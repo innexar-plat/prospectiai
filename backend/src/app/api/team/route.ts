@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { getOrCreateRequestId, jsonWithRequestId } from '@/lib/request-id';
-import { planHasModule, type ProductPlan } from '@/lib/product-modules';
+import type { ProductPlan } from '@/lib/product-modules';
 import { z } from 'zod';
 
 // GET /api/team/members — list workspace members + stats

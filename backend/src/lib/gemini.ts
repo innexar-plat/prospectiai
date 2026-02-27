@@ -327,7 +327,7 @@ async function saveAnalysisToDb(placeId: string, analysis: LeadAnalysis, profile
         if (userId && userId !== 'cl_guest_default') {
             const { createNotification } = await import('@/lib/notification-service');
             const leadLink = `/dashboard/lead/${placeId}`;
-            void createNotification({
+            createNotification({
                 userId,
                 workspaceId: workspaceId ?? null,
                 title: 'Sua análise está pronta',

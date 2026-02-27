@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
         ]);
         const usageMap = await getWorkspaceUsage(items.map((w) => w.id));
         const itemsWithUsage = items.map((w) => ({ ...w, usage: usageMap.get(w.id) ?? null }));
-        void logAdminAction(session, 'admin.workspaces.list', { resource: 'workspaces', details: { limit: safeLimit, offset: safeOffset, total } });
+        logAdminAction(session, 'admin.workspaces.list', { resource: 'workspaces', details: { limit: safeLimit, offset: safeOffset, total } }).catch(() => {});
         return NextResponse.json({ items: itemsWithUsage, total, limit: safeLimit, offset: safeOffset });
     } catch (e) {
         const { logger } = await import('@/lib/logger');

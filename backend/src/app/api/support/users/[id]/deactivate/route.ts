@@ -36,10 +36,10 @@ export async function PATCH(
         where: { id },
         data: { disabledAt: new Date() },
     });
-    void logSupportAction(session, 'support.users.deactivate', {
+    logSupportAction(session, 'support.users.deactivate', {
         resource: 'users',
         resourceId: id,
         details: body.reason ? { reason: body.reason } : undefined,
-    });
+    }).catch(() => {});
     return NextResponse.json({ success: true });
 }

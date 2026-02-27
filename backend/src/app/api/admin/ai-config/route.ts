@@ -38,7 +38,7 @@ export async function GET() {
             createdAt: c.createdAt.toISOString(),
             updatedAt: c.updatedAt.toISOString(),
         }));
-        void logAdminAction(session, 'admin.ai-config.list', { resource: 'ai-config' });
+        logAdminAction(session, 'admin.ai-config.list', { resource: 'ai-config' }).catch(() => {});
         return NextResponse.json({ items });
     } catch (e) {
         const { logger } = await import('@/lib/logger');
@@ -69,11 +69,11 @@ export async function POST(req: NextRequest) {
                 enabled,
             },
         });
-        void logAdminAction(session, 'admin.ai-config.create', {
+        logAdminAction(session, 'admin.ai-config.create', {
             resource: 'ai-config',
             resourceId: created.id,
             details: { role: created.role, provider: created.provider },
-        });
+        }).catch(() => {});
         return NextResponse.json({
             id: created.id,
             role: created.role === 'LEAD_ANALYSIS' ? 'lead_analysis' : 'viability',

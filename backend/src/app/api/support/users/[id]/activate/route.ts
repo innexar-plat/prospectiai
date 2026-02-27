@@ -24,6 +24,6 @@ export async function PATCH(
         where: { id },
         data: { disabledAt: null },
     });
-    void logSupportAction(session, 'support.users.activate', { resource: 'users', resourceId: id });
+    logSupportAction(session, 'support.users.activate', { resource: 'users', resourceId: id }).catch(() => {});
     return NextResponse.json({ success: true });
 }

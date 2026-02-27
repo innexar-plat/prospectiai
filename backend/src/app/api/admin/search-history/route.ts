@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
             }),
             prisma.searchHistory.count({ where }),
         ]);
-        void logAdminAction(session, 'admin.search-history.list', { resource: 'search-history', details: { limit: safeLimit, offset: safeOffset, total, workspaceId } });
+        logAdminAction(session, 'admin.search-history.list', { resource: 'search-history', details: { limit: safeLimit, offset: safeOffset, total, workspaceId } }).catch(() => {});
         return NextResponse.json({ items, total, limit: safeLimit, offset: safeOffset });
     } catch (e) {
         const { logger } = await import('@/lib/logger');

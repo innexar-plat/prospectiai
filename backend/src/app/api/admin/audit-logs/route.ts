@@ -43,10 +43,10 @@ export async function GET(req: NextRequest) {
             prisma.auditLog.count(),
         ]);
 
-        void logAdminAction(session, 'admin.audit-logs.list', {
+        logAdminAction(session, 'admin.audit-logs.list', {
             resource: 'audit-logs',
             details: { limit: safeLimit, offset: safeOffset, total },
-        });
+        }).catch(() => {});
         return NextResponse.json({ items, total, limit: safeLimit, offset: safeOffset });
     } catch (e) {
         const { logger } = await import('@/lib/logger');

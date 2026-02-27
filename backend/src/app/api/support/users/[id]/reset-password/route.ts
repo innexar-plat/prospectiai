@@ -65,11 +65,11 @@ export async function POST(
         }
     }
 
-    void logSupportAction(session, 'support.users.reset-password', {
+    logSupportAction(session, 'support.users.reset-password', {
         resource: 'users',
         resourceId: id,
         details: { sendEmail: !!sendEmail, temporaryPassword: !!(temporaryPassword && temporaryPassword.length >= 8) },
-    });
+    }).catch(() => {});
 
     const messages: string[] = [];
     if (sendEmail === true) messages.push('Password reset email sent.');

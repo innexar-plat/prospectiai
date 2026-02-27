@@ -50,10 +50,10 @@ export async function GET(req: NextRequest) {
             }),
             prisma.user.count({ where }),
         ]);
-        void logSupportAction(session, 'support.users.list', {
+        logSupportAction(session, 'support.users.list', {
             resource: 'users',
             details: { limit: safeLimit, offset: safeOffset, total, search: searchTerm ?? undefined },
-        });
+        }).catch(() => {});
         return NextResponse.json({ items, total, limit: safeLimit, offset: safeOffset });
     } catch (e) {
         const { logger } = await import('@/lib/logger');

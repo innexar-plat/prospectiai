@@ -75,7 +75,7 @@ export async function POST(req: Request) {
         await prisma.verificationToken.create({
             data: { identifier: email, token: verifyToken, expires: verifyExpires },
         })
-        void sendVerificationEmail(email, verifyToken)
+        sendVerificationEmail(email, verifyToken).catch(() => {})
 
         return NextResponse.json({
             message: "User created successfully",

@@ -32,7 +32,7 @@ export async function GET(
         },
     });
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    void logSupportAction(session, 'support.users.get', { resource: 'users', resourceId: id });
+    logSupportAction(session, 'support.users.get', { resource: 'users', resourceId: id }).catch(() => {});
     return NextResponse.json({
         ...user,
         workspaces: user.workspaces.map((w) => w.workspace),

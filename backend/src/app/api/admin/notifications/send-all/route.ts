@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { auth } from '@/auth';
 import { isAdmin } from '@/lib/admin';
 import { createNotificationForAllUsers } from '@/lib/notification-service';

@@ -28,7 +28,7 @@ export interface WorkspaceUsage {
  */
 export function recordUsageEvent(options: RecordUsageOptions): void {
   const { workspaceId, userId, type, quantity = 1, metadata } = options;
-  void prisma.usageEvent
+  prisma.usageEvent
     .create({
       data: {
         workspaceId,

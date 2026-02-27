@@ -46,11 +46,11 @@ export async function PATCH(
         data: parsed.data,
     });
 
-    void logAdminAction(session, 'admin.plans.update', {
+    logAdminAction(session, 'admin.plans.update', {
         resource: 'plans',
         resourceId: id,
         details: parsed.data,
-    });
+    }).catch(() => {});
 
     return NextResponse.json(updated);
 }
@@ -73,11 +73,11 @@ export async function DELETE(
         data: { isActive: false },
     });
 
-    void logAdminAction(session, 'admin.plans.delete', {
+    logAdminAction(session, 'admin.plans.delete', {
         resource: 'plans',
         resourceId: id,
         details: { key: plan.key },
-    });
+    }).catch(() => {});
 
     return NextResponse.json({ ok: true });
 }

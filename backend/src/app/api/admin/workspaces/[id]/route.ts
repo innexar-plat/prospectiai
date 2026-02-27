@@ -36,7 +36,7 @@ export async function GET(
     if (!workspace) return NextResponse.json({ error: 'Workspace not found' }, { status: 404 });
     const usageMap = await getWorkspaceUsage([id]);
     const usage = usageMap.get(id) ?? null;
-    void logAdminAction(session, 'admin.workspaces.get', { resource: 'workspaces', resourceId: id });
+    logAdminAction(session, 'admin.workspaces.get', { resource: 'workspaces', resourceId: id }).catch(() => {});
     return NextResponse.json({ ...workspace, usage });
 }
 
@@ -78,10 +78,10 @@ export async function PATCH(
     });
     const usageMap = await getWorkspaceUsage([id]);
     const usage = usageMap.get(id) ?? null;
-    void logAdminAction(session, 'admin.workspaces.update', {
+    logAdminAction(session, 'admin.workspaces.update', {
         resource: 'workspaces',
         resourceId: id,
         details: { plan: data.plan, leadsLimit: data.leadsLimit },
-    });
+    }).catch(() => {});
     return NextResponse.json({ ...updated, usage });
 }

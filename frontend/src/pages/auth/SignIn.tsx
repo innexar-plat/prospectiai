@@ -161,7 +161,7 @@ export default function SignInPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <Button
                             type="button"
-                            onClick={() => { void authApi.initiateOAuthSignIn('google', oauthCallbackPath) }}
+                            onClick={() => { authApi.initiateOAuthSignIn('google', oauthCallbackPath).catch(() => {}); }}
                             variant="secondary"
                             className="h-11 text-xs font-semibold border border-border hover:border-violet-500/30"
                             icon={<img src="https://authjs.dev/img/providers/google.svg" width={24} height={24} alt="" className="shrink-0" />}
@@ -170,7 +170,7 @@ export default function SignInPage() {
                         </Button>
                         <Button
                             type="button"
-                            onClick={() => { void authApi.initiateOAuthSignIn('github', oauthCallbackPath) }}
+                            onClick={() => { authApi.initiateOAuthSignIn('github', oauthCallbackPath).catch(() => {}); }}
                             variant="secondary"
                             className="h-11 text-xs font-semibold border border-border hover:border-violet-500/30"
                             icon={<img src="https://authjs.dev/img/providers/github.svg" width={24} height={24} alt="" className="shrink-0" />}

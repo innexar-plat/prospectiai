@@ -55,7 +55,7 @@ export default function ConfiguracoesPage() {
               onToggle={() => {
                 const next = !emailNotifs;
                 setEmailNotifs(next);
-                void savePref('notifyByEmail', next);
+                savePref('notifyByEmail', next).catch(() => {});
               }}
             />
             <ToggleRow
@@ -66,7 +66,7 @@ export default function ConfiguracoesPage() {
               onToggle={() => {
                 const next = !weeklyReport;
                 setWeeklyReport(next);
-                void savePref('notifyWeeklyReport', next);
+                savePref('notifyWeeklyReport', next).catch(() => {});
               }}
             />
             <ToggleRow
@@ -77,7 +77,7 @@ export default function ConfiguracoesPage() {
               onToggle={() => {
                 const next = !leadAlerts;
                 setLeadAlerts(next);
-                void savePref('notifyLeadAlerts', next);
+                savePref('notifyLeadAlerts', next).catch(() => {});
               }}
             />
           </div>

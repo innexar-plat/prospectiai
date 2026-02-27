@@ -30,6 +30,6 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
         },
     });
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    void logAdminAction(session, 'admin.users.get', { resource: 'users', resourceId: id });
+    logAdminAction(session, 'admin.users.get', { resource: 'users', resourceId: id }).catch(() => {});
     return NextResponse.json(user);
 }

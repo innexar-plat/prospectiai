@@ -50,7 +50,7 @@ export async function GET() {
             aiInputTokensTotal,
             aiOutputTokensTotal,
         };
-        void logAdminAction(session, 'admin.stats', { details: payload });
+        logAdminAction(session, 'admin.stats', { details: payload }).catch(() => {});
         return NextResponse.json(payload);
     } catch (e) {
         const { logger } = await import('@/lib/logger');

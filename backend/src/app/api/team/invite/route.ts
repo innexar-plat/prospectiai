@@ -75,9 +75,9 @@ export async function POST(req: NextRequest) {
             include: { user: { select: { id: true, name: true, email: true } } }
         });
 
-        void sendTeamInviteEmail(email, inviterName, workspaceName);
+        sendTeamInviteEmail(email, inviterName, workspaceName).catch(() => {});
 
-        void createNotification({
+        createNotification({
             userId: invitedUser.id,
             workspaceId: activeWorkspaceId,
             title: 'Você foi convidado para um workspace',

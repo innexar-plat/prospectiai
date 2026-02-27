@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
             prisma.leadAnalysis.count({ where }),
         ]);
 
-        void logAdminAction(session, 'admin.leads.list', { resource: 'leads', details: { limit: safeLimit, offset: safeOffset, total, workspaceId } });
+        logAdminAction(session, 'admin.leads.list', { resource: 'leads', details: { limit: safeLimit, offset: safeOffset, total, workspaceId } }).catch(() => {});
         return NextResponse.json({ items, total, limit: safeLimit, offset: safeOffset });
     } catch (error) {
         const { logger } = await import('@/lib/logger');

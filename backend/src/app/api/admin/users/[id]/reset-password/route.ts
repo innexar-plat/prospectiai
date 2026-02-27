@@ -65,11 +65,11 @@ export async function POST(
         }
     }
 
-    void logAdminAction(session, 'admin.users.reset-password', {
+    logAdminAction(session, 'admin.users.reset-password', {
         resource: 'users',
         resourceId: id,
         details: { sendEmail: !!sendEmail, temporaryPassword: !!(temporaryPassword && temporaryPassword.length >= 8) },
-    });
+    }).catch(() => {});
 
     const messages: string[] = [];
     if (sendEmail === true) messages.push('Password reset email sent.');

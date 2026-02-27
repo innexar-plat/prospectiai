@@ -34,7 +34,7 @@ export async function GET() {
       hasApiKey: Boolean(c.apiKeyEncrypted),
       updatedAt: c.updatedAt.toISOString(),
     }));
-    void logAdminAction(session, 'admin.web-search-config.list', { resource: 'web-search-config' });
+    logAdminAction(session, 'admin.web-search-config.list', { resource: 'web-search-config' }).catch(() => {});
     return NextResponse.json({ items });
   } catch (e) {
     const { logger } = await import('@/lib/logger');
@@ -73,11 +73,11 @@ export async function PATCH(req: NextRequest) {
         ...(apiKey !== undefined && { apiKeyEncrypted: apiKey ? encryptApiKey(apiKey) : null }),
       },
     });
-    void logAdminAction(session, 'admin.web-search-config.upsert', {
+    logAdminAction(session, 'admin.web-search-config.upsert', {
       resource: 'web-search-config',
       resourceId: updated.id,
       details: { role: updated.role },
-    });
+    }).catch(() => {});
     return NextResponse.json({
       id: updated.id,
       role: updated.role === 'LEAD_ANALYSIS' ? 'lead_analysis' : 'viability',

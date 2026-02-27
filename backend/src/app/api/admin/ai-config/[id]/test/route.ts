@@ -37,7 +37,7 @@ export async function POST(
             prompt: 'Respond with exactly: OK',
             maxTokens: 10,
         });
-        void logAdminAction(session, 'admin.ai-config.test', { resource: 'ai-config', resourceId: id });
+        logAdminAction(session, 'admin.ai-config.test', { resource: 'ai-config', resourceId: id }).catch(() => {});
         return NextResponse.json({ success: true });
     } catch (e) {
         const message = e instanceof Error ? e.message : 'Unknown error';

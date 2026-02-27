@@ -66,6 +66,6 @@ export async function POST(req: Request) {
     }
 
     const plan = await prisma.planConfig.create({ data: parsed.data });
-    void logAdminAction(session, 'admin.plans.create', { resource: 'plans', resourceId: plan.id, details: parsed.data });
+    logAdminAction(session, 'admin.plans.create', { resource: 'plans', resourceId: plan.id, details: parsed.data }).catch(() => {});
     return NextResponse.json(plan, { status: 201 });
 }

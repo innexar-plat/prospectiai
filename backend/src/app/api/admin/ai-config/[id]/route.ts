@@ -43,7 +43,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             where: { id },
             data: update,
         });
-        void logAdminAction(session, 'admin.ai-config.update', { resource: 'ai-config', resourceId: id });
+        logAdminAction(session, 'admin.ai-config.update', { resource: 'ai-config', resourceId: id }).catch(() => {});
         return NextResponse.json({
             id: updated.id,
             role: updated.role === 'LEAD_ANALYSIS' ? 'lead_analysis' : 'viability',
@@ -71,7 +71,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
         const existing = await prisma.aiProviderConfig.findUnique({ where: { id } });
         if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
         await prisma.aiProviderConfig.delete({ where: { id } });
-        void logAdminAction(session, 'admin.ai-config.delete', { resource: 'ai-config', resourceId: id });
+        logAdminAction(session, 'admin.ai-config.delete', { resource: 'ai-config', resourceId: id }).catch(() => {});
         return NextResponse.json({ ok: true });
     } catch (e) {
         const { logger } = await import('@/lib/logger');

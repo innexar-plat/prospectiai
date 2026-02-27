@@ -104,7 +104,7 @@ export async function createNotification(input: CreateNotificationInput): Promis
     if (user?.email && user.notifyByEmail) {
       const subject = emailSubject ?? title;
       const html = notificationTemplate(title, message, link);
-      void sendEmail(user.email, subject, html);
+      sendEmail(user.email, subject, html).catch(() => {});
     }
   }
 
@@ -154,7 +154,7 @@ export async function createNotificationForAllUsers(input: {
     const html = notificationTemplate(input.title, input.message, input.link ?? undefined);
     for (const u of users) {
       if (u.email && u.notifyByEmail) {
-        void sendEmail(u.email, subject, html);
+        sendEmail(u.email, subject, html).catch(() => {});
       }
     }
   }

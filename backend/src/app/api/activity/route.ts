@@ -24,12 +24,6 @@ export async function POST(req: NextRequest) {
             return jsonWithRequestId({ error: 'Invalid action' }, { status: 400, requestId });
         }
 
-        // Find user's workspace
-        const membership = await prisma.workspaceMember.findFirst({
-            where: { userId: session.user.id },
-            select: { workspaceId: true },
-        });
-
         await prisma.auditLog.create({
             data: {
                 userId: session.user.id,
