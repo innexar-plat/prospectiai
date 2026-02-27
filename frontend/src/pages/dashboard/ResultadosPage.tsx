@@ -18,6 +18,7 @@ interface ResultadosState {
 export default function ResultadosPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const outletContext = useOutletContext<{ user: SessionUser }>();
   const { lastSearchResults, appendSearchResults } = useSearchResults();
   const state = (location.state ?? {}) as ResultadosState;
   const error = state.error;
@@ -88,7 +89,7 @@ export default function ResultadosPage() {
     );
   }
 
-  const { user } = useOutletContext<{ user: SessionUser }>();
+  const { user } = outletContext;
   const isFree = user.plan === 'FREE';
   const displayLimit = isFree ? 10 : places.length;
   const displayedPlaces = places.slice(0, displayLimit);

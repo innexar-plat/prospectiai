@@ -59,12 +59,12 @@ export default function EquipeDashboardPage() {
 
   useEffect(() => {
     if (!hasAccess) {
-      setLoading(false);
+      queueMicrotask(() => setLoading(false));
       return;
     }
     let cancelled = false;
-    setLoading(true);
-    setError(null);
+    queueMicrotask(() => setLoading(true));
+    queueMicrotask(() => setError(null));
     request<{ members: DashboardMember[]; totals: TeamTotals }>('/team/dashboard')
       .then((data) => {
         if (!cancelled) setDashboardData(data);

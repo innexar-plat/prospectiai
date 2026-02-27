@@ -37,6 +37,8 @@ export default function SeoLandingPage() {
     const title = getSeoTitle(entry);
     const description = getSeoDescription(entry);
     const pageUrl = `${BASE_URL}/${entry.slug}`;
+    const savedTitle = defaultTitleRef.current;
+    const savedDesc = defaultDescRef.current;
 
     document.title = title;
     setMeta('description', description);
@@ -62,8 +64,8 @@ export default function SeoLandingPage() {
     setMeta('twitter:image', `${BASE_URL}/og-image.png`);
 
     return () => {
-      document.title = defaultTitleRef.current;
-      setMeta('description', defaultDescRef.current);
+      document.title = savedTitle;
+      setMeta('description', savedDesc);
       if (canonical) canonical.setAttribute('href', BASE_URL + '/');
       setMeta('og:url', BASE_URL + '/', true);
       setMeta('og:title', 'ProspectorAI — Busca B2B e prospecção com IA', true);

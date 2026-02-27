@@ -12,8 +12,10 @@ export default function VerifyEmailPage() {
 
   useEffect(() => {
     if (!token.trim()) {
-      setStatus('error');
-      setMessage('Link inválido.');
+      queueMicrotask(() => {
+        setStatus('error');
+        setMessage('Link inválido.');
+      });
       return;
     }
     fetch(`${BASE}/auth/verify-email?token=${encodeURIComponent(token)}`, { credentials: 'include' })

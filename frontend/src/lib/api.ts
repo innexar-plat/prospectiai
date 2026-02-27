@@ -171,7 +171,7 @@ export const searchApi = {
         }),
 
     marketReport: (params: { textQuery: string; includedType?: string; pageSize?: number }) =>
-        request<any>('/market-report', {
+        request<unknown>('/market-report', {
             method: 'POST',
             body: JSON.stringify(params),
         }),

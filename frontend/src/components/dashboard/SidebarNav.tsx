@@ -94,7 +94,7 @@ export function SidebarNav({
 
   useEffect(() => {
     if (mobileOpen && onMobileClose) onMobileClose();
-  }, [location.pathname]);
+  }, [location.pathname, mobileOpen, onMobileClose]);
 
   useEffect(() => {
     if (!upgradeModal) return;

@@ -49,12 +49,12 @@ export function TeamProgressCard({ plan }: { plan: SessionUser['plan'] }) {
 
   useEffect(() => {
     if (plan !== 'SCALE') {
-      setLoading(false);
+      queueMicrotask(() => setLoading(false));
       return;
     }
     let cancelled = false;
-    setLoading(true);
-    setError(null);
+    queueMicrotask(() => setLoading(true));
+    queueMicrotask(() => setError(null));
     fetchProgress()
       .then((d) => {
         if (!cancelled) setData(d);

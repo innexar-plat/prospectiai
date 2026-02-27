@@ -13,9 +13,9 @@ export function InstallPrompt() {
     const [dismissed, setDismissed] = useState(false);
 
     useEffect(() => {
-        // Check if already dismissed
+        // Check if already dismissed (defer setState to avoid sync setState in effect)
         if (localStorage.getItem('pwa-install-dismissed')) {
-            setDismissed(true);
+            queueMicrotask(() => setDismissed(true));
             return;
         }
 
@@ -23,7 +23,7 @@ export function InstallPrompt() {
         const ua = navigator.userAgent;
         const isIOSDevice = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-        setIsIOS(isIOSDevice && !isStandalone);
+        queueMicrotask(() => setIsIOS(isIOSDevice && !isStandalone));
 
         // Listen for install prompt (Chrome/Edge/Android)
         const handler = (e: Event) => {

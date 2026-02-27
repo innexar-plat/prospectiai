@@ -26,7 +26,7 @@ export default function MercadoPagoBrick({ planId, interval, price, userEmail, o
             sdkInitialized = true;
             console.log('MP SDK Configured Global');
         }
-        setIsReady(true);
+        queueMicrotask(() => setIsReady(true));
     }, []);
 
     const initialization = {

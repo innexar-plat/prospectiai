@@ -115,7 +115,7 @@ export default function DashboardIndex() {
     } finally {
       setLoading(false);
     }
-  }, [payload, validation, form.advancedTerm, addToast, navigate]);
+  }, [payload, validation, form.advancedTerm, addToast, navigate, setLastSearchResults]);
 
   const goToHistorico = useCallback(() => navigate('/dashboard/historico'), [navigate]);
 

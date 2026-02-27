@@ -64,6 +64,8 @@ export function SearchResultsProvider({ children }: { children: React.ReactNode 
   );
 }
 
+// Hook exported from same file as provider; allow for react-refresh
+// eslint-disable-next-line react-refresh/only-export-components
 export function useSearchResults(): SearchResultsContextValue {
   const ctx = useContext(SearchResultsContext);
   if (!ctx) {

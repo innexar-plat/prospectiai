@@ -11,7 +11,7 @@ export default function CookieConsent({ t }: { t: (key: string) => string }) {
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) setVisible(true);
+    if (!stored) queueMicrotask(() => setVisible(true));
   }, []);
 
   const accept = () => {

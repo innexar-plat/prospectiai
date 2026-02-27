@@ -213,7 +213,7 @@ export default function Header({
                             <Button
                                 variant={isPremiumPlan ? 'primary' : 'secondary'}
                                 size="lg"
-                                onClick={() => { isPremiumPlan ? onExport() : onPricingRedirect(); setIsMenuOpen(false); }}
+                                onClick={() => { if (isPremiumPlan) onExport(); else onPricingRedirect(); setIsMenuOpen(false); }}
                                 icon={isPremiumPlan ? <Download size={20} /> : <span>🔒</span>}
                             >
                                 {isPremiumPlan ? t('results.export') : 'Exportar Dados (Pro)'}

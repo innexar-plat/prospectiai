@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Sparkles, Loader2, ExternalLink, Phone, MapPin, Globe, Tag, Plus, X, MessageCircle, Copy, Check, Star } from 'lucide-react';
-import type { Place, PlaceDetail, LeadTagItem, LeadAnalysisListItem } from '@/lib/api';
+import type { Place, PlaceDetail, Analysis, LeadTagItem, LeadAnalysisListItem } from '@/lib/api';
 import { searchApi, activityApi, tagsApi, leadsApi } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
@@ -24,7 +24,7 @@ export default function LeadDetailPage() {
 
   const placeFromState = (location.state as { place?: Place } | null)?.place;
   const [place, setPlace] = useState<PlaceDetail | Place | null>(placeFromState ?? null);
-  const [analysis, setAnalysis] = useState<any>(null);
+  const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(!placeFromState && !!placeId);
   const [analyzing, setAnalyzing] = useState(false);
   const [tags, setTags] = useState<LeadTagItem[]>([]);

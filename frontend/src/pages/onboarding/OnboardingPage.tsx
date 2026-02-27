@@ -22,7 +22,7 @@ export default function OnboardingPage({ user }: { user: SessionUser | null }) {
                 navigate('/dashboard', { replace: true })
                 return
             }
-            setLoading(false)
+            queueMicrotask(() => setLoading(false))
         } else if (user === null) {
             navigate('/auth/signin', { replace: true })
         }

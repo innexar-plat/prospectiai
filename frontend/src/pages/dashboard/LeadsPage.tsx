@@ -16,7 +16,7 @@ export default function LeadsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    queueMicrotask(() => setLoading(true));
     leadsApi.list()
       .then((data) => {
         if (!cancelled) setLeads(data);
