@@ -65,6 +65,8 @@ const config = {
     '!src/lib/ratelimit.ts',
     '!src/modules/analyze/application/analyze.service.ts',
   ],
+  coverageDirectory: 'coverage',
+  coverageReporters: ['lcov', 'text'],
   coverageThreshold: {
     global: {
       lines: 80,

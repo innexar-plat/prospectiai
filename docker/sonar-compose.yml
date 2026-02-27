@@ -1,0 +1,43 @@
+# SonarQube (análise estática). Subir com: docker compose -f docker/sonar-compose.yml up -d
+# Domínio: https://sonar.innexar.com.br (apontar DNS para o host do Traefik)
+services:
+  sonar:
+    image: sonarqube:lts-community
+    container_name: prospector-sonar
+    environment:
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+      SONAR_WEB_JAVAADDITIONALOPTS: "-Djava.security.egd=file:/dev/./urandom"
+    volumes:
+      - sonar-data:/opt/sonarqube/data
+      - sonar-logs:/opt/sonarqube/logs
+      - sonar-extensions:/opt/sonarqube/extensions
+    ports:
+      - "9000:9000"
+    restart: unless-stopped
+    networks:
+      - fixelo-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=fixelo_fixelo-network"
+      - "traefik.http.services.prospector-sonar.loadbalancer.server.port=9000"
+      - "traefik.http.services.prospector-sonar.loadbalancer.passHostHeader=true"
+      - "traefik.http.routers.prospector-sonar.rule=Host(`sonar.innexar.com.br`)"
+      - "traefik.http.routers.prospector-sonar.entrypoints=websecure"
+      - "traefik.http.routers.prospector-sonar.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.prospector-sonar.service=prospector-sonar"
+      - "traefik.http.routers.prospector-sonar-http.rule=Host(`sonar.innexar.com.br`)"
+      - "traefik.http.routers.prospector-sonar-http.entrypoints=web"
+      - "traefik.http.routers.prospector-sonar-http.middlewares=redirect-sonar-https"
+      - "traefik.http.routers.prospector-sonar-http.service=prospector-sonar"
+      - "traefik.http.middlewares.redirect-sonar-https.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.redirect-sonar-https.redirectscheme.permanent=true"
+
+networks:
+  fixelo-network:
+    external: true
+    name: fixelo_fixelo-network
+
+volumes:
+  sonar-data:
+  sonar-logs:
+  sonar-extensions:

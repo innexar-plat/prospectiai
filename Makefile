@@ -26,3 +26,9 @@ test-e2e:
 
 health:
 	./docker/scripts/health.sh
+
+# SonarQube (análise estática). Requer rede fixelo_fixelo-network. DNS: sonar.innexar.com.br → host.
+sonar-up:
+	docker compose -f docker/sonar-compose.yml up -d
+sonar-down:
+	docker compose -f docker/sonar-compose.yml down
