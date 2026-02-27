@@ -1,0 +1,16 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Otimizar cache copiando apenas package files primeiro
+COPY package.json package-lock.json* ./
+RUN npm install --legacy-peer-deps
+
+# Copiar resto do código
+COPY . .
+
+# Expor porta padrão do Vite
+EXPOSE 5173
+
+# Rodar Vite atrelado a 0.0.0.0 (todas interfaces)
+CMD ["npm", "run", "dev", "--", "--host"]

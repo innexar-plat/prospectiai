@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "AiConfigRole" ADD VALUE 'COMPANY_ANALYSIS';

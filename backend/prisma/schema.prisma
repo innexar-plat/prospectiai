@@ -1,0 +1,458 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Plan {
+  FREE
+  BASIC
+  PRO
+  BUSINESS
+  SCALE
+}
+
+enum AnalysisStatus {
+  NEW
+  CONTACTED
+  CONVERTED
+  LOST
+}
+
+enum AiConfigRole {
+  LEAD_ANALYSIS
+  VIABILITY
+  COMPANY_ANALYSIS
+}
+
+enum AiConfigProvider {
+  GEMINI
+  OPENAI
+  CLOUDFLARE
+}
+
+enum NotificationType {
+  INFO
+  ALERT
+  REMINDER
+  SYSTEM
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  resetToken          String?   @unique
+  resetTokenExpires   DateTime?
+
+  twoFactorSecret   String?
+  twoFactorEnabled  Boolean    @default(false)
+
+  subscriptionId String?   @unique
+  customerId     String?
+  subscriptionStatus String?
+  currentPeriodEnd   DateTime?
+  
+  // Business Profile (preenchido no onboarding; usado para buscas/IA)
+  companyName    String?
+  productService String?
+  targetAudience String?
+  mainBenefit    String?
+
+  // Personal profile (per user)
+  phone         String?
+  address       String?
+  linkedInUrl   String?
+  instagramUrl  String?
+  facebookUrl   String?
+  websiteUrl    String?
+
+  // Onboarding: só acessa dashboard após concluir
+  onboardingCompletedAt DateTime?
+
+  // Suporte/admin podem desativar conta; login bloqueado quando preenchido
+  disabledAt     DateTime?
+
+  // Notification preferences (used when sending alert emails)
+  notifyByEmail      Boolean @default(true)
+  notifyWeeklyReport Boolean @default(false)
+  notifyLeadAlerts   Boolean @default(false)
+
+  // Legacy / Default Credits (moving to Workspace)
+  plan           Plan      @default(FREE)
+  leadsUsed      Int       @default(0)
+  leadsLimit     Int       @default(10)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // NextAuth Relations
+  accounts      Account[]
+  sessions      Session[]
+  
+  // App Relations
+  workspaces       WorkspaceMember[]
+  analyses         LeadAnalysis[]
+  searchHistory    SearchHistory[]
+  tags             LeadTag[]
+  notifications    Notification[]
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?  @db.Text
+  access_token       String?  @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?  @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Workspace {
+  id         String   @id @default(cuid())
+  name       String?
+  plan               Plan     @default(FREE)
+  leadsUsed          Int      @default(0)
+  leadsLimit         Int      @default(10)
+  subscriptionStatus String?
+  subscriptionId     String?
+  customerId         String?
+  currentPeriodEnd   DateTime?
+  /** Billing cycle for current subscription: monthly or annual. Used for proration on upgrade. */
+  billingCycle       String?   // 'monthly' | 'annual'
+  gracePeriodEnd     DateTime?
+  /** Downgrade scheduled for end of period: plan to apply at pendingPlanEffectiveAt */
+  pendingPlanId      String?   // PlanType key, e.g. BUSINESS
+  pendingPlanEffectiveAt DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Business profile (one per workspace; shared by all members)
+  companyName    String?
+  productService String?
+  targetAudience String?
+  mainBenefit    String?
+  address        String?
+  linkedInUrl    String?
+  instagramUrl   String?
+  facebookUrl    String?
+  websiteUrl     String?
+  logoUrl        String?
+
+  members              WorkspaceMember[]
+  analyses             LeadAnalysis[]
+  searchHistory        SearchHistory[]
+  usageEvents          UsageEvent[]
+  intelligenceReports  IntelligenceReport[]
+}
+
+model WorkspaceMember {
+  id          String    @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        String    @default("OWNER")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Sales goals (set by admin/owner)
+  dailyLeadsGoal         Int?  // target leads contacted per day
+  dailyAnalysesGoal      Int?  // target AI analyses per day
+  monthlyConversionsGoal Int?  // target conversions per month
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+}
+
+model Lead {
+  id               String   @id @default(cuid())
+  placeId          String   @unique
+  name             String
+  address          String?
+  phone            String?
+  website          String?
+  rating           Float?
+  reviewCount      Int?
+  types            Json?
+  businessStatus   String?
+  lastSearchedAt   DateTime? @default(now())
+  opportunityScore Int?      // 0-100 unified opportunity score
+  scoreFactors     Json?     // { noWebsite, fewReviews, lowRating, noPhone, ... }
+  lastScoredAt     DateTime?
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  analyses         LeadAnalysis[]
+  tags             LeadTag[]
+}
+
+model LeadAnalysis {
+  id                       String         @id @default(cuid())
+  userId                   String
+  leadId                   String
+  workspaceId              String?
+  
+  score                    Int?
+  scoreLabel               String?
+  summary                  String?        @db.Text
+  strengths                Json?
+  weaknesses               Json?
+  painPoints               Json?
+  gaps                     Json?
+  status                   AnalysisStatus @default(NEW)
+  
+  approach                 String?        @db.Text
+  contactStrategy          String?        @db.Text
+  firstContactMessage      String?        @db.Text
+  suggestedWhatsAppMessage String?        @db.Text
+  fullReport               String?        @db.Text
+  
+  socialInstagram          String?
+  socialFacebook           String?
+  socialLinkedin           String?
+  isFavorite               Boolean        @default(false)
+
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime       @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lead      Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([leadId])
+  @@index([workspaceId])
+}
+
+// Histórico de buscas para reaproveitamento e auditoria
+model SearchHistory {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  userId       String
+  textQuery    String
+  pageSize     Int?
+  filters      Json?    // hasWebsite, hasPhone, includedType, etc.
+  resultsCount Int?
+  resultsData  Json?    // Array of places returned from search, for history detail view
+  createdAt    DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// Audit log para ações admin (suporte e conformidade)
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String
+  adminEmail  String?
+  action      String
+  resource    String?
+  resourceId  String?
+  details     Json?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// Configuração de provedores de IA por papel (admin; chaves criptografadas)
+model AiProviderConfig {
+  id                String          @id @default(cuid())
+  role               AiConfigRole
+  provider           AiConfigProvider
+  model              String
+  apiKeyEncrypted    String?         @db.Text
+  cloudflareAccountId String?        // necessário para CLOUDFLARE
+  enabled            Boolean         @default(true)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  @@index([role])
+  @@index([enabled])
+}
+
+enum UsageEventType {
+  GOOGLE_PLACES_SEARCH
+  GOOGLE_PLACES_DETAILS
+  SERPER_REQUEST
+  AI_TOKENS
+}
+
+model UsageEvent {
+  id          String         @id @default(cuid())
+  workspaceId String
+  userId      String?
+  type        UsageEventType
+  quantity    Int            @default(1)  // e.g. number of Serper queries or 1 per request
+  metadata    Json?          // for AI_TOKENS: { provider, model, inputTokens, outputTokens }
+  createdAt   DateTime       @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+enum WebSearchProvider {
+  SERPER
+  TAVILY
+}
+
+// Configuração de busca na web por papel (enriquecimento de contexto para IA)
+model WebSearchConfig {
+  id                String            @id @default(cuid())
+  role               AiConfigRole
+  provider           WebSearchProvider
+  apiKeyEncrypted    String?           @db.Text
+  maxResults         Int               @default(5)
+  enabled            Boolean           @default(true)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@unique([role])
+  @@index([enabled])
+}
+
+// Tags de leads para pipeline de vendas
+model LeadTag {
+  id          String   @id @default(cuid())
+  userId      String
+  leadId      String
+  workspaceId String?
+  label       String        // "Quente", "Morno", "Frio", "Retornar segunda", etc
+  color       String        @default("gray") // gray, red, amber, green, blue, violet
+  createdAt   DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lead      Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, leadId, label])
+  @@index([userId])
+  @@index([leadId])
+  @@index([workspaceId])
+}
+
+// In-app notifications (bell dropdown; admin can send to all)
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String
+  workspaceId String?
+  title       String
+  message     String           @db.Text
+  type        NotificationType @default(INFO)
+  link        String?
+  readAt      DateTime?
+  createdAt   DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([readAt])
+  @@index([createdAt])
+}
+
+// Admin: ligar/desligar notificação no app e por email por canal (lead_analysis_ready, team_invite, admin_broadcast)
+model NotificationChannelConfig {
+  key         String   @id
+  name        String
+  appEnabled  Boolean  @default(true)
+  emailEnabled Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Planos configuráveis via admin
+model PlanConfig {
+  id               String   @id @default(cuid())
+  key              String   @unique           // FREE, BASIC, PRO, BUSINESS, SCALE, etc.
+  name             String                     // Display name
+  leadsLimit       Int      @default(10)
+  priceMonthlyBrl  Float    @default(0)
+  priceAnnualBrl   Float    @default(0)
+  priceMonthlyUsd  Float    @default(0)
+  priceAnnualUsd   Float    @default(0)
+  modules          Json     @default("[]")    // ModuleKey[]
+  isActive         Boolean  @default(true)
+  sortOrder        Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+// Resultados persistidos dos módulos de inteligência (Concorrência, Relatórios, Viabilidade)
+model IntelligenceReport {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  userId       String
+  module       String   // COMPETITORS | MARKET | VIABILITY
+  inputQuery   String
+  inputCity    String?
+  inputState   String?
+  resultsData  Json     // Full report JSON
+  isFavorite   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([module])
+  @@index([createdAt])
+}
+
+// Configuração de e-mail (única por sistema): Resend ou SMTP, editável no admin
+model EmailConfig {
+  id                     String   @id @default(cuid())
+  provider               String   // resend | smtp
+  resendApiKeyEncrypted  String?  // cifrado; só quando provider = resend
+  fromEmail              String?  // Remetente
+  smtpHost               String?
+  smtpPort               Int?     // 587, 465
+  smtpUser               String?
+  smtpPasswordEncrypted  String?  // cifrado; só quando provider = smtp
+  updatedAt              DateTime @updatedAt
+}

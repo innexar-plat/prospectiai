@@ -1,0 +1,13 @@
+var R=require("../../../chunks/[turbopack]_runtime.js")("server/app/api/competitors/route.js")
+R.c("server/chunks/node_modules_bcryptjs_index_42ebb250.js")
+R.c("server/chunks/backend_src_1d089aec._.js")
+R.c("server/chunks/node_modules_next_f5199d09._.js")
+R.c("server/chunks/[root-of-the-server]__7a0aee61._.js")
+R.c("server/chunks/node_modules_zod_v4_classic_external_fa90cebf.js")
+R.c("server/chunks/[root-of-the-server]__f408c708._.js")
+R.c("server/chunks/backend_src_lib_ai_adapters_gemini_ts_cdd5bd70._.js")
+R.c("server/chunks/_351ad5db._.js")
+R.c("server/chunks/[root-of-the-server]__fd1c8ece._.js")
+R.c("server/chunks/backend__next-internal_server_app_api_competitors_route_actions_af3dd6c5.js")
+R.m(44467)
+module.exports=R.m(44467).exports

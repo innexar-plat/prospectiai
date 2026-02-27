@@ -1,24 +1,26 @@
 {
-  "name": "prospector-ai",
-  "version": "0.1.0",
+  "name": "prospector-ai-monorepo",
+  "version": "1.0.0",
   "private": true,
+  "workspaces": ["frontend", "admin", "backend"],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "next": "16.1.6",
-    "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "dev:backend": "npm run dev -w backend",
+    "dev:frontend": "npm run dev -w frontend",
+    "dev:admin": "npm run dev -w admin",
+    "build:backend": "npm run build -w backend",
+    "build:frontend": "npm run build -w frontend",
+    "build:admin": "npm run build -w admin",
+    "lint": "npm run lint -w backend && npm run lint -w frontend && npm run lint -w admin",
+    "postinstall": "npm run postinstall -w backend",
+    "prepare": "husky"
   },
   "devDependencies": {
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.1.6",
-    "typescript": "^5"
+    "typescript": "^5.0.0",
+    "prisma": "^6.19.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.4.3"
+  },
+  "lint-staged": {
+    "{backend,frontend,admin}/src/**/*.{ts,tsx}": "bash -c 'npm run lint'"
   }
 }

@@ -1,0 +1,3 @@
+{
+  "/api/billing/schedule-downgrade/route": "app/api/billing/schedule-downgrade/route.js"
+}

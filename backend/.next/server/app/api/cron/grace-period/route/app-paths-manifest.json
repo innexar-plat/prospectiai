@@ -1,0 +1,3 @@
+{
+  "/api/cron/grace-period/route": "app/api/cron/grace-period/route.js"
+}

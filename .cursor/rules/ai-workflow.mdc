@@ -1,0 +1,16 @@
+---
+description: Fluxo obrigatório do agente: ler .ai/, planejar, validar no Docker
+alwaysApply: true
+---
+
+# Fluxo do Agente (OBRIGATÓRIO)
+
+Antes de qualquer mudança de código ou infra:
+
+1. **Ler** (na ordem): `.ai/AGENT_RULES.md`, `.ai/PROCEDURE.md`, `.ai/ARCHITECTURE.md`, `.ai/STACK.md`
+2. **Plano**: passos numerados + lista de arquivos afetados
+3. **Implementar** em mudanças pequenas e verificáveis
+4. **Validar no container**: `make build` → `make up` → `make health` → `make logs SERVICE=<svc>`
+5. **Entrega**: checklist de `.ai/CHECKLIST.md` + evidências no PR (outputs de build/test/health/logs)
+
+Nenhuma entrega é considerada feita sem build e health ok no Docker.

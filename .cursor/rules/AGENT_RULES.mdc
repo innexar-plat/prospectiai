@@ -1,0 +1,40 @@
+# Regras Globais do Projeto
+
+## Objetivo
+Construir sistema escalável, seguro e fácil de manter.
+
+## Princípios
+- Não reinventar o que já existe
+- Alterar somente o necessário
+- Código limpo e legível
+- Sempre tipado (strict mode)
+- Nunca usar any sem justificativa
+
+## Antes de implementar
+1. Verificar se já existe código similar
+2. Planejar estrutura
+3. Definir impacto
+4. Criar checklist
+
+## Padrões obrigatórios
+
+### TypeScript
+- strict: true
+- Proibido any
+- Preferir unknown + type guards
+- Separar domain, infra e presentation
+
+### Backend
+- Controllers limpos
+- Services com regra de negócio
+- DTOs tipados
+- Validação com schema
+
+## Testes
+- Sempre criar teste para nova feature
+- Não quebrar testes existentes
+
+## Entrega
+- Código
+- Teste
+- Documentação da alteração

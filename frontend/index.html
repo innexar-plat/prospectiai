@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="/logop.png" />
+  <link rel="shortcut icon" href="/logop.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ProspectorAI — Busca B2B e prospecção com IA | Innexar</title>
+  <meta name="description"
+    content="Plataforma B2B para encontrar, analisar e converter empresas por nicho e região. Busca inteligente, análise com IA, gestão de leads e exportação. Praia Grande e Brasil." />
+  <meta name="robots" content="index, follow" />
+  <meta name="geo.region" content="BR-SP" />
+  <meta name="geo.placename" content="Praia Grande" />
+  <link rel="canonical" href="https://prospectorai.innexar.com.br/" />
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://prospectorai.innexar.com.br/" />
+  <meta property="og:title" content="ProspectorAI — Busca B2B e prospecção com IA" />
+  <meta property="og:description"
+    content="Encontre e analise empresas por nicho e região com IA. Gestão de leads, exportação e trabalho em equipe." />
+  <meta property="og:locale" content="pt_BR" />
+  <meta property="og:image" content="https://prospectorai.innexar.com.br/og-image.png" />
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="ProspectorAI — Busca B2B e prospecção com IA" />
+  <meta name="twitter:description"
+    content="Plataforma B2B para encontrar, analisar e converter empresas com inteligência artificial." />
+  <meta name="twitter:image" content="https://prospectorai.innexar.com.br/og-image.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#7c3aed">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ProspectorAI">
+  <link rel="apple-touch-icon" href="/logop.png">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"Organization","name":"Innexar","url":"https://prospectorai.innexar.com.br","description":"ProspectorAI: busca B2B e prospecção com IA. Innexar Estúdio Digital.","address":{"@type":"PostalAddress","addressLocality":"Praia Grande","addressRegion":"SP","addressCountry":"BR"}}
+  </script>
+</head>
+
+<body>
+  <script>
+    (function () {
+      var t = localStorage.getItem('prospector-theme');
+      document.documentElement.setAttribute('data-theme', (t === 'dark' || t === 'light') ? t : 'light');
+    })();
+  </script>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+  <script>
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/sw.js').catch(function () { });
+      });
+    }
+  </script>
+</body>
+
+</html>

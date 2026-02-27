@@ -1,0 +1,3 @@
+{
+  "/api/billing/apply-pending-plans/route": "app/api/billing/apply-pending-plans/route.js"
+}

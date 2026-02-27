@@ -1,0 +1,3 @@
+module.exports=[75225,r=>{"use strict";let e={info:0,warn:1,error:2},t="error"===process.env.LOG_LEVEL?"error":"info";function o(r,o,n,s){if(!(e[r]>=e[t]))return;let i=JSON.stringify({level:r,message:o,timestamp:new Date().toISOString(),...s&&{requestId:s},...n});"error"===r?process.stderr.write(i+"\n"):process.stdout.write(i+"\n")}function n(r){let e=r.headers.get("x-request-id");if(e&&"string"==typeof e)return e}r.s(["getRequestId",()=>n,"logger",0,{info(r,e,t){o("info",r,e,t)},warn(r,e,t){o("warn",r,e,t)},error(r,e,t){o("error",r,e,t)}}])}];
+
+//# sourceMappingURL=backend_src_lib_logger_ts_b3bcc425._.js.map
