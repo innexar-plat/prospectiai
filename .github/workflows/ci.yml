@@ -38,6 +38,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Create minimal .env for Docker Compose
+        run: touch .env
+
       - name: Start database
         run: docker compose -f docker/docker-compose.yml up -d db
 
