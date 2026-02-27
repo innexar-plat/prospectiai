@@ -115,27 +115,17 @@ jobs:
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         run: |
           HOST_URL="${SONAR_HOST_URL:-https://sonar.innexar.com.br}"
-          RES=$(curl -s -w "\n%{http_code}" -H "Authorization: Bearer $SONAR_TOKEN" "$HOST_URL/api/projects/search?projects=prospectiai") || true
+          PROJECT_KEY="Prospector-AI"
+          RES=$(curl -s -w "\n%{http_code}" -H "Authorization: Bearer $SONAR_TOKEN" "$HOST_URL/api/projects/search?projects=$PROJECT_KEY") || true
           CODE=$(echo "$RES" | tail -n1)
           BODY=$(echo "$RES" | sed '$d')
           TOTAL=$(echo "$BODY" | grep -o '"total":[0-9]*' | head -1 | cut -d: -f2)
           if [ "$CODE" = "200" ] && { [ -z "$TOTAL" ] || [ "$TOTAL" = "0" ]; }; then
-            curl -s -o /dev/null -w "%{http_code}" -X POST -H "Authorization: Bearer $SONAR_TOKEN" -d "project=prospectiai&name=Prospector%20AI" "$HOST_URL/api/projects/create" || true
+            curl -s -o /dev/null -w "%{http_code}" -X POST -H "Authorization: Bearer $SONAR_TOKEN" -d "project=$PROJECT_KEY&name=Prospector%20AI" "$HOST_URL/api/projects/create" || true
           fi
 
-      - name: SonarScanner
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@master
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        run: |
-          HOST_URL="${SONAR_HOST_URL:-https://sonar.innexar.com.br}"
-          if [ -z "$SONAR_TOKEN" ]; then
-            echo "::error::SONAR_TOKEN secret is not set. Add it in Settings → Secrets and variables → Actions (repository secrets)."
-            exit 1
-          fi
-          docker run --rm -v "$PWD:/usr/src" -w /usr/src \
-            -e SONAR_TOKEN="$SONAR_TOKEN" \
-            -e SONAR_HOST_URL="$HOST_URL" \
-            sonarsource/sonar-scanner-cli:latest \
-            -Dsonar.host.url="$HOST_URL" \
-            -Dsonar.token="$SONAR_TOKEN"

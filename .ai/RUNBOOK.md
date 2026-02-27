@@ -37,4 +37,5 @@ Quando o billing usa Mercado Pago, planos pendentes (downgrade/upgrade agendados
 - **URL:** https://sonar.innexar.com.br (apontar DNS para o mesmo host do Traefik).
 - **Subir:** `make sonar-up` (ou `docker compose -f docker/sonar-compose.yml up -d`). Requer rede `fixelo_fixelo-network`.
 - **Parar:** `make sonar-down`
-- **CI:** No GitHub, configurar secrets `SONAR_HOST_URL` (ex.: https://sonar.innexar.com.br) e `SONAR_TOKEN` (token gerado no SonarQube: My Account → Security → Generate Token). No primeiro acesso ao SonarQube, criar o projeto com key `prospectiai` (igual a `sonar.projectKey` em `sonar-project.properties`).
+- **CI:** No GitHub, configurar secrets `SONAR_HOST_URL` (ex.: https://sonar.innexar.com.br) e `SONAR_TOKEN` (token gerado no SonarQube: My Account → Security → Generate Token). No primeiro acesso ao SonarQube, criar o projeto com key `Prospector-AI` (igual a `sonar.projectKey` em `sonar-project.properties`).
+- **Permissão "Execute Analysis":** Se o CI falhar com "You're not authorized to run analysis", no SonarQube vá em **Project** → **Prospector AI** → **Project Settings** → **Permissions** e conceda **Execute Analysis** ao usuário dono do token (ou ao grupo em que ele está).
