@@ -6,7 +6,8 @@ jest.mock('@/auth', () => ({ auth: jest.fn() }));
 jest.mock('@/lib/prisma', () => ({
   prisma: { user: { findUnique: jest.fn(), create: jest.fn() }, workspaceMember: { create: jest.fn() } },
 }));
-jest.mock('@/lib/email', () => ({ sendTeamInviteEmail: jest.fn() }));
+jest.mock('@/lib/email', () => ({ sendTeamInviteEmail: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/lib/notification-service', () => ({ createNotification: jest.fn().mockResolvedValue(undefined) }));
 
 describe('POST /api/team/invite', () => {
   beforeEach(() => { jest.clearAllMocks(); });
