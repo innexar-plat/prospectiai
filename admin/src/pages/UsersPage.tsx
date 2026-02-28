@@ -113,9 +113,9 @@ export function UsersPage() {
                     ) : (
                       <>
                         <td className="px-4 py-3 text-zinc-400">
-                          {u.onboardingCompletedAt ? 'Sim' : 'Não'}
+                          {(u as AdminUserListItem).onboardingCompletedAt ? 'Sim' : 'Não'}
                         </td>
-                        <td className="px-4 py-3 text-zinc-400">{'_count' in u ? u._count.workspaces : 0}</td>
+                        <td className="px-4 py-3 text-zinc-400">{(u as AdminUserListItem)._count.workspaces}</td>
                       </>
                     )}
                     <td className="px-4 py-3 text-zinc-500">

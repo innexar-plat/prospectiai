@@ -432,6 +432,20 @@ export default function LeadDetailPage() {
               </Button>
             </div>
           ) : (
+            (() => {
+              const scoreLabel = String(analysis.scoreLabel ?? 'Analítico');
+              const summary = String(analysis.summary ?? '');
+              const strengths = Array.isArray(analysis.strengths) ? analysis.strengths as string[] : [];
+              const gaps = Array.isArray(analysis.gaps) ? analysis.gaps as string[] : [];
+              const painPoints = Array.isArray(analysis.painPoints) ? analysis.painPoints as string[] : [];
+              const approach = analysis.approach != null ? String(analysis.approach) : '';
+              const socialMedia = analysis.socialMedia && typeof analysis.socialMedia === 'object' && !Array.isArray(analysis.socialMedia)
+                ? (analysis.socialMedia as Record<string, unknown>)
+                : {};
+              const suggestedWhatsAppMessage = analysis.suggestedWhatsAppMessage != null ? String(analysis.suggestedWhatsAppMessage) : '';
+              const firstContactMessage = analysis.firstContactMessage != null ? String(analysis.firstContactMessage) : '';
+              const fullReport = analysis.fullReport != null ? String(analysis.fullReport) : '';
+              return (
             <div className="space-y-8 pt-2">
               {/* Score Header */}
               <div className="flex items-center gap-4 p-4 rounded-xl bg-violet-500/10 border border-violet-500/20">
@@ -440,36 +454,36 @@ export default function LeadDetailPage() {
                 </div>
                 <div className="min-w-0">
                   <h3 className="text-lg font-bold text-foreground">
-                    Chance de Fechamento: <span className="text-violet-400">{analysis.scoreLabel || 'Analítico'}</span>
+                    Chance de Fechamento: <span className="text-violet-400">{scoreLabel}</span>
                   </h3>
                   {analysis.aiProvider && (
                     <p className="text-[10px] text-muted uppercase tracking-wider mt-0.5">IA: {getAnalysisProviderLabel(analysis.aiProvider)}</p>
                   )}
-                  <p className="text-xs text-muted mt-1 leading-relaxed">{analysis.summary}</p>
+                  <p className="text-xs text-muted mt-1 leading-relaxed">{summary}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {analysis.strengths && analysis.strengths.length > 0 && (
+                {strengths.length > 0 && (
                   <div className="space-y-2">
                     <h3 className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
                       <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> O que eles fazem bem
                     </h3>
                     <ul className="space-y-1.5">
-                      {analysis.strengths.map((s: string) => (
+                      {strengths.map((s) => (
                         <li key={`strength-${s.slice(0, 80)}`} className="text-sm text-foreground bg-surface p-2.5 rounded-lg border border-border/50 shadow-sm leading-relaxed">{s}</li>
                       ))}
                     </ul>
                   </div>
                 )}
 
-                {analysis.gaps && analysis.gaps.length > 0 && (
+                {gaps.length > 0 && (
                   <div className="space-y-2">
                     <h3 className="text-[10px] font-bold text-rose-400 uppercase tracking-widest flex items-center gap-1.5">
                       <div className="w-1.5 h-1.5 rounded-full bg-rose-500" /> Lacunas & Fragilidades
                     </h3>
                     <ul className="space-y-1.5">
-                      {analysis.gaps.map((w: string) => (
+                      {gaps.map((w) => (
                         <li key={`gap-${w.slice(0, 80)}`} className="text-sm text-foreground bg-surface p-2.5 rounded-lg border border-border/50 shadow-sm leading-relaxed">{w}</li>
                       ))}
                     </ul>
@@ -477,14 +491,14 @@ export default function LeadDetailPage() {
                 )}
               </div>
 
-              {analysis.painPoints && analysis.painPoints.length > 0 && (
+              {painPoints.length > 0 && (
                 <div className="space-y-2 pb-2">
                   <h3 className="text-[10px] font-bold text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
                     <div className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Dores Frequentes de Clientes
                   </h3>
                   <div className="flex flex-wrap gap-2 text-sm text-foreground border border-border/50 bg-surface rounded-lg p-4">
                     <ul className="list-disc pl-5 space-y-1.5">
-                      {analysis.painPoints.map((p: string) => (
+                      {painPoints.map((p) => (
                         <li key={`pain-${p.slice(0, 80)}`} className="leading-relaxed">{p}</li>
                       ))}
                     </ul>
@@ -494,26 +508,26 @@ export default function LeadDetailPage() {
 
               {/* Approach and Social */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-border pt-6">
-                {analysis.approach && (
+                {approach && (
                   <div className="space-y-2">
                     <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest">Estratégia de Abordagem</h3>
                     <div className="text-sm text-foreground p-4 bg-surface rounded-xl border border-border leading-relaxed border-l-4 border-l-cyan-500">
-                      {analysis.approach}
+                      {approach}
                     </div>
                   </div>
                 )}
-                {analysis.socialMedia && Object.keys(analysis.socialMedia).length > 0 && (
+                {Object.keys(socialMedia).length > 0 && (
                   <div className="space-y-2">
                     <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest">Redes Sociais Sugeridas/Encontradas</h3>
                     <div className="flex flex-col gap-2">
-                      {Object.entries(analysis.socialMedia).map(([platform, link]) => {
+                      {Object.entries(socialMedia).map(([platform, link]) => {
                         if (!link || String(link).toLowerCase() === 'não encontrado' || String(link).toLowerCase() === 'not found') return null;
                         return (
                           <a key={platform} href={String(link)} target="_blank" rel="noreferrer" className="text-sm font-medium hover:underline text-cyan-400 p-2.5 rounded-lg bg-surface border border-border inline-flex items-center justify-between group">
                             <span className="capitalize">{platform}</span>
                             <ExternalLink size={14} className="opacity-50 group-hover:opacity-100" />
                           </a>
-                        )
+                        );
                       })}
                     </div>
                   </div>
@@ -521,11 +535,11 @@ export default function LeadDetailPage() {
               </div>
 
               {/* Messages Textarea */}
-              {(analysis.firstContactMessage || analysis.suggestedWhatsAppMessage) && (
+              {(firstContactMessage || suggestedWhatsAppMessage) && (
                 <div className="space-y-4 border-t border-border pt-6">
                   <h3 className="text-xs font-bold text-foreground">Scripts Sugeridos</h3>
 
-                  {analysis.suggestedWhatsAppMessage && (
+                  {suggestedWhatsAppMessage && (
                     <div className="space-y-2">
                       <p className="text-[10px] font-bold text-green-400 uppercase tracking-widest">WhatsApp Direct (Conversacional)</p>
                       <div className="bg-surface/50 p-4 rounded-xl border border-border/50">
@@ -533,13 +547,13 @@ export default function LeadDetailPage() {
                           readOnly
                           className="w-full bg-transparent text-sm text-foreground resize-none border-0 focus:ring-0 p-0"
                           rows={4}
-                          defaultValue={analysis.suggestedWhatsAppMessage}
+                          defaultValue={suggestedWhatsAppMessage}
                         />
                       </div>
                     </div>
                   )}
 
-                  {analysis.firstContactMessage && (
+                  {firstContactMessage && (
                     <div className="space-y-2">
                       <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Email / LinkedIn Cold First Contact</p>
                       <div className="bg-surface/50 p-4 rounded-xl border border-border/50">
@@ -547,7 +561,7 @@ export default function LeadDetailPage() {
                           readOnly
                           className="w-full bg-transparent text-sm text-foreground resize-none border-0 focus:ring-0 p-0"
                           rows={6}
-                          defaultValue={analysis.firstContactMessage}
+                          defaultValue={firstContactMessage}
                         />
                       </div>
                     </div>
@@ -555,11 +569,11 @@ export default function LeadDetailPage() {
                 </div>
               )}
 
-              {analysis.fullReport && (
+              {fullReport && (
                 <div className="space-y-4 border-t border-border pt-6">
                   <h3 className="text-xs font-bold text-foreground">Relatório Completo (IA)</h3>
                   <div className="prose prose-sm prose-invert max-w-none text-muted p-6 bg-surface rounded-xl border border-border shadow-inner font-mono text-xs overflow-x-auto whitespace-pre-wrap">
-                    {analysis.fullReport}
+                    {fullReport}
                   </div>
                 </div>
               )}
@@ -570,6 +584,8 @@ export default function LeadDetailPage() {
                 </Button>
               </div>
             </div>
+              );
+            })()
           )}
         </section>
       </div>

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Brain, Rocket, Zap, ArrowRight, Shield, Globe, Download, Users, FileOutput, Lock, MapPin, BarChart3, Target, MessageSquare, TrendingUp, Tag, Swords, ChevronDown, Quote } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
-const DASHBOARD_VIDEO_SRC = '/dashboard-demo.mp4';
+const HERO_YOUTUBE_EMBED_URL = 'https://www.youtube.com/embed/N9pBT12i7nQ?si=iOe5HcG0qRz9fBvm';
 
 const TOOLS = [
     { keyTitle: 'landing.toolSearch', keyDesc: 'landing.toolSearchDesc', icon: Search },
@@ -40,7 +40,6 @@ const LANDING_FAQ = [
 
 export default function LandingPage({ onViewPlans, t }: { locale: string, onViewPlans: () => void, t: (key: string, options?: Record<string, unknown>) => string }) {
     const navigate = useNavigate();
-    const [videoFailed, setVideoFailed] = useState(false);
     const [faqOpenIndex, setFaqOpenIndex] = useState<number | null>(null);
 
     return (
@@ -103,32 +102,17 @@ export default function LandingPage({ onViewPlans, t }: { locale: string, onView
                                 <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/50" />
                                 <div className="w-2.5 h-2.5 rounded-full bg-green-500/50" />
                             </div>
-                            <div className="pt-10 h-full flex items-center justify-center p-8 absolute inset-0">
-                                {videoFailed ? (
-                                    <>
-                                        <div className="w-full max-w-md space-y-4 opacity-20">
-                                            <div className="h-4 bg-foreground/10 rounded-full w-3/4" />
-                                            <div className="h-4 bg-foreground/10 rounded-full w-1/2" />
-                                            <div className="h-4 bg-foreground/10 rounded-full w-full" />
-                                            <div className="pt-8 flex gap-4">
-                                                <div className="h-10 w-32 bg-violet-600/20 rounded-xl" />
-                                                <div className="h-10 w-32 bg-surface rounded-xl" />
-                                            </div>
-                                        </div>
-                                        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-card to-transparent pointer-events-none" />
-                                    </>
-                                ) : (
-                                    <video
-                                        className="w-full h-full object-cover"
-                                        src={DASHBOARD_VIDEO_SRC}
-                                        autoPlay
-                                        muted
-                                        loop
-                                        playsInline
-                                        aria-label="Demonstração da busca e resultados no dashboard do ProspectorAI"
-                                        onError={() => setVideoFailed(true)}
+                            <div className="pt-10 h-full flex items-center justify-center p-4 sm:p-8 absolute inset-0">
+                                <div className="w-full h-full min-h-0 rounded-xl overflow-hidden">
+                                    <iframe
+                                        className="w-full h-full min-h-0 rounded-lg"
+                                        src={HERO_YOUTUBE_EMBED_URL}
+                                        title="YouTube video player - ProspectorAI"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                        referrerPolicy="strict-origin-when-cross-origin"
+                                        allowFullScreen
                                     />
-                                )}
+                                </div>
                             </div>
                         </div>
                         <p className="mt-4 text-center text-sm text-muted font-medium max-w-xl mx-auto">

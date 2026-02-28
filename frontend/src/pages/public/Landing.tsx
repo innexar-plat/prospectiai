@@ -1,20 +1,21 @@
 'use client';
 
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import LandingPage from '@/components/landing/LandingPage';
-import Pricing from '@/components/dashboard/billing/Pricing';
 import Header from '@/components/layout/Header';
 import CookieConsent from '@/components/legal/CookieConsent';
 import { useI18n } from '@/lib/i18n';
 
 export default function PublicEntryClient({ locale: initialLocale }: { locale: string }) {
-    const { t, raw, locale, setLocale } = useI18n(initialLocale);
-    const [view, setView] = useState<'landing' | 'pricing'>('landing');
+    const { t, locale, setLocale } = useI18n(initialLocale);
+    const navigate = useNavigate();
 
     const switchLanguage = (lang: string) => {
         setLocale(lang);
     };
+
+    /** Planos/Assinar na landing levam ao cadastro; upgrade real fica em /dashboard/planos (após login). */
+    const goToSignupForPlans = () => navigate('/auth/signup');
 
     return (
         <div className="min-h-screen flex flex-col bg-background">
@@ -31,16 +32,12 @@ export default function PublicEntryClient({ locale: initialLocale }: { locale: s
                 resultsLength={0}
                 isPremiumPlan={false}
                 onExport={() => { }}
-                onPricingRedirect={() => setView('pricing')}
+                onPricingRedirect={goToSignupForPlans}
                 t={t}
             />
 
             <main id="main-content" className="flex-1 flex flex-col" role="main">
-                {view === 'pricing' ? (
-                    <Pricing locale={locale} currentPlan="FREE" onBack={() => setView('landing')} userEmail="" t={t} tRaw={raw} />
-                ) : (
-                    <LandingPage locale={locale} onViewPlans={() => setView('pricing')} t={t} />
-                )}
+                <LandingPage locale={locale} onViewPlans={goToSignupForPlans} t={t} />
             </main>
 
             <footer className="py-6 px-8 border-t border-border" role="contentinfo">
