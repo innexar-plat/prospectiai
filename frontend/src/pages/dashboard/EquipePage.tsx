@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Lock, Loader2, UserPlus, Trophy, Target, LayoutDashboard, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { Lock, Loader2, UserPlus, Trophy, Target, LayoutDashboard, AlertCircle, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import type { SessionUser } from '@/lib/api';
@@ -30,6 +31,13 @@ interface WorkspaceInfo {
     plan: string;
     leadsUsed: number;
     leadsLimit: number;
+}
+
+interface PendingInvitation {
+    id: string;
+    email: string;
+    createdAt: string;
+    lastSentAt: string;
 }
 
 interface DashboardMember {
@@ -82,18 +90,67 @@ export default function EquipePage() {
     const [viewMode, setViewMode] = useState<'ranking' | 'dashboard'>('ranking');
     const [dashboardData, setDashboardData] = useState<{ members: DashboardMember[]; totals: TeamTotals } | null>(null);
     const [loadingDashboard, setLoadingDashboard] = useState(false);
+    const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([]);
+    const [resendingId, setResendingId] = useState<string | null>(null);
+    const [, setCooldownTick] = useState(0);
+    const [actionsOpenId, setActionsOpenId] = useState<string | null>(null);
+    const [actionsMenuPosition, setActionsMenuPosition] = useState<{ top: number; left: number; width: number; openAbove: boolean; bottom?: number } | null>(null);
+    const [editModalMember, setEditModalMember] = useState<TeamMember | null>(null);
+    const [editRole, setEditRole] = useState<'MEMBER' | 'ADMIN'>('MEMBER');
+    const [savingRole, setSavingRole] = useState(false);
+    const [deleteConfirmMember, setDeleteConfirmMember] = useState<TeamMember | null>(null);
+    const [removing, setRemoving] = useState(false);
+    const actionsRef = useRef<HTMLDivElement>(null);
 
     const hasAccess = user.plan === 'SCALE';
     const isAdminOrOwner = members.some((m) => m.userId === user.id && (m.role === 'OWNER' || m.role === 'ADMIN'));
+    const RESEND_COOLDOWN_MS = 40_000;
+
+    useEffect(() => {
+        const anyCooldown = pendingInvitations.some((p) => Date.now() - new Date(p.lastSentAt).getTime() < RESEND_COOLDOWN_MS);
+        if (!anyCooldown) return;
+        const t = setInterval(() => setCooldownTick((n) => n + 1), 1000);
+        return () => clearInterval(t);
+    }, [pendingInvitations]);
+
+    const closeActionsMenu = () => {
+        setActionsOpenId(null);
+        setActionsMenuPosition(null);
+    };
+
+    useEffect(() => {
+        if (!actionsOpenId) return;
+        const onOutside = (e: MouseEvent) => {
+            const target = e.target as Node;
+            if (actionsRef.current?.contains(target)) return;
+            const portal = document.getElementById('team-actions-portal');
+            if (portal?.contains(target)) return;
+            closeActionsMenu();
+        };
+        document.addEventListener('click', onOutside);
+        return () => document.removeEventListener('click', onOutside);
+    }, [actionsOpenId]);
+
+    useEffect(() => {
+        if (!actionsOpenId) return;
+        const onScrollOrResize = () => closeActionsMenu();
+        window.addEventListener('scroll', onScrollOrResize, true);
+        window.addEventListener('resize', onScrollOrResize);
+        return () => {
+            window.removeEventListener('scroll', onScrollOrResize, true);
+            window.removeEventListener('resize', onScrollOrResize);
+        };
+    }, [actionsOpenId]);
 
     useEffect(() => {
         if (!hasAccess) { setLoading(false); return; }
         let cancelled = false;
-        request<{ members: TeamMember[]; workspace: WorkspaceInfo }>('/team')
+        request<{ members: TeamMember[]; workspace: WorkspaceInfo; pendingInvitations: PendingInvitation[] }>('/team')
             .then((data) => {
                 if (!cancelled) {
                     setMembers(data.members);
                     setWorkspace(data.workspace);
+                    setPendingInvitations(data.pendingInvitations ?? []);
                 }
             })
             .catch(() => {
@@ -127,17 +184,42 @@ export default function EquipePage() {
         if (!inviteEmail.trim()) return;
         setInviting(true);
         try {
-            await request('/team', { method: 'POST', body: JSON.stringify({ email: inviteEmail }) });
-            addToast('success', `Convite enviado para ${inviteEmail}!`);
+            const res = await request<{ ok: boolean; pendingInvite: PendingInvitation }>('/team', { method: 'POST', body: JSON.stringify({ email: inviteEmail.trim() }) });
+            addToast('success', `Convite enviado para ${inviteEmail}. A pessoa só entra na equipe após aceitar.`);
             setInviteEmail('');
             setShowInvite(false);
-            // Refresh members
-            const data = await request<{ members: TeamMember[]; workspace: WorkspaceInfo }>('/team');
+            if (res.pendingInvite) {
+                setPendingInvitations((prev) => [res.pendingInvite!, ...prev.filter((p) => p.email !== res.pendingInvite!.email)]);
+            }
+            const data = await request<{ members: TeamMember[]; workspace: WorkspaceInfo; pendingInvitations: PendingInvitation[] }>('/team');
             setMembers(data.members);
+            setPendingInvitations(data.pendingInvitations ?? []);
         } catch (err: unknown) {
             addToast('error', err instanceof Error ? err.message : 'Erro ao convidar.');
         } finally {
             setInviting(false);
+        }
+    };
+
+    const canResend = (lastSentAt: string) => Date.now() - new Date(lastSentAt).getTime() >= RESEND_COOLDOWN_MS;
+
+    const handleResendInvite = async (invitationId: string) => {
+        setResendingId(invitationId);
+        try {
+            await request<{ ok: boolean; lastSentAt: string }>('/team/invite/resend', {
+                method: 'POST',
+                body: JSON.stringify({ invitationId }),
+            });
+            addToast('success', 'Convite reenviado.');
+            setPendingInvitations((prev) =>
+                prev.map((p) =>
+                    p.id === invitationId ? { ...p, lastSentAt: new Date().toISOString() } : p
+                )
+            );
+        } catch (err: unknown) {
+            addToast('error', err instanceof Error ? err.message : 'Erro ao reenviar.');
+        } finally {
+            setResendingId(null);
         }
     };
 
@@ -172,6 +254,48 @@ export default function EquipePage() {
             addToast('error', err instanceof Error ? err.message : 'Erro ao salvar metas.');
         } finally {
             setSavingGoals(false);
+        }
+    };
+
+    const handleSaveRole = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editModalMember) return;
+        setSavingRole(true);
+        try {
+            await request('/team/role', {
+                method: 'PUT',
+                body: JSON.stringify({ memberId: editModalMember.id, role: editRole }),
+            });
+            addToast('success', 'Função atualizada.');
+            setEditModalMember(null);
+            const data = await request<{ members: TeamMember[]; workspace: WorkspaceInfo; pendingInvitations: PendingInvitation[] }>('/team');
+            setMembers(data.members);
+            if (data.pendingInvitations != null) setPendingInvitations(data.pendingInvitations);
+        } catch (err: unknown) {
+            addToast('error', err instanceof Error ? err.message : 'Erro ao atualizar função.');
+        } finally {
+            setSavingRole(false);
+        }
+    };
+
+    const handleRemoveMember = async () => {
+        if (!deleteConfirmMember) return;
+        setRemoving(true);
+        try {
+            await request('/team/remove', {
+                method: 'DELETE',
+                body: JSON.stringify({ userIdToRemove: deleteConfirmMember.userId }),
+            });
+            addToast('success', 'Membro removido da equipe.');
+            setDeleteConfirmMember(null);
+            setActionsOpenId(null);
+            const data = await request<{ members: TeamMember[]; workspace: WorkspaceInfo; pendingInvitations: PendingInvitation[] }>('/team');
+            setMembers(data.members);
+            if (data.pendingInvitations != null) setPendingInvitations(data.pendingInvitations);
+        } catch (err: unknown) {
+            addToast('error', err instanceof Error ? err.message : 'Erro ao remover.');
+        } finally {
+            setRemoving(false);
         }
     };
 
@@ -251,6 +375,41 @@ export default function EquipePage() {
                             {inviting ? 'Convidando...' : 'Enviar Convite'}
                         </Button>
                     </form>
+                )}
+
+                {/* Lista de convites pendentes: Convite enviado + Reenviar (40s) */}
+                {pendingInvitations.length > 0 && (
+                    <div className="rounded-3xl bg-card border border-amber-500/20 p-6 flex flex-col gap-3">
+                        <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Convites enviados (aguardando aceite)</h3>
+                        <ul className="space-y-2">
+                            {pendingInvitations.map((p) => {
+                                const cooldown = !canResend(p.lastSentAt);
+                                const secondsLeft = cooldown
+                                    ? Math.ceil((RESEND_COOLDOWN_MS - (Date.now() - new Date(p.lastSentAt).getTime())) / 1000)
+                                    : 0;
+                                return (
+                                    <li key={p.id} className="flex items-center justify-between gap-4 py-2 border-b border-border/50 last:border-0">
+                                        <span className="text-sm text-foreground">{p.email}</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-muted">Convite enviado</span>
+                                            <Button
+                                                type="button"
+                                                variant="secondary"
+                                                size="sm"
+                                                disabled={cooldown || resendingId === p.id}
+                                                onClick={() => handleResendInvite(p.id)}
+                                                icon={resendingId === p.id ? <Loader2 size={14} className="animate-spin" /> : undefined}
+                                                className="min-w-[100px]"
+                                            >
+                                                {resendingId === p.id ? 'Enviando...' : cooldown ? `Reenviar (${secondsLeft}s)` : 'Reenviar'}
+                                            </Button>
+                                        </div>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                        <p className="text-xs text-muted">A pessoa só entra na equipe após aceitar o convite pelo link do email.</p>
+                    </div>
                 )}
 
                 {loading ? (
@@ -433,16 +592,34 @@ export default function EquipePage() {
                                                     <td className="py-3 px-5 text-right tabular-nums text-muted">{m.monthlyConversionsGoal ?? '-'}</td>
                                                     {isAdminOrOwner && (
                                                         <td className="py-3 px-5">
-                                                            <Button
-                                                                type="button"
-                                                                variant="secondary"
-                                                                size="sm"
-                                                                icon={<Target size={14} />}
-                                                                onClick={() => openGoalsModal(m)}
-                                                                className="text-xs"
-                                                            >
-                                                                Metas
-                                                            </Button>
+                                                            <div className="flex justify-start" ref={actionsOpenId === m.id ? actionsRef : undefined}>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        if (actionsOpenId === m.id) {
+                                                                            closeActionsMenu();
+                                                                            return;
+                                                                        }
+                                                                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                                                        const spaceBelow = window.innerHeight - rect.bottom;
+                                                                        const menuHeightApprox = 150;
+                                                                        const openAbove = spaceBelow < menuHeightApprox;
+                                                                        setActionsMenuPosition({
+                                                                            top: rect.bottom + 4,
+                                                                            left: rect.left,
+                                                                            width: rect.width,
+                                                                            openAbove,
+                                                                            ...(openAbove && { bottom: window.innerHeight - rect.top + 4 }),
+                                                                        });
+                                                                        setActionsOpenId(m.id);
+                                                                    }}
+                                                                    className="p-2 rounded-lg border border-border bg-surface hover:bg-surface/80 text-muted hover:text-foreground transition-colors"
+                                                                    aria-label="Ações"
+                                                                >
+                                                                    <MoreVertical size={18} />
+                                                                </button>
+                                                            </div>
                                                         </td>
                                                     )}
                                                 </tr>
@@ -456,13 +633,13 @@ export default function EquipePage() {
                     </>
                 )}
 
-                {/* Goals modal */}
+                {/* Goals modal — responsivo, sem scroll horizontal */}
                 {goalsModalMember && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => !savingGoals && setGoalsModalMember(null)}>
-                        <div className="rounded-3xl bg-card border border-border shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
-                            <h3 className="text-lg font-bold text-foreground mb-1">Metas — {goalsModalMember.name || goalsModalMember.email}</h3>
-                            <p className="text-xs text-muted mb-4">Defina as metas diárias/mensais para este membro.</p>
-                            <form onSubmit={handleSaveGoals} className="space-y-4">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 overflow-y-auto" onClick={() => !savingGoals && setGoalsModalMember(null)}>
+                        <div className="my-auto w-full max-w-md rounded-2xl sm:rounded-3xl bg-card border border-border shadow-xl p-4 sm:p-6 max-h-[90dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                            <h3 className="text-base sm:text-lg font-bold text-foreground mb-1">Metas — {goalsModalMember.name || goalsModalMember.email}</h3>
+                            <p className="text-xs text-muted mb-3 sm:mb-4">Defina as metas diárias/mensais para este membro.</p>
+                            <form onSubmit={handleSaveGoals} className="space-y-3 sm:space-y-4">
                                 <div>
                                     <label className="block text-xs font-medium text-muted mb-1">Meta leads/dia</label>
                                     <input
@@ -471,7 +648,7 @@ export default function EquipePage() {
                                         max={500}
                                         value={goalsForm.dailyLeadsGoal}
                                         onChange={(e) => setGoalsForm((f) => ({ ...f, dailyLeadsGoal: e.target.value }))}
-                                        className="w-full h-11 bg-surface border border-border rounded-xl px-3 text-sm text-foreground"
+                                        className="w-full min-w-0 h-10 sm:h-11 bg-surface border border-border rounded-xl px-3 text-sm text-foreground"
                                     />
                                 </div>
                                 <div>
@@ -482,7 +659,7 @@ export default function EquipePage() {
                                         max={200}
                                         value={goalsForm.dailyAnalysesGoal}
                                         onChange={(e) => setGoalsForm((f) => ({ ...f, dailyAnalysesGoal: e.target.value }))}
-                                        className="w-full h-11 bg-surface border border-border rounded-xl px-3 text-sm text-foreground"
+                                        className="w-full min-w-0 h-10 sm:h-11 bg-surface border border-border rounded-xl px-3 text-sm text-foreground"
                                     />
                                 </div>
                                 <div>
@@ -493,16 +670,16 @@ export default function EquipePage() {
                                         max={1000}
                                         value={goalsForm.monthlyConversionsGoal}
                                         onChange={(e) => setGoalsForm((f) => ({ ...f, monthlyConversionsGoal: e.target.value }))}
-                                        className="w-full h-11 bg-surface border border-border rounded-xl px-3 text-sm text-foreground"
+                                        className="w-full min-w-0 h-10 sm:h-11 bg-surface border border-border rounded-xl px-3 text-sm text-foreground"
                                     />
                                 </div>
-                                <div className="flex gap-3 pt-2">
+                                <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-2">
                                     <Button
                                         type="button"
                                         variant="secondary"
                                         onClick={() => setGoalsModalMember(null)}
                                         disabled={savingGoals}
-                                        className="flex-1"
+                                        className="w-full sm:flex-1"
                                     >
                                         Cancelar
                                     </Button>
@@ -511,7 +688,7 @@ export default function EquipePage() {
                                         variant="primary"
                                         disabled={savingGoals}
                                         icon={savingGoals ? <Loader2 size={16} className="animate-spin" /> : undefined}
-                                        className="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 border-0"
+                                        className="w-full sm:flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 border-0"
                                     >
                                         {savingGoals ? 'Salvando...' : 'Salvar'}
                                     </Button>
@@ -520,6 +697,97 @@ export default function EquipePage() {
                         </div>
                     </div>
                 )}
+
+                {/* Edit role modal — responsivo */}
+                {editModalMember && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 overflow-y-auto" onClick={() => !savingRole && setEditModalMember(null)}>
+                        <div className="my-auto w-full max-w-sm rounded-2xl sm:rounded-3xl bg-card border border-border shadow-xl p-4 sm:p-6" onClick={(e) => e.stopPropagation()}>
+                            <h3 className="text-base sm:text-lg font-bold text-foreground mb-1">Editar função — {editModalMember.name || editModalMember.email}</h3>
+                            <p className="text-xs text-muted mb-3 sm:mb-4">Altere a função do membro na equipe.</p>
+                            <form onSubmit={handleSaveRole} className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-medium text-muted mb-1">Função</label>
+                                    <select
+                                        value={editRole}
+                                        onChange={(e) => setEditRole(e.target.value as 'MEMBER' | 'ADMIN')}
+                                        className="w-full min-w-0 h-10 sm:h-11 bg-surface border border-border rounded-xl px-3 text-sm text-foreground"
+                                    >
+                                        <option value="MEMBER">Membro</option>
+                                        {members.some((x) => x.userId === user.id && x.role === 'OWNER') && <option value="ADMIN">Admin</option>}
+                                    </select>
+                                </div>
+                                <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-2">
+                                    <Button type="button" variant="secondary" onClick={() => setEditModalMember(null)} disabled={savingRole} className="w-full sm:flex-1">Cancelar</Button>
+                                    <Button type="submit" variant="primary" disabled={savingRole} icon={savingRole ? <Loader2 size={16} className="animate-spin" /> : undefined} className="w-full sm:flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 border-0">
+                                        {savingRole ? 'Salvando...' : 'Salvar'}
+                                    </Button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* Delete confirm modal — responsivo */}
+                {deleteConfirmMember && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 overflow-y-auto" onClick={() => !removing && setDeleteConfirmMember(null)}>
+                        <div className="my-auto w-full max-w-sm rounded-2xl sm:rounded-3xl bg-card border border-border shadow-xl p-4 sm:p-6" onClick={(e) => e.stopPropagation()}>
+                            <h3 className="text-base sm:text-lg font-bold text-foreground mb-1">Remover da equipe</h3>
+                            <p className="text-sm text-muted mb-4">
+                                Remover <strong className="text-foreground">{deleteConfirmMember.name || deleteConfirmMember.email}</strong>? Esta ação não pode ser desfeita.
+                            </p>
+                            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
+                                <Button type="button" variant="secondary" onClick={() => setDeleteConfirmMember(null)} disabled={removing} className="w-full sm:flex-1">Cancelar</Button>
+                                <Button type="button" variant="primary" onClick={handleRemoveMember} disabled={removing} icon={removing ? <Loader2 size={16} className="animate-spin" /> : undefined} className="w-full sm:flex-1 bg-destructive hover:bg-destructive/90 border-0 text-destructive-foreground">
+                                    {removing ? 'Removendo...' : 'Remover'}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Menu de ações em portal (não cortado pelo overflow da tabela) */}
+                {actionsOpenId && actionsMenuPosition && typeof document !== 'undefined' && (() => {
+                    const m = members.find((x) => x.id === actionsOpenId);
+                    if (!m) return null;
+                    const left = Math.min(actionsMenuPosition.left, window.innerWidth - 180);
+                    const style = actionsMenuPosition.openAbove && actionsMenuPosition.bottom != null
+                        ? { bottom: actionsMenuPosition.bottom, left }
+                        : { top: actionsMenuPosition.top, left };
+                    return createPortal(
+                        <div
+                            id="team-actions-portal"
+                            className="fixed z-[100] min-w-[160px] rounded-xl border border-border bg-card shadow-xl py-1"
+                            style={style}
+                        >
+                            <button
+                                type="button"
+                                className="w-full px-4 py-2.5 text-left text-sm text-foreground hover:bg-surface flex items-center gap-2"
+                                onClick={() => { openGoalsModal(m); closeActionsMenu(); }}
+                            >
+                                <Target size={14} className="text-amber-500 shrink-0" /> Metas
+                            </button>
+                            {m.role !== 'OWNER' && (
+                                <>
+                                    <button
+                                        type="button"
+                                        className="w-full px-4 py-2.5 text-left text-sm text-foreground hover:bg-surface flex items-center gap-2"
+                                        onClick={() => { setEditModalMember(m); setEditRole(m.role === 'ADMIN' ? 'ADMIN' : 'MEMBER'); closeActionsMenu(); }}
+                                    >
+                                        <Pencil size={14} className="text-violet-400 shrink-0" /> Editar função
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="w-full px-4 py-2.5 text-left text-sm text-destructive hover:bg-destructive/10 flex items-center gap-2"
+                                        onClick={() => { setDeleteConfirmMember(m); closeActionsMenu(); }}
+                                    >
+                                        <Trash2 size={14} className="shrink-0" /> Remover
+                                    </button>
+                                </>
+                            )}
+                        </div>,
+                        document.body
+                    );
+                })()}
             </div>
         </>
     );

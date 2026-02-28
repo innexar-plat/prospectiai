@@ -4,10 +4,13 @@ const { prisma } = require('@/lib/prisma');
 const { sendTeamInviteEmail } = require('@/lib/email');
 jest.mock('@/auth', () => ({ auth: jest.fn() }));
 jest.mock('@/lib/prisma', () => ({
-  prisma: { user: { findUnique: jest.fn(), create: jest.fn() }, workspaceMember: { create: jest.fn() } },
+  prisma: {
+    user: { findUnique: jest.fn() },
+    workspaceMember: { findFirst: jest.fn() },
+    workspaceInvitation: { upsert: jest.fn() },
+  },
 }));
-jest.mock('@/lib/email', () => ({ sendTeamInviteEmail: jest.fn().mockResolvedValue(undefined) }));
-jest.mock('@/lib/notification-service', () => ({ createNotification: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('@/lib/email', () => ({ sendTeamInviteEmail: jest.fn().mockResolvedValue({ sent: true }) }));
 
 describe('POST /api/team/invite', () => {
   beforeEach(() => { jest.clearAllMocks(); });
@@ -22,7 +25,7 @@ describe('POST /api/team/invite', () => {
   });
   it('returns 400 when email invalid', async () => {
     auth.mockResolvedValue({ user: { id: 'u1' }, expires: '' });
-    prisma.user.findUnique.mockResolvedValue({ workspaces: [{ workspaceId: 'w1', role: 'OWNER' }] });
+    prisma.user.findUnique.mockResolvedValue({ name: 'Alice', workspaces: [{ workspaceId: 'w1', role: 'OWNER', workspace: { name: 'WS' } }] });
     const res = await POST(new Request('http://localhost/api/team/invite', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
@@ -41,26 +44,52 @@ describe('POST /api/team/invite', () => {
   });
   it('returns 403 when not OWNER or ADMIN', async () => {
     auth.mockResolvedValue({ user: { id: 'u1' }, expires: '' });
-    prisma.user.findUnique.mockResolvedValue({ workspaces: [{ workspaceId: 'w1', role: 'MEMBER' }] });
+    prisma.user.findUnique.mockResolvedValue({ workspaces: [{ workspaceId: 'w1', role: 'MEMBER', workspace: { name: 'WS' } }] });
     const res = await POST(new Request('http://localhost/api/team/invite', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: 'x@y.com' }),
     }));
     expect(res.status).toBe(403);
   });
-  it('returns 200 when invite succeeds', async () => {
+  it('returns 400 when user already in workspace', async () => {
     auth.mockResolvedValue({ user: { id: 'u1' }, expires: '' });
-    prisma.user.findUnique
-      .mockResolvedValueOnce({ name: 'Alice', email: 'alice@x.com', workspaces: [{ workspaceId: 'w1', role: 'OWNER', workspace: { name: 'My Workspace' } }] })
-      .mockResolvedValueOnce(null);
-    prisma.user.create.mockResolvedValue({ id: 'u2', email: 'new@x.com', name: 'new', workspaces: [] });
-    prisma.workspaceMember.create.mockResolvedValue({ id: 'wm1', userId: 'u2', user: { id: 'u2', name: 'new', email: 'new@x.com' } });
+    prisma.user.findUnique.mockResolvedValue({ name: 'Alice', workspaces: [{ workspaceId: 'w1', role: 'OWNER', workspace: { name: 'My Workspace' } }] });
+    prisma.workspaceMember.findFirst.mockResolvedValue({ id: 'wm1' });
+    const res = await POST(new Request('http://localhost/api/team/invite', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'new@x.com' }),
+    }));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ error: 'User is already in this workspace' });
+  });
+  it('returns 200 and creates pending invitation', async () => {
+    auth.mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    prisma.user.findUnique.mockResolvedValue({
+      name: 'Alice',
+      email: 'alice@x.com',
+      workspaces: [{ workspaceId: 'w1', role: 'OWNER', workspace: { name: 'My Workspace' } }],
+    });
+    prisma.workspaceMember.findFirst.mockResolvedValue(null);
+    prisma.workspaceInvitation.upsert.mockResolvedValue({
+      id: 'inv1',
+      email: 'new@x.com',
+      createdAt: new Date(),
+      lastSentAt: new Date(),
+    });
     const res = await POST(new Request('http://localhost/api/team/invite', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: 'new@x.com' }),
     }));
     expect(res.status).toBe(200);
-    expect(prisma.workspaceMember.create).toHaveBeenCalled();
-    expect(sendTeamInviteEmail).toHaveBeenCalledWith('new@x.com', 'Alice', 'My Workspace');
+    expect(prisma.workspaceInvitation.upsert).toHaveBeenCalled();
+    expect(sendTeamInviteEmail).toHaveBeenCalledWith(
+      'new@x.com',
+      'Alice',
+      'My Workspace',
+      expect.stringMatching(/\/accept-invite\?token=/)
+    );
+    const data = await res.json();
+    expect(data.ok).toBe(true);
+    expect(data.pendingInvite).toMatchObject({ email: 'new@x.com' });
   });
 });

@@ -163,20 +163,22 @@ describe('email lib', () => {
   });
 
   describe('sendTeamInviteEmail', () => {
-    it('builds subject and body with inviter and workspace name', async () => {
+    it('builds subject and body with inviter, workspace name and accept URL', async () => {
       process.env.RESEND_API_KEY = 're_xxx';
       mockSend.mockResolvedValue({ data: {}, error: null });
-      const result = await sendTeamInviteEmail('m@x.com', 'Alice', 'Acme');
+      const acceptUrl = 'https://app.example.com/accept-invite?token=abc';
+      const result = await sendTeamInviteEmail('m@x.com', 'Alice', 'Acme', acceptUrl);
       expect(result.sent).toBe(true);
       expect(mockSend).toHaveBeenCalledWith(
         expect.objectContaining({
           to: ['m@x.com'],
-          subject: 'Você foi adicionado ao workspace "Acme" – ProspectorAI',
+          subject: 'Convite para o workspace "Acme" – ProspectorAI',
         })
       );
       const html = mockSend.mock.calls[0][0].html;
       expect(html).toContain('Alice');
       expect(html).toContain('Acme');
+      expect(html).toContain(acceptUrl);
     });
   });
 });

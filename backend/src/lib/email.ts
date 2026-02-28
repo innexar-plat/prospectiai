@@ -143,14 +143,14 @@ export async function sendVerificationEmail(to: string, token: string): Promise<
 }
 
 /**
- * Send team invite notification (you were added to workspace X by Y).
+ * Send team invite email with accept link. User joins workspace only after accepting.
  */
 export async function sendTeamInviteEmail(
   to: string,
   inviterName: string,
-  workspaceName: string
+  workspaceName: string,
+  acceptInviteUrl: string
 ): Promise<SendResult> {
-  const loginUrl = `${SITE_URL.replace(/\/$/, '')}/auth/signin`;
-  const html = teamInviteTemplate(inviterName, workspaceName, loginUrl);
-  return sendEmail(to, `Você foi adicionado ao workspace "${workspaceName}" – ProspectorAI`, html);
+  const html = teamInviteTemplate(inviterName, workspaceName, acceptInviteUrl);
+  return sendEmail(to, `Convite para o workspace "${workspaceName}" – ProspectorAI`, html);
 }

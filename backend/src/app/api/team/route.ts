@@ -1,9 +1,14 @@
 import { NextRequest } from 'next/server';
+import crypto from 'crypto';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { getOrCreateRequestId, jsonWithRequestId } from '@/lib/request-id';
 import type { ProductPlan } from '@/lib/product-modules';
+import { sendTeamInviteEmail } from '@/lib/email';
+import { logger } from '@/lib/logger';
 import { z } from 'zod';
+
+const SITE_URL = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
 // GET /api/team/members — list workspace members + stats
 export async function GET(req: NextRequest) {
@@ -82,6 +87,12 @@ export async function GET(req: NextRequest) {
             monthlyConversionsGoal: m.monthlyConversionsGoal ?? null,
         }));
 
+        const pendingInvitations = await prisma.workspaceInvitation.findMany({
+            where: { workspaceId: membership.workspaceId, status: 'PENDING' },
+            orderBy: { createdAt: 'desc' },
+            select: { id: true, email: true, createdAt: true, lastSentAt: true },
+        });
+
         return jsonWithRequestId({
             members: result,
             workspace: {
@@ -91,6 +102,12 @@ export async function GET(req: NextRequest) {
                 leadsUsed: membership.workspace.leadsUsed,
                 leadsLimit: membership.workspace.leadsLimit,
             },
+            pendingInvitations: pendingInvitations.map((p) => ({
+                id: p.id,
+                email: p.email,
+                createdAt: p.createdAt.toISOString(),
+                lastSentAt: p.lastSentAt.toISOString(),
+            })),
         }, { requestId });
     } catch (err) {
         const { logger } = await import('@/lib/logger');
@@ -99,7 +116,7 @@ export async function GET(req: NextRequest) {
     }
 }
 
-// POST /api/team — invite a new member
+// POST /api/team — create pending invitation and send email; user joins only after accepting
 export async function POST(req: NextRequest) {
     const requestId = getOrCreateRequestId(req);
     try {
@@ -110,7 +127,7 @@ export async function POST(req: NextRequest) {
 
         const body = await req.json();
         const schema = z.object({
-            email: z.string().email(),
+            email: z.string().email().transform((s) => s.trim().toLowerCase()),
             role: z.enum(['MEMBER', 'ADMIN']).optional().default('MEMBER'),
         });
 
@@ -119,7 +136,6 @@ export async function POST(req: NextRequest) {
             return jsonWithRequestId({ error: 'Email inválido' }, { status: 400, requestId });
         }
 
-        // Verify caller is OWNER or ADMIN
         const callerMembership = await prisma.workspaceMember.findFirst({
             where: { userId: session.user.id },
             include: { workspace: true },
@@ -134,56 +150,62 @@ export async function POST(req: NextRequest) {
             return jsonWithRequestId({ error: 'Team management requires Scale plan' }, { status: 403, requestId });
         }
 
-        // Find or create user
-        let invitedUser = await prisma.user.findUnique({
-            where: { email: parsed.data.email },
-        });
+        const email = parsed.data.email;
+        const workspaceId = callerMembership.workspaceId;
+        const inviterName = session.user.name ?? session.user.email ?? 'A team member';
+        const workspaceName = callerMembership.workspace.name ?? 'Workspace';
 
-        if (!invitedUser) {
-            // Auto-create user as part of the workspace
-            invitedUser = await prisma.user.create({
-                data: {
-                    email: parsed.data.email,
-                    name: parsed.data.email.split('@')[0],
-                    plan: callerMembership.workspace.plan,
-                },
-            });
-        }
-
-        // Check if already a member
-        const existing = await prisma.workspaceMember.findUnique({
+        const existingMember = await prisma.workspaceMember.findFirst({
             where: {
-                userId_workspaceId: {
-                    userId: invitedUser.id,
-                    workspaceId: callerMembership.workspaceId,
-                },
+                workspaceId,
+                user: { email },
             },
         });
-
-        if (existing) {
+        if (existingMember) {
             return jsonWithRequestId({ error: 'Usuário já é membro do workspace' }, { status: 409, requestId });
         }
 
-        // Add member
-        const newMember = await prisma.workspaceMember.create({
-            data: {
-                userId: invitedUser.id,
-                workspaceId: callerMembership.workspaceId,
-                role: parsed.data.role,
+        const token = crypto.randomBytes(32).toString('hex');
+        const baseUrl = SITE_URL.replace(/\/$/, '');
+        const acceptInviteUrl = `${baseUrl}/accept-invite?token=${encodeURIComponent(token)}`;
+
+        const invitation = await prisma.workspaceInvitation.upsert({
+            where: {
+                email_workspaceId: { email, workspaceId },
             },
-            include: {
-                user: { select: { id: true, name: true, email: true, image: true } },
+            create: {
+                email,
+                workspaceId,
+                invitedById: session.user.id,
+                token,
+                status: 'PENDING',
+            },
+            update: {
+                token,
+                lastSentAt: new Date(),
+                status: 'PENDING',
             },
         });
 
+        sendTeamInviteEmail(email, inviterName, workspaceName, acceptInviteUrl)
+            .then((result) => {
+                if (!result.sent) {
+                    logger.warn('Team invite email not sent', { email, reason: result.error ?? 'no config' }, requestId);
+                } else {
+                    logger.info('Team invite email sent', { email }, requestId);
+                }
+            })
+            .catch((err) => {
+                logger.error('Team invite email failed', { email, error: err instanceof Error ? err.message : 'Unknown' }, requestId);
+            });
+
         return jsonWithRequestId({
             ok: true,
-            member: {
-                id: newMember.id,
-                userId: newMember.user.id,
-                name: newMember.user.name,
-                email: newMember.user.email,
-                role: newMember.role,
+            pendingInvite: {
+                id: invitation.id,
+                email: invitation.email,
+                createdAt: invitation.createdAt.toISOString(),
+                lastSentAt: invitation.lastSentAt.toISOString(),
             },
         }, { requestId });
     } catch (err) {

@@ -164,19 +164,19 @@ export function verificationTemplate(verifyLink: string): string {
 }
 
 /**
- * Team invite template (you were added to workspace X by Y). Names escaped for safety.
+ * Team invite template (convite para workspace X por Y). Link = aceitar convite (com token).
  */
-export function teamInviteTemplate(inviterName: string, workspaceName: string, loginUrl: string): string {
+export function teamInviteTemplate(inviterName: string, workspaceName: string, acceptInviteUrl: string): string {
   const safeInviter = escapeHtml(inviterName);
   const safeWorkspace = escapeHtml(workspaceName);
   return buildEmail({
-    title: `Você foi adicionado ao workspace "${safeWorkspace}"`,
+    title: `Convite para o workspace "${safeWorkspace}"`,
     body: [
-      `${safeInviter} adicionou você ao workspace "${safeWorkspace}".`,
-      'Acesse o painel para começar a usar o ProspectorAI.',
+      `${safeInviter} convidou você para o workspace "${safeWorkspace}".`,
+      'Clique no botão abaixo para aceitar o convite e entrar na equipe.',
     ],
-    ctaHref: loginUrl,
-    ctaLabel: 'Acessar ProspectorAI',
+    ctaHref: acceptInviteUrl,
+    ctaLabel: 'Aceitar convite',
   });
 }
 

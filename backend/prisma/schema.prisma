@@ -100,11 +100,12 @@ model User {
   sessions      Session[]
   
   // App Relations
-  workspaces       WorkspaceMember[]
-  analyses         LeadAnalysis[]
-  searchHistory    SearchHistory[]
-  tags             LeadTag[]
-  notifications    Notification[]
+  workspaces           WorkspaceMember[]
+  workspaceInvitations WorkspaceInvitation[] @relation("Inviter")
+  analyses             LeadAnalysis[]
+  searchHistory        SearchHistory[]
+  tags                 LeadTag[]
+  notifications        Notification[]
 }
 
 model Account {
@@ -174,6 +175,7 @@ model Workspace {
   logoUrl        String?
 
   members              WorkspaceMember[]
+  invitations          WorkspaceInvitation[]
   analyses             LeadAnalysis[]
   searchHistory        SearchHistory[]
   usageEvents          UsageEvent[]
@@ -197,6 +199,26 @@ model WorkspaceMember {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([userId, workspaceId])
+}
+
+/// Convite pendente para workspace. Usuário só vira membro ao aceitar (link no email).
+model WorkspaceInvitation {
+  id           String   @id @default(cuid())
+  email        String
+  workspaceId  String
+  invitedById  String
+  token        String   @unique
+  status       String   @default("PENDING") // PENDING | ACCEPTED | EXPIRED
+  lastSentAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  inviter   User      @relation("Inviter", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@unique([email, workspaceId])
+  @@index([token])
+  @@index([workspaceId])
 }
 
 model Lead {

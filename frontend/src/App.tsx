@@ -24,6 +24,7 @@ import EquipePage from './pages/dashboard/EquipePage';
 import EquipeDashboardPage from './pages/dashboard/EquipeDashboardPage';
 import PlanosPage from './pages/dashboard/PlanosPage';
 import SuportePage from './pages/dashboard/SuportePage';
+import { AcceptInvitePage } from './pages/AcceptInvitePage';
 import Privacy from './pages/legal/Privacy';
 import Terms from './pages/legal/Terms';
 import SeoLandingPage from './pages/seo/SeoLandingPage';
@@ -92,6 +93,7 @@ function App() {
         <Route path="/en/billing/success" element={billingSuccessElement} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
+        <Route path="/accept-invite" element={<AcceptInvitePage user={user} />} />
         <Route path="/auth/signin" element={user ? <Navigate to="/onboarding" replace /> : <SignIn />} />
         <Route path="/auth/signup" element={user ? <Navigate to="/onboarding" replace /> : <SignUp />} />
         <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
