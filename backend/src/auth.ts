@@ -82,12 +82,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     callbacks: {
         async session({ session, token }) {
             if (!session.user) return session;
-            if (token.id) session.user.id = token.id as string;
-            if (token.email) session.user.email = token.email as string;
+            if (token.id) session.user.id = String(token.id);
+            if (token.email) session.user.email = String(token.email);
             if (!session.user.email && token.id) {
                 const dbUser = await prisma.user.findUnique({
-                    where: { id: token.id as string },
-                    select: { email: true, name: true, image: true },
+where: { id: String(token.id) },
+                select: { email: true, name: true, image: true },
                 });
                 if (dbUser?.email) {
                     session.user.email = dbUser.email;
@@ -125,16 +125,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 token.email = user.email ?? token.email;
                 token.name = user.name ?? token.name;
                 token.picture = user.image ?? token.picture;
-                token.role = getPanelRole({ user: { email: user.email ?? undefined } } as Session);
+                token.role = getPanelRole({ user: { email: user.email ?? undefined }, expires: '' });
             }
             if (!token.role && token.id) {
                 const dbUser = await prisma.user.findUnique({
-                    where: { id: token.id as string },
+                    where: { id: String(token.id) },
                     select: { email: true },
                 });
                 if (dbUser?.email) {
                     token.email = dbUser.email;
-                    token.role = getPanelRole({ user: { email: dbUser.email } } as Session);
+                    token.role = getPanelRole({ user: { email: dbUser.email }, expires: '' });
                 }
             }
             return token;

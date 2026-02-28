@@ -216,8 +216,8 @@ export default function PlanosPage() {
                                             <span className="text-xs text-muted">/mês</span>
                                         </div>
                                         <ul className="text-xs text-muted space-y-2 flex-1">
-                                            {features.map((f, i) => (
-                                                <li key={i} className="flex items-start gap-2">
+                                            {features.map((f) => (
+                                                <li key={`${plan.key}-feat-${f}`} className="flex items-start gap-2">
                                                     <Check size={14} className="text-emerald-400 shrink-0 mt-0.5" />
                                                     <span>{f}</span>
                                                 </li>
@@ -269,8 +269,8 @@ export default function PlanosPage() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {FEATURE_MATRIX.map((row, i) => (
-                                    <tr key={i} className="border-b border-border/30 hover:bg-surface/30">
+                                {FEATURE_MATRIX.map((row) => (
+                                    <tr key={`row-${row.feature}`} className="border-b border-border/30 hover:bg-surface/30">
                                         <td className="py-2.5 px-5 text-xs text-foreground">{row.feature}</td>
                                         {plans.map((plan) => {
                                             const val = row[plan.key];

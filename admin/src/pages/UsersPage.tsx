@@ -108,14 +108,14 @@ export function UsersPage() {
                     <td className="px-4 py-3 text-zinc-400">{u.plan}</td>
                     {isSupport ? (
                       <td className="px-4 py-3 text-zinc-400">
-                        {(u as SupportUserListItem).disabledAt ? 'Desativado' : 'Ativo'}
+                        {u.disabledAt ? 'Desativado' : 'Ativo'}
                       </td>
                     ) : (
                       <>
                         <td className="px-4 py-3 text-zinc-400">
-                          {(u as AdminUserListItem).onboardingCompletedAt ? 'Sim' : 'Não'}
+                          {u.onboardingCompletedAt ? 'Sim' : 'Não'}
                         </td>
-                        <td className="px-4 py-3 text-zinc-400">{(u as AdminUserListItem)._count.workspaces}</td>
+                        <td className="px-4 py-3 text-zinc-400">{'_count' in u ? u._count.workspaces : 0}</td>
                       </>
                     )}
                     <td className="px-4 py-3 text-zinc-500">

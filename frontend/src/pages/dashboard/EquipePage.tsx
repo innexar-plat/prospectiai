@@ -189,7 +189,8 @@ export default function EquipePage() {
             setInviteEmail('');
             setShowInvite(false);
             if (res.pendingInvite) {
-                setPendingInvitations((prev) => [res.pendingInvite!, ...prev.filter((p) => p.email !== res.pendingInvite!.email)]);
+                const invite = res.pendingInvite;
+                setPendingInvitations((prev) => invite ? [invite, ...prev.filter((p) => p.email !== invite.email)] : prev);
             }
             const data = await request<{ members: TeamMember[]; workspace: WorkspaceInfo; pendingInvitations: PendingInvitation[] }>('/team');
             setMembers(data.members);

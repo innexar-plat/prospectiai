@@ -152,8 +152,8 @@ export default function RelatoriosPage() {
                       <TrendingUp size={12} /> Tendências
                     </h4>
                     <ul className="space-y-2">
-                      {report.aiInsights.marketTrends.map((t, i) => (
-                        <li key={i} className="text-xs text-muted flex items-start gap-2"><span className="text-violet-400 shrink-0 mt-0.5">→</span>{t}</li>
+                      {report.aiInsights.marketTrends.map((t) => (
+                        <li key={`trend-${String(t).slice(0, 80)}`} className="text-xs text-muted flex items-start gap-2"><span className="text-violet-400 shrink-0 mt-0.5">→</span>{t}</li>
                       ))}
                     </ul>
                   </div>
@@ -162,8 +162,8 @@ export default function RelatoriosPage() {
                       <Target size={12} /> Oportunidades
                     </h4>
                     <ul className="space-y-2">
-                      {report.aiInsights.opportunities.map((o, i) => (
-                        <li key={i} className="text-xs text-muted flex items-start gap-2"><span className="text-emerald-400 shrink-0 mt-0.5">→</span>{o}</li>
+                      {report.aiInsights.opportunities.map((o) => (
+                        <li key={`opp-${String(o).slice(0, 80)}`} className="text-xs text-muted flex items-start gap-2"><span className="text-emerald-400 shrink-0 mt-0.5">→</span>{o}</li>
                       ))}
                     </ul>
                   </div>
@@ -172,8 +172,8 @@ export default function RelatoriosPage() {
                       <Lightbulb size={12} /> Recomendações
                     </h4>
                     <ul className="space-y-2">
-                      {report.aiInsights.recommendations.map((r, i) => (
-                        <li key={i} className="text-xs text-muted flex items-start gap-2"><span className="text-amber-400 shrink-0 mt-0.5">→</span>{r}</li>
+                      {report.aiInsights.recommendations.map((r) => (
+                        <li key={`rec-${String(r).slice(0, 80)}`} className="text-xs text-muted flex items-start gap-2"><span className="text-amber-400 shrink-0 mt-0.5">→</span>{r}</li>
                       ))}
                     </ul>
                   </div>

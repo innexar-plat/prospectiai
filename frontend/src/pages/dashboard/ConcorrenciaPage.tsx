@@ -237,8 +237,8 @@ export default function ConcorrenciaPage() {
                                         <Shield size={16} className="text-violet-400" /> SEO Local — Checklist
                                     </h3>
                                     <ul className="space-y-2.5">
-                                        {data.aiPlaybook.seoChecklist.map((item, i) => (
-                                            <li key={`seo-${i}-${String(item).slice(0, 40)}`} className="flex items-start gap-2 text-sm text-muted">
+                                        {data.aiPlaybook.seoChecklist.map((item) => (
+                                            <li key={`seo-${String(item).slice(0, 80)}`} className="flex items-start gap-2 text-sm text-muted">
                                                 <CheckCircle2 size={14} className="text-violet-400 shrink-0 mt-0.5" />{item}
                                             </li>
                                         ))}
@@ -249,8 +249,8 @@ export default function ConcorrenciaPage() {
                                         <Star size={16} className="text-amber-400" /> Estratégia de Reviews
                                     </h3>
                                     <ul className="space-y-2.5">
-                                        {data.aiPlaybook.reviewStrategy.map((item, i) => (
-                                            <li key={`review-${i}-${String(item).slice(0, 40)}`} className="flex items-start gap-2 text-sm text-muted">
+                                        {data.aiPlaybook.reviewStrategy.map((item) => (
+                                            <li key={`review-${String(item).slice(0, 80)}`} className="flex items-start gap-2 text-sm text-muted">
                                                 <CheckCircle2 size={14} className="text-amber-400 shrink-0 mt-0.5" />{item}
                                             </li>
                                         ))}
@@ -261,8 +261,8 @@ export default function ConcorrenciaPage() {
                                         <Zap size={16} className="text-emerald-400" /> Quick Wins (24-72h)
                                     </h3>
                                     <ul className="space-y-2.5">
-                                        {data.aiPlaybook.quickWins.map((item, i) => (
-                                            <li key={`quick-${i}-${String(item).slice(0, 40)}`} className="flex items-start gap-2 text-sm text-muted">
+                                        {data.aiPlaybook.quickWins.map((item) => (
+                                            <li key={`quick-${String(item).slice(0, 80)}`} className="flex items-start gap-2 text-sm text-muted">
                                                 <Zap size={14} className="text-emerald-400 shrink-0 mt-0.5" />{item}
                                             </li>
                                         ))}

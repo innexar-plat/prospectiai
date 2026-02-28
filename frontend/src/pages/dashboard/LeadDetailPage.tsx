@@ -145,20 +145,21 @@ export default function LeadDetailPage() {
     const name = place.displayName?.text ?? place.id;
     setAnalyzing(true);
     try {
-      const placeDetail = place as PlaceDetail & { reviews?: Array<{ rating: number; text?: { text: string }; authorAttribution?: { displayName: string }; relativePublishTimeDescription?: string }> };
+      type PlaceWithReviews = PlaceDetail & { reviews?: Array<{ rating: number; text?: { text: string }; authorAttribution?: { displayName: string }; relativePublishTimeDescription?: string }>; website?: string; primaryType?: string };
+      const placeDetail = place as PlaceWithReviews;
       const result = await searchApi.analyze({
         placeId: place.id,
         name,
         locale: 'pt-BR',
         websiteUri: placeDetail.websiteUri ?? undefined,
-        website: (placeDetail as { website?: string }).website ?? undefined,
+        website: placeDetail.website ?? undefined,
         formattedAddress: placeDetail.formattedAddress ?? undefined,
         nationalPhoneNumber: placeDetail.nationalPhoneNumber ?? undefined,
         internationalPhoneNumber: placeDetail.internationalPhoneNumber ?? undefined,
         rating: placeDetail.rating ?? undefined,
         userRatingCount: placeDetail.userRatingCount ?? undefined,
         types: placeDetail.types ?? undefined,
-        primaryType: (placeDetail as { primaryType?: string }).primaryType ?? undefined,
+        primaryType: placeDetail.primaryType ?? undefined,
         businessStatus: placeDetail.businessStatus ?? undefined,
         reviews: placeDetail.reviews ?? undefined,
       });
@@ -449,8 +450,8 @@ export default function LeadDetailPage() {
                       <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> O que eles fazem bem
                     </h3>
                     <ul className="space-y-1.5">
-                      {analysis.strengths.map((s: string, i: number) => (
-                        <li key={i} className="text-sm text-foreground bg-surface p-2.5 rounded-lg border border-border/50 shadow-sm leading-relaxed">{s}</li>
+                      {analysis.strengths.map((s: string) => (
+                        <li key={`strength-${s.slice(0, 80)}`} className="text-sm text-foreground bg-surface p-2.5 rounded-lg border border-border/50 shadow-sm leading-relaxed">{s}</li>
                       ))}
                     </ul>
                   </div>
@@ -462,8 +463,8 @@ export default function LeadDetailPage() {
                       <div className="w-1.5 h-1.5 rounded-full bg-rose-500" /> Lacunas & Fragilidades
                     </h3>
                     <ul className="space-y-1.5">
-                      {analysis.gaps.map((w: string, i: number) => (
-                        <li key={i} className="text-sm text-foreground bg-surface p-2.5 rounded-lg border border-border/50 shadow-sm leading-relaxed">{w}</li>
+                      {analysis.gaps.map((w: string) => (
+                        <li key={`gap-${w.slice(0, 80)}`} className="text-sm text-foreground bg-surface p-2.5 rounded-lg border border-border/50 shadow-sm leading-relaxed">{w}</li>
                       ))}
                     </ul>
                   </div>
@@ -477,8 +478,8 @@ export default function LeadDetailPage() {
                   </h3>
                   <div className="flex flex-wrap gap-2 text-sm text-foreground border border-border/50 bg-surface rounded-lg p-4">
                     <ul className="list-disc pl-5 space-y-1.5">
-                      {analysis.painPoints.map((p: string, i: number) => (
-                        <li key={i} className="leading-relaxed">{p}</li>
+                      {analysis.painPoints.map((p: string) => (
+                        <li key={`pain-${p.slice(0, 80)}`} className="leading-relaxed">{p}</li>
                       ))}
                     </ul>
                   </div>

@@ -287,8 +287,8 @@ export default function MinhaEmpresaPage() {
                                     <CheckCircle2 size={16} className="text-emerald-400" /> Pontos fortes
                                 </h3>
                                 <ul className="space-y-2">
-                                    {report.strengths.map((s, i) => (
-                                        <li key={i} className="flex items-start gap-2 text-sm text-muted">
+                                    {report.strengths.map((s) => (
+                                        <li key={`strength-${String(s).slice(0, 80)}`} className="flex items-start gap-2 text-sm text-muted">
                                             <span className="w-5 h-5 rounded bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
                                                 <CheckCircle2 size={12} className="text-emerald-400" />
                                             </span>
@@ -302,8 +302,8 @@ export default function MinhaEmpresaPage() {
                                     <AlertTriangle size={16} className="text-amber-400" /> Pontos fracos
                                 </h3>
                                 <ul className="space-y-2">
-                                    {report.weaknesses.map((w, i) => (
-                                        <li key={i} className="flex items-start gap-2 text-sm text-muted">
+                                    {report.weaknesses.map((w) => (
+                                        <li key={`weak-${String(w).slice(0, 80)}`} className="flex items-start gap-2 text-sm text-muted">
                                             <span className="w-5 h-5 rounded bg-amber-500/10 flex items-center justify-center shrink-0 mt-0.5">
                                                 <AlertTriangle size={12} className="text-amber-400" />
                                             </span>
@@ -363,8 +363,8 @@ export default function MinhaEmpresaPage() {
                                 <p className="text-sm text-muted mb-4">{report.socialNetworks.presence}</p>
                                 {report.socialNetworks.perNetwork && report.socialNetworks.perNetwork.length > 0 && (
                                     <div className="space-y-3">
-                                        {report.socialNetworks.perNetwork.map((n, i) => (
-                                            <div key={i} className="p-4 bg-surface rounded-xl border border-border/50">
+                                        {report.socialNetworks.perNetwork.map((n) => (
+                                            <div key={`network-${n.network}-${n.link ?? ''}`} className="p-4 bg-surface rounded-xl border border-border/50">
                                                 <p className="font-bold text-foreground text-sm mb-1">{n.network}</p>
                                                 {n.link && <p className="text-xs text-muted flex items-center gap-1 mb-1"><LinkIcon size={10} /> {n.link}</p>}
                                                 {n.found && <p className="text-sm text-muted mb-1">{n.found}</p>}
@@ -409,7 +409,7 @@ export default function MinhaEmpresaPage() {
                             </h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 {report.recommendations.map((rec, i) => (
-                                    <div key={i} className="flex items-start gap-3 p-4 bg-surface rounded-xl border border-border/50">
+                                    <div key={`recommendation-${String(rec).slice(0, 80)}`} className="flex items-start gap-3 p-4 bg-surface rounded-xl border border-border/50">
                                         <span className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center font-bold text-xs text-amber-400 shrink-0">{i + 1}</span>
                                         <p className="text-sm text-muted">{rec}</p>
                                     </div>

@@ -4,6 +4,36 @@ import { prisma } from "@/lib/prisma"
 import { onboardingCompleteSchema, formatZodError } from "@/lib/validations/schemas"
 import { logger } from "@/lib/logger"
 
+async function ensureWorkspaceMembership(userId: string) {
+    let membership = await prisma.workspaceMember.findFirst({
+        where: { userId },
+        select: { workspaceId: true },
+    });
+    if (!membership) {
+        const existingUser = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { name: true },
+        });
+        const userName = existingUser?.name ?? null;
+        const workspaceName = (userName && String(userName).trim())
+            ? `${String(userName).trim()} - Workspace`
+            : "Meu Workspace";
+        await prisma.$transaction(async (tx) => {
+            const workspace = await tx.workspace.create({
+                data: { name: workspaceName, plan: "FREE", leadsLimit: 10, leadsUsed: 0 },
+            });
+            await tx.workspaceMember.create({
+                data: { userId, workspaceId: workspace.id, role: "OWNER" },
+            });
+        });
+        membership = await prisma.workspaceMember.findFirst({
+            where: { userId },
+            select: { workspaceId: true },
+        });
+    }
+    return membership;
+}
+
 /**
  * POST /api/onboarding/complete
  * Conclui o onboarding: atualiza perfil do negócio e marca onboardingCompletedAt.
@@ -25,35 +55,9 @@ export async function POST(req: Request) {
         }
         const { companyName, productService, targetAudience, mainBenefit } = parsed.data
 
-        let membership = await prisma.workspaceMember.findFirst({
-            where: { userId: session.user.id },
-            select: { workspaceId: true },
-        })
+        const membership = await ensureWorkspaceMembership(session.user.id);
         if (!membership) {
-            const existingUser = await prisma.user.findUnique({
-                where: { id: session.user.id },
-                select: { name: true },
-            })
-            const userName = existingUser?.name ?? null
-            const workspaceName = (userName && String(userName).trim())
-                ? `${String(userName).trim()} - Workspace`
-                : "Meu Workspace"
-            await prisma.$transaction(async (tx) => {
-                const workspace = await tx.workspace.create({
-                    data: { name: workspaceName, plan: "FREE", leadsLimit: 10, leadsUsed: 0 },
-                })
-                await tx.workspaceMember.create({
-                    data: { userId: session.user.id!, workspaceId: workspace.id, role: "OWNER" },
-                })
-            })
-            membership = await prisma.workspaceMember.findFirst({
-                where: { userId: session.user.id },
-                select: { workspaceId: true },
-            })
-        }
-
-        if (!membership) {
-            return NextResponse.json({ error: "Workspace membership not found" }, { status: 500 })
+            return NextResponse.json({ error: "Workspace membership not found" }, { status: 500 });
         }
         const workspaceId = membership.workspaceId
         await Promise.all([

@@ -183,8 +183,8 @@ export default function Pricing({
                         <div style={{ marginBottom: '32px', flex: 1 }}>
                             <div style={styles.leadsLabel}>{plan.leads}</div>
                             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                {plan.features.map((f: string, i: number) => (
-                                    <li key={`${plan.id}-${i}-${f.slice(0, 24)}`} style={styles.featureItem}>
+                                {plan.features.map((f: string) => (
+                                    <li key={`${plan.id}-feat-${f}`} style={styles.featureItem}>
                                         <Check size={16} color={plan.color} /> {f}
                                     </li>
                                 ))}

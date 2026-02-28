@@ -323,7 +323,7 @@ export default function HistoricoPage() {
                   <div className="space-y-2">
                     {'summary' in rd && <p className="text-muted">{String(rd.summary)}</p>}
                     {typeof rd.socialNetworks === 'object' && rd.socialNetworks && 'presence' in (rd.socialNetworks as Record<string, unknown>) && (
-                      <p className="text-muted"><strong>Redes sociais:</strong> {(rd.socialNetworks as Record<string, unknown>).presence as string}</p>
+                      <p className="text-muted"><strong>Redes sociais:</strong> {String((rd.socialNetworks as Record<string, unknown>).presence ?? '')}</p>
                     )}
                   </div>
                 )}

@@ -10,6 +10,37 @@ function isAdminDetail(u: UserDetail): u is AdminUserDetail {
     && (u as AdminUserDetail).workspaces[0]?.workspace != null;
 }
 
+function UserActionButtons({
+  actionLoading,
+  disabledAt,
+  onActivate,
+  onDeactivate,
+  onResetPassword,
+}: {
+  actionLoading: boolean;
+  disabledAt: string | null;
+  onActivate: () => void;
+  onDeactivate: () => void;
+  onResetPassword: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <button type="button" disabled={actionLoading} onClick={onResetPassword} className="px-4 py-2 rounded-lg bg-zinc-700 text-white text-sm font-medium hover:bg-zinc-600 disabled:opacity-50">
+        Resetar senha
+      </button>
+      {disabledAt ? (
+        <button type="button" disabled={actionLoading} onClick={onActivate} className="px-4 py-2 rounded-lg bg-emerald-600/80 text-white text-sm font-medium hover:bg-emerald-600 disabled:opacity-50">
+          Ativar conta
+        </button>
+      ) : (
+        <button type="button" disabled={actionLoading} onClick={onDeactivate} className="px-4 py-2 rounded-lg bg-red-600/80 text-white text-sm font-medium hover:bg-red-600 disabled:opacity-50">
+          Desativar conta
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function UserDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { role } = useOutletContext<AdminLayoutContext>();
@@ -134,35 +165,13 @@ export function UserDetailPage() {
         <h1 className="text-xl font-semibold text-white">
           {user.name ?? user.email ?? user.id}
         </h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            disabled={actionLoading}
-            onClick={() => { setShowResetPasswordModal(true); setResetPasswordMode('email'); setTempPassword(''); setActionError(null); }}
-            className="px-4 py-2 rounded-lg bg-zinc-700 text-white text-sm font-medium hover:bg-zinc-600 disabled:opacity-50"
-          >
-            Resetar senha
-          </button>
-          {disabledAt ? (
-            <button
-              type="button"
-              disabled={actionLoading}
-              onClick={handleActivate}
-              className="px-4 py-2 rounded-lg bg-emerald-600/80 text-white text-sm font-medium hover:bg-emerald-600 disabled:opacity-50"
-            >
-              Ativar conta
-            </button>
-          ) : (
-            <button
-              type="button"
-              disabled={actionLoading}
-              onClick={() => setShowDeactivateModal(true)}
-              className="px-4 py-2 rounded-lg bg-red-600/80 text-white text-sm font-medium hover:bg-red-600 disabled:opacity-50"
-            >
-              Desativar conta
-            </button>
-          )}
-        </div>
+        <UserActionButtons
+          actionLoading={actionLoading}
+          disabledAt={disabledAt}
+          onActivate={handleActivate}
+          onDeactivate={() => setShowDeactivateModal(true)}
+          onResetPassword={() => { setShowResetPasswordModal(true); setResetPasswordMode('email'); setTempPassword(''); setActionError(null); }}
+        />
       </div>
       {toast && (
         <div className={`mb-4 rounded-lg px-4 py-3 text-sm ${toast.type === 'success' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-red-500/10 border border-red-500/30 text-red-400'}`}>

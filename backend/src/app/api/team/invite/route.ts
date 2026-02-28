@@ -8,6 +8,24 @@ import { logger } from '@/lib/logger';
 
 const SITE_URL = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
+async function getInviteContext(sessionUserId: string, email: string) {
+    const currentUser = await prisma.user.findUnique({
+        where: { id: sessionUserId },
+        include: { workspaces: { take: 1, include: { workspace: { select: { name: true } } } } },
+    });
+    const activeWorkspaceId = currentUser?.workspaces[0]?.workspaceId;
+    const currentUserRole = currentUser?.workspaces[0]?.role;
+    const workspaceName = currentUser?.workspaces[0]?.workspace?.name ?? 'Workspace';
+    const inviterName = currentUser?.name ?? currentUser?.email ?? 'A team member';
+    if (!activeWorkspaceId) return { error: 'Workspace not found' as const, status: 404 as const };
+    if (currentUserRole !== 'OWNER' && currentUserRole !== 'ADMIN') return { error: 'Only owners or admins can invite members' as const, status: 403 as const };
+    const existingMember = await prisma.workspaceMember.findFirst({
+        where: { workspaceId: activeWorkspaceId, user: { email } },
+    });
+    if (existingMember) return { error: 'User is already in this workspace' as const, status: 400 as const };
+    return { currentUser, activeWorkspaceId, workspaceName, inviterName };
+}
+
 /** POST /api/team/invite — cria convite pendente e envia email; usuário só entra ao aceitar. */
 export async function POST(req: NextRequest) {
     try {
@@ -23,33 +41,11 @@ export async function POST(req: NextRequest) {
         }
         const email = parsed.data.email.trim().toLowerCase();
 
-        const currentUser = await prisma.user.findUnique({
-            where: { id: session.user.id },
-            include: { workspaces: { take: 1, include: { workspace: { select: { name: true } } } } },
-        });
-
-        const activeWorkspaceId = currentUser?.workspaces[0]?.workspaceId;
-        const currentUserRole = currentUser?.workspaces[0]?.role;
-        const workspaceName = currentUser?.workspaces[0]?.workspace?.name ?? 'Workspace';
-        const inviterName = currentUser?.name ?? currentUser?.email ?? 'A team member';
-
-        if (!activeWorkspaceId) {
-            return NextResponse.json({ error: 'Workspace not found' }, { status: 404 });
+        const ctx = await getInviteContext(session.user.id, email);
+        if ('status' in ctx) {
+            return NextResponse.json({ error: ctx.error }, { status: ctx.status });
         }
-
-        if (currentUserRole !== 'OWNER' && currentUserRole !== 'ADMIN') {
-            return NextResponse.json({ error: 'Only owners or admins can invite members' }, { status: 403 });
-        }
-
-        const existingMember = await prisma.workspaceMember.findFirst({
-            where: {
-                workspaceId: activeWorkspaceId,
-                user: { email },
-            },
-        });
-        if (existingMember) {
-            return NextResponse.json({ error: 'User is already in this workspace' }, { status: 400 });
-        }
+        const { activeWorkspaceId, workspaceName, inviterName } = ctx;
 
         const token = crypto.randomBytes(32).toString('hex');
         const baseUrl = SITE_URL.replace(/\/$/, '');
