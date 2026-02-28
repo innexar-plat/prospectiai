@@ -27,7 +27,7 @@ export default function OnboardingPage({ user }: { user: SessionUser | null }) {
         }
     }, [user, navigate])
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
         setSubmitting(true)
         try {

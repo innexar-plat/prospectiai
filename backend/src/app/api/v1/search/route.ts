@@ -4,7 +4,6 @@ import { getCached } from '@/lib/redis';
 import { syncLeads } from '@/lib/db-sync';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import { PLANS, PlanType } from '@/lib/billing-config';
 import { getOrCreateRequestId, jsonWithRequestId } from '@/lib/request-id';
 import { searchSchema, formatZodError } from '@/lib/validations/schemas';
 import { recordUsageEvent } from '@/lib/usage';

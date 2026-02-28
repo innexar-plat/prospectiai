@@ -15,7 +15,7 @@ export default function SignUpPage() {
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState('')
 
-    const handleEmailSignUp = async (e: React.FormEvent) => {
+    const handleEmailSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
 
         if (password !== confirmPassword) {

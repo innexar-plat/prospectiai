@@ -221,7 +221,8 @@ export function paymentSuccessTemplate(planName: string, leadsLimit: number, das
     'Próximos passos: acesse o dashboard, defina nicho e região na Nova Busca e execute sua primeira busca. Em Inteligência você encontra concorrência, relatórios e análise da sua empresa conforme seu plano.',
   ];
   const base = SITE_URL.replace(/\/$/, '');
-  const ctaHref = dashboardUrl.startsWith('http') ? dashboardUrl : `${base}${dashboardUrl.startsWith('/') ? '' : '/'}${dashboardUrl}`;
+  const pathPrefix = dashboardUrl.startsWith('/') ? '' : '/';
+  const ctaHref = dashboardUrl.startsWith('http') ? dashboardUrl : `${base}${pathPrefix}${dashboardUrl}`;
   return buildEmail({
     title: `Bem-vindo ao ${APP_NAME} — seu plano está ativo`,
     body,
@@ -236,7 +237,8 @@ export function paymentSuccessTemplate(planName: string, leadsLimit: number, das
  */
 export function paymentFailureTemplate(dashboardOrPlansUrl: string): string {
   const base = SITE_URL.replace(/\/$/, '');
-  const ctaHref = dashboardOrPlansUrl.startsWith('http') ? dashboardOrPlansUrl : `${base}${dashboardOrPlansUrl.startsWith('/') ? '' : '/'}${dashboardOrPlansUrl}`;
+  const pathPrefix = dashboardOrPlansUrl.startsWith('/') ? '' : '/';
+  const ctaHref = dashboardOrPlansUrl.startsWith('http') ? dashboardOrPlansUrl : `${base}${pathPrefix}${dashboardOrPlansUrl}`;
   return buildEmail({
     title: 'Pagamento não aprovado',
     body: [

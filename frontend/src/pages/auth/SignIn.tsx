@@ -10,6 +10,9 @@ export default function SignInPage() {
     const [searchParams] = useSearchParams()
     const errorParam = searchParams.get('error')
     const callbackUrlParam = searchParams.get('callbackUrl')
+    const resolvedCallbackPath = callbackUrlParam && callbackUrlParam.startsWith('/')
+        ? callbackUrlParam
+        : undefined;
     const oauthCallbackPath =
         callbackUrlParam && callbackUrlParam.startsWith('http')
             ? (() => {
@@ -19,7 +22,7 @@ export default function SignInPage() {
                     return '/onboarding'
                 }
             })()
-            : (callbackUrlParam && callbackUrlParam.startsWith('/') ? callbackUrlParam : undefined) ?? '/onboarding'
+            : (resolvedCallbackPath ?? '/onboarding')
 
     // Auto-set error if coming back from failed login
     React.useEffect(() => {
@@ -36,7 +39,7 @@ export default function SignInPage() {
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState('')
 
-    const handleEmailSignIn = async (e: React.FormEvent) => {
+    const handleEmailSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
         setIsLoading(true)
         setError('')

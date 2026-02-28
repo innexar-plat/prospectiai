@@ -8,7 +8,6 @@ import { generateCompletionForRole, resolveAiForRole } from '@/lib/ai';
 import { getWebContextForRole } from '@/lib/web-search/resolve';
 import { runCompetitorAnalysis } from '@/modules/competitors';
 import { runMarketReport } from '@/modules/market';
-import { scoreAndRankPlaces, type PlaceLikeForScoring } from '@/modules/scoring';
 import { recordUsageEvent } from '@/lib/usage';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';

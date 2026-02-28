@@ -18,7 +18,7 @@ export default function ResetPasswordPage() {
     if (!token.trim()) setError('Link inválido. Solicite um novo link de recuperação.');
   }, [token]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (password !== confirm) {
       setError('As senhas não coincidem.');

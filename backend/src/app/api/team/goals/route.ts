@@ -25,7 +25,7 @@ export async function PUT(req: NextRequest) {
         const body = await req.json();
         const parsed = goalsSchema.safeParse(body);
         if (!parsed.success) {
-            return jsonWithRequestId({ error: 'Invalid input', details: parsed.error.flatten() }, { status: 400, requestId });
+            return jsonWithRequestId({ error: 'Invalid input', details: z.flattenError(parsed.error) }, { status: 400, requestId });
         }
 
         // Verify caller is OWNER or ADMIN

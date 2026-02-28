@@ -24,9 +24,24 @@ export interface ScheduleDowngradeResult {
     pendingPlanEffectiveAt: string;
 }
 
-export interface ScheduleDowngradeError {
+export interface ScheduleDowngradeErrorShape {
     status: number;
     error: string;
+}
+
+/** Error thrown by performScheduleDowngrade; use .status and .error for API response. */
+export class ScheduleDowngradeError extends Error implements ScheduleDowngradeErrorShape {
+    constructor(
+        public readonly status: number,
+        message: string
+    ) {
+        super(message);
+        this.name = 'ScheduleDowngradeError';
+        Object.setPrototypeOf(this, ScheduleDowngradeError.prototype);
+    }
+    get error(): string {
+        return this.message;
+    }
 }
 
 /**
@@ -41,16 +56,13 @@ export async function performScheduleDowngrade(
     const targetPlan = PLANS[targetPlanId as PlanType];
 
     if (!targetPlan || targetPlanId === 'FREE') {
-        throw { status: 400, error: 'Invalid plan or use cancel flow for Free.' } as ScheduleDowngradeError;
+        throw new ScheduleDowngradeError(400, 'Invalid plan or use cancel flow for Free.');
     }
     if (!isDowngrade(currentPlan, targetPlanId as PlanType)) {
-        throw {
-            status: 400,
-            error: 'Schedule downgrade only applies when moving to a lower tier.',
-        } as ScheduleDowngradeError;
+        throw new ScheduleDowngradeError(400, 'Schedule downgrade only applies when moving to a lower tier.');
     }
     if (currentPlan === 'FREE') {
-        throw { status: 400, error: 'Current plan is Free. Use checkout to subscribe.' } as ScheduleDowngradeError;
+        throw new ScheduleDowngradeError(400, 'Current plan is Free. Use checkout to subscribe.');
     }
 
     const subscriptionId = workspace.subscriptionId;
@@ -71,7 +83,7 @@ export async function performScheduleDowngrade(
             const currentPeriodEndUnix = subscription.current_period_end;
             const item = subscription.items.data[0];
             if (!item?.price) {
-                throw { status: 400, error: 'Subscription has no price item' } as ScheduleDowngradeError;
+                throw new ScheduleDowngradeError(400, 'Subscription has no price item');
             }
 
             const scheduleCreate = await stripe.subscriptionSchedules.create({
@@ -110,15 +122,12 @@ export async function performScheduleDowngrade(
                 ],
             });
         } catch (err: unknown) {
-            if (typeof err === 'object' && err != null && 'status' in err && 'error' in err) {
+            if (err instanceof ScheduleDowngradeError) {
                 throw err;
             }
             const msg = err instanceof Error ? err.message : 'Stripe API error';
             logger.error('Stripe schedule downgrade failed', { subscriptionId, error: msg });
-            throw {
-                status: 502,
-                error: 'Could not schedule plan change with payment provider. Try again later.',
-            } as ScheduleDowngradeError;
+            throw new ScheduleDowngradeError(502, 'Could not schedule plan change with payment provider. Try again later.');
         }
     }
 

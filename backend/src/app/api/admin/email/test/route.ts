@@ -7,7 +7,7 @@ import { getOrCreateRequestId, jsonWithRequestId } from '@/lib/request-id';
 import { z } from 'zod';
 
 const testSchema = z.object({
-  to: z.string().email('Valid email is required'),
+  to: z.email({ error: 'Valid email is required' }),
 });
 
 /**

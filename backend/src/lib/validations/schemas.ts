@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 /** POST /api/auth/register */
 export const registerSchema = z.object({
-  email: z.string().email('Invalid email').transform((s) => s.trim().toLowerCase()),
+  email: z.email({ error: 'Invalid email' }).transform((s) => s.trim().toLowerCase()),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   name: z.string().max(200).optional().transform((s) => (s?.trim() || undefined)),
 });
@@ -135,7 +135,7 @@ export const processPaymentSchema = z.object({
   transaction_amount: z.coerce.number().positive('transaction_amount must be positive'),
   installments: z.number().int().min(1).optional(),
   payer: z.object({
-    email: z.string().email().optional(),
+    email: z.email().optional(),
     identification: z.object({ type: z.string().optional(), number: z.string().optional() }).optional(),
   }).optional(),
   planId: z.string().min(1, 'planId is required'),
@@ -177,12 +177,12 @@ export const adminWorkspaceUpdateSchema = z.object({
 
 /** POST /api/team/invite */
 export const teamInviteSchema = z.object({
-  email: z.string().email('Valid email is required').transform((s) => s.trim().toLowerCase()),
+  email: z.email({ error: 'Valid email is required' }).transform((s) => s.trim().toLowerCase()),
 });
 
 /** POST /api/auth/forgot-password */
 export const forgotSchema = z.object({
-  email: z.string().min(1, 'Email is required').email('Invalid email address'),
+  email: z.email({ error: 'Invalid email address' }),
 });
 
 /** POST /api/auth/reset-password */

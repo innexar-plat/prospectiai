@@ -48,11 +48,13 @@ export const authApi = {
     signIn: async (data: { email: string; password: string; callbackUrl?: string }) => {
         const csrfToken = await getCsrfToken();
         const origin = typeof window !== 'undefined' ? window.location.origin : '';
+        const baseOrigin = origin.replace(/\/$/, '');
+        const pathPart = data.callbackUrl?.startsWith('/') ? data.callbackUrl : data.callbackUrl ? `/${data.callbackUrl}` : '';
         const callbackUrl =
             data.callbackUrl && data.callbackUrl.startsWith('http')
                 ? data.callbackUrl
                 : data.callbackUrl
-                    ? `${origin.replace(/\/$/, '')}${data.callbackUrl.startsWith('/') ? data.callbackUrl : `/${data.callbackUrl}`}`
+                    ? `${baseOrigin}${pathPart}`
                     : `${origin}/dashboard`;
 
         const form = document.createElement('form');
@@ -85,7 +87,9 @@ export const authApi = {
     initiateOAuthSignIn: async (provider: 'google' | 'github', callbackPath = '/dashboard') => {
         const csrfToken = await getCsrfToken();
         const origin = typeof window !== 'undefined' ? window.location.origin : '';
-        const callbackUrl = origin ? `${origin.replace(/\/$/, '')}${callbackPath.startsWith('/') ? callbackPath : `/${callbackPath}`}` : '';
+        const baseOrigin = origin.replace(/\/$/, '');
+        const pathSegment = callbackPath.startsWith('/') ? callbackPath : `/${callbackPath}`;
+        const callbackUrl = origin ? `${baseOrigin}${pathSegment}` : '';
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = `${BASE}/auth/signin/${provider}`;

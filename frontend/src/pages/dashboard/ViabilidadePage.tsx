@@ -53,18 +53,14 @@ export default function ViabilidadePage() {
     const profileBusinessLabel = [user.companyName, user.productService].filter(Boolean).join(' — ') || '';
     const myBusinessProfileEmpty = !(user.companyName?.trim() || user.productService?.trim());
 
-    const effectiveBusinessType =
-        mode === 'my_business'
-            ? profileBusinessLabel
-            : mode === 'expand' && useProfileForExpand
-                ? profileBusinessLabel
-                : businessType;
+    const useProfileLabel = mode === 'my_business' || (mode === 'expand' && useProfileForExpand);
+    const effectiveBusinessType = useProfileLabel ? profileBusinessLabel : businessType;
 
     const canSubmit =
         city.trim().length > 0 &&
         (mode === 'my_business' ? !myBusinessProfileEmpty : effectiveBusinessType.trim().length >= 2);
 
-    const handleAnalyze = async (e: React.FormEvent) => {
+    const handleAnalyze = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!canSubmit) return;
         setLoading(true);

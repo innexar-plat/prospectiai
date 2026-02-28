@@ -27,12 +27,14 @@ export async function POST(
             return NextResponse.json({ error: 'No API key configured for this config' }, { status: 400 });
         }
         const apiKey = decryptApiKey(config.apiKeyEncrypted);
-        const adapter =
-            config.provider === 'GEMINI'
-                ? createGeminiAdapter(apiKey, config.model)
-                : config.provider === 'OPENAI'
-                  ? createOpenAIAdapter(apiKey, config.model)
-                  : createCloudflareAdapter(apiKey, config.model, config.cloudflareAccountId ?? undefined);
+        let adapter: Awaited<ReturnType<typeof createGeminiAdapter>>;
+        if (config.provider === 'GEMINI') {
+            adapter = createGeminiAdapter(apiKey, config.model);
+        } else if (config.provider === 'OPENAI') {
+            adapter = createOpenAIAdapter(apiKey, config.model);
+        } else {
+            adapter = createCloudflareAdapter(apiKey, config.model, config.cloudflareAccountId ?? undefined);
+        }
         await adapter.generateCompletion({
             prompt: 'Respond with exactly: OK',
             maxTokens: 10,

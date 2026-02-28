@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { PLANS, PlanType } from '@/lib/billing-config';
 import { logger } from '@/lib/logger';
 import { scheduleDowngradeSchema, formatZodError } from '@/lib/validations/schemas';
-import { performScheduleDowngrade, type ScheduleDowngradeError } from '@/lib/schedule-downgrade';
+import { performScheduleDowngrade, ScheduleDowngradeError } from '@/lib/schedule-downgrade';
 
 export async function POST(req: Request) {
     const session = await auth();
@@ -59,9 +59,8 @@ export async function POST(req: Request) {
             pendingPlanEffectiveAt: result.pendingPlanEffectiveAt,
         });
     } catch (err: unknown) {
-        const known = err as ScheduleDowngradeError;
-        if (typeof known.status === 'number' && typeof known.error === 'string') {
-            return NextResponse.json({ error: known.error }, { status: known.status });
+        if (err instanceof ScheduleDowngradeError) {
+            return NextResponse.json({ error: err.error }, { status: err.status });
         }
         logger.error('Schedule downgrade error', { error: err instanceof Error ? err.message : 'Unknown' });
         return NextResponse.json({ error: 'Failed to schedule downgrade' }, { status: 500 });

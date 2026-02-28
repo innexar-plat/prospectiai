@@ -107,11 +107,12 @@ export async function analyzeLead(
     const reviewCount = business.userRatingCount || business.reviewCount || 0;
 
     // Format reviews for analysis
+    const noReviewsLabel = isEn ? 'No recent reviews available' : 'Nenhuma avaliação recente disponível';
     const reviewsText = business.reviews && business.reviews.length > 0
         ? business.reviews.slice(0, 5).map(r =>
             `[${r.rating}/5 - ${r.authorAttribution?.displayName || 'Client'}]: "${r.text?.text?.slice(0, 200)}"`
         ).join('\n')
-        : (isEn ? 'No recent reviews available' : 'Nenhuma avaliação recente disponível');
+        : noReviewsLabel;
 
     const companyContext = finalProfile
         ? (isEn
@@ -146,7 +147,7 @@ ${isEn ? 'LEAD DATA:' : 'DADOS DO LEAD:'}
 - ${isEn ? 'Type/Category' : 'Tipo/Categoria'}: ${business.primaryType || business.types?.join(', ') || (isEn ? 'Not specified' : 'Não especificado')}
 - ${isEn ? 'Address' : 'Endereço'}: ${address || (isEn ? 'Not available' : 'Não disponível')}
 - ${isEn ? 'Phone' : 'Telefone'}: ${phone || (isEn ? 'No phone listed' : 'Sem telefone cadastrado')}
-- ${isEn ? 'Website' : 'Website'}: ${website ? website : (isEn ? 'NO WEBSITE (critical gap)' : 'SEM WEBSITE (lacuna crítica)')}
+- Website: ${website ? website : (isEn ? 'NO WEBSITE (critical gap)' : 'SEM WEBSITE (lacuna crítica)')}
 - ${isEn ? 'Google Rating' : 'Avaliação Google'}: ${business.rating ?? (isEn ? 'No rating' : 'Sem avaliação')}/5
 - ${isEn ? 'Total Reviews' : 'Total de Avaliações'}: ${reviewCount}
 - ${isEn ? 'Business Status' : 'Status do Negócio'}: ${business.businessStatus || 'OPERATIONAL'}
@@ -215,16 +216,13 @@ ${isBusinessPlan ? `  ,"reclameAquiAnalysis": "<${isEn ? 'Analysis of Reclame Aq
         });
 
         // More robust JSON extraction
-        let cleaned = result.text;
         const jsonMatch = result.text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-            cleaned = jsonMatch[0];
-        } else {
-            cleaned = result.text
-                .replace(/```json\n?/g, '')
-                .replace(/```\n?/g, '')
-                .trim();
-        }
+        const cleaned = jsonMatch
+            ? jsonMatch[0]
+            : result.text
+                  .replace(/```json\n?/g, '')
+                  .replace(/```\n?/g, '')
+                  .trim();
 
         const analysis = JSON.parse(cleaned) as LeadAnalysis;
 

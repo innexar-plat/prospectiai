@@ -73,6 +73,7 @@ function App() {
   }, []);
 
   const landingOrRedirect = user ? <Navigate to="/onboarding" replace /> : <Landing locale="pt" />;
+  const whenUserResolved = user ? <Navigate to="/dashboard/planos" replace /> : <Navigate to="/auth/signin" replace />;
   const billingSuccessElement =
     user === undefined
       ? (
@@ -80,9 +81,7 @@ function App() {
           <div className="text-2xl text-muted">Carregando...</div>
         </div>
         )
-      : user
-        ? <Navigate to="/dashboard/planos" replace />
-        : <Navigate to="/auth/signin" replace />;
+      : whenUserResolved;
 
   return (
     <BrowserRouter>

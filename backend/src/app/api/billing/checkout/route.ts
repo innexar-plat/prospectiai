@@ -8,7 +8,7 @@ import { PLANS, PlanType, getPlanPrices, isDowngrade, isUpgrade, type BillingCyc
 import { logger } from '@/lib/logger';
 import { checkoutSchema, formatZodError } from '@/lib/validations/schemas';
 import { prisma } from '@/lib/prisma';
-import { performScheduleDowngrade, type ScheduleDowngradeError } from '@/lib/schedule-downgrade';
+import { performScheduleDowngrade, ScheduleDowngradeError } from '@/lib/schedule-downgrade';
 
 export async function POST(req: Request) {
     const session = await auth();
@@ -80,9 +80,8 @@ export async function POST(req: Request) {
                     pendingPlanEffectiveAt: result.pendingPlanEffectiveAt,
                 });
             } catch (scheduleErr: unknown) {
-                const known = scheduleErr as ScheduleDowngradeError;
-                if (typeof known.status === 'number' && typeof known.error === 'string') {
-                    return NextResponse.json({ error: known.error }, { status: known.status });
+                if (scheduleErr instanceof ScheduleDowngradeError) {
+                    return NextResponse.json({ error: scheduleErr.error }, { status: scheduleErr.status });
                 }
                 throw scheduleErr;
             }

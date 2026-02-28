@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
 
         const body = await req.json();
         const schema = z.object({
-            email: z.string().email().transform((s) => s.trim().toLowerCase()),
+            email: z.email().transform((s) => s.trim().toLowerCase()),
             role: z.enum(['MEMBER', 'ADMIN']).optional().default('MEMBER'),
         });
 

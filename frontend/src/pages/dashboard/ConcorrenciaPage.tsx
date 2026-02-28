@@ -29,7 +29,7 @@ export default function ConcorrenciaPage() {
 
     const hasAccess = user.plan === 'PRO' || user.plan === 'BUSINESS' || user.plan === 'SCALE';
 
-    const handleAnalyze = async (e: React.FormEvent) => {
+    const handleAnalyze = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!query.trim()) return;
         setLoading(true);

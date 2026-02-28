@@ -92,6 +92,10 @@ export async function POST(req: Request) {
                 const subWithItems = subscription as { items?: { data?: Array<{ price?: { recurring?: { interval?: string } } }> } };
                 const interval = subWithItems.items?.data?.[0]?.price?.recurring?.interval;
                 const billingCycle = interval === 'year' ? 'annual' : 'monthly';
+                let gracePeriodEndValue: Date | null | undefined;
+                if (isPastDue) gracePeriodEndValue = new Date(Date.now() + GRACE_DAYS_MS);
+                else if (isActive) gracePeriodEndValue = null;
+                else gracePeriodEndValue = undefined;
                 await prisma.workspace.updateMany({
                     where: { subscriptionId: subscription.id },
                     data: {
@@ -101,7 +105,7 @@ export async function POST(req: Request) {
                         leadsUsed: isActive ? 0 : undefined,
                         currentPeriodEnd: periodEnd(subscription),
                         billingCycle,
-                        gracePeriodEnd: isPastDue ? new Date(Date.now() + GRACE_DAYS_MS) : isActive ? null : undefined,
+                        gracePeriodEnd: gracePeriodEndValue,
                         pendingPlanId: null,
                         pendingPlanEffectiveAt: null,
                     },

@@ -52,7 +52,7 @@ export default function PerfilPage() {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSaving(true);
     try {

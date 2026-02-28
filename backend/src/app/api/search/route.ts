@@ -5,6 +5,7 @@ import { getOrCreateRequestId, jsonWithRequestId } from '@/lib/request-id';
 import { searchSchema, formatZodError } from '@/lib/validations/schemas';
 import { runSearch, SearchHttpError } from '@/modules/search';
 import { logger } from '@/lib/logger';
+import { z } from 'zod';
 
 export async function POST(req: NextRequest) {
     const requestId = getOrCreateRequestId(req);
@@ -18,7 +19,7 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const parsed = searchSchema.safeParse(body);
         if (!parsed.success) {
-            logger.info('Search API: validation failed', { requestId, errors: parsed.error.flatten() });
+            logger.info('Search API: validation failed', { requestId, errors: z.flattenError(parsed.error) });
             return jsonWithRequestId({ error: formatZodError(parsed) }, { status: 400, requestId });
         }
 

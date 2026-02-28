@@ -1,6 +1,4 @@
-import NextAuth from "next-auth"
-import type { Session } from "next-auth"
-import { CredentialsSignin } from "next-auth"
+import NextAuth, { type Session, CredentialsSignin } from "next-auth"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "@/lib/prisma"
 import { getPanelRole } from "@/lib/admin"
