@@ -147,7 +147,7 @@ ${isEn ? 'LEAD DATA:' : 'DADOS DO LEAD:'}
 - ${isEn ? 'Type/Category' : 'Tipo/Categoria'}: ${business.primaryType || business.types?.join(', ') || (isEn ? 'Not specified' : 'Não especificado')}
 - ${isEn ? 'Address' : 'Endereço'}: ${address || (isEn ? 'Not available' : 'Não disponível')}
 - ${isEn ? 'Phone' : 'Telefone'}: ${phone || (isEn ? 'No phone listed' : 'Sem telefone cadastrado')}
-- Website: ${website ? website : (isEn ? 'NO WEBSITE (critical gap)' : 'SEM WEBSITE (lacuna crítica)')}
+- ${isEn ? 'Website' : 'Site'}: ${website || (isEn ? 'NO WEBSITE (critical gap)' : 'SEM WEBSITE (lacuna crítica)')}
 - ${isEn ? 'Google Rating' : 'Avaliação Google'}: ${business.rating ?? (isEn ? 'No rating' : 'Sem avaliação')}/5
 - ${isEn ? 'Total Reviews' : 'Total de Avaliações'}: ${reviewCount}
 - ${isEn ? 'Business Status' : 'Status do Negócio'}: ${business.businessStatus || 'OPERATIONAL'}

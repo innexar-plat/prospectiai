@@ -53,7 +53,7 @@ async function generateMarketInsights(
       .map((s) => `${s.type}: ${s.count} (avg ${s.avgRating ?? 'n/a'}★)`)
       .join('; ');
 
-    const prompt = `Você é um analista de inteligência de mercado especializado em mercados locais brasileiros.
+    const basePrompt = `Você é um analista de inteligência de mercado especializado em mercados locais brasileiros.
 Com base nos DADOS REAIS coletados via Google Maps abaixo, gere insights executivos do mercado.
 
 DADOS DO MERCADO:
@@ -79,7 +79,9 @@ REGRAS:
 - marketTrends: tendências observáveis a partir dos dados
 - opportunities: oportunidades reais para quem vende serviços digitais
 - recommendations: ações estratégicas práticas
-${webContext ? `\n\n${webContext}\n\n` : ''}`;
+`;
+    const webSuffix = webContext ? '\n\n' + webContext + '\n\n' : '';
+    const prompt = basePrompt + webSuffix;
 
     const { config } = await resolveAiForRole('viability');
     const result = await generateCompletionForRole('viability', {

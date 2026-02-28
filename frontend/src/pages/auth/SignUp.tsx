@@ -15,7 +15,7 @@ export default function SignUpPage() {
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState('')
 
-    const handleEmailSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleEmailSignUp = async (e: React.SyntheticEvent<HTMLFormElement>) => {
         e.preventDefault()
 
         if (password !== confirmPassword) {
@@ -52,8 +52,8 @@ export default function SignUpPage() {
                             { icon: <Search size={20} />, title: 'Encontre Leads Qualificados', desc: 'Filtre por nicho, região e tamanho em segundos.' },
                             { icon: <Brain size={20} />, title: 'Análise de IA', desc: 'IA analisa cada lead para o melhor fit.' },
                             { icon: <Shield size={20} />, title: 'Dados Verificados', desc: 'Dados atualizados e reais.' }
-                        ].map((item, idx) => (
-                            <div key={idx} className="flex gap-3">
+                        ].map((item) => (
+                            <div key={item.title} className="flex gap-3">
                                 <div className="w-10 h-10 rounded-xl bg-surface border border-border flex items-center justify-center text-violet-500 shrink-0">
                                     {item.icon}
                                 </div>

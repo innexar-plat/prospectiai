@@ -39,7 +39,7 @@ export default function SignInPage() {
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState('')
 
-    const handleEmailSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleEmailSignIn = async (e: React.SyntheticEvent<HTMLFormElement>) => {
         e.preventDefault()
         setIsLoading(true)
         setError('')

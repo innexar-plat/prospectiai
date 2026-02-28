@@ -31,7 +31,7 @@ export function UserDetailPage() {
     setLoading(true);
     const api = isSupport ? supportApi.user(id) : adminApi.user(id);
     api
-      .then((u) => setUser(u as UserDetail))
+      .then((u) => setUser(u))
       .catch((err) => setError(err instanceof Error ? err.message : 'Erro ao carregar'))
       .finally(() => setLoading(false));
   }, [id, isSupport]);
@@ -72,7 +72,7 @@ export function UserDetailPage() {
   const refetch = () => {
     if (!id) return;
     (isSupport ? supportApi.user(id) : adminApi.user(id))
-      .then((u) => setUser(u as UserDetail))
+      .then((u) => setUser(u))
       .catch(() => {});
   };
 

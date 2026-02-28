@@ -29,7 +29,7 @@ export default function ConcorrenciaPage() {
 
     const hasAccess = user.plan === 'PRO' || user.plan === 'BUSINESS' || user.plan === 'SCALE';
 
-    const handleAnalyze = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleAnalyze = async (e: React.SyntheticEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!query.trim()) return;
         setLoading(true);
@@ -201,12 +201,20 @@ export default function ConcorrenciaPage() {
                                         <div key={opp.id} className="p-4 bg-surface rounded-xl border border-border/50 flex flex-col gap-2 hover:border-violet-500/30 transition-colors">
                                             <div className="flex items-start justify-between gap-2">
                                                 <p className="text-sm font-bold text-foreground truncate flex-1">{opp.name}</p>
-                                                <span className={`shrink-0 text-xs font-black px-2 py-0.5 rounded-full ${opp.score >= 60 ? 'bg-emerald-500/20 text-emerald-400' : opp.score >= 35 ? 'bg-amber-500/20 text-amber-400' : 'bg-surface text-muted'}`}>
+                                                <span className={`shrink-0 text-xs font-black px-2 py-0.5 rounded-full ${(() => {
+                                                    if (opp.score >= 60) return 'bg-emerald-500/20 text-emerald-400';
+                                                    if (opp.score >= 35) return 'bg-amber-500/20 text-amber-400';
+                                                    return 'bg-surface text-muted';
+                                                  })()}`}>
                                                     {opp.score}
                                                 </span>
                                             </div>
                                             <div className="w-full h-1.5 bg-card rounded-full overflow-hidden">
-                                                <div className={`h-full rounded-full transition-all duration-500 ${opp.score >= 60 ? 'bg-emerald-500' : opp.score >= 35 ? 'bg-amber-500' : 'bg-surface'}`} style={{ width: `${opp.score}%` }} />
+                                                <div className={`h-full rounded-full transition-all duration-500 ${(() => {
+                                                    if (opp.score >= 60) return 'bg-emerald-500';
+                                                    if (opp.score >= 35) return 'bg-amber-500';
+                                                    return 'bg-surface';
+                                                  })()}`} style={{ width: `${opp.score}%` }} />
                                             </div>
                                             <div className="flex flex-wrap gap-1.5">
                                                 {opp.scoreFactors.noWebsite && <span className="inline-flex items-center gap-1 text-[9px] font-bold text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded-full"><Globe size={9} />Sem site</span>}
@@ -230,7 +238,7 @@ export default function ConcorrenciaPage() {
                                     </h3>
                                     <ul className="space-y-2.5">
                                         {data.aiPlaybook.seoChecklist.map((item, i) => (
-                                            <li key={i} className="flex items-start gap-2 text-sm text-muted">
+                                            <li key={`seo-${i}-${String(item).slice(0, 40)}`} className="flex items-start gap-2 text-sm text-muted">
                                                 <CheckCircle2 size={14} className="text-violet-400 shrink-0 mt-0.5" />{item}
                                             </li>
                                         ))}
@@ -242,7 +250,7 @@ export default function ConcorrenciaPage() {
                                     </h3>
                                     <ul className="space-y-2.5">
                                         {data.aiPlaybook.reviewStrategy.map((item, i) => (
-                                            <li key={i} className="flex items-start gap-2 text-sm text-muted">
+                                            <li key={`review-${i}-${String(item).slice(0, 40)}`} className="flex items-start gap-2 text-sm text-muted">
                                                 <CheckCircle2 size={14} className="text-amber-400 shrink-0 mt-0.5" />{item}
                                             </li>
                                         ))}
@@ -254,7 +262,7 @@ export default function ConcorrenciaPage() {
                                     </h3>
                                     <ul className="space-y-2.5">
                                         {data.aiPlaybook.quickWins.map((item, i) => (
-                                            <li key={i} className="flex items-start gap-2 text-sm text-muted">
+                                            <li key={`quick-${i}-${String(item).slice(0, 40)}`} className="flex items-start gap-2 text-sm text-muted">
                                                 <Zap size={14} className="text-emerald-400 shrink-0 mt-0.5" />{item}
                                             </li>
                                         ))}

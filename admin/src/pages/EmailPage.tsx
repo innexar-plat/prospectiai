@@ -235,19 +235,23 @@ export function EmailPage() {
           Envio usa a configuração do painel ou a variável RESEND_API_KEY. Chaves não são exibidas.
         </p>
         <div className="space-y-4">
-          {loading ? (
-            <p className="text-sm text-zinc-500">Carregando...</p>
-          ) : configured ? (
-            <div className="flex items-center gap-2 text-emerald-600">
-              <CheckCircle className="w-5 h-5" />
-              <span>Configurado</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-amber-600">
-              <XCircle className="w-5 h-5" />
-              <span>Não configurado. Defina Resend ou SMTP acima ou use RESEND_API_KEY.</span>
-            </div>
-          )}
+          {(() => {
+            if (loading) return <p className="text-sm text-zinc-500">Carregando...</p>;
+            if (configured) {
+              return (
+                <div className="flex items-center gap-2 text-emerald-600">
+                  <CheckCircle className="w-5 h-5" />
+                  <span>Configurado</span>
+                </div>
+              );
+            }
+            return (
+              <div className="flex items-center gap-2 text-amber-600">
+                <XCircle className="w-5 h-5" />
+                <span>Não configurado. Defina Resend ou SMTP acima ou use RESEND_API_KEY.</span>
+              </div>
+            );
+          })()}
 
           <div className="pt-2 border-t border-zinc-800">
             <label className="block text-sm font-medium text-zinc-300 mb-2">Enviar teste para</label>

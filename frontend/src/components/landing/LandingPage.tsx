@@ -153,7 +153,7 @@ export default function LandingPage({ onViewPlans, t }: { locale: string, onView
                             { icon: <Download size={28} aria-hidden />, title: t('landing.feature3Title'), desc: t('landing.feature3Desc') }
                         ].map((item, idx) => (
                             <div
-                                key={idx}
+                                key={item.title}
                                 className={`group p-8 md:p-12 rounded-[2.5rem] border transition-all duration-300 card-shadow card-shadow-hover ${item.highlight
                                     ? 'bg-violet-500/10 border-violet-500/25 hover:bg-violet-500/15 md:-translate-y-2'
                                     : 'bg-card border-border hover:border-violet-500/20'
@@ -216,8 +216,8 @@ export default function LandingPage({ onViewPlans, t }: { locale: string, onView
                             { step: '01', title: 'Busque', desc: 'Informe o nicho e a região. Nossa IA busca empresas reais via Google Places.' },
                             { step: '02', title: 'Analise', desc: 'Score IA, concorrência, viabilidade — tudo automatizado com dados reais.' },
                             { step: '03', title: 'Converta', desc: 'Scripts personalizados, WhatsApp automatizado e pipeline completo.' },
-                        ].map((item, i) => (
-                            <div key={i} className="text-center p-8 rounded-3xl bg-card border border-border card-shadow">
+                        ].map((item) => (
+                            <div key={item.step} className="text-center p-8 rounded-3xl bg-card border border-border card-shadow">
                                 <div className="w-14 h-14 rounded-2xl bg-violet-600 text-white flex items-center justify-center font-black text-xl mx-auto mb-6">
                                     {item.step}
                                 </div>
@@ -239,10 +239,10 @@ export default function LandingPage({ onViewPlans, t }: { locale: string, onView
                         <h2 id="new-features-heading" className="text-3xl md:text-5xl font-black text-foreground">Funcionalidades Exclusivas</h2>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {NEW_FEATURES.map((item, i) => {
+                        {NEW_FEATURES.map((item) => {
                             const Icon = item.icon;
                             return (
-                                <div key={i} className="p-6 md:p-8 rounded-2xl border border-border bg-card hover:border-violet-500/25 transition-all duration-300 card-shadow card-shadow-hover">
+                                <div key={item.title} className="p-6 md:p-8 rounded-2xl border border-border bg-card hover:border-violet-500/25 transition-all duration-300 card-shadow card-shadow-hover">
                                     <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6 bg-violet-500/15 text-violet-600">
                                         <Icon size={24} aria-hidden />
                                     </div>
@@ -263,11 +263,11 @@ export default function LandingPage({ onViewPlans, t }: { locale: string, onView
                         <p className="text-muted max-w-2xl mx-auto text-lg">{t('landing.servicesSubtitle')}</p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {SERVICES.slice(0, 3).map((item, idx) => {
+                        {SERVICES.slice(0, 3).map((item) => {
                             const Icon = item.icon;
                             return (
                                 <div
-                                    key={idx}
+                                    key={item.keyName}
                                     className="p-6 md:p-8 rounded-2xl border border-border bg-card hover:border-violet-500/25 transition-all duration-300 card-shadow card-shadow-hover"
                                 >
                                     <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6 bg-violet-500/15 text-violet-600">
@@ -280,11 +280,11 @@ export default function LandingPage({ onViewPlans, t }: { locale: string, onView
                         })}
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 max-w-4xl mx-auto">
-                        {SERVICES.slice(3, 5).map((item, idx) => {
+                        {SERVICES.slice(3, 5).map((item) => {
                             const Icon = item.icon;
                             return (
                                 <div
-                                    key={idx + 3}
+                                    key={item.keyName}
                                     className="p-6 md:p-8 rounded-2xl border border-border bg-card hover:border-violet-500/25 transition-all duration-300 card-shadow card-shadow-hover"
                                 >
                                     <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6 bg-violet-500/15 text-violet-600">
@@ -307,11 +307,11 @@ export default function LandingPage({ onViewPlans, t }: { locale: string, onView
                         <p className="text-muted max-w-2xl mx-auto text-lg">{t('landing.toolsSubtitle')}</p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {TOOLS.map((item, idx) => {
+                        {TOOLS.map((item) => {
                             const Icon = item.icon;
                             return (
                                 <div
-                                    key={idx}
+                                    key={item.keyTitle}
                                     className="p-6 md:p-8 rounded-2xl border border-border bg-card hover:border-violet-500/25 transition-all duration-300 card-shadow card-shadow-hover"
                                 >
                                     <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6 bg-violet-500/15 text-violet-600">
@@ -365,8 +365,8 @@ export default function LandingPage({ onViewPlans, t }: { locale: string, onView
                             { keyQuote: 'landing.testimonial1Quote', keyName: 'landing.testimonial1Name', keyRole: 'landing.testimonial1Role' },
                             { keyQuote: 'landing.testimonial2Quote', keyName: 'landing.testimonial2Name', keyRole: 'landing.testimonial2Role' },
                             { keyQuote: 'landing.testimonial3Quote', keyName: 'landing.testimonial3Name', keyRole: 'landing.testimonial3Role' },
-                        ].map((item, i) => (
-                            <div key={i} className="p-6 rounded-2xl border border-border bg-card">
+                        ].map((item) => (
+                            <div key={item.keyName} className="p-6 rounded-2xl border border-border bg-card">
                                 <Quote size={24} className="text-violet-500/60 mb-4" aria-hidden />
                                 <p className="text-foreground font-medium mb-4">&ldquo;{t(item.keyQuote)}&rdquo;</p>
                                 <p className="text-sm font-bold text-foreground">{t(item.keyName)}</p>
@@ -416,7 +416,7 @@ export default function LandingPage({ onViewPlans, t }: { locale: string, onView
                     <h2 id="faq-heading" className="text-3xl md:text-5xl font-black mb-12 text-center text-foreground">{t('landing.faqTitle')}</h2>
                     <div className="space-y-2">
                         {LANDING_FAQ.map((item, index) => (
-                            <div key={index} className="border border-border rounded-xl bg-card overflow-hidden">
+                            <div key={item.keyQ} className="border border-border rounded-xl bg-card overflow-hidden">
                                 <button
                                     type="button"
                                     onClick={() => setFaqOpenIndex(faqOpenIndex === index ? null : index)}

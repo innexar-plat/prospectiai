@@ -33,6 +33,22 @@ async function getCsrfToken(): Promise<string> {
     return data?.csrfToken ?? data?.token ?? '';
 }
 
+/** Create a form with hidden inputs and submit (used by credentials and OAuth sign-in). */
+function createAndSubmitForm(action: string, fields: Record<string, string>): void {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = action;
+    for (const [name, value] of Object.entries(fields)) {
+        const input = document.createElement('input');
+        input.name = name;
+        input.type = 'hidden';
+        input.value = value;
+        form.appendChild(input);
+    }
+    document.body.appendChild(form);
+    form.submit();
+}
+
 export const authApi = {
     /** Get current logged-in user (null if not authenticated) */
     session: () => request<{ user: SessionUser | null }>('/auth/session'),
@@ -49,33 +65,21 @@ export const authApi = {
         const csrfToken = await getCsrfToken();
         const origin = typeof window !== 'undefined' ? window.location.origin : '';
         const baseOrigin = origin.replace(/\/$/, '');
-        const pathPart = data.callbackUrl?.startsWith('/') ? data.callbackUrl : data.callbackUrl ? `/${data.callbackUrl}` : '';
-        const callbackUrl =
-            data.callbackUrl && data.callbackUrl.startsWith('http')
-                ? data.callbackUrl
-                : data.callbackUrl
-                    ? `${baseOrigin}${pathPart}`
-                    : `${origin}/dashboard`;
+        let pathPart: string;
+        if (data.callbackUrl?.startsWith('/')) pathPart = data.callbackUrl;
+        else if (data.callbackUrl) pathPart = `/${data.callbackUrl}`;
+        else pathPart = '';
+        let callbackUrl: string;
+        if (data.callbackUrl && data.callbackUrl.startsWith('http')) callbackUrl = data.callbackUrl;
+        else if (data.callbackUrl) callbackUrl = `${baseOrigin}${pathPart}`;
+        else callbackUrl = `${origin}/dashboard`;
 
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = `${BASE}/auth/callback/credentials`;
-
-        const addInput = (name: string, value: string) => {
-            const input = document.createElement('input');
-            input.name = name;
-            input.type = 'hidden';
-            input.value = value;
-            form.appendChild(input);
-        };
-
-        addInput('csrfToken', csrfToken);
-        addInput('email', data.email);
-        addInput('password', data.password);
-        addInput('callbackUrl', callbackUrl);
-
-        document.body.appendChild(form);
-        form.submit();
+        createAndSubmitForm(`${BASE}/auth/callback/credentials`, {
+            csrfToken,
+            email: data.email,
+            password: data.password,
+            callbackUrl,
+        });
     },
 
     /**
@@ -89,21 +93,11 @@ export const authApi = {
         const origin = typeof window !== 'undefined' ? window.location.origin : '';
         const baseOrigin = origin.replace(/\/$/, '');
         const pathSegment = callbackPath.startsWith('/') ? callbackPath : `/${callbackPath}`;
-        const callbackUrl = origin ? `${baseOrigin}${pathSegment}` : '';
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = `${BASE}/auth/signin/${provider}`;
-        const addInput = (name: string, value: string) => {
-            const input = document.createElement('input');
-            input.name = name;
-            input.type = 'hidden';
-            input.value = value;
-            form.appendChild(input);
-        };
-        addInput('csrfToken', csrfToken);
-        addInput('callbackUrl', callbackUrl);
-        document.body.appendChild(form);
-        form.submit();
+        const callbackUrl = origin === '' ? '' : `${baseOrigin}${pathSegment}`;
+        createAndSubmitForm(`${BASE}/auth/signin/${provider}`, {
+            csrfToken,
+            callbackUrl,
+        });
     },
 
     /** Request password reset email. POST /api/auth/forgot-password { email } */

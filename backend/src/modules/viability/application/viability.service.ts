@@ -55,7 +55,7 @@ Para suggestedOffer/suggestedTicket: recomendações para o negócio do usuário
 
     const intro = modeInstructions[mode];
 
-    return `Você é um consultor de negócios especializado em análise de viabilidade local no Brasil.
+    const basePrompt = `Você é um consultor de negócios especializado em análise de viabilidade local no Brasil.
 ${intro}
 
 DADOS DO MERCADO LOCAL:
@@ -94,14 +94,17 @@ REGRAS CRÍTICAS:
 - dailyLeadsTarget: base no total de oportunidades e um ritmo realista
 - suggestedTicket: baseado no nicho e na região
 - Seja realista e honesto, não superestime a viabilidade
-${webContext ? `\n\n${webContext}\n\n` : ''}`;
+`;
+    const webSuffix = webContext ? '\n\n' + webContext + '\n\n' : '';
+    return basePrompt + webSuffix;
 }
 
 export async function runViabilityAnalysis(
     input: ViabilityInput,
     userId: string
 ): Promise<ViabilityReport> {
-    const textQuery = `${input.businessType} em ${input.city}${input.state ? `, ${input.state}` : ''}`;
+    const statePart = input.state ? ', ' + input.state : '';
+    const textQuery = input.businessType + ' em ' + input.city + statePart;
 
     let workspaceId: string | undefined;
     const user = await prisma.user.findFirst({

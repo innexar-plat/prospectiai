@@ -179,7 +179,7 @@ export default function EquipePage() {
         return () => { cancelled = true; };
     }, [hasAccess, isAdminOrOwner, viewMode, addToast]);
 
-    const handleInvite = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleInvite = async (e: React.SyntheticEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!inviteEmail.trim()) return;
         setInviting(true);
@@ -232,7 +232,7 @@ export default function EquipePage() {
         });
     };
 
-    const handleSaveGoals = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSaveGoals = async (e: React.SyntheticEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!goalsModalMember) return;
         setSavingGoals(true);
@@ -257,7 +257,7 @@ export default function EquipePage() {
         }
     };
 
-    const handleSaveRole = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSaveRole = async (e: React.SyntheticEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!editModalMember) return;
         setSavingRole(true);

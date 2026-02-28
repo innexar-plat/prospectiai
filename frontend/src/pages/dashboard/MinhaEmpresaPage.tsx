@@ -39,7 +39,7 @@ export default function MinhaEmpresaPage() {
     const canSubmitSearch = searchCompanyName.trim().length > 0;
     const canSubmit = mode === 'profile' ? canSubmitProfile : canSubmitSearch;
 
-    const handleAnalyze = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleAnalyze = async (e: React.SyntheticEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!canSubmit) return;
         setLoading(true);

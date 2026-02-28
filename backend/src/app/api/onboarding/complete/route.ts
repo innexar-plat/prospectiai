@@ -52,7 +52,10 @@ export async function POST(req: Request) {
             })
         }
 
-        const workspaceId = membership!.workspaceId
+        if (!membership) {
+            return NextResponse.json({ error: "Workspace membership not found" }, { status: 500 })
+        }
+        const workspaceId = membership.workspaceId
         await Promise.all([
             prisma.user.update({
                 where: { id: session.user.id },

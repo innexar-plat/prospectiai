@@ -376,7 +376,10 @@ export function PlansPage() {
                                 disabled={saving || !form.key?.trim() || !form.name?.trim()}
                                 className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-500 disabled:opacity-50"
                             >
-                                {saving ? 'Salvando...' : editingId ? 'Salvar Alterações' : 'Criar Plano'}
+                                {(() => {
+                                if (saving) return 'Salvando...';
+                                return editingId ? 'Salvar Alterações' : 'Criar Plano';
+                              })()}
                             </button>
                         </div>
                     </div>

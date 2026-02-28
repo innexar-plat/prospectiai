@@ -41,7 +41,7 @@ export default function RelatoriosPage() {
 
   const hasAccess = user.plan === 'BUSINESS' || user.plan === 'SCALE';
 
-  const handleGenerate = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleGenerate = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!query.trim()) return;
     setLoading(true);

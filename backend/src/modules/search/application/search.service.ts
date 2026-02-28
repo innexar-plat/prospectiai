@@ -120,10 +120,10 @@ export async function runSearch(input: SearchInput, userId: string): Promise<Sea
         const cached = await getCached<{ places: unknown[]; nextPageToken?: string }>(cacheKey);
         const cachedCount = cached?.places?.length ?? 0;
         const minAcceptableFromCache = Math.min(5, effectivePageSize);
-        if (cachedCount >= minAcceptableFromCache) {
+        if (cached && cached.places && cachedCount >= minAcceptableFromCache) {
             logger.info('Search: cache hit', { cachedCount });
-            await saveHistory(cachedCount, cached!.places);
-            return { ...cached!, fromCache: true };
+            await saveHistory(cachedCount, cached.places);
+            return { ...cached, fromCache: true };
         }
         if (cachedCount > 0) {
             logger.info('Search: cache skipped (below minimum)', { cachedCount, minAcceptableFromCache });

@@ -56,7 +56,7 @@ async function generatePlaybook(
       workspaceId && userId ? { workspaceId, userId } : undefined,
     );
 
-    const prompt = `Você é um consultor de marketing digital e vendas B2B especializado em análise competitiva local.
+    const basePrompt = `Você é um consultor de marketing digital e vendas B2B especializado em análise competitiva local.
 Com base nos DADOS REAIS de mercado abaixo, gere um playbook de ataque para quem quer vender serviços digitais (site, SEO, marketing) para esse nicho/região.
 
 DADOS DO MERCADO LOCAL:
@@ -86,7 +86,9 @@ REGRAS:
 - quickWins: ações que dão resultado em 24-72 horas
 - entryBarrier alto = top players muito fortes, muitas reviews, mercado saturado
 - entryBarrier baixo = poucos concorrentes bons, muitos sem site, fácil se destacar
-${webContext ? `\n\n${webContext}\n\n` : ''}`;
+`;
+    const webSuffix = webContext ? '\n\n' + webContext + '\n\n' : '';
+    const prompt = basePrompt + webSuffix;
 
     const { config } = await resolveAiForRole('viability');
     const result = await generateCompletionForRole('viability', {

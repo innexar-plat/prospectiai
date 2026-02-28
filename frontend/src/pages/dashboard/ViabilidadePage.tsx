@@ -60,7 +60,7 @@ export default function ViabilidadePage() {
         city.trim().length > 0 &&
         (mode === 'my_business' ? !myBusinessProfileEmpty : effectiveBusinessType.trim().length >= 2);
 
-    const handleAnalyze = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleAnalyze = async (e: React.SyntheticEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!canSubmit) return;
         setLoading(true);

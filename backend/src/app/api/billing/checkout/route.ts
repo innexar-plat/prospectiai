@@ -41,7 +41,7 @@ export async function POST(req: Request) {
             include: { workspaces: { take: 1, include: { workspace: true } } },
         });
         const workspace = userWithWorkspace?.workspaces?.[0]?.workspace;
-        const currentPlan = workspace?.plan as PlanType | undefined;
+        const currentPlan = workspace?.plan;
         const isDowngradeRequest =
             scheduleAtPeriodEnd === true &&
             currentPlan != null &&

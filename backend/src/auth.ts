@@ -80,6 +80,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     trustHost: true,
     session: { strategy: "jwt" },
     callbacks: {
+        async session({ session, token }) {
+            if (!session.user) return session;
+            if (token.id) session.user.id = token.id as string;
+            if (token.email) session.user.email = token.email as string;
+            if (!session.user.email && token.id) {
+                const dbUser = await prisma.user.findUnique({
+                    where: { id: token.id as string },
+                    select: { email: true, name: true, image: true },
+                });
+                if (dbUser?.email) {
+                    session.user.email = dbUser.email;
+                    if (dbUser.name != null) session.user.name = dbUser.name;
+                    if (dbUser.image != null) session.user.image = dbUser.image;
+                }
+            }
+            const role = (token.role as 'admin' | 'support' | null) ?? getPanelRole(session);
+            (session.user as { role?: 'admin' | 'support' | null }).role = role;
+            return session;
+        },
         async redirect({ url, baseUrl }) {
             const base = baseUrl.replace(/\/$/, "");
             if (url.startsWith("/")) return `${base}${url}`;
@@ -119,30 +138,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 }
             }
             return token;
-        },
-        async session({ session, token }) {
-            if (session.user && token.id) {
-                session.user.id = token.id as string;
-            }
-            if (session.user && token.email) {
-                session.user.email = token.email as string;
-            }
-            if (session.user && !session.user.email && token.id) {
-                const dbUser = await prisma.user.findUnique({
-                    where: { id: token.id as string },
-                    select: { email: true, name: true, image: true },
-                });
-                if (dbUser?.email) {
-                    session.user.email = dbUser.email;
-                    if (dbUser.name != null) session.user.name = dbUser.name;
-                    if (dbUser.image != null) session.user.image = dbUser.image;
-                }
-            }
-            if (session.user) {
-                const role = (token.role as 'admin' | 'support' | null) ?? getPanelRole(session);
-                (session.user as { role?: 'admin' | 'support' | null }).role = role;
-            }
-            return session;
         },
     },
     pages: {

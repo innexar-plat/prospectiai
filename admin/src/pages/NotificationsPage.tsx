@@ -119,56 +119,56 @@ export function NotificationsPage() {
           </p>
         </div>
         <div className="overflow-x-auto">
-          {channelsLoading ? (
-            <p className="p-4 text-sm text-zinc-500">Carregando canais...</p>
-          ) : channels.length === 0 ? (
-            <p className="p-4 text-sm text-zinc-500">Nenhum canal configurado.</p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-zinc-800 text-left text-zinc-500">
-                  <th className="pb-2 pr-4 pt-2 pl-4">Canal</th>
-                  <th className="pb-2 pr-4 pt-2">Notificação no app</th>
-                  <th className="pb-2 pr-4 pt-2">Email</th>
-                </tr>
-              </thead>
-              <tbody>
-                {channels.map((ch) => (
-                  <tr key={ch.key} className="border-b border-zinc-800/80">
-                    <td className="py-3 pr-4 pl-4 text-zinc-300 font-medium">{ch.name}</td>
-                    <td className="py-3 pr-4">
-                      <button
-                        type="button"
-                        disabled={channelUpdating === ch.key}
-                        onClick={() => handleChannelToggle(ch.key, 'appEnabled', !ch.appEnabled)}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                          ch.appEnabled
-                            ? 'bg-violet-600 text-white hover:bg-violet-500'
-                            : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'
-                        }`}
-                      >
-                        {ch.appEnabled ? 'Ligado' : 'Desligado'}
-                      </button>
-                    </td>
-                    <td className="py-3 pr-4">
-                      <button
-                        type="button"
-                        disabled={channelUpdating === ch.key}
-                        onClick={() => handleChannelToggle(ch.key, 'emailEnabled', !ch.emailEnabled)}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                          ch.emailEnabled
-                            ? 'bg-violet-600 text-white hover:bg-violet-500'
-                            : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'
-                        }`}
-                      >
-                        {ch.emailEnabled ? 'Ligado' : 'Desligado'}
-                      </button>
-                    </td>
+          {(() => {
+            if (channelsLoading) return <p className="p-4 text-sm text-zinc-500">Carregando canais...</p>;
+            if (channels.length === 0) return <p className="p-4 text-sm text-zinc-500">Nenhum canal configurado.</p>;
+            return (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-800 text-left text-zinc-500">
+                    <th className="pb-2 pr-4 pt-2 pl-4">Canal</th>
+                    <th className="pb-2 pr-4 pt-2">Notificação no app</th>
+                    <th className="pb-2 pr-4 pt-2">Email</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                </thead>
+                <tbody>
+                  {channels.map((ch) => (
+                    <tr key={ch.key} className="border-b border-zinc-800/80">
+                      <td className="py-3 pr-4 pl-4 text-zinc-300 font-medium">{ch.name}</td>
+                      <td className="py-3 pr-4">
+                        <button
+                          type="button"
+                          disabled={channelUpdating === ch.key}
+                          onClick={() => handleChannelToggle(ch.key, 'appEnabled', !ch.appEnabled)}
+                          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                            ch.appEnabled
+                              ? 'bg-violet-600 text-white hover:bg-violet-500'
+                              : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'
+                          }`}
+                        >
+                          {ch.appEnabled ? 'Ligado' : 'Desligado'}
+                        </button>
+                      </td>
+                      <td className="py-3 pr-4">
+                        <button
+                          type="button"
+                          disabled={channelUpdating === ch.key}
+                          onClick={() => handleChannelToggle(ch.key, 'emailEnabled', !ch.emailEnabled)}
+                          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                            ch.emailEnabled
+                              ? 'bg-violet-600 text-white hover:bg-violet-500'
+                              : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'
+                          }`}
+                        >
+                          {ch.emailEnabled ? 'Ligado' : 'Desligado'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            );
+          })()}
         </div>
         {toast && <p className="p-4 pt-0 text-sm text-zinc-500">{toast}</p>}
       </div>
@@ -259,36 +259,36 @@ export function NotificationsPage() {
           <p className="text-sm text-zinc-500">Total: {total}</p>
         </div>
         <div className="overflow-x-auto">
-          {loading ? (
-            <p className="p-4 text-sm text-zinc-500">Carregando...</p>
-          ) : items.length === 0 ? (
-            <p className="p-4 text-sm text-zinc-500">Nenhuma notificação.</p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-zinc-800 text-left text-zinc-500">
-                  <th className="pb-2 pr-2">Data</th>
-                  <th className="pb-2 pr-2">Título</th>
-                  <th className="pb-2 pr-2">Usuário</th>
-                  <th className="pb-2 pr-2">Lida</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((n) => (
-                  <tr key={n.id} className="border-b border-zinc-800/80">
-                    <td className="py-2 pr-2 text-zinc-300 whitespace-nowrap">
-                      {new Date(n.createdAt).toLocaleString('pt-BR')}
-                    </td>
-                    <td className="py-2 pr-2 text-zinc-300">{n.title}</td>
-                    <td className="py-2 pr-2 text-zinc-300">
-                      {n.user?.email ?? n.userId}
-                    </td>
-                    <td className="py-2 pr-2 text-zinc-300">{n.readAt ? 'Sim' : 'Não'}</td>
+          {(() => {
+            if (loading) return <p className="p-4 text-sm text-zinc-500">Carregando...</p>;
+            if (items.length === 0) return <p className="p-4 text-sm text-zinc-500">Nenhuma notificação.</p>;
+            return (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-800 text-left text-zinc-500">
+                    <th className="pb-2 pr-2">Data</th>
+                    <th className="pb-2 pr-2">Título</th>
+                    <th className="pb-2 pr-2">Usuário</th>
+                    <th className="pb-2 pr-2">Lida</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                </thead>
+                <tbody>
+                  {items.map((n) => (
+                    <tr key={n.id} className="border-b border-zinc-800/80">
+                      <td className="py-2 pr-2 text-zinc-300 whitespace-nowrap">
+                        {new Date(n.createdAt).toLocaleString('pt-BR')}
+                      </td>
+                      <td className="py-2 pr-2 text-zinc-300">{n.title}</td>
+                      <td className="py-2 pr-2 text-zinc-300">
+                        {n.user?.email ?? n.userId}
+                      </td>
+                      <td className="py-2 pr-2 text-zinc-300">{n.readAt ? 'Sim' : 'Não'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            );
+          })()}
         </div>
       </div>
     </div>

@@ -19,9 +19,9 @@ export function InstallPrompt() {
             return;
         }
 
-        // Detect iOS
+        // Detect iOS (iPad on macOS 13+ reports as Mac with touch; avoid deprecated navigator.platform)
         const ua = navigator.userAgent;
-        const isIOSDevice = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const isIOSDevice = /iPad|iPhone|iPod/.test(ua) || (/Mac/.test(ua) && navigator.maxTouchPoints > 1);
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
         queueMicrotask(() => setIsIOS(isIOSDevice && !isStandalone));
 

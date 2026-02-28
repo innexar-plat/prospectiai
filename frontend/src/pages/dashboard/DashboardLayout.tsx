@@ -189,11 +189,10 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
                     )}
                   </div>
                   <div className="flex-1 overflow-y-auto min-h-[120px]">
-                    {notifLoading ? (
-                      <div className="p-4 text-center text-muted text-sm">Carregando...</div>
-                    ) : notifItems.length === 0 ? (
-                      <div className="p-4 text-center text-muted text-sm">Nenhuma notificação.</div>
-                    ) : (
+                    {(() => {
+                      if (notifLoading) return <div className="p-4 text-center text-muted text-sm">Carregando...</div>;
+                      if (notifItems.length === 0) return <div className="p-4 text-center text-muted text-sm">Nenhuma notificação.</div>;
+                      return (
                       <ul className="py-1">
                         {notifItems.map((item) => (
                           <li key={item.id}>
@@ -219,7 +218,8 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
                           </li>
                         ))}
                       </ul>
-                    )}
+                      );
+                    })()}
                   </div>
                 </div>
               )}

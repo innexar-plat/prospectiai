@@ -184,7 +184,7 @@ export default function Pricing({
                             <div style={styles.leadsLabel}>{plan.leads}</div>
                             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 {plan.features.map((f: string, i: number) => (
-                                    <li key={i} style={styles.featureItem}>
+                                    <li key={`${plan.id}-${i}-${f.slice(0, 24)}`} style={styles.featureItem}>
                                         <Check size={16} color={plan.color} /> {f}
                                     </li>
                                 ))}
@@ -197,7 +197,11 @@ export default function Pricing({
                             onClick={() => handleCheckout(plan.id)}
                             style={styles.ctaBtn(!!plan.popular, currentPlan === plan.id || loading === plan.id)}
                         >
-                            {loading === plan.id ? t('billing.processing') : (currentPlan === plan.id ? t('billing.currentPlan').replace('{plan}', plan.name) : t('billing.subscribe'))}
+                            {(() => {
+                            if (loading === plan.id) return t('billing.processing');
+                            if (currentPlan === plan.id) return t('billing.currentPlan').replace('{plan}', plan.name);
+                            return t('billing.subscribe');
+                          })()}
                         </button>
                     </div>
                 ))}
