@@ -39,11 +39,14 @@ export function isSupport(session: Session | null): boolean {
 
 export type PanelRole = 'admin' | 'support' | null;
 
+/** Mínimo necessário para getPanelRole (só usa session?.user?.email). */
+export type SessionLike = { user?: { email?: string | null } } | null;
+
 /**
  * Retorna o papel do usuário no painel: admin (acesso total) ou support (só suporte).
  * Se email estiver em ambos, retorna admin. Se não estiver em nenhum, null.
  */
-export function getPanelRole(session: Session | null): PanelRole {
+export function getPanelRole(session: Session | SessionLike): PanelRole {
   if (!session?.user?.email) return null;
   const adminEmails = parseEmailList(ADMIN_EMAILS_KEY);
   const supportEmails = parseEmailList(SUPPORT_EMAILS_KEY);
