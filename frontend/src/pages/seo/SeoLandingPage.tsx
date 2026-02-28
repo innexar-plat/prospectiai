@@ -10,9 +10,23 @@ import {
   getSeoLocalBlock,
   getSeoFaq,
   getRelatedSeoSlugs,
+  type SeoLandingSlug,
 } from '@/lib/seo-local';
 
 const BASE_URL = 'https://prospectorai.innexar.com.br';
+
+function getSeoH1Title(entry: SeoLandingSlug): string {
+  if (entry.type === 'cidade' && entry.city) return `Ferramenta de Inteligência Comercial para Empresas em ${entry.city}`;
+  if (entry.type === 'cidade-nicho' && entry.city && entry.niche) return `Prospecção B2B para ${entry.niche} em ${entry.city}`;
+  if (entry.type === 'bairro' && entry.neighborhood) return `Lista de Empresas por Bairro: ${entry.neighborhood}`;
+  return 'Geração de Leads B2B e Prospecção com IA';
+}
+
+function getRelatedLinkLabel(r: SeoLandingSlug): string {
+  if (r.type === 'cidade' && r.city) return `Leads em ${r.city}`;
+  if (r.type === 'cidade-nicho' && r.city && r.niche) return `${r.niche} em ${r.city}`;
+  return r.slug;
+}
 
 function setMeta(nameOrProperty: string, content: string, isProperty = false) {
   const attr = isProperty ? 'property' : 'name';
@@ -81,14 +95,7 @@ export default function SeoLandingPage() {
   if (!entry) return <Navigate to="/" replace />;
 
   const description = getSeoDescription(entry);
-  const h1 =
-    entry.type === 'cidade' && entry.city
-      ? `Ferramenta de Inteligência Comercial para Empresas em ${entry.city}`
-      : entry.type === 'cidade-nicho' && entry.city && entry.niche
-        ? `Prospecção B2B para ${entry.niche} em ${entry.city}`
-        : entry.type === 'bairro' && entry.neighborhood
-          ? `Lista de Empresas por Bairro: ${entry.neighborhood}`
-          : 'Geração de Leads B2B e Prospecção com IA';
+  const h1 = getSeoH1Title(entry);
 
   const pageUrl = `${BASE_URL}/${entry.slug}`;
   const intro = getSeoIntro(entry);
@@ -147,8 +154,8 @@ export default function SeoLandingPage() {
           <h2 id="intro-heading" className="sr-only">
             Sobre esta página
           </h2>
-          {intro.map((p, i) => (
-            <p key={i}>{p}</p>
+          {intro.map((p) => (
+            <p key={`p-${String(p).slice(0, 50)}`}>{p}</p>
           ))}
         </section>
 
@@ -157,8 +164,8 @@ export default function SeoLandingPage() {
             <h2 id="local-heading" className="text-xl font-bold text-foreground">
               O que você pode fazer aqui
             </h2>
-            {localBlock.map((p, i) => (
-              <p key={i}>{p}</p>
+            {localBlock.map((p) => (
+              <p key={`local-${String(p).slice(0, 50)}`}>{p}</p>
             ))}
           </section>
         )}
@@ -182,8 +189,8 @@ export default function SeoLandingPage() {
               Perguntas frequentes
             </h2>
             <ul className="space-y-4 list-none p-0 m-0">
-              {faq.map((item, i) => (
-                <li key={i} className="border-b border-border pb-4 last:border-0">
+              {faq.map((item) => (
+                <li key={`faq-${String(item.question).slice(0, 80)}`} className="border-b border-border pb-4 last:border-0">
                   <h3 className="text-base font-semibold text-foreground mb-2">{item.question}</h3>
                   <p className="text-muted text-sm leading-relaxed">{item.answer}</p>
                 </li>
@@ -218,11 +225,7 @@ export default function SeoLandingPage() {
                     to={`/${r.slug}`}
                     className="text-sm text-muted hover:text-foreground underline underline-offset-2 focus:outline-none focus:ring-2 focus:ring-violet-500 rounded"
                   >
-                    {r.type === 'cidade' && r.city
-                      ? `Leads em ${r.city}`
-                      : r.type === 'cidade-nicho' && r.city && r.niche
-                        ? `${r.niche} em ${r.city}`
-                        : r.slug}
+                    {getRelatedLinkLabel(r)}
                   </Link>
                 </li>
               ))}

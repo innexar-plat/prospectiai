@@ -236,9 +236,17 @@ export default function PlanosPage() {
                                                 className="w-full rounded-xl font-bold"
                                                 disabled={loadingPlan === plan.key}
                                                 onClick={() => handleUpgrade(plan.key)}
-                                                icon={loadingPlan === plan.key ? <Loader2 size={14} className="animate-spin" /> : isDowngrade(plan.key) ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />}
+                                                icon={(() => {
+                                                if (loadingPlan === plan.key) return <Loader2 size={14} className="animate-spin" />;
+                                                if (isDowngrade(plan.key)) return <ArrowDownRight size={14} />;
+                                                return <ArrowUpRight size={14} />;
+                                              })()}
                                             >
-                                                {loadingPlan === plan.key ? 'Processando...' : isDowngrade(plan.key) ? 'Downgrade' : 'Assinar'}
+                                                {(() => {
+                                                if (loadingPlan === plan.key) return 'Processando...';
+                                                if (isDowngrade(plan.key)) return 'Downgrade';
+                                                return 'Assinar';
+                                              })()}
                                             </Button>
                                         )}
                                     </div>

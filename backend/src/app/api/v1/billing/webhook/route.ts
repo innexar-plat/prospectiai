@@ -51,10 +51,12 @@ export async function POST(req: Request) {
     }
 
     if (event.type === 'customer.subscription.deleted') {
-        const subscription = event.data.object as Stripe.Subscription;
-
+        const obj = event.data.object;
+        if (typeof obj !== 'object' || obj === null || !('id' in obj)) {
+            return NextResponse.json({ error: 'Invalid subscription object' }, { status: 400 });
+        }
         await prisma.user.update({
-            where: { subscriptionId: subscription.id },
+            where: { subscriptionId: (obj as Stripe.Subscription).id },
             data: {
                 subscriptionStatus: 'canceled',
                 plan: 'FREE',

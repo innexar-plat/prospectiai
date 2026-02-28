@@ -23,6 +23,13 @@ const MODULE_LABELS: Record<string, string> = {
   MY_COMPANY: 'Análise da minha empresa',
 };
 
+function getHistoricoSubtitle(activeTab: TabId, searchTotal: number, intelTotal: number): string {
+  if (activeTab === 'buscas' && searchTotal) return `Suas buscas anteriores (${searchTotal} registros).`;
+  if (activeTab === 'lead') return 'Relatórios de análise de lead.';
+  if (activeTab === 'intelligence' && intelTotal !== 0) return `Relatórios de inteligência (${intelTotal}).`;
+  return 'Buscas, relatórios de lead e relatórios de inteligência.';
+}
+
 export default function HistoricoPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabFromUrl = (searchParams.get('tab') as TabId) || 'buscas';
@@ -276,7 +283,10 @@ export default function HistoricoPage() {
       <>
         <HeaderDashboard
           title={`Relatório — ${moduleLabel}`}
-          subtitle={`${selectedIntelItem.inputQuery}${selectedIntelItem.inputCity ? ` · ${selectedIntelItem.inputCity}` : ''} — ${formatDate(selectedIntelItem.createdAt)}`}
+          subtitle={(() => {
+          const cityPart = selectedIntelItem.inputCity ? ` · ${selectedIntelItem.inputCity}` : '';
+          return `${selectedIntelItem.inputQuery}${cityPart} — ${formatDate(selectedIntelItem.createdAt)}`;
+        })()}
           breadcrumb="Prospecção Ativa / Histórico / Relatório de inteligência"
         />
         <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full">
@@ -290,7 +300,7 @@ export default function HistoricoPage() {
             </Button>
             <button
               type="button"
-              onClick={(e) => selectedIntelItem && handleIntelFavorite(selectedIntelItem, e)}
+              onClick={(e) => handleIntelFavorite(selectedIntelItem, e)}
               className="p-2 rounded-lg border border-border hover:bg-violet-500/10 text-amber-400"
               title={selectedIntelItem?.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
               aria-label={selectedIntelItem?.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
@@ -319,10 +329,10 @@ export default function HistoricoPage() {
                     <p><strong>Total de negócios:</strong> {String(rd.totalBusinesses)}</p>
                   </div>
                 )}
-                {selectedIntelItem.module === 'MY_COMPANY' && ('summary' in rd || (typeof rd.socialNetworks === 'object' && rd.socialNetworks && 'presence' in (rd.socialNetworks as object))) && (
+                {selectedIntelItem.module === 'MY_COMPANY' && ('summary' in rd || (typeof rd.socialNetworks === 'object' && rd.socialNetworks && 'presence' in rd.socialNetworks)) && (
                   <div className="space-y-2">
                     {'summary' in rd && <p className="text-muted">{String(rd.summary)}</p>}
-                    {typeof rd.socialNetworks === 'object' && rd.socialNetworks && 'presence' in (rd.socialNetworks as Record<string, unknown>) && (
+                    {typeof rd.socialNetworks === 'object' && rd.socialNetworks && 'presence' in rd.socialNetworks && (
                       <p className="text-muted"><strong>Redes sociais:</strong> {String((rd.socialNetworks as Record<string, unknown>).presence ?? '')}</p>
                     )}
                   </div>
@@ -351,15 +361,7 @@ export default function HistoricoPage() {
     <>
       <HeaderDashboard
         title="Histórico"
-        subtitle={
-          activeTab === 'buscas' && searchTotal
-            ? `Suas buscas anteriores (${searchTotal} registros).`
-            : activeTab === 'lead'
-              ? 'Relatórios de análise de lead.'
-              : activeTab === 'intelligence' && intelTotal !== 0
-                ? `Relatórios de inteligência (${intelTotal}).`
-                : 'Buscas, relatórios de lead e relatórios de inteligência.'
-        }
+        subtitle={getHistoricoSubtitle(activeTab, searchTotal, intelTotal)}
         breadcrumb="Prospecção Ativa / Histórico"
       />
       <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full">

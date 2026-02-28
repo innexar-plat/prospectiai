@@ -2,7 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { rateLimit } from '@/lib/ratelimit';
-import { profileSchema, formatZodError } from '@/lib/validations/schemas';
+import { profileSchema, formatZodError, type ProfileInput } from '@/lib/validations/schemas';
+
+function buildProfileUpdate(data: ProfileInput): Record<string, unknown> {
+    const out: Record<string, unknown> = {};
+    if (data.name !== undefined) out.name = data.name;
+    if (data.phone !== undefined) out.phone = data.phone;
+    if (data.address !== undefined) out.address = data.address;
+    if (data.linkedInUrl !== undefined) out.linkedInUrl = data.linkedInUrl;
+    if (data.instagramUrl !== undefined) out.instagramUrl = data.instagramUrl;
+    if (data.facebookUrl !== undefined) out.facebookUrl = data.facebookUrl;
+    if (data.websiteUrl !== undefined) out.websiteUrl = data.websiteUrl;
+    if (data.image !== undefined) out.image = data.image;
+    if (data.notifyByEmail !== undefined) out.notifyByEmail = data.notifyByEmail;
+    if (data.notifyWeeklyReport !== undefined) out.notifyWeeklyReport = data.notifyWeeklyReport;
+    if (data.notifyLeadAlerts !== undefined) out.notifyLeadAlerts = data.notifyLeadAlerts;
+    return out;
+}
 
 export async function POST(req: NextRequest) {
     try {
@@ -21,48 +37,10 @@ export async function POST(req: NextRequest) {
         if (!parsed.success) {
             return NextResponse.json({ error: formatZodError(parsed) }, { status: 400 });
         }
-        const {
-            name,
-            phone,
-            address,
-            linkedInUrl,
-            instagramUrl,
-            facebookUrl,
-            websiteUrl,
-            image,
-            notifyByEmail,
-            notifyWeeklyReport,
-            notifyLeadAlerts,
-        } = parsed.data;
-
-        const userUpdate: {
-            name?: string;
-            phone?: string;
-            address?: string;
-            linkedInUrl?: string;
-            instagramUrl?: string;
-            facebookUrl?: string;
-            websiteUrl?: string;
-            image?: string;
-            notifyByEmail?: boolean;
-            notifyWeeklyReport?: boolean;
-            notifyLeadAlerts?: boolean;
-        } = {};
-        if (name !== undefined) userUpdate.name = name;
-        if (phone !== undefined) userUpdate.phone = phone;
-        if (address !== undefined) userUpdate.address = address;
-        if (linkedInUrl !== undefined) userUpdate.linkedInUrl = linkedInUrl;
-        if (instagramUrl !== undefined) userUpdate.instagramUrl = instagramUrl;
-        if (facebookUrl !== undefined) userUpdate.facebookUrl = facebookUrl;
-        if (websiteUrl !== undefined) userUpdate.websiteUrl = websiteUrl;
-        if (image !== undefined) userUpdate.image = image;
-        if (notifyByEmail !== undefined) userUpdate.notifyByEmail = notifyByEmail;
-        if (notifyWeeklyReport !== undefined) userUpdate.notifyWeeklyReport = notifyWeeklyReport;
-        if (notifyLeadAlerts !== undefined) userUpdate.notifyLeadAlerts = notifyLeadAlerts;
 
         const user = await prisma.user.update({
             where: { id: session.user.id },
-            data: userUpdate,
+            data: buildProfileUpdate(parsed.data),
             select: {
                 id: true,
                 name: true,

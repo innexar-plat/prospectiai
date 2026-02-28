@@ -114,8 +114,12 @@ export async function analyzeLead(
         ).join('\n')
         : noReviewsLabel;
 
-    const companyContext = finalProfile
-        ? (isEn
+    const fallbackRole = isEn
+        ? 'You are a Senior B2B Strategic Consultant specialized in commercial prospecting.'
+        : 'Você é um Consultor Estratégico B2B Sênior especializado em prospecção comercial.';
+    let companyContext: string;
+    if (finalProfile) {
+        companyContext = isEn
             ? `You are a Senior B2B Commercial Consultant for "${finalProfile.companyName}".
 "${finalProfile.companyName}" offers: "${finalProfile.productService}".
 Target audience: "${finalProfile.targetAudience}".
@@ -127,20 +131,22 @@ MANDATORY: The ENTIRE report (summary, strengths, weaknesses, gaps, painPoints, 
 Público-alvo: "${finalProfile.targetAudience}".
 Principal diferencial: "${finalProfile.mainBenefit}".
 CONTEXTO CRUCIAL: Analise a lacuna de "website" através da lente do SEU produto ("${finalProfile.productService}"). Se você vende sites/marketing, a falta de um site é uma enorme oportunidade de venda. Se você vende Seguros, Limpeza, Logística, Imobiliária ou outros serviços físicos/B2B, a falta de um site é apenas um detalhe de comunicação menor, NÃO uma falha crítica.
-OBRIGATÓRIO: O relatório INTEIRO (resumo, pontos fortes, fraquezas, lacunas, dores, estratégia de abordagem, scripts sugeridos, relatório completo) deve ser na perspectiva de "${finalProfile.companyName}" vendendo APENAS "${finalProfile.productService}". NÃO recomende nem ofereça serviços que não sejam o que esta empresa vende (ex.: se for imobiliária, NÃO sugira oferecer site, SEO ou marketing digital ao lead; sugira apenas serviços imobiliários como encontrar espaço, imóveis para locação/venda).`)
-        : (isEn
-            ? `You are a Senior B2B Strategic Consultant specialized in commercial prospecting.`
-            : `Você é um Consultor Estratégico B2B Sênior especializado em prospecção comercial.`);
+OBRIGATÓRIO: O relatório INTEIRO (resumo, pontos fortes, fraquezas, lacunas, dores, estratégia de abordagem, scripts sugeridos, relatório completo) deve ser na perspectiva de "${finalProfile.companyName}" vendendo APENAS "${finalProfile.productService}". NÃO recomende nem ofereça serviços que não sejam o que esta empresa vende (ex.: se for imobiliária, NÃO sugira oferecer site, SEO ou marketing digital ao lead; sugira apenas serviços imobiliários como encontrar espaço, imóveis para locação/venda).`;
+    } else {
+        companyContext = fallbackRole;
+    }
+
+    const taskDescription = isEn
+        ? `Your task is to generate a DEEP, DETAILED, and ACTIONABLE strategic prospecting report for the lead below.
+Be like a senior consultant who has researched this company thoroughly. Avoid generic statements.
+Every insight must be specific to THIS business and how YOUR product/service can help them.`
+        : `Sua tarefa é gerar um relatório estratégico de prospecção PROFUNDO, DETALHADO e ACIONÁVEL para o lead abaixo.
+Seja como um consultor sênior que pesquisou a fundo esta empresa. Evite afirmações genéricas.
+Cada análise deve ser específica para ESTE negócio e como o SEU produto/serviço pode ajudá-los.`;
 
     const prompt = `${companyContext}
 
-${isEn
-            ? `Your task is to generate a DEEP, DETAILED, and ACTIONABLE strategic prospecting report for the lead below.
-Be like a senior consultant who has researched this company thoroughly. Avoid generic statements.
-Every insight must be specific to THIS business and how YOUR product/service can help them.`
-            : `Sua tarefa é gerar um relatório estratégico de prospecção PROFUNDO, DETALHADO e ACIONÁVEL para o lead abaixo.
-Seja como um consultor sênior que pesquisou a fundo esta empresa. Evite afirmações genéricas.
-Cada análise deve ser específica para ESTE negócio e como o SEU produto/serviço pode ajudá-los.`}
+${taskDescription}
 
 ${isEn ? 'LEAD DATA:' : 'DADOS DO LEAD:'}
 - ${isEn ? 'Business Name' : 'Nome do Negócio'}: ${business.name}
@@ -151,19 +157,24 @@ ${isEn ? 'LEAD DATA:' : 'DADOS DO LEAD:'}
 - ${isEn ? 'Google Rating' : 'Avaliação Google'}: ${business.rating ?? (isEn ? 'No rating' : 'Sem avaliação')}/5
 - ${isEn ? 'Total Reviews' : 'Total de Avaliações'}: ${reviewCount}
 - ${isEn ? 'Business Status' : 'Status do Negócio'}: ${business.businessStatus || 'OPERATIONAL'}
-${website
-            ? (isEn
-                ? '\nCRITICAL: This lead HAS a website (URL above). You MUST acknowledge it, analyze it when relevant (content, UX, SEO, gaps in the site itself), and NEVER list "no website" or "missing website" as a gap.'
-                : '\nCRÍTICO: Este lead POSSUI website (URL acima). Você DEVE reconhecê-lo, analisá-lo quando relevante (conteúdo, UX, SEO, lacunas no próprio site) e NUNCA listar "sem website" ou "ausência de site" como lacuna.')
-            : ''}
+${((): string => {
+        if (!website) return '';
+        return isEn
+            ? '\nCRITICAL: This lead HAS a website (URL above). You MUST acknowledge it, analyze it when relevant (content, UX, SEO, gaps in the site itself), and NEVER list "no website" or "missing website" as a gap.'
+            : '\nCRÍTICO: Este lead POSSUI website (URL acima). Você DEVE reconhecê-lo, analisá-lo quando relevante (conteúdo, UX, SEO, lacunas no próprio site) e NUNCA listar "sem website" ou "ausência de site" como lacuna.';
+    })()}
 
 ${isEn ? 'RECENT CUSTOMER REVIEWS:' : 'AVALIAÇÕES RECENTES DE CLIENTES:'}
 ${reviewsText}
-${webContext ? `\n\n${webContext}\n${isBusinessPlan
+${((): string => {
+        if (!webContext) return '';
+        const businessPlanNote = isBusinessPlan
             ? (isEn
                 ? '\nIMPORTANT: The web context above contains REAL data collected from Reclame Aqui, JusBrasil, CNPJ databases, and general web searches. You MUST analyze this data carefully and incorporate it into your report. Cite specific findings and sources. If Reclame Aqui shows complaints, detail them. If JusBrasil shows lawsuits, flag the risks. If CNPJ data reveals information about the company, use it.'
                 : '\nIMPORTANTE: O contexto da web acima contém dados REAIS coletados do Reclame Aqui, JusBrasil, bases de CNPJ e buscas web gerais. Você DEVE analisar esses dados cuidadosamente e incorporá-los ao seu relatório. Cite achados e fontes específicas. Se o Reclame Aqui mostra reclamações, detalhe-as. Se o JusBrasil mostra processos, sinalize os riscos. Se dados de CNPJ revelam informações sobre a empresa, use-os.')
-            : ''}\n\n` : ''}
+            : '';
+        return `\n\n${webContext}\n${businessPlanNote}\n\n`;
+    })()}
 
 ${isEn ? 'ANALYSIS REQUIREMENTS (be extremely specific, not generic):' : 'REQUISITOS DA ANÁLISE (seja extremamente específico, não genérico):'}
 
@@ -175,7 +186,12 @@ ${isEn ? 'ANALYSIS REQUIREMENTS (be extremely specific, not generic):' : 'REQUIS
 
 4. ${isEn ? 'FIRST CONTACT MESSAGE: Write a professional, personalized opening message for the FIRST contact (WhatsApp/email). It should reference something specific about this business (their rating, a review pattern, missing digital element). Max 3 short paragraphs. No generic templates.' : 'MENSAGEM DE PRIMEIRO CONTATO: Escreva uma mensagem de abertura profissional e personalizada para o PRIMEIRO contato (WhatsApp/email). Deve referenciar algo específico deste negócio (avaliação, padrão nas reviews, elemento digital faltando). Máximo 3 parágrafos curtos. Sem templates genéricos.'}
 5. ${isEn ? 'REVIEW RECENCY: Analyze the time of reviews. If reviews are mostly from years ago, flag this as a "stagnant reputation". If recent, analyze the trend.' : 'RECÊNCIA DE REVIEWS: Analise o tempo das avaliações. Se forem majoritariamente de anos atrás, aponte isso como "reputação estagnada". Se recentes, analise a tendência.'}
-${isBusinessPlan ? (isEn ? '6. DEEP REPUTATION ANALYSIS: Using the REAL data from Reclame Aqui and JusBrasil provided in the web context above, analyze: (a) consumer reputation — complaints, response rate, resolution rate; (b) legal risks — lawsuits, labor disputes, consumer protection cases; (c) CNPJ data — company size, founding date, business activities. Include ALL findings in the full report with source citations.' : '6. ANÁLISE PROFUNDA DE REPUTAÇÃO: Usando os dados REAIS do Reclame Aqui e JusBrasil fornecidos no contexto da web acima, analise: (a) reputação do consumidor — reclamações, taxa de resposta, taxa de resolução; (b) riscos legais — processos, disputas trabalhistas, casos de defesa do consumidor; (c) dados de CNPJ — porte da empresa, data de fundação, atividades empresariais. Inclua TODOS os achados no relatório completo com citações de fonte.') : ''}
+${((): string => {
+        if (!isBusinessPlan) return '';
+        return isEn
+            ? '6. DEEP REPUTATION ANALYSIS: Using the REAL data from Reclame Aqui and JusBrasil provided in the web context above, analyze: (a) consumer reputation — complaints, response rate, resolution rate; (b) legal risks — lawsuits, labor disputes, consumer protection cases; (c) CNPJ data — company size, founding date, business activities. Include ALL findings in the full report with source citations.'
+            : '6. ANÁLISE PROFUNDA DE REPUTAÇÃO: Usando os dados REAIS do Reclame Aqui e JusBrasil fornecidos no contexto da web acima, analise: (a) reputação do consumidor — reclamações, taxa de resposta, taxa de resolução; (b) riscos legais — processos, disputas trabalhistas, casos de defesa do consumidor; (c) dados de CNPJ — porte da empresa, data de fundação, atividades empresariais. Inclua TODOS os achados no relatório completo com citações de fonte.';
+    })()}
 7. ${isEn ? 'WHATSAPP MESSAGE: A shorter, more casual version for WhatsApp (max 2 short paragraphs, conversational tone, gets to the point fast).' : 'MENSAGEM WHATSAPP: Uma versão mais curta e casual para WhatsApp (máximo 2 parágrafos curtos, tom conversacional, vai direto ao ponto).'}
 
 ${isEn ? 'CRITICAL: Respond ONLY with valid JSON, no markdown, no code blocks. Values must be in ENGLISH:' : 'CRÍTICO: Responda APENAS com JSON válido, sem markdown, sem blocos de código. Valores devem estar em PORTUGUÊS:'}
@@ -197,12 +213,16 @@ ${isEn ? 'CRITICAL: Respond ONLY with valid JSON, no markdown, no code blocks. V
     "facebook": "<${isEn ? 'CRITICAL: NEVER hallucinate URLs. If unsure, return Not found' : 'CRÍTICO: NUNCA alucine URLs. Se não tiver certeza, retorne exatamente Não encontrado'}>",
     "linkedin": "<${isEn ? 'CRITICAL: NEVER hallucinate URLs. If unsure, return Not found' : 'CRÍTICO: NUNCA alucine URLs. Se não tiver certeza, retorne exatamente Não encontrado'}>"
   },
-  "fullReport": "<${isEn
-            ? 'EXTREMELY DETAILED and extensive report in Markdown. Dive deep into all possibilities. Sections: ## Executive Summary | ## Digital Strategy | ## Deep Gaps | ## Operational Vulnerabilities | ## Competitor Profile | ## Complete Action Plan.'
-            : 'Relatório EXTREMAMENTE DETALHADO e extenso em Markdown. Aprofunde-se muito nas possibilidades, sem medo de gerar um texto grande. Seções: ## Resumo Executivo | ## Estratégia Digital | ## Lacunas Profundas | ## Vulnerabilidades Operacionais | ## Perfil do Concorrente | ## Plano de Ação Completo.'}>"
-${isBusinessPlan ? `  ,"reclameAquiAnalysis": "<${isEn ? 'Analysis of Reclame Aqui data: complaint patterns, response rate, resolution rate, overall reputation score. If no data found, state that clearly.' : 'Análise dos dados do Reclame Aqui: padrões de reclamação, taxa de resposta, taxa de resolução, score geral de reputação. Se nenhum dado foi encontrado, declare isso claramente.'}>"
-  ,"jusBrasilAnalysis": "<${isEn ? 'Analysis of JusBrasil data: lawsuits, labor disputes, consumer cases, legal risks. If no data found, state that clearly.' : 'Análise dos dados do JusBrasil: processos, disputas trabalhistas, casos de consumidor, riscos legais. Se nenhum dado foi encontrado, declare isso claramente.'}>"
-  ,"cnpjAnalysis": "<${isEn ? 'Analysis of CNPJ data: company size, founding date, registered activities, tax status. If no data found, state that clearly.' : 'Análise dos dados de CNPJ: porte da empresa, data de fundação, atividades registradas, situação fiscal. Se nenhum dado foi encontrado, declare isso claramente.'}>"` : ''}
+  "fullReport": "<${isEn ? 'EXTREMELY DETAILED and extensive report in Markdown. Dive deep into all possibilities. Sections: ## Executive Summary | ## Digital Strategy | ## Deep Gaps | ## Operational Vulnerabilities | ## Competitor Profile | ## Complete Action Plan.' : 'Relatório EXTREMAMENTE DETALHADO e extenso em Markdown. Aprofunde-se muito nas possibilidades, sem medo de gerar um texto grande. Seções: ## Resumo Executivo | ## Estratégia Digital | ## Lacunas Profundas | ## Vulnerabilidades Operacionais | ## Perfil do Concorrente | ## Plano de Ação Completo.'}>"
+${((): string => {
+        if (!isBusinessPlan) return '';
+        const reclamePrompt = isEn ? 'Analysis of Reclame Aqui data: complaint patterns, response rate, resolution rate, overall reputation score. If no data found, state that clearly.' : 'Análise dos dados do Reclame Aqui: padrões de reclamação, taxa de resposta, taxa de resolução, score geral de reputação. Se nenhum dado foi encontrado, declare isso claramente.';
+        const jusBrasilPrompt = isEn ? 'Analysis of JusBrasil data: lawsuits, labor disputes, consumer cases, legal risks. If no data found, state that clearly.' : 'Análise dos dados do JusBrasil: processos, disputas trabalhistas, casos de consumidor, riscos legais. Se nenhum dado foi encontrado, declare isso claramente.';
+        const cnpjPrompt = isEn ? 'Analysis of CNPJ data: company size, founding date, registered activities, tax status. If no data found, state that clearly.' : 'Análise dos dados de CNPJ: porte da empresa, data de fundação, atividades registradas, situação fiscal. Se nenhum dado foi encontrado, declare isso claramente.';
+        return `  ,"reclameAquiAnalysis": "<${reclamePrompt}>"
+  ,"jusBrasilAnalysis": "<${jusBrasilPrompt}>"
+  ,"cnpjAnalysis": "<${cnpjPrompt}>"`;
+    })()}
 }
 `;
 

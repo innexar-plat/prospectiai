@@ -39,7 +39,8 @@ function buildViabilityPrompt(
     context: PromptContext,
     webContext: string | undefined
 ): string {
-    const cityState = `${input.city}${input.state ? `, ${input.state}` : ''}`;
+    const statePart = input.state ? `, ${input.state}` : '';
+    const cityState = `${input.city}${statePart}`;
 
     const modeInstructions: Record<ViabilityMode, string> = {
         new_business: `Análise de viabilidade para **abrir um novo negócio** do tipo "${input.businessType}" em ${cityState}.

@@ -19,6 +19,34 @@ const WORKSPACE_SELECT = {
     logoUrl: true,
 } as const;
 
+type WorkspaceSelected = {
+    companyName: string | null;
+    productService: string | null;
+    targetAudience: string | null;
+    mainBenefit: string | null;
+    address: string | null;
+    linkedInUrl: string | null;
+    instagramUrl: string | null;
+    facebookUrl: string | null;
+    websiteUrl: string | null;
+    logoUrl: string | null;
+};
+
+function toProfileResponse(workspace: WorkspaceSelected) {
+    return {
+        companyName: workspace.companyName ?? null,
+        productService: workspace.productService ?? null,
+        targetAudience: workspace.targetAudience ?? null,
+        mainBenefit: workspace.mainBenefit ?? null,
+        address: workspace.address ?? null,
+        linkedInUrl: workspace.linkedInUrl ?? null,
+        instagramUrl: workspace.instagramUrl ?? null,
+        facebookUrl: workspace.facebookUrl ?? null,
+        websiteUrl: workspace.websiteUrl ?? null,
+        logoUrl: workspace.logoUrl ?? null,
+    };
+}
+
 export async function GET(req: NextRequest) {
     const requestId = getOrCreateRequestId(req);
     try {
@@ -43,20 +71,7 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: 'Workspace not found' }, { status: 404 });
         }
 
-        const profile = {
-            companyName: workspace.companyName ?? null,
-            productService: workspace.productService ?? null,
-            targetAudience: workspace.targetAudience ?? null,
-            mainBenefit: workspace.mainBenefit ?? null,
-            address: workspace.address ?? null,
-            linkedInUrl: workspace.linkedInUrl ?? null,
-            instagramUrl: workspace.instagramUrl ?? null,
-            facebookUrl: workspace.facebookUrl ?? null,
-            websiteUrl: workspace.websiteUrl ?? null,
-            logoUrl: workspace.logoUrl ?? null,
-        };
-
-        return jsonWithRequestId(profile, { requestId });
+        return jsonWithRequestId(toProfileResponse(workspace), { requestId });
     } catch (error) {
         logger.error('GET workspace profile error', {
             error: error instanceof Error ? error.message : 'Unknown',
@@ -111,20 +126,7 @@ export async function PATCH(req: NextRequest) {
             select: WORKSPACE_SELECT,
         });
 
-        const profile = {
-            companyName: workspace.companyName ?? null,
-            productService: workspace.productService ?? null,
-            targetAudience: workspace.targetAudience ?? null,
-            mainBenefit: workspace.mainBenefit ?? null,
-            address: workspace.address ?? null,
-            linkedInUrl: workspace.linkedInUrl ?? null,
-            instagramUrl: workspace.instagramUrl ?? null,
-            facebookUrl: workspace.facebookUrl ?? null,
-            websiteUrl: workspace.websiteUrl ?? null,
-            logoUrl: workspace.logoUrl ?? null,
-        };
-
-        return jsonWithRequestId(profile, { requestId });
+        return jsonWithRequestId(toProfileResponse(workspace), { requestId });
     } catch (error) {
         logger.error('PATCH workspace profile error', {
             error: error instanceof Error ? error.message : 'Unknown',

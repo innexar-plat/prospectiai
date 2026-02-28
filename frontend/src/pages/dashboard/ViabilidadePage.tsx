@@ -35,6 +35,12 @@ function getScoreGradient(s: number) {
     return 'from-rose-500 to-rose-600';
 }
 
+function getScoreBadgeBarClasses(score: number): { badge: string; bar: string } {
+    if (score >= 60) return { badge: 'bg-emerald-500/20 text-emerald-400', bar: 'bg-emerald-500' };
+    if (score >= 35) return { badge: 'bg-amber-500/20 text-amber-400', bar: 'bg-amber-500' };
+    return { badge: 'bg-surface text-muted', bar: 'bg-surface' };
+}
+
 export default function ViabilidadePage() {
     const { user } = useOutletContext<{ user: SessionUser }>();
     const navigate = useNavigate();
@@ -279,8 +285,8 @@ export default function ViabilidadePage() {
                                     <CheckCircle2 size={16} className="text-emerald-400" /> Pontos Fortes
                                 </h3>
                                 <ul className="space-y-3">
-                                    {report.strengths.map((s, i) => (
-                                        <li key={i} className="flex items-start gap-3 text-sm text-muted">
+                                    {report.strengths.map((s) => (
+                                        <li key={`str-${String(s).slice(0, 80)}`} className="flex items-start gap-3 text-sm text-muted">
                                             <span className="w-6 h-6 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5"><CheckCircle2 size={12} className="text-emerald-400" /></span>
                                             {s}
                                         </li>
@@ -292,8 +298,8 @@ export default function ViabilidadePage() {
                                     <ShieldAlert size={16} className="text-rose-400" /> Riscos Identificados
                                 </h3>
                                 <ul className="space-y-3">
-                                    {report.risks.map((r, i) => (
-                                        <li key={i} className="flex items-start gap-3 text-sm text-muted">
+                                    {report.risks.map((r) => (
+                                        <li key={`risk-${String(r).slice(0, 80)}`} className="flex items-start gap-3 text-sm text-muted">
                                             <span className="w-6 h-6 rounded-lg bg-rose-500/10 flex items-center justify-center shrink-0 mt-0.5"><AlertTriangle size={12} className="text-rose-400" /></span>
                                             {r}
                                         </li>
@@ -350,12 +356,12 @@ export default function ViabilidadePage() {
                                         <div key={opp.id} className="p-4 bg-surface rounded-xl border border-border/50 flex flex-col gap-2 hover:border-emerald-500/30 transition-colors">
                                             <div className="flex items-start justify-between gap-2">
                                                 <p className="text-sm font-bold text-foreground truncate flex-1">{opp.name}</p>
-                                                <span className={`shrink-0 text-xs font-black px-2 py-0.5 rounded-full ${opp.score >= 60 ? 'bg-emerald-500/20 text-emerald-400' : opp.score >= 35 ? 'bg-amber-500/20 text-amber-400' : 'bg-surface text-muted'}`}>
+                                                <span className={`shrink-0 text-xs font-black px-2 py-0.5 rounded-full ${getScoreBadgeBarClasses(opp.score).badge}`}>
                                                     {opp.score}
                                                 </span>
                                             </div>
                                             <div className="w-full h-1.5 bg-card rounded-full overflow-hidden">
-                                                <div className={`h-full rounded-full transition-all duration-500 ${opp.score >= 60 ? 'bg-emerald-500' : opp.score >= 35 ? 'bg-amber-500' : 'bg-surface'}`} style={{ width: `${opp.score}%` }} />
+                                                <div className={`h-full rounded-full transition-all duration-500 ${getScoreBadgeBarClasses(opp.score).bar}`} style={{ width: `${opp.score}%` }} />
                                             </div>
                                             <div className="flex flex-wrap gap-1.5">
                                                 {opp.scoreFactors?.noWebsite && <span className="inline-flex items-center gap-1 text-[9px] font-bold text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded-full"><Globe size={9} />Sem site</span>}
@@ -377,7 +383,7 @@ export default function ViabilidadePage() {
                             </h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 {report.recommendations.map((rec, i) => (
-                                    <div key={i} className="flex items-start gap-3 p-4 bg-surface rounded-xl border border-border/50">
+                                    <div key={`rec-${String(rec).slice(0, 80)}`} className="flex items-start gap-3 p-4 bg-surface rounded-xl border border-border/50">
                                         <span className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center font-bold text-xs text-amber-400 shrink-0">{i + 1}</span>
                                         <p className="text-sm text-muted">{rec}</p>
                                     </div>
@@ -391,8 +397,8 @@ export default function ViabilidadePage() {
                                 <MapPin size={16} className="text-violet-400" /> Melhores Localizações
                             </h3>
                             <div className="flex flex-wrap gap-2">
-                                {report.bestLocations.map((loc, i) => (
-                                    <span key={i} className="px-3 py-1.5 bg-violet-500/10 border border-violet-500/20 rounded-xl text-sm font-medium text-violet-400">{loc}</span>
+                                {report.bestLocations.map((loc) => (
+                                    <span key={`loc-${String(loc).slice(0, 80)}`} className="px-3 py-1.5 bg-violet-500/10 border border-violet-500/20 rounded-xl text-sm font-medium text-violet-400">{loc}</span>
                                 ))}
                             </div>
                         </div>

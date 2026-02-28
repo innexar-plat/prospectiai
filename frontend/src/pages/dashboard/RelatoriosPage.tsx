@@ -28,6 +28,12 @@ function getSaturationInfo(index: number) {
   return SATURATION_LABELS[clamped] || SATURATION_LABELS[5];
 }
 
+function getScoreBadgeBarClasses(score: number): { badge: string; bar: string } {
+  if (score >= 60) return { badge: 'bg-emerald-500/20 text-emerald-400', bar: 'bg-emerald-500' };
+  if (score >= 35) return { badge: 'bg-amber-500/20 text-amber-400', bar: 'bg-amber-500' };
+  return { badge: 'bg-surface text-muted', bar: 'bg-surface' };
+}
+
 export default function RelatoriosPage() {
   const { user } = useOutletContext<{ user: SessionUser }>();
   const navigate = useNavigate();
@@ -204,12 +210,12 @@ export default function RelatoriosPage() {
                     <div key={opp.id} className="p-3 bg-surface rounded-xl border border-border/50 flex flex-col gap-2 hover:border-violet-500/30 transition-colors">
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-sm font-bold text-foreground truncate flex-1">{opp.name}</p>
-                        <span className={`shrink-0 text-xs font-black px-2 py-0.5 rounded-full ${opp.score >= 60 ? 'bg-emerald-500/20 text-emerald-400' : opp.score >= 35 ? 'bg-amber-500/20 text-amber-400' : 'bg-surface text-muted'}`}>
+                        <span className={`shrink-0 text-xs font-black px-2 py-0.5 rounded-full ${getScoreBadgeBarClasses(opp.score).badge}`}>
                           {opp.score}
                         </span>
                       </div>
                       <div className="w-full h-1.5 bg-card rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full transition-all duration-500 ${opp.score >= 60 ? 'bg-emerald-500' : opp.score >= 35 ? 'bg-amber-500' : 'bg-surface'}`} style={{ width: `${opp.score}%` }} />
+                        <div className={`h-full rounded-full transition-all duration-500 ${getScoreBadgeBarClasses(opp.score).bar}`} style={{ width: `${opp.score}%` }} />
                       </div>
                       {opp.rating != null && <p className="text-[10px] text-muted flex items-center gap-1"><Star size={10} className="text-amber-400" />{opp.rating?.toFixed(1)}★ · {opp.reviewCount ?? 0} reviews</p>}
                     </div>

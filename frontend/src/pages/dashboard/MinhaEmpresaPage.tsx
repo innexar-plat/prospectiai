@@ -321,7 +321,7 @@ export default function MinhaEmpresaPage() {
                                 </h3>
                                 <ul className="space-y-2">
                                     {report.opportunities.map((o, i) => (
-                                        <li key={i} className="text-sm text-muted flex items-start gap-2">
+                                        <li key={`opp-${String(o).slice(0, 80)}`} className="text-sm text-muted flex items-start gap-2">
                                             <span className="text-violet-400 font-bold shrink-0">{i + 1}.</span>
                                             {o}
                                         </li>
@@ -378,8 +378,8 @@ export default function MinhaEmpresaPage() {
                                 )}
                                 {report.socialNetworks.recommendations && report.socialNetworks.recommendations.length > 0 && (
                                     <ul className="mt-3 space-y-1 text-sm text-muted">
-                                        {report.socialNetworks.recommendations.map((r, i) => (
-                                            <li key={i}>• {r}</li>
+                                        {report.socialNetworks.recommendations.map((r) => (
+                                            <li key={`rec-${String(r).slice(0, 80)}`}>• {r}</li>
                                         ))}
                                     </ul>
                                 )}

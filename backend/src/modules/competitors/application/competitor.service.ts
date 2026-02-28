@@ -32,6 +32,43 @@ function toCompetitorPlace(place: Record<string, unknown>): CompetitorPlace {
   };
 }
 
+function getCompetitorRankings(places: CompetitorPlace[]) {
+  const byRating = [...places]
+    .filter((p) => p.rating != null && p.rating > 0)
+    .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
+    .slice(0, 10)
+    .map((p, i) => ({
+      position: i + 1,
+      id: p.id,
+      name: p.name,
+      rating: p.rating!,
+      reviewCount: p.userRatingCount,
+    }));
+
+  const byReviews = [...places]
+    .filter((p) => (p.userRatingCount ?? 0) > 0)
+    .sort((a, b) => (b.userRatingCount ?? 0) - (a.userRatingCount ?? 0))
+    .slice(0, 10)
+    .map((p, i) => ({
+      position: i + 1,
+      id: p.id,
+      name: p.name,
+      reviewCount: p.userRatingCount ?? 0,
+      rating: p.rating,
+    }));
+
+  const opportunities = places
+    .filter((p) => !p.websiteUri?.trim() || !p.nationalPhoneNumber?.trim())
+    .map((p) => ({
+      id: p.id,
+      name: p.name,
+      missingWebsite: !p.websiteUri?.trim(),
+      missingPhone: !p.nationalPhoneNumber?.trim(),
+    }));
+
+  return { byRating, byReviews, opportunities };
+}
+
 export { SearchHttpError };
 
 async function generatePlaybook(
@@ -139,38 +176,7 @@ export async function runCompetitorAnalysis(
   const withWebsite = places.filter((p) => !!p.websiteUri?.trim()).length;
   const withPhone = places.filter((p) => !!p.nationalPhoneNumber?.trim()).length;
 
-  const byRating = [...places]
-    .filter((p) => p.rating != null && p.rating > 0)
-    .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
-    .slice(0, 10)
-    .map((p, i) => ({
-      position: i + 1,
-      id: p.id,
-      name: p.name,
-      rating: p.rating!,
-      reviewCount: p.userRatingCount,
-    }));
-
-  const byReviews = [...places]
-    .filter((p) => (p.userRatingCount ?? 0) > 0)
-    .sort((a, b) => (b.userRatingCount ?? 0) - (a.userRatingCount ?? 0))
-    .slice(0, 10)
-    .map((p, i) => ({
-      position: i + 1,
-      id: p.id,
-      name: p.name,
-      reviewCount: p.userRatingCount ?? 0,
-      rating: p.rating,
-    }));
-
-  const opportunities = places
-    .filter((p) => !p.websiteUri?.trim() || !p.nationalPhoneNumber?.trim())
-    .map((p) => ({
-      id: p.id,
-      name: p.name,
-      missingWebsite: !p.websiteUri?.trim(),
-      missingPhone: !p.nationalPhoneNumber?.trim(),
-    }));
+  const { byRating, byReviews, opportunities } = getCompetitorRankings(places);
 
   // Opportunity scoring
   const placesForScoring = places.map((p) => ({

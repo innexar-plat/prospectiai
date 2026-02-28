@@ -7,6 +7,13 @@ import { Button } from '@/components/ui/Button';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { useToast } from '@/contexts/ToastContext';
 
+/** Rótulo amigável do provedor de IA (não expõe Cloudflare ao usuário). */
+function getAnalysisProviderLabel(provider: string | undefined): string | undefined {
+  if (!provider) return undefined;
+  if (provider === 'CLOUDFLARE') return 'Análise inteligente';
+  return provider;
+}
+
 const TAG_COLORS: Record<string, string> = {
   green: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
   amber: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
@@ -145,27 +152,26 @@ export default function LeadDetailPage() {
     const name = place.displayName?.text ?? place.id;
     setAnalyzing(true);
     try {
-      type PlaceWithReviews = PlaceDetail & { reviews?: Array<{ rating: number; text?: { text: string }; authorAttribution?: { displayName: string }; relativePublishTimeDescription?: string }>; website?: string; primaryType?: string };
-      const placeDetail = place as PlaceWithReviews;
+      const p = place as PlaceDetail & { website?: string; primaryType?: string; reviews?: Array<{ rating: number; text?: { text: string }; authorAttribution?: { displayName: string }; relativePublishTimeDescription?: string }> };
       const result = await searchApi.analyze({
         placeId: place.id,
         name,
         locale: 'pt-BR',
-        websiteUri: placeDetail.websiteUri ?? undefined,
-        website: placeDetail.website ?? undefined,
-        formattedAddress: placeDetail.formattedAddress ?? undefined,
-        nationalPhoneNumber: placeDetail.nationalPhoneNumber ?? undefined,
-        internationalPhoneNumber: placeDetail.internationalPhoneNumber ?? undefined,
-        rating: placeDetail.rating ?? undefined,
-        userRatingCount: placeDetail.userRatingCount ?? undefined,
-        types: placeDetail.types ?? undefined,
-        primaryType: placeDetail.primaryType ?? undefined,
-        businessStatus: placeDetail.businessStatus ?? undefined,
-        reviews: placeDetail.reviews ?? undefined,
+        websiteUri: p.websiteUri ?? undefined,
+        website: p.website ?? undefined,
+        formattedAddress: p.formattedAddress ?? undefined,
+        nationalPhoneNumber: p.nationalPhoneNumber ?? undefined,
+        internationalPhoneNumber: p.internationalPhoneNumber ?? undefined,
+        rating: p.rating ?? undefined,
+        userRatingCount: p.userRatingCount ?? undefined,
+        types: p.types ?? undefined,
+        primaryType: p.primaryType ?? undefined,
+        businessStatus: p.businessStatus ?? undefined,
+        reviews: p.reviews ?? undefined,
       });
       setAnalysis(result);
       window.dispatchEvent(new Event('refresh-user'));
-      addToast('success', result.aiProvider ? `Análise concluída (${result.aiProvider}).` : 'Análise concluída.');
+      addToast('success', result.aiProvider ? `Análise concluída (${getAnalysisProviderLabel(result.aiProvider)}).` : 'Análise concluída.');
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Erro ao analisar';
       addToast('error', msg);
@@ -437,7 +443,7 @@ export default function LeadDetailPage() {
                     Chance de Fechamento: <span className="text-violet-400">{analysis.scoreLabel || 'Analítico'}</span>
                   </h3>
                   {analysis.aiProvider && (
-                    <p className="text-[10px] text-muted uppercase tracking-wider mt-0.5">IA: {analysis.aiProvider}</p>
+                    <p className="text-[10px] text-muted uppercase tracking-wider mt-0.5">IA: {getAnalysisProviderLabel(analysis.aiProvider)}</p>
                   )}
                   <p className="text-xs text-muted mt-1 leading-relaxed">{analysis.summary}</p>
                 </div>
