@@ -511,6 +511,14 @@ export interface Place {
 export type PlaceDetail = Place & {
     regularOpeningHours?: unknown;
     editorialSummary?: { text: string };
+    website?: string;
+    primaryType?: string;
+    reviews?: Array<{
+        rating: number;
+        text?: { text: string };
+        authorAttribution?: { displayName: string };
+        relativePublishTimeDescription?: string;
+    }>;
 };
 
 export interface Analysis {

@@ -394,21 +394,24 @@ export default function HistoricoPage() {
 
         {activeTab === 'buscas' && (
           <>
-            {searchLoading ? (
-              <div className="flex items-center justify-center p-12 text-muted gap-3">
-                <Loader2 size={24} className="animate-spin" />
-                <span>Carregando histórico...</span>
-              </div>
-            ) : searchItems.length === 0 ? (
-              <div className="rounded-[2.4rem] bg-card border border-border p-12 flex flex-col items-center justify-center gap-4 min-h-[320px]">
-                <Clock size={48} className="text-muted" aria-hidden />
-                <h2 className="text-xl font-bold text-foreground">Nenhuma busca no histórico</h2>
-                <p className="text-sm text-muted text-center max-w-md">Suas buscas aparecerão aqui conforme você usa a plataforma.</p>
-                <Button variant="primary" onClick={() => navigate('/dashboard')} className="mt-4">
-                  Realizar uma busca
-                </Button>
-              </div>
-            ) : (
+            {(() => {
+              if (searchLoading) return (
+                <div className="flex items-center justify-center p-12 text-muted gap-3">
+                  <Loader2 size={24} className="animate-spin" />
+                  <span>Carregando histórico...</span>
+                </div>
+              );
+              if (searchItems.length === 0) return (
+                <div className="rounded-[2.4rem] bg-card border border-border p-12 flex flex-col items-center justify-center gap-4 min-h-[320px]">
+                  <Clock size={48} className="text-muted" aria-hidden />
+                  <h2 className="text-xl font-bold text-foreground">Nenhuma busca no histórico</h2>
+                  <p className="text-sm text-muted text-center max-w-md">Suas buscas aparecerão aqui conforme você usa a plataforma.</p>
+                  <Button variant="primary" onClick={() => navigate('/dashboard')} className="mt-4">
+                    Realizar uma busca
+                  </Button>
+                </div>
+              );
+              return (
               <div className="space-y-3">
                 {searchItems.map((item, idx) => (
                   <button
@@ -440,7 +443,8 @@ export default function HistoricoPage() {
                   </button>
                 ))}
               </div>
-            )}
+              );
+            })()}
           </>
         )}
 

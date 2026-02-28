@@ -7,6 +7,26 @@ import type { Plan } from '@prisma/client';
 import { PLANS, PlanType } from '@/lib/billing-config';
 import { processPaymentSchema, formatZodError } from '@/lib/validations/schemas';
 
+async function applyApprovedPayment(userId: string, planId: string, interval: string): Promise<void> {
+    const plan = PLANS[planId as PlanType];
+    const userWithWorkspace = await prisma.user.findUnique({
+        where: { id: userId },
+        include: { workspaces: { take: 1 } }
+    });
+    const workspaceId = userWithWorkspace?.workspaces[0]?.workspaceId;
+    if (!workspaceId) return;
+    await prisma.workspace.update({
+        where: { id: workspaceId },
+        data: {
+            plan: planId as Plan,
+            leadsLimit: plan.leadsLimit,
+            subscriptionStatus: 'active',
+            currentPeriodEnd: new Date(Date.now() + (interval === 'annual' ? 365 : 30) * 24 * 60 * 60 * 1000),
+            billingCycle: interval === 'annual' ? 'annual' : 'monthly',
+        }
+    });
+}
+
 export async function POST(req: Request) {
     const session = await auth();
 
@@ -52,24 +72,7 @@ export async function POST(req: Request) {
         logger.info('Mercado Pago Payment Created', { paymentId: paymentResponse.id, status: paymentResponse.status });
 
         if (paymentResponse.status === 'approved') {
-            const plan = PLANS[planId as PlanType];
-            const userWithWorkspace = await prisma.user.findUnique({
-                where: { id: session.user.id },
-                include: { workspaces: { take: 1 } }
-            });
-
-            if (userWithWorkspace?.workspaces[0]?.workspaceId) {
-                await prisma.workspace.update({
-                    where: { id: userWithWorkspace.workspaces[0].workspaceId },
-                    data: {
-                        plan: planId as Plan,
-                        leadsLimit: plan.leadsLimit,
-                        subscriptionStatus: 'active',
-                        currentPeriodEnd: new Date(Date.now() + (interval === 'annual' ? 365 : 30) * 24 * 60 * 60 * 1000),
-                        billingCycle: interval === 'annual' ? 'annual' : 'monthly',
-                    }
-                });
-            }
+            await applyApprovedPayment(session.user.id, planId, interval);
         }
 
         // Return the clean data object. Bricks expect the direct payment response fields.

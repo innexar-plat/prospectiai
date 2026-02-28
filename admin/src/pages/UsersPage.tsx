@@ -111,12 +111,17 @@ export function UsersPage() {
                         {u.disabledAt ? 'Desativado' : 'Ativo'}
                       </td>
                     ) : (
-                      <>
-                        <td className="px-4 py-3 text-zinc-400">
-                          {(u as AdminUserListItem).onboardingCompletedAt ? 'Sim' : 'Não'}
-                        </td>
-                        <td className="px-4 py-3 text-zinc-400">{(u as AdminUserListItem)._count.workspaces}</td>
-                      </>
+                      (() => {
+                        if (!('_count' in u) || !('onboardingCompletedAt' in u)) return null;
+                        return (
+                          <>
+                            <td className="px-4 py-3 text-zinc-400">
+                              {u.onboardingCompletedAt ? 'Sim' : 'Não'}
+                            </td>
+                            <td className="px-4 py-3 text-zinc-400">{u._count.workspaces}</td>
+                          </>
+                        );
+                      })()
                     )}
                     <td className="px-4 py-3 text-zinc-500">
                       {new Date(u.createdAt).toLocaleDateString('pt-BR')}

@@ -5,6 +5,22 @@ import { getOrCreateRequestId, jsonWithRequestId } from '@/lib/request-id';
 import { logger } from '@/lib/logger';
 import { applyGracePeriodExpiryIfNeeded } from '@/lib/grace-period';
 
+function buildWorkspaceProfile(w: { companyName?: string | null; productService?: string | null; targetAudience?: string | null; mainBenefit?: string | null; address?: string | null; linkedInUrl?: string | null; instagramUrl?: string | null; facebookUrl?: string | null; websiteUrl?: string | null; logoUrl?: string | null } | null) {
+    if (!w) return null;
+    return {
+        companyName: w.companyName ?? null,
+        productService: w.productService ?? null,
+        targetAudience: w.targetAudience ?? null,
+        mainBenefit: w.mainBenefit ?? null,
+        address: w.address ?? null,
+        linkedInUrl: w.linkedInUrl ?? null,
+        instagramUrl: w.instagramUrl ?? null,
+        facebookUrl: w.facebookUrl ?? null,
+        websiteUrl: w.websiteUrl ?? null,
+        logoUrl: w.logoUrl ?? null,
+    };
+}
+
 /** Garante que o usuário tenha ao menos um workspace (OAuth e outros fluxos podem criar user sem workspace). */
 async function ensureUserHasWorkspace(userId: string, userName: string | null): Promise<void> {
     const existing = await prisma.workspaceMember.findFirst({
@@ -146,27 +162,12 @@ export async function GET(req: NextRequest) {
             })
             : null;
         const w = workspaceAfterExpiry ?? activeWorkspace;
+        const workspaceProfile = buildWorkspaceProfile(w);
 
-        // Business profile: workspace (one per workspace) with user fallback for backward compatibility
         const companyName = w?.companyName ?? user.companyName ?? null;
         const productService = w?.productService ?? user.productService ?? null;
         const targetAudience = w?.targetAudience ?? user.targetAudience ?? null;
         const mainBenefit = w?.mainBenefit ?? user.mainBenefit ?? null;
-
-        const workspaceProfile = w
-            ? {
-                companyName: w.companyName ?? null,
-                productService: w.productService ?? null,
-                targetAudience: w.targetAudience ?? null,
-                mainBenefit: w.mainBenefit ?? null,
-                address: w.address ?? null,
-                linkedInUrl: w.linkedInUrl ?? null,
-                instagramUrl: w.instagramUrl ?? null,
-                facebookUrl: w.facebookUrl ?? null,
-                websiteUrl: w.websiteUrl ?? null,
-                logoUrl: w.logoUrl ?? null,
-            }
-            : null;
 
         const uiUser = {
             ...user,

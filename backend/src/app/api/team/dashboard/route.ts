@@ -3,6 +3,54 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { getOrCreateRequestId, jsonWithRequestId } from '@/lib/request-id';
 
+type MemberWithUser = Awaited<ReturnType<typeof prisma.workspaceMember.findMany>>[number] & {
+    user: { id: string; name: string | null; email: string | null; image: string | null };
+};
+
+function buildDashboardRows(
+    members: MemberWithUser[],
+    todaySearchMap: Map<string, number>,
+    todayAnalysisMap: Map<string, number>,
+    monthSearchMap: Map<string, number>,
+    monthAnalysisMap: Map<string, number>,
+    monthActionMap: Map<string, number>,
+    now: Date,
+) {
+    return members.map((m) => {
+        const uid = m.user.id;
+        const todayLeads = todaySearchMap.get(uid) ?? 0;
+        const todayAnal = todayAnalysisMap.get(uid) ?? 0;
+        const monthLeads = monthSearchMap.get(uid) ?? 0;
+        const monthAnal = monthAnalysisMap.get(uid) ?? 0;
+        const monthActs = monthActionMap.get(uid) ?? 0;
+        const dailyLeadsPct = m.dailyLeadsGoal ? Math.round((todayLeads / m.dailyLeadsGoal) * 100) : null;
+        const dailyAnalysesPct = m.dailyAnalysesGoal ? Math.round((todayAnal / m.dailyAnalysesGoal) * 100) : null;
+        const monthlyConvPct = m.monthlyConversionsGoal ? Math.round((monthActs / m.monthlyConversionsGoal) * 100) : null;
+        const isAfternoon = now.getHours() >= 12;
+        const belowGoal = isAfternoon && (
+            (dailyLeadsPct !== null && dailyLeadsPct < 50) ||
+            (dailyAnalysesPct !== null && dailyAnalysesPct < 50)
+        );
+        return {
+            memberId: m.id,
+            userId: uid,
+            name: m.user.name || 'Sem nome',
+            email: m.user.email,
+            image: m.user.image,
+            role: m.role,
+            goals: {
+                dailyLeadsGoal: m.dailyLeadsGoal,
+                dailyAnalysesGoal: m.dailyAnalysesGoal,
+                monthlyConversionsGoal: m.monthlyConversionsGoal,
+            },
+            today: { leads: todayLeads, analyses: todayAnal },
+            month: { leads: monthLeads, analyses: monthAnal, actions: monthActs },
+            progress: { dailyLeadsPct, dailyAnalysesPct, monthlyConvPct },
+            belowGoal,
+        };
+    });
+}
+
 /**
  * GET /api/team/dashboard — Gestor/Admin view with all members' progress vs goals.
  */
@@ -81,50 +129,16 @@ export async function GET(req: NextRequest) {
         });
         const monthActionMap = new Map(monthActions.map((a) => [a.userId, a._count.id]));
 
-        const dashboard = members.map((m) => {
-            const uid = m.user.id;
-            const todayLeads = todaySearchMap.get(uid) ?? 0;
-            const todayAnal = todayAnalysisMap.get(uid) ?? 0;
-            const monthLeads = monthSearchMap.get(uid) ?? 0;
-            const monthAnal = monthAnalysisMap.get(uid) ?? 0;
-            const monthActs = monthActionMap.get(uid) ?? 0;
+        const dashboard = buildDashboardRows(
+            members,
+            todaySearchMap,
+            todayAnalysisMap,
+            monthSearchMap,
+            monthAnalysisMap,
+            monthActionMap,
+            now,
+        );
 
-            // Calculate goal progress percentages
-            const dailyLeadsPct = m.dailyLeadsGoal ? Math.round((todayLeads / m.dailyLeadsGoal) * 100) : null;
-            const dailyAnalysesPct = m.dailyAnalysesGoal ? Math.round((todayAnal / m.dailyAnalysesGoal) * 100) : null;
-            const monthlyConvPct = m.monthlyConversionsGoal ? Math.round((monthActs / m.monthlyConversionsGoal) * 100) : null;
-
-            // Alert: below 50% of daily goal and it's past noon
-            const isAfternoon = now.getHours() >= 12;
-            const belowGoal = isAfternoon && (
-                (dailyLeadsPct !== null && dailyLeadsPct < 50) ||
-                (dailyAnalysesPct !== null && dailyAnalysesPct < 50)
-            );
-
-            return {
-                memberId: m.id,
-                userId: uid,
-                name: m.user.name || 'Sem nome',
-                email: m.user.email,
-                image: m.user.image,
-                role: m.role,
-                goals: {
-                    dailyLeadsGoal: m.dailyLeadsGoal,
-                    dailyAnalysesGoal: m.dailyAnalysesGoal,
-                    monthlyConversionsGoal: m.monthlyConversionsGoal,
-                },
-                today: { leads: todayLeads, analyses: todayAnal },
-                month: { leads: monthLeads, analyses: monthAnal, actions: monthActs },
-                progress: {
-                    dailyLeadsPct,
-                    dailyAnalysesPct,
-                    monthlyConvPct,
-                },
-                belowGoal,
-            };
-        });
-
-        // Team totals
         const teamTotals = {
             todayLeads: dashboard.reduce((s, m) => s + m.today.leads, 0),
             todayAnalyses: dashboard.reduce((s, m) => s + m.today.analyses, 0),

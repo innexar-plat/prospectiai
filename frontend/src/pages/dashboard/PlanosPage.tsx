@@ -53,8 +53,14 @@ interface PlanCardActionButtonProps {
 function PlanCardActionButton({ planKey, loadingPlan, isDowngrade, onUpgrade }: PlanCardActionButtonProps) {
     const loading = loadingPlan === planKey;
     const downgrade = isDowngrade(planKey);
-    const icon = loading ? <Loader2 size={14} className="animate-spin" /> : downgrade ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />;
-    const label = loading ? 'Processando...' : downgrade ? 'Downgrade' : 'Assinar';
+    let icon: React.ReactNode;
+    if (loading) icon = <Loader2 size={14} className="animate-spin" />;
+    else if (downgrade) icon = <ArrowDownRight size={14} />;
+    else icon = <ArrowUpRight size={14} />;
+    let label: string;
+    if (loading) label = 'Processando...';
+    else if (downgrade) label = 'Downgrade';
+    else label = 'Assinar';
     return (
         <Button
             variant={downgrade ? 'secondary' : 'primary'}
@@ -189,31 +195,35 @@ export default function PlanosPage() {
                 {/* Plans Grid (from API / PlanConfig) */}
                 <div>
                     <h3 className="text-lg font-bold text-foreground mb-6 text-center">Planos Disponíveis</h3>
-                    {plansLoading ? (
-                        <div className="flex justify-center py-12">
-                            <Loader2 size={32} className="text-violet-400 animate-spin" />
-                        </div>
-                    ) : plansError ? (
-                        <div className="rounded-3xl bg-card border border-border p-8 text-center">
-                            <p className="text-muted mb-4">{plansError}</p>
-                            <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => {
-                                    setPlansError(null);
-                                    setPlansLoading(true);
-                                    plansApi.list().then(setPlans).catch((err: unknown) => setPlansError(err instanceof Error ? err.message : 'Falha ao carregar planos.')).finally(() => setPlansLoading(false));
-                                }}
-                                icon={<RefreshCw size={14} />}
-                            >
-                                Tentar novamente
-                            </Button>
-                        </div>
-                    ) : plans.length === 0 ? (
-                        <div className="rounded-3xl bg-card border border-border p-8 text-center text-muted">
-                            Nenhum plano disponível no momento.
-                        </div>
-                    ) : (
+                    {(() => {
+                        if (plansLoading) return (
+                            <div className="flex justify-center py-12">
+                                <Loader2 size={32} className="text-violet-400 animate-spin" />
+                            </div>
+                        );
+                        if (plansError) return (
+                            <div className="rounded-3xl bg-card border border-border p-8 text-center">
+                                <p className="text-muted mb-4">{plansError}</p>
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => {
+                                        setPlansError(null);
+                                        setPlansLoading(true);
+                                        plansApi.list().then(setPlans).catch((err: unknown) => setPlansError(err instanceof Error ? err.message : 'Falha ao carregar planos.')).finally(() => setPlansLoading(false));
+                                    }}
+                                    icon={<RefreshCw size={14} />}
+                                >
+                                    Tentar novamente
+                                </Button>
+                            </div>
+                        );
+                        if (plans.length === 0) return (
+                            <div className="rounded-3xl bg-card border border-border p-8 text-center text-muted">
+                                Nenhum plano disponível no momento.
+                            </div>
+                        );
+                        return (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                             {plans.map((plan) => {
                                 const isCurrent = plan.key === user.plan;
@@ -221,13 +231,12 @@ export default function PlanosPage() {
                                 const Icon = ui.icon;
                                 const creditsLabel = `${plan.leadsLimit.toLocaleString('pt-BR')} créditos/mês`;
                                 const features = [...ui.features, creditsLabel];
+                                const cardBgClass = ui.popular ? 'bg-gradient-to-b from-violet-900/30 to-card border-violet-500/40 shadow-lg shadow-violet-500/10' : `bg-card ${ui.borderColor}`;
+                                const ringClass = isCurrent ? 'ring-2 ring-violet-500' : '';
                                 return (
                                     <div
                                         key={plan.key}
-                                        className={`rounded-3xl border p-6 flex flex-col gap-4 transition-all relative ${ui.popular
-                                            ? 'bg-gradient-to-b from-violet-900/30 to-card border-violet-500/40 shadow-lg shadow-violet-500/10'
-                                            : `bg-card ${ui.borderColor}`
-                                            } ${isCurrent ? 'ring-2 ring-violet-500' : ''}`}
+                                        className={`rounded-3xl border p-6 flex flex-col gap-4 transition-all relative ${cardBgClass} ${ringClass}`}
                                     >
                                         {ui.popular && (
                                             <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-violet-600 text-white text-[10px] font-bold uppercase tracking-wider rounded-full">
@@ -255,25 +264,30 @@ export default function PlanosPage() {
                                                 </li>
                                             ))}
                                         </ul>
-                                        {isCurrent ? (
-                                            <div className="text-center text-xs font-bold text-violet-400 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20">
-                                                Plano Atual
-                                            </div>
-                                        ) : plan.key === 'FREE' ? (
-                                            <div className="text-center text-xs text-muted py-2">Plano gratuito</div>
-                                        ) : (
-                                            <PlanCardActionButton
-                                                planKey={plan.key}
-                                                loadingPlan={loadingPlan}
-                                                isDowngrade={isDowngrade}
-                                                onUpgrade={handleUpgrade}
-                                            />
-                                        )}
+                                        {(() => {
+                                            if (isCurrent) return (
+                                                <div className="text-center text-xs font-bold text-violet-400 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20">
+                                                    Plano Atual
+                                                </div>
+                                            );
+                                            if (plan.key === 'FREE') return (
+                                                <div className="text-center text-xs text-muted py-2">Plano gratuito</div>
+                                            );
+                                            return (
+                                                <PlanCardActionButton
+                                                    planKey={plan.key}
+                                                    loadingPlan={loadingPlan}
+                                                    isDowngrade={isDowngrade}
+                                                    onUpgrade={handleUpgrade}
+                                                />
+                                            );
+                                        })()}
                                     </div>
                                 );
                             })}
                         </div>
-                    )}
+                        );
+                    })()}
                 </div>
 
                 {/* Feature Comparison (dynamic from plans) */}

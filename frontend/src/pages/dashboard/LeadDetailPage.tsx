@@ -152,22 +152,21 @@ export default function LeadDetailPage() {
     const name = place.displayName?.text ?? place.id;
     setAnalyzing(true);
     try {
-      const p = place as PlaceDetail & { website?: string; primaryType?: string; reviews?: Array<{ rating: number; text?: { text: string }; authorAttribution?: { displayName: string }; relativePublishTimeDescription?: string }> };
       const result = await searchApi.analyze({
         placeId: place.id,
         name,
         locale: 'pt-BR',
-        websiteUri: p.websiteUri ?? undefined,
-        website: p.website ?? undefined,
-        formattedAddress: p.formattedAddress ?? undefined,
-        nationalPhoneNumber: p.nationalPhoneNumber ?? undefined,
-        internationalPhoneNumber: p.internationalPhoneNumber ?? undefined,
-        rating: p.rating ?? undefined,
-        userRatingCount: p.userRatingCount ?? undefined,
-        types: p.types ?? undefined,
-        primaryType: p.primaryType ?? undefined,
-        businessStatus: p.businessStatus ?? undefined,
-        reviews: p.reviews ?? undefined,
+        websiteUri: place.websiteUri ?? undefined,
+        website: place.website ?? undefined,
+        formattedAddress: place.formattedAddress ?? undefined,
+        nationalPhoneNumber: place.nationalPhoneNumber ?? undefined,
+        internationalPhoneNumber: place.internationalPhoneNumber ?? undefined,
+        rating: place.rating ?? undefined,
+        userRatingCount: place.userRatingCount ?? undefined,
+        types: place.types ?? undefined,
+        primaryType: place.primaryType ?? undefined,
+        businessStatus: place.businessStatus ?? undefined,
+        reviews: place.reviews ?? undefined,
       });
       setAnalysis(result);
       window.dispatchEvent(new Event('refresh-user'));

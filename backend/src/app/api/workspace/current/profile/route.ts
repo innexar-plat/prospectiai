@@ -47,6 +47,21 @@ function toProfileResponse(workspace: WorkspaceSelected) {
     };
 }
 
+function buildProfileUpdate(data: Record<string, string | undefined>): Record<string, string | undefined> {
+    const update: Record<string, string | undefined> = {};
+    if (data.companyName !== undefined) update.companyName = data.companyName;
+    if (data.productService !== undefined) update.productService = data.productService;
+    if (data.targetAudience !== undefined) update.targetAudience = data.targetAudience;
+    if (data.mainBenefit !== undefined) update.mainBenefit = data.mainBenefit;
+    if (data.address !== undefined) update.address = data.address;
+    if (data.linkedInUrl !== undefined) update.linkedInUrl = data.linkedInUrl;
+    if (data.instagramUrl !== undefined) update.instagramUrl = data.instagramUrl;
+    if (data.facebookUrl !== undefined) update.facebookUrl = data.facebookUrl;
+    if (data.websiteUrl !== undefined) update.websiteUrl = data.websiteUrl;
+    if (data.logoUrl !== undefined) update.logoUrl = data.logoUrl;
+    return update;
+}
+
 export async function GET(req: NextRequest) {
     const requestId = getOrCreateRequestId(req);
     try {
@@ -107,19 +122,7 @@ export async function PATCH(req: NextRequest) {
             return NextResponse.json({ error: 'Workspace not found' }, { status: 404 });
         }
 
-        const data = parsed.data;
-        const update: Record<string, string | undefined> = {};
-        if (data.companyName !== undefined) update.companyName = data.companyName;
-        if (data.productService !== undefined) update.productService = data.productService;
-        if (data.targetAudience !== undefined) update.targetAudience = data.targetAudience;
-        if (data.mainBenefit !== undefined) update.mainBenefit = data.mainBenefit;
-        if (data.address !== undefined) update.address = data.address;
-        if (data.linkedInUrl !== undefined) update.linkedInUrl = data.linkedInUrl;
-        if (data.instagramUrl !== undefined) update.instagramUrl = data.instagramUrl;
-        if (data.facebookUrl !== undefined) update.facebookUrl = data.facebookUrl;
-        if (data.websiteUrl !== undefined) update.websiteUrl = data.websiteUrl;
-        if (data.logoUrl !== undefined) update.logoUrl = data.logoUrl;
-
+        const update = buildProfileUpdate(parsed.data);
         const workspace = await prisma.workspace.update({
             where: { id: membership.workspaceId },
             data: update,

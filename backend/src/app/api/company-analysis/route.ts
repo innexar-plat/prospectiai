@@ -20,6 +20,40 @@ const WORKSPACE_SELECT = {
     websiteUrl: true,
 } as const;
 
+type WorkspaceForAnalysis = { companyName: string | null; productService: string | null; targetAudience: string | null; mainBenefit: string | null; address: string | null; linkedInUrl: string | null; instagramUrl: string | null; facebookUrl: string | null; websiteUrl: string | null };
+type BodyForAnalysis = { useProfile?: boolean; companyName?: string; city?: string; state?: string; productService?: string; targetAudience?: string; mainBenefit?: string; address?: string; websiteUrl?: string; linkedInUrl?: string; instagramUrl?: string; facebookUrl?: string };
+
+function buildAnalysisInput(useProfile: boolean, data: BodyForAnalysis, w: WorkspaceForAnalysis) {
+    if (useProfile) {
+        return {
+            companyName: (data.companyName ?? w.companyName ?? '').trim(),
+            productService: w.productService ?? undefined,
+            targetAudience: w.targetAudience ?? undefined,
+            mainBenefit: w.mainBenefit ?? undefined,
+            address: w.address ?? undefined,
+            websiteUrl: w.websiteUrl ?? undefined,
+            linkedInUrl: w.linkedInUrl ?? undefined,
+            instagramUrl: w.instagramUrl ?? undefined,
+            facebookUrl: w.facebookUrl ?? undefined,
+            city: data.city,
+            state: data.state,
+        };
+    }
+    return {
+        companyName: (data.companyName ?? '').trim(),
+        productService: data.productService,
+        targetAudience: data.targetAudience,
+        mainBenefit: data.mainBenefit,
+        address: data.address,
+        websiteUrl: data.websiteUrl,
+        linkedInUrl: data.linkedInUrl,
+        instagramUrl: data.instagramUrl,
+        facebookUrl: data.facebookUrl,
+        city: data.city,
+        state: data.state,
+    };
+}
+
 export async function POST(req: NextRequest) {
     const requestId = getOrCreateRequestId(req);
     try {
@@ -72,55 +106,18 @@ export async function POST(req: NextRequest) {
         };
         const data: Body = parsed.success ? parsed.data : defaultBody;
 
-        const w = membership.workspace;
+        const w = membership.workspace as WorkspaceForAnalysis;
         const useProfile = data.useProfile !== false;
 
-        if (useProfile) {
-            const companyName = (data.companyName ?? w.companyName ?? '').trim();
-            if (!companyName) {
-                return jsonWithRequestId(
-                    { error: 'Preencha o nome da empresa no Perfil da empresa (Configurações > Empresa) ou envie companyName no corpo da requisição.' },
-                    { status: 400, requestId }
-                );
-            }
-        } else {
-            const companyName = (data.companyName ?? '').trim();
-            if (!companyName) {
-                return jsonWithRequestId(
-                    { error: 'No modo "Pesquisar", informe o nome da empresa (companyName) no corpo da requisição.' },
-                    { status: 400, requestId }
-                );
-            }
+        const companyNameForValidation = useProfile ? (data.companyName ?? w.companyName ?? '').trim() : (data.companyName ?? '').trim();
+        if (!companyNameForValidation) {
+            const msg = useProfile
+                ? 'Preencha o nome da empresa no Perfil da empresa (Configurações > Empresa) ou envie companyName no corpo da requisição.'
+                : 'No modo "Pesquisar", informe o nome da empresa (companyName) no corpo da requisição.';
+            return jsonWithRequestId({ error: msg }, { status: 400, requestId });
         }
 
-        const input = useProfile
-            ? {
-                  companyName: (data.companyName ?? w.companyName ?? '').trim(),
-                  productService: w.productService ?? undefined,
-                  targetAudience: w.targetAudience ?? undefined,
-                  mainBenefit: w.mainBenefit ?? undefined,
-                  address: w.address ?? undefined,
-                  websiteUrl: w.websiteUrl ?? undefined,
-                  linkedInUrl: w.linkedInUrl ?? undefined,
-                  instagramUrl: w.instagramUrl ?? undefined,
-                  facebookUrl: w.facebookUrl ?? undefined,
-                  city: data.city,
-                  state: data.state,
-              }
-            : {
-                  companyName: (data.companyName ?? '').trim(),
-                  productService: data.productService,
-                  targetAudience: data.targetAudience,
-                  mainBenefit: data.mainBenefit,
-                  address: data.address,
-                  websiteUrl: data.websiteUrl,
-                  linkedInUrl: data.linkedInUrl,
-                  instagramUrl: data.instagramUrl,
-                  facebookUrl: data.facebookUrl,
-                  city: data.city,
-                  state: data.state,
-              };
-
+        const input = buildAnalysisInput(useProfile, data, w);
         const result = await runCompanyAnalysis(input, session.user.id);
         return jsonWithRequestId(result, { requestId });
     } catch (err) {

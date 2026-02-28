@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { textSearch } from '@/lib/google-places';
 import { getCached } from '@/lib/redis';
 import { syncLeads } from '@/lib/db-sync';
@@ -7,6 +7,34 @@ import { prisma } from '@/lib/prisma';
 import { getOrCreateRequestId, jsonWithRequestId } from '@/lib/request-id';
 import { searchSchema, formatZodError } from '@/lib/validations/schemas';
 import { recordUsageEvent } from '@/lib/usage';
+
+type WorkspaceWithLimit = { id: string; leadsUsed: number; leadsLimit: number };
+
+async function getActiveWorkspaceOrError(
+    userId: string,
+    requestId: string,
+): Promise<{ ok: true; workspace: WorkspaceWithLimit } | { ok: false; response: NextResponse }> {
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: { workspaces: { include: { workspace: true }, take: 1 } }
+    });
+    if (!user || user.workspaces.length === 0) {
+        return { ok: false, response: jsonWithRequestId({ error: 'Workspace not found' }, { status: 404, requestId }) };
+    }
+    const activeWorkspace = user.workspaces[0].workspace as WorkspaceWithLimit;
+    if (activeWorkspace.leadsUsed >= activeWorkspace.leadsLimit) {
+        return {
+            ok: false,
+            response: jsonWithRequestId({
+                error: 'Limit reached',
+                code: 'LIMIT_EXCEEDED',
+                limit: activeWorkspace.leadsLimit,
+                used: activeWorkspace.leadsUsed
+            }, { status: 403, requestId })
+        };
+    }
+    return { ok: true, workspace: activeWorkspace };
+}
 
 export async function POST(req: NextRequest) {
     const requestId = getOrCreateRequestId(req);
@@ -23,26 +51,11 @@ export async function POST(req: NextRequest) {
             return jsonWithRequestId({ error: 'Unauthorized' }, { status: 401, requestId });
         }
 
-        // 1. Check Usage Limit
-        const user = await prisma.user.findUnique({
-            where: { id: session.user.id },
-            include: { workspaces: { include: { workspace: true }, take: 1 } }
-        });
-
-        if (!user || user.workspaces.length === 0) {
-            return jsonWithRequestId({ error: 'Workspace not found' }, { status: 404, requestId });
+        const workspaceResult = await getActiveWorkspaceOrError(session.user.id, requestId);
+        if (!workspaceResult.ok) {
+            return workspaceResult.response;
         }
-
-        const activeWorkspace = user.workspaces[0].workspace;
-
-        if (activeWorkspace.leadsUsed >= activeWorkspace.leadsLimit) {
-            return jsonWithRequestId({
-                error: 'Limit reached',
-                code: 'LIMIT_EXCEEDED',
-                limit: activeWorkspace.leadsLimit,
-                used: activeWorkspace.leadsUsed
-            }, { status: 403, requestId });
-        }
+        const { workspace: activeWorkspace } = workspaceResult;
 
         // 2. Check cache (skip if paginating)
         if (!pageToken) {

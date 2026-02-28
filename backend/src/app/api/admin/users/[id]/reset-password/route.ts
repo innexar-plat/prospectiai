@@ -8,6 +8,26 @@ import { logAdminAction } from '@/lib/audit';
 import { sendPasswordResetEmail } from '@/lib/email';
 import { adminResetPasswordSchema, formatZodError } from '@/lib/validations/schemas';
 
+async function buildResetUpdateData(
+    temporaryPassword: string | null | undefined,
+    sendEmail: boolean,
+): Promise<{ updateData: { password?: string; resetToken: string | null; resetTokenExpires: Date | null }; token?: string }> {
+    const updateData: { password?: string; resetToken: string | null; resetTokenExpires: Date | null } = {
+        resetToken: null,
+        resetTokenExpires: null,
+    };
+    if (temporaryPassword != null && temporaryPassword.length >= 8) {
+        updateData.password = await bcrypt.hash(temporaryPassword, 10);
+    }
+    let token: string | undefined;
+    if (sendEmail === true) {
+        token = crypto.randomBytes(32).toString('hex');
+        updateData.resetToken = token;
+        updateData.resetTokenExpires = new Date(Date.now() + 3600000);
+    }
+    return { updateData, token };
+}
+
 export async function POST(
     req: NextRequest,
     ctx: { params: Promise<{ id: string }> }
@@ -31,31 +51,8 @@ export async function POST(
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
     if (!user.email) return NextResponse.json({ error: 'User has no email' }, { status: 400 });
 
-    const updateData: {
-        password?: string;
-        resetToken: string | null;
-        resetTokenExpires: Date | null;
-    } = {
-        resetToken: null,
-        resetTokenExpires: null,
-    };
-
-    if (temporaryPassword != null && temporaryPassword.length >= 8) {
-        updateData.password = await bcrypt.hash(temporaryPassword, 10);
-    }
-
-    let token: string | undefined;
-    if (sendEmail === true) {
-        token = crypto.randomBytes(32).toString('hex');
-        const expires = new Date(Date.now() + 3600000);
-        updateData.resetToken = token;
-        updateData.resetTokenExpires = expires;
-    }
-
-    await prisma.user.update({
-        where: { id },
-        data: updateData,
-    });
+    const { updateData, token } = await buildResetUpdateData(temporaryPassword, sendEmail === true);
+    await prisma.user.update({ where: { id }, data: updateData });
 
     if (sendEmail === true && token) {
         const { sent } = await sendPasswordResetEmail(user.email, token);

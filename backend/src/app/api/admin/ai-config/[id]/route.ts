@@ -8,6 +8,33 @@ import { encryptApiKey } from '@/lib/ai/encrypt';
 
 const ROLE_TO_PRISMA = { lead_analysis: 'LEAD_ANALYSIS' as const, viability: 'VIABILITY' as const };
 
+type AiConfigUpdatePayload = {
+    role?: 'lead_analysis' | 'viability';
+    provider?: 'GEMINI' | 'OPENAI' | 'CLOUDFLARE';
+    model?: string;
+    apiKey?: string | null;
+    cloudflareAccountId?: string | null;
+    enabled?: boolean;
+};
+
+function buildAiConfigUpdate(data: AiConfigUpdatePayload): {
+    role?: 'LEAD_ANALYSIS' | 'VIABILITY';
+    provider?: 'GEMINI' | 'OPENAI' | 'CLOUDFLARE';
+    model?: string;
+    apiKeyEncrypted?: string | null;
+    cloudflareAccountId?: string | null;
+    enabled?: boolean;
+} {
+    const update: ReturnType<typeof buildAiConfigUpdate> = {};
+    if (data.role !== undefined) update.role = ROLE_TO_PRISMA[data.role];
+    if (data.provider !== undefined) update.provider = data.provider;
+    if (data.model !== undefined) update.model = data.model;
+    if (data.enabled !== undefined) update.enabled = data.enabled;
+    if (data.cloudflareAccountId !== undefined) update.cloudflareAccountId = data.cloudflareAccountId ?? null;
+    if (data.apiKey !== undefined) update.apiKeyEncrypted = data.apiKey ? encryptApiKey(data.apiKey) : null;
+    return update;
+}
+
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const session = await auth();
     if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -22,22 +49,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         const existing = await prisma.aiProviderConfig.findUnique({ where: { id } });
         if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-        const update: {
-            role?: 'LEAD_ANALYSIS' | 'VIABILITY';
-            provider?: 'GEMINI' | 'OPENAI' | 'CLOUDFLARE';
-            model?: string;
-            apiKeyEncrypted?: string | null;
-            cloudflareAccountId?: string | null;
-            enabled?: boolean;
-        } = {};
-        if (parsed.data.role !== undefined) update.role = ROLE_TO_PRISMA[parsed.data.role];
-        if (parsed.data.provider !== undefined) update.provider = parsed.data.provider;
-        if (parsed.data.model !== undefined) update.model = parsed.data.model;
-        if (parsed.data.enabled !== undefined) update.enabled = parsed.data.enabled;
-        if (parsed.data.cloudflareAccountId !== undefined) update.cloudflareAccountId = parsed.data.cloudflareAccountId ?? null;
-        if (parsed.data.apiKey !== undefined) {
-            update.apiKeyEncrypted = parsed.data.apiKey ? encryptApiKey(parsed.data.apiKey) : null;
-        }
+        const update = buildAiConfigUpdate(parsed.data);
 
         const updated = await prisma.aiProviderConfig.update({
             where: { id },
