@@ -445,12 +445,21 @@ export default function EquipePage() {
 
                         {viewMode === 'dashboard' && isAdminOrOwner ? (
                             <div className="space-y-6">
-                                {loadingDashboard ? (
-                                    <div className="flex items-center justify-center p-12 text-muted gap-3">
-                                        <Loader2 size={24} className="animate-spin" />
-                                        <span>Carregando dashboard...</span>
-                                    </div>
-                                ) : dashboardData ? (
+                                {(() => {
+                                    if (loadingDashboard) {
+                                        return (
+                                            <div className="flex items-center justify-center p-12 text-muted gap-3">
+                                                <Loader2 size={24} className="animate-spin" />
+                                                <span>Carregando dashboard...</span>
+                                            </div>
+                                        );
+                                    }
+                                    if (!dashboardData) {
+                                        return (
+                                            <div className="rounded-3xl bg-card border border-border p-8 text-center text-muted">Nenhum dado do dashboard.</div>
+                                        );
+                                    }
+                                    return (
                                     <>
                                         <div className="rounded-3xl bg-card border border-border p-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
                                             <div>
@@ -533,9 +542,8 @@ export default function EquipePage() {
                                             </div>
                                         </div>
                                     </>
-                                ) : (
-                                    <div className="rounded-3xl bg-card border border-border p-8 text-center text-muted">Nenhum dado do dashboard.</div>
-                                )}
+                                    );
+                                })()}
                             </div>
                         ) : (
                         <>

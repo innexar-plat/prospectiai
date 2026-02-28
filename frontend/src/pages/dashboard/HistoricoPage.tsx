@@ -457,25 +457,32 @@ export default function HistoricoPage() {
                 <span className="text-sm text-muted">Só favoritos</span>
               </label>
             </div>
-            {leadLoading ? (
-              <div className="flex items-center justify-center p-12 text-muted gap-3">
-                <Loader2 size={24} className="animate-spin" />
-                <span>Carregando relatórios de lead...</span>
-              </div>
-            ) : leadFiltered.length === 0 ? (
-              <div className="rounded-[2.4rem] bg-card border border-border p-12 flex flex-col items-center justify-center gap-4 min-h-[320px]">
-                <User size={48} className="text-muted" aria-hidden />
-                <h2 className="text-xl font-bold text-foreground">
-                  {leadFavoriteOnly ? 'Nenhum relatório de lead favorito' : 'Nenhum relatório de lead'}
-                </h2>
-                <p className="text-sm text-muted text-center max-w-md">
-                  {leadFavoriteOnly ? 'Marque leads como favoritos na listagem para filtrar aqui.' : 'Os relatórios de análise de lead aparecerão aqui.'}
-                </p>
-                {leadFavoriteOnly && (
-                  <Button variant="secondary" onClick={() => setLeadFavoriteOnly(false)}>Ver todos</Button>
-                )}
-              </div>
-            ) : (
+            {(() => {
+              if (leadLoading) {
+                return (
+                  <div className="flex items-center justify-center p-12 text-muted gap-3">
+                    <Loader2 size={24} className="animate-spin" />
+                    <span>Carregando relatórios de lead...</span>
+                  </div>
+                );
+              }
+              if (leadFiltered.length === 0) {
+                return (
+                  <div className="rounded-[2.4rem] bg-card border border-border p-12 flex flex-col items-center justify-center gap-4 min-h-[320px]">
+                    <User size={48} className="text-muted" aria-hidden />
+                    <h2 className="text-xl font-bold text-foreground">
+                      {leadFavoriteOnly ? 'Nenhum relatório de lead favorito' : 'Nenhum relatório de lead'}
+                    </h2>
+                    <p className="text-sm text-muted text-center max-w-md">
+                      {leadFavoriteOnly ? 'Marque leads como favoritos na listagem para filtrar aqui.' : 'Os relatórios de análise de lead aparecerão aqui.'}
+                    </p>
+                    {leadFavoriteOnly && (
+                      <Button variant="secondary" onClick={() => setLeadFavoriteOnly(false)}>Ver todos</Button>
+                    )}
+                  </div>
+                );
+              }
+              return (
               <div className="space-y-3">
                 {leadFiltered.map((item) => {
                   const leadData = item.lead;
@@ -520,7 +527,8 @@ export default function HistoricoPage() {
                   );
                 })}
               </div>
-            )}
+              );
+            })()}
           </>
         )}
 
@@ -548,25 +556,32 @@ export default function HistoricoPage() {
                 <span className="text-sm text-muted">Só favoritos</span>
               </label>
             </div>
-            {intelLoading ? (
-              <div className="flex items-center justify-center p-12 text-muted gap-3">
-                <Loader2 size={24} className="animate-spin" />
-                <span>Carregando relatórios de inteligência...</span>
-              </div>
-            ) : intelItems.length === 0 ? (
-              <div className="rounded-[2.4rem] bg-card border border-border p-12 flex flex-col items-center justify-center gap-4 min-h-[320px]">
-                <BarChart3 size={48} className="text-muted" aria-hidden />
-                <h2 className="text-xl font-bold text-foreground">
-                  {intelFavoriteOnly ? 'Nenhum relatório de inteligência favorito' : 'Nenhum relatório de inteligência'}
-                </h2>
-                <p className="text-sm text-muted text-center max-w-md">
-                  Gere relatórios em Viabilidade, Concorrência ou Mercado para ver o histórico aqui.
-                </p>
-                {intelFavoriteOnly && (
-                  <Button variant="secondary" onClick={() => setIntelFavoriteOnly(false)}>Ver todos</Button>
-                )}
-              </div>
-            ) : (
+            {(() => {
+              if (intelLoading) {
+                return (
+                  <div className="flex items-center justify-center p-12 text-muted gap-3">
+                    <Loader2 size={24} className="animate-spin" />
+                    <span>Carregando relatórios de inteligência...</span>
+                  </div>
+                );
+              }
+              if (intelItems.length === 0) {
+                return (
+                  <div className="rounded-[2.4rem] bg-card border border-border p-12 flex flex-col items-center justify-center gap-4 min-h-[320px]">
+                    <BarChart3 size={48} className="text-muted" aria-hidden />
+                    <h2 className="text-xl font-bold text-foreground">
+                      {intelFavoriteOnly ? 'Nenhum relatório de inteligência favorito' : 'Nenhum relatório de inteligência'}
+                    </h2>
+                    <p className="text-sm text-muted text-center max-w-md">
+                      Gere relatórios em Viabilidade, Concorrência ou Mercado para ver o histórico aqui.
+                    </p>
+                    {intelFavoriteOnly && (
+                      <Button variant="secondary" onClick={() => setIntelFavoriteOnly(false)}>Ver todos</Button>
+                    )}
+                  </div>
+                );
+              }
+              return (
               <div className="space-y-3">
                 {intelItems.map((item) => (
                   <div
@@ -609,7 +624,8 @@ export default function HistoricoPage() {
                   </div>
                 ))}
               </div>
-            )}
+              );
+            })()}
           </>
         )}
       </div>

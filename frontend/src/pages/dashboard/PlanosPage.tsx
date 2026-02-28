@@ -37,6 +37,38 @@ const FEATURE_MATRIX: Array<{ feature: string } & Record<string, boolean | strin
     { feature: 'Gestão de equipe', FREE: false, BASIC: false, PRO: false, BUSINESS: true, SCALE: true },
 ];
 
+function renderFeatureCellValue(val: boolean | string | undefined) {
+    if (val === true) return <Check size={14} className="text-emerald-400 mx-auto" />;
+    if (val === false) return <span className="text-muted/30">—</span>;
+    return <span className="text-xs font-bold text-violet-400 tabular-nums">{String(val ?? '—')}</span>;
+}
+
+interface PlanCardActionButtonProps {
+    planKey: string;
+    loadingPlan: string | null;
+    isDowngrade: (key: string) => boolean;
+    onUpgrade: (key: string) => void;
+}
+
+function PlanCardActionButton({ planKey, loadingPlan, isDowngrade, onUpgrade }: PlanCardActionButtonProps) {
+    const loading = loadingPlan === planKey;
+    const downgrade = isDowngrade(planKey);
+    const icon = loading ? <Loader2 size={14} className="animate-spin" /> : downgrade ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />;
+    const label = loading ? 'Processando...' : downgrade ? 'Downgrade' : 'Assinar';
+    return (
+        <Button
+            variant={downgrade ? 'secondary' : 'primary'}
+            size="sm"
+            className="w-full rounded-xl font-bold"
+            disabled={loading}
+            onClick={() => onUpgrade(planKey)}
+            icon={icon}
+        >
+            {label}
+        </Button>
+    );
+}
+
 export default function PlanosPage() {
     const { user } = useOutletContext<{ user: SessionUser }>();
     const { addToast } = useToast();
@@ -230,24 +262,12 @@ export default function PlanosPage() {
                                         ) : plan.key === 'FREE' ? (
                                             <div className="text-center text-xs text-muted py-2">Plano gratuito</div>
                                         ) : (
-                                            <Button
-                                                variant={isDowngrade(plan.key) ? 'secondary' : 'primary'}
-                                                size="sm"
-                                                className="w-full rounded-xl font-bold"
-                                                disabled={loadingPlan === plan.key}
-                                                onClick={() => handleUpgrade(plan.key)}
-                                                icon={(() => {
-                                                if (loadingPlan === plan.key) return <Loader2 size={14} className="animate-spin" />;
-                                                if (isDowngrade(plan.key)) return <ArrowDownRight size={14} />;
-                                                return <ArrowUpRight size={14} />;
-                                              })()}
-                                            >
-                                                {(() => {
-                                                if (loadingPlan === plan.key) return 'Processando...';
-                                                if (isDowngrade(plan.key)) return 'Downgrade';
-                                                return 'Assinar';
-                                              })()}
-                                            </Button>
+                                            <PlanCardActionButton
+                                                planKey={plan.key}
+                                                loadingPlan={loadingPlan}
+                                                isDowngrade={isDowngrade}
+                                                onUpgrade={handleUpgrade}
+                                            />
                                         )}
                                     </div>
                                 );
@@ -284,13 +304,7 @@ export default function PlanosPage() {
                                             const val = row[plan.key];
                                             return (
                                                 <td key={plan.key} className="py-2.5 px-4 text-center">
-                                                    {val === true ? (
-                                                        <Check size={14} className="text-emerald-400 mx-auto" />
-                                                    ) : val === false ? (
-                                                        <span className="text-muted/30">—</span>
-                                                    ) : (
-                                                        <span className="text-xs font-bold text-violet-400 tabular-nums">{String(val ?? '—')}</span>
-                                                    )}
+                                                    {renderFeatureCellValue(val)}
                                                 </td>
                                             );
                                         })}

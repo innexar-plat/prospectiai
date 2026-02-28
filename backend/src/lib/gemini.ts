@@ -168,11 +168,12 @@ ${isEn ? 'RECENT CUSTOMER REVIEWS:' : 'AVALIAÇÕES RECENTES DE CLIENTES:'}
 ${reviewsText}
 ${((): string => {
         if (!webContext) return '';
-        const businessPlanNote = isBusinessPlan
-            ? (isEn
+        let businessPlanNote = '';
+        if (isBusinessPlan) {
+            businessPlanNote = isEn
                 ? '\nIMPORTANT: The web context above contains REAL data collected from Reclame Aqui, JusBrasil, CNPJ databases, and general web searches. You MUST analyze this data carefully and incorporate it into your report. Cite specific findings and sources. If Reclame Aqui shows complaints, detail them. If JusBrasil shows lawsuits, flag the risks. If CNPJ data reveals information about the company, use it.'
-                : '\nIMPORTANTE: O contexto da web acima contém dados REAIS coletados do Reclame Aqui, JusBrasil, bases de CNPJ e buscas web gerais. Você DEVE analisar esses dados cuidadosamente e incorporá-los ao seu relatório. Cite achados e fontes específicas. Se o Reclame Aqui mostra reclamações, detalhe-as. Se o JusBrasil mostra processos, sinalize os riscos. Se dados de CNPJ revelam informações sobre a empresa, use-os.')
-            : '';
+                : '\nIMPORTANTE: O contexto da web acima contém dados REAIS coletados do Reclame Aqui, JusBrasil, bases de CNPJ e buscas web gerais. Você DEVE analisar esses dados cuidadosamente e incorporá-los ao seu relatório. Cite achados e fontes específicas. Se o Reclame Aqui mostra reclamações, detalhe-as. Se o JusBrasil mostra processos, sinalize os riscos. Se dados de CNPJ revelam informações sobre a empresa, use-os.';
+        }
         return `\n\n${webContext}\n${businessPlanNote}\n\n`;
     })()}
 
@@ -188,9 +189,10 @@ ${isEn ? 'ANALYSIS REQUIREMENTS (be extremely specific, not generic):' : 'REQUIS
 5. ${isEn ? 'REVIEW RECENCY: Analyze the time of reviews. If reviews are mostly from years ago, flag this as a "stagnant reputation". If recent, analyze the trend.' : 'RECÊNCIA DE REVIEWS: Analise o tempo das avaliações. Se forem majoritariamente de anos atrás, aponte isso como "reputação estagnada". Se recentes, analise a tendência.'}
 ${((): string => {
         if (!isBusinessPlan) return '';
-        return isEn
+        const point6 = isEn
             ? '6. DEEP REPUTATION ANALYSIS: Using the REAL data from Reclame Aqui and JusBrasil provided in the web context above, analyze: (a) consumer reputation — complaints, response rate, resolution rate; (b) legal risks — lawsuits, labor disputes, consumer protection cases; (c) CNPJ data — company size, founding date, business activities. Include ALL findings in the full report with source citations.'
             : '6. ANÁLISE PROFUNDA DE REPUTAÇÃO: Usando os dados REAIS do Reclame Aqui e JusBrasil fornecidos no contexto da web acima, analise: (a) reputação do consumidor — reclamações, taxa de resposta, taxa de resolução; (b) riscos legais — processos, disputas trabalhistas, casos de defesa do consumidor; (c) dados de CNPJ — porte da empresa, data de fundação, atividades empresariais. Inclua TODOS os achados no relatório completo com citações de fonte.';
+        return point6;
     })()}
 7. ${isEn ? 'WHATSAPP MESSAGE: A shorter, more casual version for WhatsApp (max 2 short paragraphs, conversational tone, gets to the point fast).' : 'MENSAGEM WHATSAPP: Uma versão mais curta e casual para WhatsApp (máximo 2 parágrafos curtos, tom conversacional, vai direto ao ponto).'}
 

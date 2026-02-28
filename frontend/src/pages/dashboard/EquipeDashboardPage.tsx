@@ -113,18 +113,33 @@ export default function EquipeDashboardPage() {
         breadcrumb="Dashboard / Equipe / Dashboard"
       />
       <div className="p-6 sm:p-8 max-w-6xl mx-auto space-y-6">
-        {loading ? (
-          <div className="flex items-center justify-center p-12 text-muted gap-3">
-            <Loader2 size={24} className="animate-spin" />
-            <span>Carregando dashboard...</span>
-          </div>
-        ) : error ? (
-          <div className="rounded-3xl bg-card border border-border p-8 text-center text-muted">
-            {error.includes('403') || error.includes('Only admins')
+        {(() => {
+          if (loading) {
+            return (
+              <div className="flex items-center justify-center p-12 text-muted gap-3">
+                <Loader2 size={24} className="animate-spin" />
+                <span>Carregando dashboard...</span>
+              </div>
+            );
+          }
+          if (error) {
+            const errorMessage = error.includes('403') || error.includes('Only admins')
               ? 'Acesso restrito a gestores (OWNER/ADMIN).'
-              : error}
-          </div>
-        ) : dashboardData ? (
+              : error;
+            return (
+              <div className="rounded-3xl bg-card border border-border p-8 text-center text-muted">
+                {errorMessage}
+              </div>
+            );
+          }
+          if (!dashboardData) {
+            return (
+              <div className="rounded-3xl bg-card border border-border p-8 text-center text-muted">
+                Nenhum dado do dashboard.
+              </div>
+            );
+          }
+          return (
           <>
             <div className="rounded-3xl bg-card border border-border p-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
@@ -233,11 +248,8 @@ export default function EquipeDashboardPage() {
               </div>
             </div>
           </>
-        ) : (
-          <div className="rounded-3xl bg-card border border-border p-8 text-center text-muted">
-            Nenhum dado do dashboard.
-          </div>
-        )}
+          );
+        })()}
       </div>
     </>
   );

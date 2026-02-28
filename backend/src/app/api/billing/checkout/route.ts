@@ -9,6 +9,125 @@ import { logger } from '@/lib/logger';
 import { checkoutSchema, formatZodError } from '@/lib/validations/schemas';
 import { prisma } from '@/lib/prisma';
 import { performScheduleDowngrade, ScheduleDowngradeError } from '@/lib/schedule-downgrade';
+import type { Workspace } from '@prisma/client';
+
+type WorkspaceForCheckout = Pick<Workspace, 'id' | 'plan' | 'subscriptionId' | 'currentPeriodEnd'>;
+type SessionUser = { id: string; email?: string | null; name?: string | null };
+
+async function tryScheduleDowngrade(
+    workspace: WorkspaceForCheckout,
+    planId: string,
+): Promise<NextResponse | null> {
+    try {
+        const result = await performScheduleDowngrade(
+            {
+                id: workspace.id,
+                plan: workspace.plan,
+                subscriptionId: workspace.subscriptionId,
+                currentPeriodEnd: workspace.currentPeriodEnd,
+            },
+            planId
+        );
+        return NextResponse.json({
+            url: null,
+            scheduled: true,
+            message: result.message,
+            pendingPlanEffectiveAt: result.pendingPlanEffectiveAt,
+        });
+    } catch (scheduleErr: unknown) {
+        if (scheduleErr instanceof ScheduleDowngradeError) {
+            return NextResponse.json({ error: scheduleErr.error }, { status: scheduleErr.status });
+        }
+        throw scheduleErr;
+    }
+}
+
+async function tryStripeUpgrade(
+    workspace: WorkspaceForCheckout,
+    planId: string,
+    cycle: BillingCycle,
+    plan: { name: string; leadsLimit: number },
+    userId: string,
+    appUrl: string,
+    localePath: string,
+): Promise<NextResponse | null> {
+    const subId = workspace.subscriptionId as string;
+    const subscription = await stripe.subscriptions.retrieve(subId, {
+        expand: ['items.data.price', 'items.data.price.product'],
+    });
+    const item = subscription.items.data[0];
+    const price = item?.price as { recurring?: { interval?: string }; product?: string } | undefined;
+    const stripeInterval = price?.recurring?.interval ?? 'month';
+    const productId = typeof price?.product === 'string' ? price.product : undefined;
+    const sameCycle =
+        (cycle === 'monthly' && stripeInterval === 'month') ||
+        (cycle === 'annual' && stripeInterval === 'year');
+    if (!item || !sameCycle || !productId) return null;
+    const newPriceCents = Math.round(getPlanPrices(PLANS[planId as PlanType], cycle).price_usd * 100);
+    await stripe.subscriptions.update(subId, {
+        items: [
+            {
+                id: item.id,
+                price_data: {
+                    currency: 'usd',
+                    unit_amount: newPriceCents,
+                    recurring: { interval: stripeInterval },
+                    product: productId,
+                },
+            },
+        ],
+        proration_behavior: 'always_invoice',
+        metadata: { planId, userId, interval: cycle },
+    });
+    logger.info('Stripe subscription upgraded with proration', {
+        userId,
+        workspaceId: workspace.id,
+        from: workspace.plan,
+        to: planId,
+        cycle,
+    });
+    return NextResponse.json({ url: `${appUrl}/${localePath}/billing/success?upgraded=1` });
+}
+
+async function createMPCheckoutUrl(
+    planId: string,
+    cycle: BillingCycle,
+    plan: { name: string; leadsLimit: number },
+    priceBrl: number,
+    user: SessionUser,
+    appUrl: string,
+    localePath: string,
+): Promise<string> {
+    const fullName = user.name || 'Cliente ProspectorAI';
+    const spaceIdx = fullName.trim().indexOf(' ');
+    const name = spaceIdx > 0 ? fullName.trim().slice(0, spaceIdx) : fullName.trim();
+    const surname = spaceIdx > 0 ? fullName.trim().slice(spaceIdx + 1) : '.';
+    const mpPreference = await preference.create({
+        body: {
+            items: [
+                {
+                    id: `${planId}_${cycle}`,
+                    title: `ProspectorAI Plano ${plan.name} (${cycle})`,
+                    description: `Assinatura ${cycle} para ${plan.leadsLimit} buscas por mês.`,
+                    quantity: 1,
+                    unit_price: priceBrl,
+                    currency_id: 'BRL'
+                }
+            ],
+            back_urls: {
+                success: `${appUrl}/${localePath}/dashboard`,
+                failure: `${appUrl}/${localePath}/dashboard`,
+                pending: `${appUrl}/${localePath}/dashboard`
+            },
+            auto_return: 'approved',
+            notification_url: `${appUrl}/api/billing/webhook/mercadopago`,
+            metadata: { user_id: user.id, plan_id: planId, interval: cycle },
+            payer: { email: user.email ?? '', name, surname: surname || '.' },
+        }
+    });
+    logger.info('MP Preference Created', { preferenceId: mpPreference.id, initPoint: mpPreference.init_point });
+    return mpPreference.init_point ?? '';
+}
 
 export async function POST(req: Request) {
     const session = await auth();
@@ -63,34 +182,12 @@ export async function POST(req: Request) {
         }
 
         if (isDowngradeRequest && workspace) {
-            try {
-                const result = await performScheduleDowngrade(
-                    {
-                        id: workspace.id,
-                        plan: workspace.plan,
-                        subscriptionId: workspace.subscriptionId,
-                        currentPeriodEnd: workspace.currentPeriodEnd,
-                    },
-                    planId
-                );
-                return NextResponse.json({
-                    url: null,
-                    scheduled: true,
-                    message: result.message,
-                    pendingPlanEffectiveAt: result.pendingPlanEffectiveAt,
-                });
-            } catch (scheduleErr: unknown) {
-                if (scheduleErr instanceof ScheduleDowngradeError) {
-                    return NextResponse.json({ error: scheduleErr.error }, { status: scheduleErr.status });
-                }
-                throw scheduleErr;
-            }
+            const downgradeRes = await tryScheduleDowngrade(workspace, planId);
+            if (downgradeRes) return downgradeRes;
         }
 
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
         const localePath = locale || 'pt';
-
-        // Stripe: upgrade (paid → higher plan) with proration — update subscription instead of new checkout
         const isStripeSubscription = workspace?.subscriptionId != null && workspace.subscriptionId.startsWith('sub_');
         const isUpgradeRequest =
             currentPlan != null &&
@@ -100,46 +197,16 @@ export async function POST(req: Request) {
 
         if (localePath !== 'pt' && isUpgradeRequest && isStripeSubscription && workspace) {
             try {
-                const subscription = await stripe.subscriptions.retrieve(workspace.subscriptionId!, {
-                    expand: ['items.data.price', 'items.data.price.product'],
-                });
-                const item = subscription.items.data[0];
-                const price = item?.price as { recurring?: { interval?: string }; product?: string } | undefined;
-                const stripeInterval = price?.recurring?.interval ?? 'month';
-                const productId = typeof price?.product === 'string' ? price.product : undefined;
-                const sameCycle =
-                    (cycle === 'monthly' && stripeInterval === 'month') ||
-                    (cycle === 'annual' && stripeInterval === 'year');
-                if (!item || !sameCycle || !productId) {
-                    // Fall through to create new checkout (e.g. cycle change, missing item, or no product)
-                } else {
-                    const subId = workspace.subscriptionId as string;
-                    const newPriceCents = Math.round(getPlanPrices(plan, cycle).price_usd * 100);
-                    await stripe.subscriptions.update(subId, {
-                        items: [
-                            {
-                                id: item.id,
-                                price_data: {
-                                    currency: 'usd',
-                                    unit_amount: newPriceCents,
-                                    recurring: { interval: stripeInterval },
-                                    product: productId,
-                                },
-                            },
-                        ],
-                        proration_behavior: 'always_invoice',
-                        metadata: { planId, userId: session.user.id, interval: cycle },
-                    });
-                    logger.info('Stripe subscription upgraded with proration', {
-                        userId: session.user.id,
-                        workspaceId: workspace.id,
-                        from: currentPlan,
-                        to: planId,
-                        cycle,
-                    });
-                    const successUrl = `${appUrl}/${localePath}/billing/success?upgraded=1`;
-                    return NextResponse.json({ url: successUrl });
-                }
+                const upgradeRes = await tryStripeUpgrade(
+                    workspace,
+                    planId,
+                    cycle,
+                    plan,
+                    session.user.id,
+                    appUrl,
+                    localePath,
+                );
+                if (upgradeRes) return upgradeRes;
             } catch (upgradeErr: unknown) {
                 logger.error('Stripe upgrade failed', {
                     userId: session.user.id,
@@ -155,9 +222,7 @@ export async function POST(req: Request) {
         const { price_brl: priceBrl, price_usd: priceUsd } = getPlanPrices(plan, cycle);
 
         if (localePath === 'pt') {
-            // MP: upgrade (paid → higher plan) currently charges full new plan price; proration can be added later.
             if (card_token_id) {
-                // Recurring subscription with card (PreApproval). No installments.
                 const preApproval = await createPreApproval({
                     payerEmail: session.user.email,
                     cardTokenId: card_token_id,
@@ -172,74 +237,40 @@ export async function POST(req: Request) {
                 const url = preApproval.init_point || `${appUrl}/${localePath}/billing/success`;
                 return NextResponse.json({ url });
             }
-            // PIX / boleto: one-time Preference. Activate only on webhook approved. No installments.
-            const mpPreference = await preference.create({
-                body: {
-                    items: [
-                        {
-                            id: `${planId}_${cycle}`,
-                            title: `ProspectorAI Plano ${plan.name} (${cycle})`,
-                            description: `Assinatura ${cycle} para ${plan.leadsLimit} buscas por mês.`,
-                            quantity: 1,
-                            unit_price: priceBrl,
-                            currency_id: 'BRL'
-                        }
-                    ],
-                    back_urls: {
-                        success: `${appUrl}/${localePath}/dashboard`,
-                        failure: `${appUrl}/${localePath}/dashboard`,
-                        pending: `${appUrl}/${localePath}/dashboard`
-                    },
-                    auto_return: 'approved',
-                    notification_url: `${appUrl}/api/billing/webhook/mercadopago`,
-                    metadata: {
-                        user_id: session.user.id,
-                        plan_id: planId,
-                        interval: cycle
-                    },
-                    payer: {
-                        email: session.user.email,
-                        name: session.user.name || 'Cliente ProspectorAI',
-                    },
-                }
-            });
-
-            logger.info('MP Preference Created', {
-                preferenceId: mpPreference.id,
-                initPoint: mpPreference.init_point,
-            });
-
-            return NextResponse.json({ url: mpPreference.init_point });
-        } else {
-            // Stripe Checkout (International)
-            const stripeSession = await stripe.checkout.sessions.create({
-                customer_email: session.user.email,
-                line_items: [
-                    {
-                        price_data: {
-                            currency: 'usd',
-                            product_data: {
-                                name: `ProspectorAI ${plan.name} Plan (${cycle})`,
-                                description: `Subscription for ${plan.leadsLimit} leads searches per month.`,
-                            },
-                            unit_amount: priceUsd * 100,
-                            recurring: { interval: cycle === 'annual' ? 'year' : 'month' },
-                        },
-                        quantity: 1,
-                    },
-                ],
-                mode: 'subscription',
-                success_url: `${process.env.NEXT_PUBLIC_APP_URL}/${locale}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
-                cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/${locale}/pricing`,
-                metadata: {
-                    userId: session.user.id,
-                    planId,
-                    interval: cycle
-                },
-            });
-
-            return NextResponse.json({ url: stripeSession.url });
+            const mpUrl = await createMPCheckoutUrl(
+                planId,
+                cycle,
+                plan,
+                priceBrl,
+                session.user,
+                appUrl,
+                localePath,
+            );
+            return NextResponse.json({ url: mpUrl });
         }
+
+        const stripeSession = await stripe.checkout.sessions.create({
+            customer_email: session.user.email,
+            line_items: [
+                {
+                    price_data: {
+                        currency: 'usd',
+                        product_data: {
+                            name: `ProspectorAI ${plan.name} Plan (${cycle})`,
+                            description: `Subscription for ${plan.leadsLimit} leads searches per month.`,
+                        },
+                        unit_amount: priceUsd * 100,
+                        recurring: { interval: cycle === 'annual' ? 'year' : 'month' },
+                    },
+                    quantity: 1,
+                },
+            ],
+            mode: 'subscription',
+            success_url: `${process.env.NEXT_PUBLIC_APP_URL}/${locale}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/${locale}/pricing`,
+            metadata: { userId: session.user.id, planId, interval: cycle },
+        });
+        return NextResponse.json({ url: stripeSession.url });
     } catch (error) {
         logger.error('Checkout failed', { error: error instanceof Error ? error.message : 'Unknown' });
         return NextResponse.json({ error: 'Failed to create checkout session' }, { status: 500 });

@@ -35,6 +35,7 @@
   --text-secondary: var(--theme-muted);
 }
 
+/* stylelint-disable-next-line at-rule-no-unknown -- Tailwind v4 @theme */
 @theme {
   --color-accent-primary: #8b5cf6;
   --color-accent-secondary: #06b6d4;
