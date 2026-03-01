@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Lock, Loader2, Search, Globe, Phone, AlertTriangle, Star, MessageSquare, Shield, Zap, CheckCircle2, Target } from 'lucide-react';
+import { Lock, Loader2, Search, Target, Globe, Star } from 'lucide-react';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
-import { useOutletContext, useNavigate, Link } from 'react-router-dom';
+import { Link, useOutletContext, useNavigate } from 'react-router-dom';
 import type { SessionUser, CompetitorAnalysisResult } from '@/lib/api';
 import { competitorApi } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/contexts/ToastContext';
+import { StatCard, PresenceBar, EmptyState } from '@/components/dashboard/shared/DashboardUI';
 
 const UF_OPTIONS = ['', 'AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MG', 'MS', 'MT', 'PA', 'PB', 'PE', 'PI', 'PR', 'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP', 'TO'];
 
@@ -59,22 +60,13 @@ export default function ConcorrenciaPage() {
             <>
                 <HeaderDashboard title="Análise de Concorrência" subtitle="Ranking e gaps vs concorrentes na sua região." breadcrumb="Prospecção Ativa / Concorrência" />
                 <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full">
-                    <div className="rounded-[2.4rem] bg-gradient-to-br from-violet-900/40 to-background border border-violet-500/20 p-12 flex flex-col items-center justify-center gap-6 min-h-[400px] text-center shadow-2xl relative overflow-hidden">
-                        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-violet-500/10 blur-[100px] -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none" />
-                        <div className="w-20 h-20 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center relative z-10">
-                            <Lock size={32} className="text-violet-400" />
-                        </div>
-                        <div className="space-y-2 relative z-10 max-w-xl">
-                            <h2 className="text-2xl font-black text-foreground">Análise de Concorrência</h2>
-                            <p className="text-muted leading-relaxed">
-                                Descubra quem são seus concorrentes no raio, quem tem mais avaliações,
-                                quem não tem site ou redes sociais, e identifique <span className="text-violet-400 font-bold">oportunidades de venda</span> reais.
-                            </p>
-                        </div>
-                        <Button variant="primary" onClick={() => navigate('/dashboard/configuracoes')} className="mt-4 min-h-[56px] px-8 rounded-xl font-bold text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 shadow-lg shadow-violet-500/25 border-0 transition-all hover:-translate-y-0.5 relative z-10">
-                            Faça Upgrade para Growth
-                        </Button>
-                    </div>
+                    <EmptyState
+                        icon={Lock}
+                        title="Análise de Concorrência"
+                        description="Descubra quem são seus concorrentes no raio, quem tem mais avaliações, quem não tem site ou redes sociais, e identifique oportunidades de venda reais."
+                        actionLabel="Faça Upgrade para Growth"
+                        onAction={() => navigate('/dashboard/configuracoes')}
+                    />
                 </div>
             </>
         );
@@ -205,7 +197,7 @@ export default function ConcorrenciaPage() {
                                                     if (opp.score >= 60) return 'bg-emerald-500/20 text-emerald-400';
                                                     if (opp.score >= 35) return 'bg-amber-500/20 text-amber-400';
                                                     return 'bg-surface text-muted';
-                                                  })()}`}>
+                                                })()}`}>
                                                     {opp.score}
                                                 </span>
                                             </div>
@@ -214,7 +206,7 @@ export default function ConcorrenciaPage() {
                                                     if (opp.score >= 60) return 'bg-emerald-500';
                                                     if (opp.score >= 35) return 'bg-amber-500';
                                                     return 'bg-surface';
-                                                  })()}`} style={{ width: `${opp.score}%` }} />
+                                                })()}`} style={{ width: `${opp.score}%` }} />
                                             </div>
                                             <div className="flex flex-wrap gap-1.5">
                                                 {opp.scoreFactors.noWebsite && <span className="inline-flex items-center gap-1 text-[9px] font-bold text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded-full"><Globe size={9} />Sem site</span>}
@@ -298,29 +290,3 @@ export default function ConcorrenciaPage() {
     );
 }
 
-/* ─── Sub-components ────────────────────────────────────────────────────────── */
-
-function StatCard({ value, label, color, suffix }: { value: number; label: string; color: string; suffix?: string }) {
-    const colors: Record<string, string> = { violet: 'text-violet-400', emerald: 'text-emerald-400', blue: 'text-blue-400', amber: 'text-amber-400' };
-    return (
-        <div className="rounded-2xl bg-card border border-border p-5 flex flex-col items-center justify-center text-center gap-1">
-            <div className={`text-3xl font-black tabular-nums ${colors[color] || 'text-foreground'}`}>{value}{suffix}</div>
-            <div className="text-[10px] font-bold text-muted uppercase tracking-wider">{label}</div>
-        </div>
-    );
-}
-
-function PresenceBar({ label, count, total, color }: { label: string; count: number; total: number; color: string }) {
-    const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-    return (
-        <div>
-            <div className="flex justify-between text-xs text-muted mb-1.5">
-                <span>{label}</span>
-                <span className="tabular-nums font-bold">{count} ({pct}%)</span>
-            </div>
-            <div className="w-full h-2.5 bg-surface rounded-full overflow-hidden border border-border/50">
-                <div className={`h-full rounded-full transition-all duration-700 ease-out ${color}`} style={{ width: `${pct}%` }} />
-            </div>
-        </div>
-    );
-}

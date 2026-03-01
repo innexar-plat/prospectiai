@@ -1,0 +1,37 @@
+---
+description: Regras SonarQube e cobertura mínima para o Prospector AI (Quality Gate, 0 issues, 80% coverage).
+alwaysApply: true
+---
+
+# SonarQube — Qualidade e Cobertura
+
+## Objetivo
+
+O código deve passar no **Quality Gate** do Sonar (0 issues abertos, cobertura adequada). Rodar análise antes de merge (CI ou `sonar-scanner`). Ver `.ai/MANUTENCAO_SONAR.md` e `sonar-project.properties`.
+
+## Cobertura mínima
+
+- **80%** em lines, statements, branches e functions no código coberto por testes.
+- **Backend:** Jest; relatório em `backend/coverage/lcov.info`.
+- **Frontend:** Vitest com lcov; relatório em `frontend/coverage/lcov.info`.
+- Garantir que `npm run test` (ou `test:coverage`) gere lcov antes do step Sonar no CI.
+
+## Regras que mais geram issues (respeitar sempre)
+
+| Regra   | O que fazer |
+|--------|--------------|
+| **S3358** | Evitar ternários aninhados; extrair em variáveis ou funções auxiliares. Não usar `a ? b : (c ? d : e)`. |
+| **S3776** | Reduzir complexidade cognitiva: funções menores, early returns, extrair helpers. |
+| **S3735** | Evitar operador `void`; usar `.catch(() => {})` ou `.catch(noop)` em promises fire-and-forget. |
+| **S1874** | Não usar APIs deprecadas: Zod v4 `z.email()`, `z.flattenError(err)`; React tipos de evento atualizados. |
+| **S1128** | Remover imports não utilizados. |
+| **S3863** | Unificar imports duplicados do mesmo módulo em um único `import { a, b } from 'mod'`. |
+| **S1854** | Evitar atribuições inúteis; usar o valor diretamente ou eliminar a variável. |
+| **S3696** | Lançar `new Error()` ou subclasse; nunca `throw { message: '...' }`. |
+
+## Checklist pré-merge
+
+- [ ] Lint: `npm run lint` (backend, frontend, admin conforme workspace).
+- [ ] Testes com cobertura: `npm run test` (ou `test:coverage`) em backend e frontend; sem falha de threshold.
+- [ ] Build: `npm run build` nos workspaces alterados.
+- [ ] Sonar: CI passou ou `sonar-scanner` local com 0 issues.

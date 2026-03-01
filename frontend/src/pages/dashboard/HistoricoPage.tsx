@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Clock, Loader2, Search, CalendarDays, ChevronRight, ArrowLeft, Star, Phone, Globe, MapPin, FileText, User, BarChart3 } from 'lucide-react';
+import { Clock, Search, CalendarDays, ChevronRight, ArrowLeft, Star, Phone, Globe, MapPin, FileText, User, BarChart3, Loader2, AlertTriangle, CheckCircle2, Lock } from 'lucide-react';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import {
   searchApi,
@@ -13,6 +13,8 @@ import {
 import { Button } from '@/components/ui/Button';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '@/contexts/ToastContext';
+import { LoadingState, EmptyState } from '@/components/dashboard/shared/DashboardUI';
+import { formatDate } from '@/lib/date-utils';
 
 type TabId = 'buscas' | 'lead' | 'intelligence';
 
@@ -24,9 +26,9 @@ const MODULE_LABELS: Record<string, string> = {
 };
 
 function getHistoricoSubtitle(activeTab: TabId, searchTotal: number, intelTotal: number): string {
-  if (activeTab === 'buscas' && searchTotal) return `Suas buscas anteriores (${searchTotal} registros).`;
+  if (activeTab === 'buscas' && searchTotal) return `Suas buscas anteriores(${searchTotal} registros).`;
   if (activeTab === 'lead') return 'Relatórios de análise de lead.';
-  if (activeTab === 'intelligence' && intelTotal !== 0) return `Relatórios de inteligência (${intelTotal}).`;
+  if (activeTab === 'intelligence' && intelTotal !== 0) return `Relatórios de inteligência(${intelTotal}).`;
   return 'Buscas, relatórios de lead e relatórios de inteligência.';
 }
 
@@ -53,55 +55,53 @@ function HistoricoSearchDetail({
         <Button variant="ghost" onClick={onBack} className="mb-4 inline-flex items-center gap-2 text-sm text-muted hover:text-foreground">
           <ArrowLeft size={16} /> Voltar ao histórico
         </Button>
-        {places.length === 0 ? (
-          <div className="rounded-2xl bg-card border border-border p-12 flex flex-col items-center justify-center gap-4 min-h-[240px]">
-            <Search size={48} className="text-muted" aria-hidden />
-            <h2 className="text-xl font-bold text-foreground">Resultados não disponíveis</h2>
-            <p className="text-sm text-muted text-center max-w-md">Os resultados desta busca não foram armazenados.</p>
-            <Button variant="primary" onClick={() => onNavigate('/dashboard')} className="mt-2">Realizar nova busca</Button>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {places.map((place, idx) => {
-              const name = place.displayName?.text || '—';
-              const address = place.formattedAddress || '';
-              const phone = place.nationalPhoneNumber || place.internationalPhoneNumber || '';
-              const website = place.websiteUri || '';
-              const rating = place.rating;
-              const reviews = place.userRatingCount ?? 0;
-              return (
-                <div key={place.id || idx} className="bg-card border border-border rounded-2xl p-4 sm:px-6 hover:border-violet-500/30 transition-colors">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-foreground truncate">{name}</p>
-                      {address && (
-                        <p className="text-xs text-muted mt-1 flex items-center gap-1 truncate">
-                          <MapPin size={12} className="shrink-0" /> {address}
-                        </p>
+        <EmptyState
+          icon={Search}
+          title="Resultados não disponíveis"
+          description="Os resultados desta busca não foram armazenados."
+          actionLabel="Realizar nova busca"
+          onAction={() => onNavigate('/dashboard')}
+        />
+        <div className="space-y-3">
+          {places.map((place, idx) => {
+            const name = place.displayName?.text || '—';
+            const address = place.formattedAddress || '';
+            const phone = place.nationalPhoneNumber || place.internationalPhoneNumber || '';
+            const website = place.websiteUri || '';
+            const rating = place.rating;
+            const reviews = place.userRatingCount ?? 0;
+            return (
+              <div key={place.id || idx} className="bg-card border border-border rounded-2xl p-4 sm:px-6 hover:border-violet-500/30 transition-colors">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-foreground truncate">{name}</p>
+                    {address && (
+                      <p className="text-xs text-muted mt-1 flex items-center gap-1 truncate">
+                        <MapPin size={12} className="shrink-0" /> {address}
+                      </p>
+                    )}
+                    <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted">
+                      {rating != null && (
+                        <span className="inline-flex items-center gap-1">
+                          <Star size={12} className="text-amber-400" /> {rating}/5
+                          {reviews > 0 && <span className="text-muted">({reviews})</span>}
+                        </span>
                       )}
-                      <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted">
-                        {rating != null && (
-                          <span className="inline-flex items-center gap-1">
-                            <Star size={12} className="text-amber-400" /> {rating}/5
-                            {reviews > 0 && <span className="text-muted">({reviews})</span>}
-                          </span>
-                        )}
-                        {phone && (
-                          <span className="inline-flex items-center gap-1"><Phone size={12} /> {phone}</span>
-                        )}
-                        {website && (
-                          <a href={website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-violet-400 hover:text-violet-300">
-                            <Globe size={12} /> Website
-                          </a>
-                        )}
-                      </div>
+                      {phone && (
+                        <span className="inline-flex items-center gap-1"><Phone size={12} /> {phone}</span>
+                      )}
+                      {website && (
+                        <a href={website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-violet-400 hover:text-violet-300">
+                          <Globe size={12} /> Website
+                        </a>
+                      )}
                     </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </>
   );
@@ -280,14 +280,6 @@ export default function HistoricoPage() {
     return () => { cancelled = true; };
   }, [activeTab, intelModule, intelFavoriteOnly, addToast]);
 
-  const formatDate = (iso: string) => {
-    try {
-      return new Date(iso).toLocaleDateString('pt-BR', {
-        day: '2-digit', month: 'short', year: 'numeric',
-        hour: '2-digit', minute: '2-digit',
-      });
-    } catch { return iso; }
-  };
 
   const setTab = (t: TabId) => {
     setActiveTab(t);
@@ -395,11 +387,10 @@ export default function HistoricoPage() {
               key={id}
               type="button"
               onClick={() => setTab(id)}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                activeTab === id
-                  ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30'
-                  : 'bg-card border border-border text-muted hover:text-foreground hover:border-violet-500/30'
-              }`}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${activeTab === id
+                ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30'
+                : 'bg-card border border-border text-muted hover:text-foreground hover:border-violet-500/30'
+                }`}
             >
               <Icon size={16} />
               {label}
@@ -419,54 +410,48 @@ export default function HistoricoPage() {
         {activeTab === 'buscas' && (
           <>
             {(() => {
-              if (searchLoading) return (
-                <div className="flex items-center justify-center p-12 text-muted gap-3">
-                  <Loader2 size={24} className="animate-spin" />
-                  <span>Carregando histórico...</span>
-                </div>
-              );
+              if (searchLoading) return <LoadingState message="Carregando histórico..." />;
               if (searchItems.length === 0) return (
-                <div className="rounded-[2.4rem] bg-card border border-border p-12 flex flex-col items-center justify-center gap-4 min-h-[320px]">
-                  <Clock size={48} className="text-muted" aria-hidden />
-                  <h2 className="text-xl font-bold text-foreground">Nenhuma busca no histórico</h2>
-                  <p className="text-sm text-muted text-center max-w-md">Suas buscas aparecerão aqui conforme você usa a plataforma.</p>
-                  <Button variant="primary" onClick={() => navigate('/dashboard')} className="mt-4">
-                    Realizar uma busca
-                  </Button>
-                </div>
+                <EmptyState
+                  icon={Clock}
+                  title="Nenhuma busca no histórico"
+                  description="Suas buscas aparecerão aqui conforme você usa a plataforma."
+                  actionLabel="Realizar uma busca"
+                  onAction={() => navigate('/dashboard')}
+                />
               );
               return (
-              <div className="space-y-3">
-                {searchItems.map((item, idx) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => handleSearchItemClick(item)}
-                    className="w-full text-left flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card border border-border rounded-2xl p-4 sm:px-6 hover:border-violet-500/30 hover:bg-violet-500/5 transition-colors cursor-pointer group"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
-                        <Search size={18} className="text-violet-400" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-bold text-foreground">{item.textQuery}</p>
-                          {idx === 0 && (
-                            <span className="text-[10px] font-semibold uppercase tracking-wider bg-violet-500/20 text-violet-300 px-2 py-0.5 rounded-full">
-                              Mais recente
-                            </span>
-                          )}
+                <div className="space-y-3">
+                  {searchItems.map((item, idx) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => handleSearchItemClick(item)}
+                      className="w-full text-left flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card border border-border rounded-2xl p-4 sm:px-6 hover:border-violet-500/30 hover:bg-violet-500/5 transition-colors cursor-pointer group"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
+                          <Search size={18} className="text-violet-400" />
                         </div>
-                        <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted">
-                          <span className="inline-flex items-center gap-1"><CalendarDays size={12} /> {formatDate(item.createdAt)}</span>
-                          <span>{item.resultsCount} resultados</span>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-bold text-foreground">{item.textQuery}</p>
+                            {idx === 0 && (
+                              <span className="text-[10px] font-semibold uppercase tracking-wider bg-violet-500/20 text-violet-300 px-2 py-0.5 rounded-full">
+                                Mais recente
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted">
+                            <span className="inline-flex items-center gap-1"><CalendarDays size={12} /> {formatDate(item.createdAt)}</span>
+                            <span>{item.resultsCount} resultados</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <ChevronRight size={20} className="text-muted group-hover:text-violet-400 transition-colors shrink-0 hidden sm:block" />
-                  </button>
-                ))}
-              </div>
+                      <ChevronRight size={20} className="text-muted group-hover:text-violet-400 transition-colors shrink-0 hidden sm:block" />
+                    </button>
+                  ))}
+                </div>
               );
             })()}
           </>
@@ -487,74 +472,64 @@ export default function HistoricoPage() {
             </div>
             {(() => {
               if (leadLoading) {
-                return (
-                  <div className="flex items-center justify-center p-12 text-muted gap-3">
-                    <Loader2 size={24} className="animate-spin" />
-                    <span>Carregando relatórios de lead...</span>
-                  </div>
-                );
+                return <LoadingState message="Carregando relatórios de lead..." />;
               }
               if (leadFiltered.length === 0) {
                 return (
-                  <div className="rounded-[2.4rem] bg-card border border-border p-12 flex flex-col items-center justify-center gap-4 min-h-[320px]">
-                    <User size={48} className="text-muted" aria-hidden />
-                    <h2 className="text-xl font-bold text-foreground">
-                      {leadFavoriteOnly ? 'Nenhum relatório de lead favorito' : 'Nenhum relatório de lead'}
-                    </h2>
-                    <p className="text-sm text-muted text-center max-w-md">
-                      {leadFavoriteOnly ? 'Marque leads como favoritos na listagem para filtrar aqui.' : 'Os relatórios de análise de lead aparecerão aqui.'}
-                    </p>
-                    {leadFavoriteOnly && (
-                      <Button variant="secondary" onClick={() => setLeadFavoriteOnly(false)}>Ver todos</Button>
-                    )}
-                  </div>
+                  <EmptyState
+                    icon={User}
+                    title={leadFavoriteOnly ? 'Nenhum relatório de lead favorito' : 'Nenhum relatório de lead'}
+                    description={leadFavoriteOnly ? 'Marque leads como favoritos na listagem para filtrar aqui.' : 'Os relatórios de análise de lead aparecerão aqui.'}
+                    actionLabel={leadFavoriteOnly ? 'Ver todos' : undefined}
+                    onAction={leadFavoriteOnly ? () => setLeadFavoriteOnly(false) : undefined}
+                  />
                 );
               }
               return (
-              <div className="space-y-3">
-                {leadFiltered.map((item) => {
-                  const leadData = item.lead;
-                  const placeId = leadData?.placeId ?? '';
-                  return (
-                    <div
-                      key={item.id}
-                      className="w-full text-left flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card border border-border rounded-2xl p-4 sm:px-6 hover:border-violet-500/30 transition-colors"
-                    >
-                      <div className="flex items-start gap-3 flex-1 min-w-0">
-                        <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
-                          <User size={18} className="text-violet-400" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-foreground truncate">{leadData?.name ?? '—'}</p>
-                          <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted">
-                            <span className="inline-flex items-center gap-1"><CalendarDays size={12} /> {formatDate(item.createdAt)}</span>
-                            {item.score != null && <span>Score: {item.score}</span>}
+                <div className="space-y-3">
+                  {leadFiltered.map((item) => {
+                    const leadData = item.lead;
+                    const placeId = leadData?.placeId ?? '';
+                    return (
+                      <div
+                        key={item.id}
+                        className="w-full text-left flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card border border-border rounded-2xl p-4 sm:px-6 hover:border-violet-500/30 transition-colors"
+                      >
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
+                            <User size={18} className="text-violet-400" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-foreground truncate">{leadData?.name ?? '—'}</p>
+                            <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted">
+                              <span className="inline-flex items-center gap-1"><CalendarDays size={12} /> {formatDate(item.createdAt)}</span>
+                              {item.score != null && <span>Score: {item.score}</span>}
+                            </div>
                           </div>
                         </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={(e) => handleLeadFavorite(item, e)}
+                            className="p-2 rounded-lg border border-border hover:bg-violet-500/10 text-amber-400"
+                            title={item.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
+                            aria-label={item.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
+                          >
+                            <Star size={18} className={item.isFavorite ? 'fill-current' : ''} />
+                          </button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-violet-400 hover:text-violet-300"
+                            onClick={() => placeId && navigate(`/dashboard/lead/${placeId}`)}
+                          >
+                            Abrir relatório
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          type="button"
-                          onClick={(e) => handleLeadFavorite(item, e)}
-                          className="p-2 rounded-lg border border-border hover:bg-violet-500/10 text-amber-400"
-                          title={item.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
-                          aria-label={item.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
-                        >
-                          <Star size={18} className={item.isFavorite ? 'fill-current' : ''} />
-                        </button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-violet-400 hover:text-violet-300"
-                          onClick={() => placeId && navigate(`/dashboard/lead/${placeId}`)}
-                        >
-                          Abrir relatório
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
               );
             })()}
           </>
@@ -586,72 +561,62 @@ export default function HistoricoPage() {
             </div>
             {(() => {
               if (intelLoading) {
-                return (
-                  <div className="flex items-center justify-center p-12 text-muted gap-3">
-                    <Loader2 size={24} className="animate-spin" />
-                    <span>Carregando relatórios de inteligência...</span>
-                  </div>
-                );
+                return <LoadingState message="Carregando relatórios de inteligência..." />;
               }
               if (intelItems.length === 0) {
                 return (
-                  <div className="rounded-[2.4rem] bg-card border border-border p-12 flex flex-col items-center justify-center gap-4 min-h-[320px]">
-                    <BarChart3 size={48} className="text-muted" aria-hidden />
-                    <h2 className="text-xl font-bold text-foreground">
-                      {intelFavoriteOnly ? 'Nenhum relatório de inteligência favorito' : 'Nenhum relatório de inteligência'}
-                    </h2>
-                    <p className="text-sm text-muted text-center max-w-md">
-                      Gere relatórios em Viabilidade, Concorrência ou Mercado para ver o histórico aqui.
-                    </p>
-                    {intelFavoriteOnly && (
-                      <Button variant="secondary" onClick={() => setIntelFavoriteOnly(false)}>Ver todos</Button>
-                    )}
-                  </div>
+                  <EmptyState
+                    icon={BarChart3}
+                    title={intelFavoriteOnly ? 'Nenhum relatório de inteligência favorito' : 'Nenhum relatório de inteligência'}
+                    description="Gere relatórios em Viabilidade, Concorrência ou Mercado para ver o histórico aqui."
+                    actionLabel={intelFavoriteOnly ? 'Ver todos' : undefined}
+                    onAction={intelFavoriteOnly ? () => setIntelFavoriteOnly(false) : undefined}
+                  />
                 );
               }
               return (
-              <div className="space-y-3">
-                {intelItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="w-full text-left flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card border border-border rounded-2xl p-4 sm:px-6 hover:border-violet-500/30 transition-colors"
-                  >
-                    <div className="flex items-start gap-3 flex-1 min-w-0">
-                      <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
-                        <FileText size={18} className="text-violet-400" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-foreground truncate">
-                          {item.inputQuery}{item.inputCity ? ` · ${item.inputCity}` : ''}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted">
-                          <span className="inline-flex items-center gap-1"><CalendarDays size={12} /> {formatDate(item.createdAt)}</span>
-                          <span>{MODULE_LABELS[item.module] || item.module}</span>
+                <div className="space-y-3">
+                  {intelItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="w-full text-left flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card border border-border rounded-2xl p-4 sm:px-6 hover:border-violet-500/30 transition-colors"
+                    >
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
+                          <FileText size={18} className="text-violet-400" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-foreground truncate">
+                            {item.inputQuery}{item.inputCity ? ` · ${item.inputCity}` : ''}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted">
+                            <span className="inline-flex items-center gap-1"><CalendarDays size={12} /> {formatDate(item.createdAt)}</span>
+                            <span>{MODULE_LABELS[item.module] || item.module}</span>
+                          </div>
                         </div>
                       </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={(e) => handleIntelFavorite(item, e)}
+                          className="p-2 rounded-lg border border-border hover:bg-violet-500/10 text-amber-400"
+                          title={item.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
+                          aria-label={item.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
+                        >
+                          <Star size={18} className={item.isFavorite ? 'fill-current' : ''} />
+                        </button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-violet-400 hover:text-violet-300"
+                          onClick={() => handleIntelItemClick(item)}
+                        >
+                          Abrir
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={(e) => handleIntelFavorite(item, e)}
-                        className="p-2 rounded-lg border border-border hover:bg-violet-500/10 text-amber-400"
-                        title={item.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
-                        aria-label={item.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
-                      >
-                        <Star size={18} className={item.isFavorite ? 'fill-current' : ''} />
-                      </button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-violet-400 hover:text-violet-300"
-                        onClick={() => handleIntelItemClick(item)}
-                      >
-                        Abrir
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
               );
             })()}
           </>

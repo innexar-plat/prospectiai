@@ -148,13 +148,14 @@ async function tryCacheOrDbSearch(
     return { places: slice, fromLocalDb: true };
 }
 
-async function persistSearchResult(
+async function persistUnifiedSearchResult(
     activeWorkspace: { id: string },
     userId: string,
     places: unknown[],
     textQuery: string,
-    effectivePageSize: number,
-    filtersPayload: { includedType: string | null; hasWebsite: string | null; hasPhone: string | null },
+    pageSize: number,
+    filters: FiltersPayload,
+    resultsCount: number,
 ): Promise<void> {
     recordUsageEvent({
         workspaceId: activeWorkspace.id,
@@ -175,9 +176,9 @@ async function persistSearchResult(
                 workspaceId: activeWorkspace.id,
                 userId,
                 textQuery,
-                pageSize: effectivePageSize,
-                filters: filtersPayload,
-                resultsCount: places.length,
+                pageSize,
+                filters,
+                resultsCount,
                 resultsData: JSON.parse(JSON.stringify(places)),
             },
         }),
@@ -269,7 +270,7 @@ async function executeGoogleSearchAndPersist(
         hasPhone: input.hasPhone,
     });
     if (result.places && result.places.length > 0) {
-        await persistSearchResult(activeWorkspace, userId, result.places, input.textQuery, input.effectivePageSize, filtersPayload);
+        await persistUnifiedSearchResult(activeWorkspace, userId, result.places, input.textQuery, input.effectivePageSize, filtersPayload, result.places.length);
     }
     logger.info('Search: result', { resultCount: finalCount });
     return result;
@@ -331,38 +332,6 @@ async function getSearchAllPagesUserAndWorkspaceOrThrow(userId: string) {
     return { activeWorkspace };
 }
 
-async function persistSearchAllPagesResult(
-    activeWorkspace: { id: string },
-    userId: string,
-    places: PlaceResult[],
-    totalFetched: number,
-    params: { textQuery: string; includedType: string | null; hasWebsite: string | null; hasPhone: string | null; effectiveMax: number },
-): Promise<void> {
-    recordUsageEvent({ workspaceId: activeWorkspace.id, userId, type: 'GOOGLE_PLACES_SEARCH', quantity: 1 });
-    syncLeads(places).catch((err) =>
-        logger.error('Background sync error', { error: err instanceof Error ? err.message : 'Unknown' })
-    );
-    const filtersPayload = {
-        includedType: params.includedType,
-        hasWebsite: params.hasWebsite,
-        hasPhone: params.hasPhone,
-    };
-    await prisma.$transaction([
-        prisma.workspace.update({ where: { id: activeWorkspace.id }, data: { leadsUsed: { increment: 1 } } }),
-        prisma.searchHistory.create({
-            data: {
-                workspaceId: activeWorkspace.id,
-                userId,
-                textQuery: params.textQuery,
-                pageSize: params.effectiveMax,
-                filters: filtersPayload,
-                resultsCount: totalFetched,
-                resultsData: JSON.parse(JSON.stringify(places)),
-            },
-        }),
-    ]);
-}
-
 /**
  * Fetch multiple pages of search results (up to maxPlaces) for intelligence modules.
  * Uses a single usage credit regardless of how many API pages are fetched.
@@ -404,13 +373,15 @@ export async function runSearchAllPages(
     const totalFetched = places.length;
 
     if (places.length > 0) {
-        await persistSearchAllPagesResult(activeWorkspace, userId, places, totalFetched, {
+        await persistUnifiedSearchResult(
+            activeWorkspace,
+            userId,
+            places,
             textQuery,
-            includedType: includedType ?? null,
-            hasWebsite: hasWebsite ?? null,
-            hasPhone: hasPhone ?? null,
             effectiveMax,
-        });
+            { includedType: includedType ?? null, hasWebsite: hasWebsite ?? null, hasPhone: hasPhone ?? null },
+            totalFetched
+        );
     }
 
     logger.info('SearchAllPages: result', { totalFetched });

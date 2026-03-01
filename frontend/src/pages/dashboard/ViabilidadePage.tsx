@@ -6,6 +6,7 @@ import type { SessionUser, ViabilityReport, ViabilityMode } from '@/lib/api';
 import { viabilityApi } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/contexts/ToastContext';
+import { StatCard, EmptyState } from '@/components/dashboard/shared/DashboardUI';
 
 const UF_OPTIONS = ['', 'AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MG', 'MS', 'MT', 'PA', 'PB', 'PE', 'PI', 'PR', 'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP', 'TO'];
 
@@ -93,23 +94,13 @@ export default function ViabilidadePage() {
             <>
                 <HeaderDashboard title="Viabilidade de Negócio" subtitle="Descubra se vale a pena abrir um negócio na região." breadcrumb="Inteligência / Viabilidade" />
                 <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full">
-                    <div className="rounded-[2.4rem] bg-gradient-to-br from-emerald-900/30 via-violet-900/20 to-background border border-emerald-500/20 p-12 flex flex-col items-center justify-center gap-6 min-h-[400px] text-center shadow-2xl relative overflow-hidden">
-                        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-emerald-500/10 blur-[100px] -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none" />
-                        <div className="w-20 h-20 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center relative z-10">
-                            <Lock size={32} className="text-emerald-400" />
-                        </div>
-                        <div className="space-y-2 relative z-10 max-w-xl">
-                            <h2 className="text-2xl font-black text-foreground">Análise de Viabilidade com IA</h2>
-                            <p className="text-muted leading-relaxed">
-                                Descubra se vale a pena abrir um negócio em determinada cidade ou bairro.
-                                A IA analisa <span className="text-emerald-400 font-bold">concorrentes reais</span>, saturação de mercado, presença digital
-                                e sugere as <span className="text-emerald-400 font-bold">melhores localizações</span>.
-                            </p>
-                        </div>
-                        <Button variant="primary" onClick={() => navigate('/dashboard/configuracoes')} className="mt-4 min-h-[56px] px-8 rounded-xl font-bold text-white bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 shadow-lg shadow-emerald-500/25 border-0 relative z-10">
-                            Faça Upgrade para Enterprise
-                        </Button>
-                    </div>
+                    <EmptyState
+                        icon={Lock}
+                        title="Análise de Viabilidade com IA"
+                        description="Descubra se vale a pena abrir um negócio em determinada cidade ou bairro. A IA analisa concorrentes reais, saturação de mercado e sugere as melhores localizações."
+                        actionLabel="Faça Upgrade para Enterprise"
+                        onAction={() => navigate('/dashboard/configuracoes')}
+                    />
                 </div>
             </>
         );
@@ -141,11 +132,10 @@ export default function ViabilidadePage() {
                                 key={opt.value}
                                 type="button"
                                 onClick={() => setMode(opt.value)}
-                                className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors ${
-                                    mode === opt.value
-                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                                        : 'bg-surface text-muted border border-border hover:border-emerald-500/30 hover:text-foreground'
-                                }`}
+                                className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors ${mode === opt.value
+                                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                                    : 'bg-surface text-muted border border-border hover:border-emerald-500/30 hover:text-foreground'
+                                    }`}
                             >
                                 {opt.label}
                             </button>
@@ -240,26 +230,10 @@ export default function ViabilidadePage() {
 
                         {/* KPIs */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                            <div className="rounded-2xl bg-card border border-border p-5 flex flex-col items-center text-center gap-1">
-                                <Target size={20} className="text-violet-400 mb-1" />
-                                <div className="text-3xl font-black text-foreground tabular-nums">{report.competitorDensity}</div>
-                                <div className="text-[10px] font-bold text-muted uppercase tracking-wider">Concorrentes</div>
-                            </div>
-                            <div className="rounded-2xl bg-card border border-border p-5 flex flex-col items-center text-center gap-1">
-                                <TrendingUp size={20} className="text-amber-400 mb-1" />
-                                <div className="text-3xl font-black text-foreground tabular-nums">{report.saturationIndex}</div>
-                                <div className="text-[10px] font-bold text-muted uppercase tracking-wider">Saturação</div>
-                            </div>
-                            <div className="rounded-2xl bg-card border border-border p-5 flex flex-col items-center text-center gap-1">
-                                <Globe size={20} className="text-emerald-400 mb-1" />
-                                <div className="text-3xl font-black text-foreground tabular-nums">{report.digitalMaturityPercent}%</div>
-                                <div className="text-[10px] font-bold text-muted uppercase tracking-wider">Maturidade Digital</div>
-                            </div>
-                            <div className="rounded-2xl bg-card border border-border p-5 flex flex-col items-center text-center gap-1">
-                                <Zap size={20} className="text-blue-400 mb-1" />
-                                <div className="text-3xl font-black text-foreground tabular-nums">{report.dailyLeadsTarget}</div>
-                                <div className="text-[10px] font-bold text-muted uppercase tracking-wider">Leads/Dia</div>
-                            </div>
+                            <StatCard icon={Target} value={report.competitorDensity} label="Concorrentes" color="violet" />
+                            <StatCard icon={TrendingUp} value={report.saturationIndex} label="Saturação" color="amber" />
+                            <StatCard icon={Globe} value={report.digitalMaturityPercent} label="Maturidade Digital" color="emerald" suffix="%" />
+                            <StatCard icon={Zap} value={report.dailyLeadsTarget} label="Leads/Dia" color="blue" />
                         </div>
 
                         {/* Playbook: Offer + Ticket */}

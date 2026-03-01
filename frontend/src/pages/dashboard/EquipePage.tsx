@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Lock, Loader2, UserPlus, Trophy, Target, LayoutDashboard, AlertCircle, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { Lock, UserPlus, Trophy, AlertCircle, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import type { SessionUser } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/contexts/ToastContext';
-
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+import { LoadingState, EmptyState } from '@/components/dashboard/shared/DashboardUI';
+import { request } from '@/lib/request-helpers';
 
 interface TeamMember {
     id: string;
@@ -65,14 +65,7 @@ interface TeamTotals {
 }
 
 function TeamDashboardView({ loading, data }: { loading: boolean; data: { members: DashboardMember[]; totals: TeamTotals } | null }) {
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center p-12 text-muted gap-3">
-                <Loader2 size={24} className="animate-spin" />
-                <span>Carregando dashboard...</span>
-            </div>
-        );
-    }
+    if (loading) return <LoadingState message="Carregando dashboard..." />;
     if (!data) {
         return <div className="rounded-3xl bg-card border border-border p-8 text-center text-muted">Nenhum dado do dashboard.</div>;
     }
@@ -163,14 +156,6 @@ function TeamDashboardView({ loading, data }: { loading: boolean; data: { member
     );
 }
 
-async function request<T>(path: string, opts?: RequestInit): Promise<T> {
-    const res = await fetch(`${API_BASE}${path}`, { credentials: 'include', headers: { 'Content-Type': 'application/json' }, ...opts });
-    if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `HTTP ${res.status}`);
-    }
-    return res.json();
-}
 
 function TeamInviteForm({
     email,
@@ -495,27 +480,13 @@ export default function EquipePage() {
             <>
                 <HeaderDashboard title="Gestão de Equipe" subtitle="Convide vendedores, defina metas e acompanhe performance." breadcrumb="Dashboard / Equipe" />
                 <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full">
-                    <div className="rounded-[2.4rem] bg-gradient-to-br from-emerald-900/30 via-violet-900/20 to-background border border-emerald-500/20 p-12 flex flex-col items-center justify-center gap-6 min-h-[400px] text-center shadow-2xl relative overflow-hidden">
-                        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-emerald-500/10 blur-[100px] -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none" />
-                        <div className="w-20 h-20 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center relative z-10">
-                            <Lock size={32} className="text-emerald-400" />
-                        </div>
-                        <div className="space-y-2 relative z-10 max-w-xl">
-                            <h2 className="text-2xl font-black text-foreground">Gestão de Equipe</h2>
-                            <p className="text-muted leading-relaxed">
-                                Convide vendedores por email, acompanhe as ações de cada membro,
-                                defina <span className="text-emerald-400 font-bold">metas mensais</span> e veja o
-                                <span className="text-emerald-400 font-bold"> ranking de performance</span> do time.
-                            </p>
-                        </div>
-                        <Button
-                            variant="primary"
-                            onClick={() => navigate('/dashboard/configuracoes')}
-                            className="mt-4 min-h-[56px] px-8 rounded-xl font-bold text-white bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 shadow-lg shadow-emerald-500/25 border-0 relative z-10"
-                        >
-                            Faça Upgrade para Enterprise
-                        </Button>
-                    </div>
+                    <EmptyState
+                        icon={Lock}
+                        title="Gestão de Equipe"
+                        description="Convide vendedores por email, acompanhe as ações de cada membro, defina metas mensais e veja o ranking de performance do time."
+                        actionLabel="Faça Upgrade para Enterprise"
+                        onAction={() => navigate('/dashboard/configuracoes')}
+                    />
                 </div>
             </>
         );
@@ -563,10 +534,7 @@ export default function EquipePage() {
                 />
 
                 {loading ? (
-                    <div className="flex items-center justify-center p-12 text-muted gap-3">
-                        <Loader2 size={24} className="animate-spin" />
-                        <span>Carregando equipe...</span>
-                    </div>
+                    <LoadingState message="Carregando equipe..." />
                 ) : (
                     <>
                         {isAdminOrOwner && (
@@ -593,102 +561,102 @@ export default function EquipePage() {
                                 <TeamDashboardView loading={loadingDashboard} data={dashboardData} />
                             </div>
                         ) : (
-                        <>
-                        {/* Team Members Table */}
-                        <div className="rounded-3xl bg-card border border-border overflow-hidden">
-                            <div className="p-5 border-b border-border">
-                                <h3 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
-                                    <Trophy size={16} className="text-amber-400" /> Ranking da Equipe
-                                </h3>
-                            </div>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="border-b border-border text-left">
-                                            <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider">#</th>
-                                            <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider">Membro</th>
-                                            <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider">Função</th>
-                                            <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">Leads</th>
-                                            <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">Análises IA</th>
-                                            <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">Ações (30d)</th>
-                                            <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">Meta leads/dia</th>
-                                            <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">Meta análises/dia</th>
-                                            <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">Meta conversões/mês</th>
-                                            {isAdminOrOwner && <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider">Ações</th>}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {[...members]
-                                            .sort((a, b) => b.leadsAnalyzed - a.leadsAnalyzed)
-                                            .map((m, i) => (
-                                                <tr key={m.id} className="border-b border-border/30 hover:bg-surface/50 transition-colors">
-                                                    <td className="py-3 px-5">
-                                                        <span className={`w-7 h-7 inline-flex items-center justify-center rounded-lg font-bold text-xs ${i < 3 ? 'bg-amber-500/20 text-amber-400' : 'bg-surface text-muted'}`}>
-                                                            {i + 1}
-                                                        </span>
-                                                    </td>
-                                                    <td className="py-3 px-5">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 rounded-full bg-violet-600/20 flex items-center justify-center font-semibold text-xs text-violet-400 shrink-0">
-                                                                {m.name?.[0] || m.email?.[0] || '?'}
-                                                            </div>
-                                                            <div>
-                                                                <p className="font-medium text-foreground">{m.name || 'Sem nome'}</p>
-                                                                <p className="text-[10px] text-muted">{m.email}</p>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="py-3 px-5">
-                                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${m.role === 'OWNER' ? 'bg-violet-500/15 text-violet-400' : 'bg-surface text-muted'
-                                                            }`}>
-                                                            {m.role}
-                                                        </span>
-                                                    </td>
-                                                    <td className="py-3 px-5 text-right tabular-nums font-bold text-foreground">{m.leadsUsed}</td>
-                                                    <td className="py-3 px-5 text-right tabular-nums font-bold text-violet-400">{m.leadsAnalyzed}</td>
-                                                    <td className="py-3 px-5 text-right tabular-nums font-bold text-emerald-400">{m.actionsLast30d}</td>
-                                                    <td className="py-3 px-5 text-right tabular-nums text-muted">{m.dailyLeadsGoal ?? '-'}</td>
-                                                    <td className="py-3 px-5 text-right tabular-nums text-muted">{m.dailyAnalysesGoal ?? '-'}</td>
-                                                    <td className="py-3 px-5 text-right tabular-nums text-muted">{m.monthlyConversionsGoal ?? '-'}</td>
-                                                    {isAdminOrOwner && (
-                                                        <td className="py-3 px-5">
-                                                            <div className="flex justify-start" ref={actionsOpenId === m.id ? actionsRef : undefined}>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        if (actionsOpenId === m.id) {
-                                                                            closeActionsMenu();
-                                                                            return;
-                                                                        }
-                                                                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                                                        const spaceBelow = window.innerHeight - rect.bottom;
-                                                                        const menuHeightApprox = 150;
-                                                                        const openAbove = spaceBelow < menuHeightApprox;
-                                                                        setActionsMenuPosition({
-                                                                            top: rect.bottom + 4,
-                                                                            left: rect.left,
-                                                                            width: rect.width,
-                                                                            openAbove,
-                                                                            ...(openAbove && { bottom: window.innerHeight - rect.top + 4 }),
-                                                                        });
-                                                                        setActionsOpenId(m.id);
-                                                                    }}
-                                                                    className="p-2 rounded-lg border border-border bg-surface hover:bg-surface/80 text-muted hover:text-foreground transition-colors"
-                                                                    aria-label="Ações"
-                                                                >
-                                                                    <MoreVertical size={18} />
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    )}
+                            <>
+                                {/* Team Members Table */}
+                                <div className="rounded-3xl bg-card border border-border overflow-hidden">
+                                    <div className="p-5 border-b border-border">
+                                        <h3 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
+                                            <Trophy size={16} className="text-amber-400" /> Ranking da Equipe
+                                        </h3>
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm">
+                                            <thead>
+                                                <tr className="border-b border-border text-left">
+                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider">#</th>
+                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider">Membro</th>
+                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider">Função</th>
+                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">Leads</th>
+                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">Análises IA</th>
+                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">Ações (30d)</th>
+                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">Meta leads/dia</th>
+                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">Meta análises/dia</th>
+                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">Meta conversões/mês</th>
+                                                    {isAdminOrOwner && <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider">Ações</th>}
                                                 </tr>
-                                            ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        </>
+                                            </thead>
+                                            <tbody>
+                                                {[...members]
+                                                    .sort((a, b) => b.leadsAnalyzed - a.leadsAnalyzed)
+                                                    .map((m, i) => (
+                                                        <tr key={m.id} className="border-b border-border/30 hover:bg-surface/50 transition-colors">
+                                                            <td className="py-3 px-5">
+                                                                <span className={`w-7 h-7 inline-flex items-center justify-center rounded-lg font-bold text-xs ${i < 3 ? 'bg-amber-500/20 text-amber-400' : 'bg-surface text-muted'}`}>
+                                                                    {i + 1}
+                                                                </span>
+                                                            </td>
+                                                            <td className="py-3 px-5">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="w-8 h-8 rounded-full bg-violet-600/20 flex items-center justify-center font-semibold text-xs text-violet-400 shrink-0">
+                                                                        {m.name?.[0] || m.email?.[0] || '?'}
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="font-medium text-foreground">{m.name || 'Sem nome'}</p>
+                                                                        <p className="text-[10px] text-muted">{m.email}</p>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td className="py-3 px-5">
+                                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${m.role === 'OWNER' ? 'bg-violet-500/15 text-violet-400' : 'bg-surface text-muted'
+                                                                    }`}>
+                                                                    {m.role}
+                                                                </span>
+                                                            </td>
+                                                            <td className="py-3 px-5 text-right tabular-nums font-bold text-foreground">{m.leadsUsed}</td>
+                                                            <td className="py-3 px-5 text-right tabular-nums font-bold text-violet-400">{m.leadsAnalyzed}</td>
+                                                            <td className="py-3 px-5 text-right tabular-nums font-bold text-emerald-400">{m.actionsLast30d}</td>
+                                                            <td className="py-3 px-5 text-right tabular-nums text-muted">{m.dailyLeadsGoal ?? '-'}</td>
+                                                            <td className="py-3 px-5 text-right tabular-nums text-muted">{m.dailyAnalysesGoal ?? '-'}</td>
+                                                            <td className="py-3 px-5 text-right tabular-nums text-muted">{m.monthlyConversionsGoal ?? '-'}</td>
+                                                            {isAdminOrOwner && (
+                                                                <td className="py-3 px-5">
+                                                                    <div className="flex justify-start" ref={actionsOpenId === m.id ? actionsRef : undefined}>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                if (actionsOpenId === m.id) {
+                                                                                    closeActionsMenu();
+                                                                                    return;
+                                                                                }
+                                                                                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                                                                const spaceBelow = window.innerHeight - rect.bottom;
+                                                                                const menuHeightApprox = 150;
+                                                                                const openAbove = spaceBelow < menuHeightApprox;
+                                                                                setActionsMenuPosition({
+                                                                                    top: rect.bottom + 4,
+                                                                                    left: rect.left,
+                                                                                    width: rect.width,
+                                                                                    openAbove,
+                                                                                    ...(openAbove && { bottom: window.innerHeight - rect.top + 4 }),
+                                                                                });
+                                                                                setActionsOpenId(m.id);
+                                                                            }}
+                                                                            className="p-2 rounded-lg border border-border bg-surface hover:bg-surface/80 text-muted hover:text-foreground transition-colors"
+                                                                            aria-label="Ações"
+                                                                        >
+                                                                            <MoreVertical size={18} />
+                                                                        </button>
+                                                                    </div>
+                                                                </td>
+                                                            )}
+                                                        </tr>
+                                                    ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </>
                         )}
                     </>
                 )}

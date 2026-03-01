@@ -1,43 +1,27 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { isAdmin } from '@/lib/admin';
-import { logAdminAction } from '@/lib/audit';
-import { adminListQuerySchema, formatZodError } from '@/lib/validations/schemas';
+import { handleAdminListRequest } from '@/lib/admin-api-helpers';
 
 export async function GET(req: NextRequest) {
-    const session = await auth();
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (!isAdmin(session)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    try {
-        const parsed = adminListQuerySchema.safeParse({
-            limit: req.nextUrl.searchParams.get('limit') ?? undefined,
-            offset: req.nextUrl.searchParams.get('offset') ?? undefined,
+    return handleAdminListRequest({
+        req,
+        resourceName: 'search-history',
+        auditAction: 'admin.search-history.list',
+        parseQuery: (req) => ({
             workspaceId: req.nextUrl.searchParams.get('workspaceId') ?? undefined,
-        });
-        if (!parsed.success) return NextResponse.json({ error: formatZodError(parsed) }, { status: 400 });
-        const { limit = 20, offset = 0, workspaceId } = parsed.data;
-        const safeLimit = Math.min(limit, 100);
-        const safeOffset = Math.max(0, offset);
-        const where = workspaceId ? { workspaceId } : {};
-        const [items, total] = await Promise.all([
-            prisma.searchHistory.findMany({
-                where,
-                take: safeLimit,
-                skip: safeOffset,
-                orderBy: { createdAt: 'desc' },
-                include: {
-                    user: { select: { id: true, name: true, email: true } },
-                    workspace: { select: { id: true, name: true } },
-                },
-            }),
-            prisma.searchHistory.count({ where }),
-        ]);
-        logAdminAction(session, 'admin.search-history.list', { resource: 'search-history', details: { limit: safeLimit, offset: safeOffset, total, workspaceId } }).catch(() => {});
-        return NextResponse.json({ items, total, limit: safeLimit, offset: safeOffset });
-    } catch (e) {
-        const { logger } = await import('@/lib/logger');
-        logger.error('Admin search-history list error', { error: e instanceof Error ? e.message : 'Unknown' });
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-    }
+        }),
+        fetchItems: (limit, offset, query) => prisma.searchHistory.findMany({
+            where: query.workspaceId ? { workspaceId: query.workspaceId } : {},
+            take: limit,
+            skip: offset,
+            orderBy: { createdAt: 'desc' },
+            include: {
+                user: { select: { id: true, name: true, email: true } },
+                workspace: { select: { id: true, name: true } },
+            },
+        }),
+        countItems: (query) => prisma.searchHistory.count({
+            where: query.workspaceId ? { workspaceId: query.workspaceId } : {},
+        }),
+    });
 }

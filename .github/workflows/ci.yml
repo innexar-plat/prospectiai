@@ -109,6 +109,14 @@ jobs:
           mkdir -p backend/coverage
           if [ ! -f backend/coverage/lcov.info ]; then echo -e "SF:\nend_of_record" > backend/coverage/lcov.info; fi
 
+      - name: Frontend coverage
+        run: npm run test:coverage -w frontend
+
+      - name: Ensure frontend lcov exists for Sonar
+        run: |
+          mkdir -p frontend/coverage
+          if [ ! -f frontend/coverage/lcov.info ]; then echo -e "SF:\nend_of_record" > frontend/coverage/lcov.info; fi
+
       - name: Create SonarQube project if not exists
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

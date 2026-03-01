@@ -1,4 +1,4 @@
-import { logAdminAction } from '@/lib/audit';
+import { logAdminAction, logSupportAction } from '@/lib/audit';
 import { prisma } from '@/lib/prisma';
 
 jest.mock('@/lib/prisma', () => ({
@@ -43,6 +43,21 @@ describe('logAdminAction', () => {
         action: 'admin.users.get',
         resource: 'users',
         resourceId: 'u2',
+        details: undefined,
+      },
+    });
+  });
+
+  it('logSupportAction delegates to logAdminAction with support action', async () => {
+    const session = { user: { id: 'u1', email: 'support@test.com' }, expires: '' };
+    await logSupportAction(session as never, 'support.users.list');
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: {
+        userId: 'u1',
+        adminEmail: 'support@test.com',
+        action: 'support.users.list',
+        resource: undefined,
+        resourceId: undefined,
         details: undefined,
       },
     });

@@ -190,185 +190,179 @@ interface BuildLeadPromptInput {
     isBusinessPlan: boolean;
 }
 
-const LEAD_DATA_LABELS_EN = {
-    section: 'LEAD DATA:',
-    name: 'Business Name',
-    type: 'Type/Category',
-    address: 'Address',
-    phone: 'Phone',
-    website: 'Website',
-    rating: 'Google Rating',
-    reviews: 'Total Reviews',
-    status: 'Business Status',
-    reviewsSection: 'RECENT CUSTOMER REVIEWS:',
-    notSpecified: 'Not specified',
-    notAvailable: 'Not available',
-    noPhone: 'No phone listed',
-    noWebsite: 'NO WEBSITE (critical gap)',
-    noRating: 'No rating',
+const LEAD_DATA_LABELS = {
+    en: {
+        section: 'LEAD DATA:',
+        name: 'Business Name',
+        type: 'Type/Category',
+        address: 'Address',
+        phone: 'Phone',
+        website: 'Website',
+        rating: 'Google Rating',
+        reviews: 'Total Reviews',
+        status: 'Business Status',
+        reviewsSection: 'RECENT CUSTOMER REVIEWS:',
+        notSpecified: 'Not specified',
+        notAvailable: 'Not available',
+        noPhone: 'No phone listed',
+        noWebsite: 'NO WEBSITE (critical gap)',
+        noRating: 'No rating',
+    },
+    pt: {
+        section: 'DADOS DO LEAD:',
+        name: 'Nome do Negócio',
+        type: 'Tipo/Categoria',
+        address: 'Endereço',
+        phone: 'Telefone',
+        website: 'Site',
+        rating: 'Avaliação Google',
+        reviews: 'Total de Avaliações',
+        status: 'Status do Negócio',
+        reviewsSection: 'AVALIAÇÕES RECENTES DE CLIENTES:',
+        notSpecified: 'Não especificado',
+        notAvailable: 'Não disponível',
+        noPhone: 'Sem telefone cadastrado',
+        noWebsite: 'SEM WEBSITE (lacuna crítica)',
+        noRating: 'Sem avaliação',
+    }
 } as const;
 
-const LEAD_DATA_LABELS_PT = {
-    section: 'DADOS DO LEAD:',
-    name: 'Nome do Negócio',
-    type: 'Tipo/Categoria',
-    address: 'Endereço',
-    phone: 'Telefone',
-    website: 'Site',
-    rating: 'Avaliação Google',
-    reviews: 'Total de Avaliações',
-    status: 'Status do Negócio',
-    reviewsSection: 'AVALIAÇÕES RECENTES DE CLIENTES:',
-    notSpecified: 'Não especificado',
-    notAvailable: 'Não disponível',
-    noPhone: 'Sem telefone cadastrado',
-    noWebsite: 'SEM WEBSITE (lacuna crítica)',
-    noRating: 'Sem avaliação',
+const LEAD_REQUIREMENTS_LABELS = {
+    en: {
+        header: 'ANALYSIS REQUIREMENTS (be extremely specific, not generic):',
+        gaps: 'DIGITAL PRESENCE GAPS: What is this business missing? (website, online booking, e-commerce, CRM, social media management, paid ads, SEO, etc.) Consider if missing a website is actually a problem for them based on what YOU sell.',
+        painPoints: 'CUSTOMER PAIN POINTS: Based on reviews and business type, what frustrations do their customers likely face? What operational challenges does this business have?',
+        socialMedia: 'SOCIAL MEDIA STRATEGY: Proactively analyze scenarios for Instagram, LinkedIn, and Facebook based on their niche. Suggest what kind of content they SHOULD be posting to get more clients. Be highly sincere about what they can improve.',
+        firstContact: 'FIRST CONTACT MESSAGE: Write a professional, personalized opening message for the FIRST contact (WhatsApp/email). It should reference something specific about this business (their rating, a review pattern, missing digital element). Max 3 short paragraphs. No generic templates.',
+        recency: 'REVIEW RECENCY: Analyze the time of reviews. If reviews are mostly from years ago, flag this as a "stagnant reputation". If recent, analyze the trend.',
+        whatsapp: 'WHATSAPP MESSAGE: A shorter, more casual version for WhatsApp (max 2 short paragraphs, conversational tone, gets to the point fast).'
+    },
+    pt: {
+        header: 'REQUISITOS DA ANÁLISE (seja extremamente específico, não genérico):',
+        gaps: 'LACUNAS DE PRESENÇA DIGITAL: O que este negócio está faltando? (website, agendamento online, e-commerce, CRM, gestão de redes sociais, anúncios pagos, SEO, etc.) Considere se a falta de um site é realmente um problema para eles com base no que VOCÊ vende.',
+        painPoints: 'DORES DO CLIENTE: Com base nas avaliações e tipo de negócio, quais frustrações os clientes provavelmente enfrentam? Quais desafios operacionais este negócio tem?',
+        socialMedia: 'ESTRATÉGIA DE REDES SOCIAIS: Analise proativamente cenários para Instagram, LinkedIn e Facebook com base no nicho deles. Sugira que tipo de conteúdo eles DEVERIAM postar para atrair mais clientes. Seja altamente sincero sobre o que eles podem melhorar.',
+        firstContact: 'MENSAGEM DE PRIMEIRO CONTATO: Escreva uma mensagem de abertura profissional e personalizada para o PRIMEIRO contato (WhatsApp/email). Deve referenciar algo específico deste negócio (avaliação, padrão nas reviews, elemento digital faltando). Máximo 3 parágrafos curtos. Sem templates genéricos.',
+        recency: 'RECÊNCIA DE REVIEWS: Analise o tempo das avaliações. Se forem majoritariamente de anos atrás, aponte isso como "reputação estagnada". Se recentes, analise a tendência.',
+        whatsapp: 'MENSAGEM WHATSAPP: Uma versão mais curta e casual para WhatsApp (máximo 2 parágrafos curtos, tom conversacional, vai direto ao ponto).'
+    }
 } as const;
 
-function buildLeadDataBlock(opts: BuildLeadPromptInput): string {
-    const { business, isEn, address, phone, website, reviewCount, reviewsText, webContext, isBusinessPlan } = opts;
-    const L = isEn ? LEAD_DATA_LABELS_EN : LEAD_DATA_LABELS_PT;
-    const typeVal = business.primaryType || business.types?.join(', ') || L.notSpecified;
-    const addressVal = address || L.notAvailable;
-    const phoneVal = phone || L.noPhone;
-    const websiteVal = website || L.noWebsite;
-    const ratingVal = business.rating ?? L.noRating;
-    const websiteNote = getWebsiteNote(website, isEn);
-    const webBlock = getWebContextBlock(webContext, isBusinessPlan, isEn);
-    return `${L.section}
-- ${L.name}: ${business.name}
-- ${L.type}: ${typeVal}
-- ${L.address}: ${addressVal}
-- ${L.phone}: ${phoneVal}
-- ${L.website}: ${websiteVal}
-- ${L.rating}: ${ratingVal}/5
-- ${L.reviews}: ${reviewCount}
-- ${L.status}: ${business.businessStatus || 'OPERATIONAL'}
-${websiteNote}
-
-${L.reviewsSection}
-${reviewsText}
-${webBlock}`;
-}
-
-function buildLeadRequirementsBlock(opts: BuildLeadPromptInput): string {
-    const { isEn, isBusinessPlan } = opts;
-    const point6 = getPoint6Requirement(isBusinessPlan, isEn);
-    return `${isEn ? 'ANALYSIS REQUIREMENTS (be extremely specific, not generic):' : 'REQUISITOS DA ANÁLISE (seja extremamente específico, não genérico):'}
-
-1. ${isEn ? 'DIGITAL PRESENCE GAPS: What is this business missing? (website, online booking, e-commerce, CRM, social media management, paid ads, SEO, etc.) Consider if missing a website is actually a problem for them based on what YOU sell.' : 'LACUNAS DE PRESENÇA DIGITAL: O que este negócio está faltando? (website, agendamento online, e-commerce, CRM, gestão de redes sociais, anúncios pagos, SEO, etc.) Considere se a falta de um site é realmente um problema para eles com base no que VOCÊ vende.'}
-
-2. ${isEn ? 'CUSTOMER PAIN POINTS: Based on reviews and business type, what frustrations do their customers likely face? What operational challenges does this business have?' : 'DORES DO CLIENTE: Com base nas avaliações e tipo de negócio, quais frustrações os clientes provavelmente enfrentam? Quais desafios operacionais este negócio tem?'}
-
-3. ${isEn ? 'SOCIAL MEDIA STRATEGY: Proactively analyze scenarios for Instagram, LinkedIn, and Facebook based on their niche. Suggest what kind of content they SHOULD be posting to get more clients. Be highly sincere about what they can improve.' : 'ESTRATÉGIA DE REDES SOCIAIS: Analise proativamente cenários para Instagram, LinkedIn e Facebook com base no nicho deles. Sugira que tipo de conteúdo eles DEVERIAM postar para atrair mais clientes. Seja altamente sincero sobre o que eles podem melhorar.'}
-
-4. ${isEn ? 'FIRST CONTACT MESSAGE: Write a professional, personalized opening message for the FIRST contact (WhatsApp/email). It should reference something specific about this business (their rating, a review pattern, missing digital element). Max 3 short paragraphs. No generic templates.' : 'MENSAGEM DE PRIMEIRO CONTATO: Escreva uma mensagem de abertura profissional e personalizada para o PRIMEIRO contato (WhatsApp/email). Deve referenciar algo específico deste negócio (avaliação, padrão nas reviews, elemento digital faltando). Máximo 3 parágrafos curtos. Sem templates genéricos.'}
-5. ${isEn ? 'REVIEW RECENCY: Analyze the time of reviews. If reviews are mostly from years ago, flag this as a "stagnant reputation". If recent, analyze the trend.' : 'RECÊNCIA DE REVIEWS: Analise o tempo das avaliações. Se forem majoritariamente de anos atrás, aponte isso como "reputação estagnada". Se recentes, analise a tendência.'}
-${point6}
-7. ${isEn ? 'WHATSAPP MESSAGE: A shorter, more casual version for WhatsApp (max 2 short paragraphs, conversational tone, gets to the point fast).' : 'MENSAGEM WHATSAPP: Uma versão mais curta e casual para WhatsApp (máximo 2 parágrafos curtos, tom conversacional, vai direto ao ponto).'}`;
-}
-
-const JSON_SCHEMA_LABELS_EN = {
-    intro: 'CRITICAL: Respond ONLY with valid JSON, no markdown, no code blocks. Values must be in ENGLISH:',
-    scoreLabel: 'Cold|Warm|Hot|Very Hot',
-    summary: 'Provide a dense executive summary specific to this business, without strict length constraints.',
-    strength: 'specific strength 1',
-    strength2: 'strength 2',
-    strength3: 'strength 3',
-    weakness: 'specific weakness 1',
-    weakness2: 'weakness 2',
-    weakness3: 'weakness 3',
-    painPoint: 'specific customer pain point 1',
-    painPoint2: 'pain point 2',
-    painPoint3: 'pain point 3',
-    painPoint4: 'operational challenge 4',
-    gap: 'digital gap 1: e.g. No website',
-    gap2: 'gap 2',
-    gap3: 'gap 3',
-    gap4: 'gap 4',
-    approach: 'Specific approach strategy: what angle to use, what pain to address first, timing recommendations',
-    contactStrategy: 'Recommended channels (WhatsApp, LinkedIn, phone, email), best time to contact, who likely to answer, what to say first call',
-    firstContact: 'Professional personalized opening message for first contact (email/WhatsApp), max 3 short paragraphs, specific to this business',
-    whatsapp: 'Shorter casual WhatsApp version, 2 paragraphs max, conversational, direct',
-    reviewAnalysis: 'Detailed analysis of the rating trend and recency',
-    instagram: 'CRITICAL: ONLY return real URLs. NEVER invent or hallucinate. If unsure, return Not found',
-    facebook: 'CRITICAL: NEVER hallucinate URLs. If unsure, return Not found',
-    linkedin: 'CRITICAL: NEVER hallucinate URLs. If unsure, return Not found',
-    fullReport: 'EXTREMELY DETAILED and extensive report in Markdown. Dive deep into all possibilities. Sections: ## Executive Summary | ## Digital Strategy | ## Deep Gaps | ## Operational Vulnerabilities | ## Competitor Profile | ## Complete Action Plan.',
-};
-
-const JSON_SCHEMA_LABELS_PT = {
-    intro: 'CRÍTICO: Responda APENAS com JSON válido, sem markdown, sem blocos de código. Valores devem estar em PORTUGUÊS:',
-    scoreLabel: 'Frio|Morno|Quente|Muito Quente',
-    summary: 'Forneça um denso resumo executivo específico para este negócio, sem limite estrito de tamanho.',
-    strength: 'força específica 1',
-    strength2: 'força 2',
-    strength3: 'força 3',
-    weakness: 'fraqueza específica 1',
-    weakness2: 'fraqueza 2',
-    weakness3: 'fraqueza 3',
-    painPoint: 'dor específica do cliente 1',
-    painPoint2: 'dor 2',
-    painPoint3: 'dor 3',
-    painPoint4: 'desafio operacional 4',
-    gap: 'lacuna digital 1: ex. Sem website',
-    gap2: 'lacuna 2',
-    gap3: 'lacuna 3',
-    gap4: 'lacuna 4',
-    approach: 'Estratégia de abordagem específica: qual ângulo usar, qual dor abordar primeiro, recomendações de timing',
-    contactStrategy: 'Canais recomendados (WhatsApp, LinkedIn, telefone, email), melhor horário para contato, quem provavelmente atende, o que dizer na primeira ligação',
-    firstContact: 'Mensagem de abertura profissional e personalizada para primeiro contato (email/WhatsApp), máximo 3 parágrafos curtos, específica para este negócio',
-    whatsapp: 'Versão mais curta e casual para WhatsApp, 2 parágrafos no máximo, conversacional, direta',
-    reviewAnalysis: 'Análise detalhada da tendência e recência das avaliações',
-    instagram: 'CRÍTICO: Retorne APENAS URLs reais. NUNCA invente ou alucine. Se não tiver certeza absoluta, retorne exatamente Não encontrado',
-    facebook: 'CRÍTICO: NUNCA alucine URLs. Se não tiver certeza, retorne exatamente Não encontrado',
-    linkedin: 'CRÍTICO: NUNCA alucine URLs. Se não tiver certeza, retorne exatamente Não encontrado',
-    fullReport: 'Relatório EXTREMAMENTE DETALHADO e extenso em Markdown. Aprofunde-se muito nas possibilidades, sem medo de gerar um texto grande. Seções: ## Resumo Executivo | ## Estratégia Digital | ## Lacunas Profundas | ## Vulnerabilidades Operacionais | ## Perfil do Concorrente | ## Plano de Ação Completo.',
-};
-
-function buildLeadJsonSchemaBlock(isEn: boolean, isBusinessPlan: boolean): string {
-    const L = isEn ? JSON_SCHEMA_LABELS_EN : JSON_SCHEMA_LABELS_PT;
-    const extendedSchema = getExtendedJsonSchemaBlock(isBusinessPlan, isEn);
-    return `${L.intro}
-{
-  "score": <number 1-100>,
-  "scoreLabel": "<${L.scoreLabel}>",
-  "summary": "<${L.summary}>",
-  "strengths": ["<${L.strength}>", "<${L.strength2}>", "<${L.strength3}>"],
-  "weaknesses": ["<${L.weakness}>", "<${L.weakness2}>", "<${L.weakness3}>"],
-  "painPoints": ["<${L.painPoint}>", "<${L.painPoint2}>", "<${L.painPoint3}>", "<${L.painPoint4}>"],
-  "gaps": ["<${L.gap}>", "<${L.gap2}>", "<${L.gap3}>", "<${L.gap4}>"],
-  "approach": "<${L.approach}>",
-  "contactStrategy": "<${L.contactStrategy}>",
-  "firstContactMessage": "<${L.firstContact}>",
-  "suggestedWhatsAppMessage": "<${L.whatsapp}>",
-  "reviewAnalysis": "<${L.reviewAnalysis}>",
-  "socialMedia": {
-    "instagram": "<${L.instagram}>",
-    "facebook": "<${L.facebook}>",
-    "linkedin": "<${L.linkedin}>"
-  },
-  "fullReport": "<${L.fullReport}>"
-${extendedSchema}
-}
-`;
-}
+const JSON_SCHEMA_LABELS = {
+    en: {
+        intro: 'CRITICAL: Respond ONLY with valid JSON, no markdown, no code blocks. Values must be in ENGLISH:',
+        scoreLabel: 'Cold|Warm|Hot|Very Hot',
+        summary: 'Provide a dense executive summary specific to this business, without strict length constraints.',
+        strength: 'specific strength 1',
+        strength2: 'strength 2',
+        strength3: 'strength 3',
+        weakness: 'specific weakness 1',
+        weakness2: 'weakness 2',
+        weakness3: 'weakness 3',
+        painPoint: 'specific customer pain point 1',
+        painPoint2: 'pain point 2',
+        painPoint3: 'pain point 3',
+        painPoint4: 'operational challenge 4',
+        gap: 'digital gap 1: e.g. No website',
+        gap2: 'gap 2',
+        gap3: 'gap 3',
+        gap4: 'gap 4',
+        approach: 'Specific approach strategy: what angle to use, what pain to address first, timing recommendations',
+        contactStrategy: 'Recommended channels (WhatsApp, LinkedIn, phone, email), best time to contact, who likely to answer, what to say first call',
+        firstContact: 'Professional personalized opening message for first contact (email/WhatsApp), max 3 short paragraphs, specific to this business',
+        whatsapp: 'Shorter casual WhatsApp version, 2 paragraphs max, conversational, direct',
+        reviewAnalysis: 'Detailed analysis of the rating trend and recency',
+        instagram: 'CRITICAL: ONLY return real URLs. NEVER invent or hallucinate. If unsure, return Not found',
+        facebook: 'CRITICAL: NEVER hallucinate URLs. If unsure, return Not found',
+        linkedin: 'CRITICAL: NEVER hallucinate URLs. If unsure, return Not found',
+        fullReport: 'EXTREMELY DETAILED and extensive report in Markdown. Dive deep into all possibilities. Sections: ## Executive Summary | ## Digital Strategy | ## Deep Gaps | ## Operational Vulnerabilities | ## Competitor Profile | ## Complete Action Plan.',
+    },
+    pt: {
+        intro: 'CRÍTICO: Responda APENAS com JSON válido, sem markdown, sem blocos de código. Valores devem estar em PORTUGUÊS:',
+        scoreLabel: 'Frio|Morno|Quente|Muito Quente',
+        summary: 'Forneça um denso resumo executivo específico para este negócio, sem limite estrito de tamanho.',
+        strength: 'força específica 1',
+        strength2: 'força 2',
+        strength3: 'força 3',
+        breakdown: 'Análise detalhada',
+        weakness: 'fraqueza específica 1',
+        weakness2: 'fraqueza 2',
+        weakness3: 'fraqueza 3',
+        painPoint: 'dor específica do cliente 1',
+        painPoint2: 'dor 2',
+        painPoint3: 'dor 3',
+        painPoint4: 'desafio operacional 4',
+        gap: 'lacuna digital 1: ex. Sem website',
+        gap2: 'lacuna 2',
+        gap3: 'lacuna 3',
+        gap4: 'lacuna 4',
+        approach: 'Estratégia de abordagem específica: qual ângulo usar, qual dor abordar primeiro, recomendações de timing',
+        contactStrategy: 'Canais recomendados (WhatsApp, LinkedIn, telefone, email), melhor horário para contato, quem provavelmente atende, o que dizer na primeira ligação',
+        firstContact: 'Mensagem de abertura profissional e personalizada para primeiro contato (email/WhatsApp), máximo 3 parágrafos curtos, específica para este negócio',
+        whatsapp: 'Versão mais curta e casual para WhatsApp, 2 parágrafos no máximo, conversacional, direta',
+        reviewAnalysis: 'Análise detalhada da tendência e recência das avaliações',
+        instagram: 'CRÍTICO: Retorne APENAS URLs reais. NUNCA invente ou alucine. Se não tiver certeza absoluta, retorne exatamente Não encontrado',
+        facebook: 'CRÍTICO: NUNCA alucine URLs. Se não tiver certeza, retorne exatamente Não encontrado',
+        linkedin: 'CRÍTICO: NUNCA alucine URLs. Se não tiver certeza, retorne exatamente Não encontrado',
+        fullReport: 'Relatório EXTREMAMENTE DETALHADO e extenso em Markdown. Aprofunde-se muito nas possibilidades, sem medo de gerar um texto grande. Seções: ## Resumo Executivo | ## Estratégia Digital | ## Lacunas Profundas | ## Vulnerabilidades Operacionais | ## Perfil do Concorrente | ## Plano de Ação Completo.',
+    }
+} as const;
 
 function buildLeadAnalysisPrompt(opts: BuildLeadPromptInput): string {
     const { companyContext, taskDescription, isEn, isBusinessPlan } = opts;
-    const dataBlock = buildLeadDataBlock(opts);
-    const requirementsBlock = buildLeadRequirementsBlock(opts);
-    const jsonSchemaBlock = buildLeadJsonSchemaBlock(isEn, isBusinessPlan);
+    const L = LEAD_REQUIREMENTS_LABELS[isEn ? 'en' : 'pt'];
+    const D = LEAD_DATA_LABELS[isEn ? 'en' : 'pt'];
+    const J = JSON_SCHEMA_LABELS[isEn ? 'en' : 'pt'];
+
+    const typeVal = opts.business.primaryType || opts.business.types?.join(', ') || D.notSpecified;
+    const webBlock = getWebContextBlock(opts.webContext, isBusinessPlan, isEn);
+
     return `${companyContext}
 
 ${taskDescription}
 
-${dataBlock}
+${D.section}
+- ${D.name}: ${opts.business.name}
+- ${D.type}: ${typeVal}
+- ${D.address}: ${opts.address || D.notAvailable}
+- ${D.phone}: ${opts.phone || D.noPhone}
+- ${D.website}: ${opts.website || D.noWebsite}
+- ${D.rating}: ${opts.business.rating ?? D.noRating}/5
+- ${D.reviews}: ${opts.reviewCount}
+- ${D.status}: ${opts.business.businessStatus || 'OPERATIONAL'}
+${getWebsiteNote(opts.website, isEn)}
 
-${requirementsBlock}
+${D.reviewsSection}
+${opts.reviewsText}
+${webBlock}
 
-${jsonSchemaBlock}`;
+${L.header}
+1. ${L.gaps}
+2. ${L.painPoints}
+3. ${L.socialMedia}
+4. ${L.firstContact}
+5. ${L.recency}
+${getPoint6Requirement(isBusinessPlan, isEn)}
+7. ${L.whatsapp}
+
+${J.intro}
+{
+  "score": <number 1-100>,
+  "scoreLabel": "<${J.scoreLabel}>",
+  "summary": "<${J.summary}>",
+  "strengths": ["<${J.strength}>", "<${J.strength2}>", "<${J.strength3}>"],
+  "weaknesses": ["<${J.weakness}>", "<${J.weakness2}>", "<${J.weakness3}>"],
+  "painPoints": ["<${J.painPoint}>", "<${J.painPoint2}>", "<${J.painPoint3}>", "<${J.painPoint4}>"],
+  "gaps": ["<${J.gap}>", "<${J.gap2}>", "<${D.noWebsite ? '...' : 'gap 3'}>", "gap 4"],
+  "approach": "<${J.approach}>",
+  "contactStrategy": "<${J.contactStrategy}>",
+  "firstContactMessage": "<${J.firstContact}>",
+  "suggestedWhatsAppMessage": "<${J.whatsapp}>",
+  "reviewAnalysis": "<${J.reviewAnalysis}>",
+  "socialMedia": { "instagram": "<${J.instagram}>", "facebook": "<${J.facebook}>", "linkedin": "<${J.linkedin}>" },
+  "fullReport": "<${J.fullReport}>"
+${getExtendedJsonSchemaBlock(isBusinessPlan, isEn)}
+}`;
 }
 
 async function prepareLeadAnalysisPrompt(

@@ -123,4 +123,42 @@ describe('Gemini AI Lib', () => {
         expect(prompt).toContain('Reclame Aqui');
         expect(prompt).toContain('JusBrasil');
     });
+
+    it('should correctly extract JSON from markdown blocks', async () => {
+        const mockResponse = 'Here is the analysis:\n```json\n{"score": 90, "scoreLabel": "Hot"}\n```\nHope it helps!';
+        jest.mocked(generateCompletionForRole).mockResolvedValueOnce({
+            text: mockResponse,
+            usage: { inputTokens: 10, outputTokens: 20 }
+        });
+
+        const business: BusinessData = { placeId: 'p-md', name: 'MD Store' };
+        const result = await analyzeLead(business, undefined, 'en');
+
+        expect(result.analysis.score).toBe(90);
+        expect(result.analysis.scoreLabel).toBe('Hot');
+    });
+
+    it('should use English labels when locale is "en"', async () => {
+        const business: BusinessData = { placeId: 'p-en', name: 'EN Store' };
+        await analyzeLead(business, undefined, 'en');
+
+        const callArgs = jest.mocked(generateCompletionForRole).mock.calls;
+        const lastCall = callArgs[callArgs.length - 1];
+        const prompt = lastCall[1].prompt as string;
+
+        expect(prompt).toContain('LEAD DATA:');
+        expect(prompt).toContain('Business Name: EN Store');
+    });
+
+    it('should use Portuguese labels when locale is "pt"', async () => {
+        const business: BusinessData = { placeId: 'p-pt', name: 'Loja PT' };
+        await analyzeLead(business, undefined, 'pt');
+
+        const callArgs = jest.mocked(generateCompletionForRole).mock.calls;
+        const lastCall = callArgs[callArgs.length - 1];
+        const prompt = lastCall[1].prompt as string;
+
+        expect(prompt).toContain('DADOS DO LEAD:');
+        expect(prompt).toContain('Nome do Negócio: Loja PT');
+    });
 });
