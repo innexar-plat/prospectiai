@@ -40,6 +40,61 @@ const emptyProfile: Record<keyof WorkspaceProfile, string> = {
   logoUrl: '',
 };
 
+function EmpresaPerfilForm({
+  form,
+  saving,
+  onChange,
+  onSave,
+}: {
+  form: Record<keyof WorkspaceProfile, string>;
+  saving: boolean;
+  onChange: (key: keyof WorkspaceProfile, value: string) => void;
+  onSave: (e: React.SyntheticEvent<HTMLFormElement>) => void;
+}) {
+  return (
+    <form onSubmit={onSave} className="rounded-3xl bg-card border border-border p-6 sm:p-8 space-y-6">
+      <div className="flex items-center gap-4 pb-4 border-b border-border">
+        {form.logoUrl ? (
+          <img src={form.logoUrl} alt="Logo" className="w-14 h-14 rounded-2xl object-cover border border-violet-500/20" />
+        ) : (
+          <div className="w-14 h-14 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
+            <Building2 size={24} className="text-violet-400" />
+          </div>
+        )}
+        <div>
+          <h2 className="text-lg font-bold text-foreground">{form.companyName || 'Empresa'}</h2>
+          <p className="text-xs text-muted">Workspace compartilhado com sua equipe</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {FIELDS.map((field) => (
+          <div key={field.key} className={field.fullWidth ? 'md:col-span-2' : ''}>
+            <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">{field.label}</label>
+            <input
+              type="text"
+              value={form[field.key] ?? ''}
+              onChange={(e) => onChange(field.key, e.target.value)}
+              placeholder={field.placeholder}
+              className="w-full h-11 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted/50 focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-colors"
+            />
+          </div>
+        ))}
+      </div>
+      <div className="flex justify-end pt-4 border-t border-border">
+        <Button
+          type="submit"
+          variant="primary"
+          disabled={saving}
+          icon={saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+          className="min-h-[48px] px-8 rounded-xl font-bold text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 shadow-lg shadow-violet-500/25 border-0 transition-all hover:-translate-y-0.5"
+        >
+          {saving ? 'Salvando...' : 'Salvar Alterações'}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 export default function EmpresaPerfilPage() {
   useOutletContext<{ user: SessionUser }>();
   const { addToast } = useToast();
@@ -137,57 +192,7 @@ export default function EmpresaPerfilPage() {
         breadcrumb="Dashboard / Empresa"
       />
       <div className="p-6 sm:p-8 max-w-3xl mx-auto w-full">
-        <form onSubmit={handleSave} className="rounded-3xl bg-card border border-border p-6 sm:p-8 space-y-6">
-          <div className="flex items-center gap-4 pb-4 border-b border-border">
-            {form.logoUrl ? (
-              <img
-                src={form.logoUrl}
-                alt="Logo"
-                className="w-14 h-14 rounded-2xl object-cover border border-violet-500/20"
-              />
-            ) : (
-              <div className="w-14 h-14 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
-                <Building2 size={24} className="text-violet-400" />
-              </div>
-            )}
-            <div>
-              <h2 className="text-lg font-bold text-foreground">{form.companyName || 'Empresa'}</h2>
-              <p className="text-xs text-muted">Workspace compartilhado com sua equipe</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {FIELDS.map((field) => (
-              <div
-                key={field.key}
-                className={field.fullWidth ? 'md:col-span-2' : ''}
-              >
-                <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">
-                  {field.label}
-                </label>
-                <input
-                  type="text"
-                  value={form[field.key] ?? ''}
-                  onChange={(e) => handleChange(field.key, e.target.value)}
-                  placeholder={field.placeholder}
-                  className="w-full h-11 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted/50 focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-colors"
-                />
-              </div>
-            ))}
-          </div>
-
-          <div className="flex justify-end pt-4 border-t border-border">
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={saving}
-              icon={saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-              className="min-h-[48px] px-8 rounded-xl font-bold text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 shadow-lg shadow-violet-500/25 border-0 transition-all hover:-translate-y-0.5"
-            >
-              {saving ? 'Salvando...' : 'Salvar Alterações'}
-            </Button>
-          </div>
-        </form>
+        <EmpresaPerfilForm form={form} saving={saving} onChange={handleChange} onSave={handleSave} />
       </div>
     </>
   );

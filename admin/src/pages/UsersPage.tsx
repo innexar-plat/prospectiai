@@ -118,7 +118,7 @@ export function UsersPage() {
                             <td className="px-4 py-3 text-zinc-400">
                               {u.onboardingCompletedAt ? 'Sim' : 'Não'}
                             </td>
-                            <td className="px-4 py-3 text-zinc-400">{u._count.workspaces}</td>
+                            <td className="px-4 py-3 text-zinc-400">{(u as { _count: { workspaces: number } })._count.workspaces}</td>
                           </>
                         );
                       })()

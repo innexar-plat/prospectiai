@@ -41,6 +41,84 @@ function UserActionButtons({
   );
 }
 
+function ResetPasswordModal({
+  open,
+  mode,
+  tempPassword,
+  actionLoading,
+  onClose,
+  onModeChange,
+  onTempPasswordChange,
+  onConfirm,
+}: {
+  open: boolean;
+  mode: 'email' | 'temp';
+  tempPassword: string;
+  actionLoading: boolean;
+  onClose: () => void;
+  onModeChange: (m: 'email' | 'temp') => void;
+  onTempPasswordChange: (v: string) => void;
+  onConfirm: () => void;
+}) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="rounded-xl border border-zinc-700 bg-zinc-900 p-6 max-w-md w-full shadow-xl">
+        <h2 className="text-lg font-semibold text-white mb-2">Resetar senha</h2>
+        <p className="text-zinc-400 text-sm mb-4">
+          Enviar email com link de redefinição ou definir uma senha temporária (mín. 8 caracteres).
+        </p>
+        <div className="flex gap-2 mb-4">
+          <button type="button" onClick={() => onModeChange('email')} className={`px-3 py-2 rounded-lg text-sm font-medium ${mode === 'email' ? 'bg-violet-600 text-white' : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'}`}>
+            Enviar email com link
+          </button>
+          <button type="button" onClick={() => onModeChange('temp')} className={`px-3 py-2 rounded-lg text-sm font-medium ${mode === 'temp' ? 'bg-violet-600 text-white' : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'}`}>
+            Definir senha temporária
+          </button>
+        </div>
+        {mode === 'temp' && (
+          <input type="text" value={tempPassword} onChange={(e) => onTempPasswordChange(e.target.value)} placeholder="Senha temporária (mín. 8 caracteres)" className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200 placeholder-zinc-500 mb-4" />
+        )}
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg bg-zinc-700 text-zinc-200 text-sm font-medium hover:bg-zinc-600">Cancelar</button>
+          <button type="button" onClick={onConfirm} disabled={actionLoading || (mode === 'temp' && tempPassword.length < 8)} className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-500 disabled:opacity-50">Confirmar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeactivateModal({
+  open,
+  reason,
+  actionLoading,
+  onClose,
+  onReasonChange,
+  onConfirm,
+}: {
+  open: boolean;
+  reason: string;
+  actionLoading: boolean;
+  onClose: () => void;
+  onReasonChange: (v: string) => void;
+  onConfirm: () => void;
+}) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="rounded-xl border border-zinc-700 bg-zinc-900 p-6 max-w-md w-full shadow-xl">
+        <h2 className="text-lg font-semibold text-white mb-2">Desativar conta</h2>
+        <p className="text-zinc-400 text-sm mb-4">O usuário não poderá fazer login até a conta ser reativada. Opcionalmente informe o motivo.</p>
+        <textarea value={reason} onChange={(e) => onReasonChange(e.target.value)} placeholder="Motivo (opcional)" rows={3} className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200 placeholder-zinc-500 mb-4" />
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg bg-zinc-700 text-zinc-200 text-sm font-medium hover:bg-zinc-600">Cancelar</button>
+          <button type="button" onClick={onConfirm} disabled={actionLoading} className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-500 disabled:opacity-50">Desativar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function UserDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { role } = useOutletContext<AdminLayoutContext>();
@@ -174,12 +252,12 @@ export function UserDetailPage() {
         />
       </div>
       {toast && (
-        <div className={`mb-4 rounded-lg px-4 py-3 text-sm ${toast.type === 'success' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-red-500/10 border border-red-500/30 text-red-400'}`}>
+        <div className={`mb-4 rounded-lg px-4 py-3 text-sm font-medium ${toast.type === 'success' ? 'bg-emerald-200 dark:bg-emerald-500/10 border border-emerald-600 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400' : 'bg-red-200 dark:bg-red-500/10 border border-red-600 dark:border-red-500/30 text-red-900 dark:text-red-400'}`}>
           {toast.message}
         </div>
       )}
       {actionError && (
-        <div className="mb-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 text-sm">
+        <div className="mb-4 rounded-lg bg-red-200 dark:bg-red-500/10 border border-red-600 dark:border-red-500/30 text-red-900 dark:text-red-400 px-4 py-3 text-sm font-medium">
           {actionError}
         </div>
       )}
@@ -267,92 +345,24 @@ export function UserDetailPage() {
           </div>
         )}
       </div>
-      {showResetPasswordModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="rounded-xl border border-zinc-700 bg-zinc-900 p-6 max-w-md w-full shadow-xl">
-            <h2 className="text-lg font-semibold text-white mb-2">Resetar senha</h2>
-            <p className="text-zinc-400 text-sm mb-4">
-              Enviar email com link de redefinição ou definir uma senha temporária (mín. 8 caracteres).
-            </p>
-            <div className="flex gap-2 mb-4">
-              <button
-                type="button"
-                onClick={() => setResetPasswordMode('email')}
-                className={`px-3 py-2 rounded-lg text-sm font-medium ${resetPasswordMode === 'email' ? 'bg-violet-600 text-white' : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'}`}
-              >
-                Enviar email com link
-              </button>
-              <button
-                type="button"
-                onClick={() => setResetPasswordMode('temp')}
-                className={`px-3 py-2 rounded-lg text-sm font-medium ${resetPasswordMode === 'temp' ? 'bg-violet-600 text-white' : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'}`}
-              >
-                Definir senha temporária
-              </button>
-            </div>
-            {resetPasswordMode === 'temp' && (
-              <input
-                type="text"
-                value={tempPassword}
-                onChange={(e) => setTempPassword(e.target.value)}
-                placeholder="Senha temporária (mín. 8 caracteres)"
-                className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200 placeholder-zinc-500 mb-4"
-              />
-            )}
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => { setShowResetPasswordModal(false); setTempPassword(''); setActionError(null); }}
-                className="px-4 py-2 rounded-lg bg-zinc-700 text-zinc-200 text-sm font-medium hover:bg-zinc-600"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleResetPassword}
-                disabled={actionLoading || (resetPasswordMode === 'temp' && tempPassword.length < 8)}
-                className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-500 disabled:opacity-50"
-              >
-                Confirmar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {showDeactivateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="rounded-xl border border-zinc-700 bg-zinc-900 p-6 max-w-md w-full shadow-xl">
-            <h2 className="text-lg font-semibold text-white mb-2">Desativar conta</h2>
-            <p className="text-zinc-400 text-sm mb-4">
-              O usuário não poderá fazer login até a conta ser reativada. Opcionalmente informe o motivo.
-            </p>
-            <textarea
-              value={deactivateReason}
-              onChange={(e) => setDeactivateReason(e.target.value)}
-              placeholder="Motivo (opcional)"
-              rows={3}
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200 placeholder-zinc-500 mb-4"
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowDeactivateModal(false)}
-                className="px-4 py-2 rounded-lg bg-zinc-700 text-zinc-200 text-sm font-medium hover:bg-zinc-600"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDeactivate(deactivateReason.trim() || undefined)}
-                disabled={actionLoading}
-                className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-500 disabled:opacity-50"
-              >
-                Desativar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ResetPasswordModal
+        open={showResetPasswordModal}
+        mode={resetPasswordMode}
+        tempPassword={tempPassword}
+        actionLoading={actionLoading}
+        onClose={() => { setShowResetPasswordModal(false); setTempPassword(''); setActionError(null); }}
+        onModeChange={setResetPasswordMode}
+        onTempPasswordChange={setTempPassword}
+        onConfirm={handleResetPassword}
+      />
+      <DeactivateModal
+        open={showDeactivateModal}
+        reason={deactivateReason}
+        actionLoading={actionLoading}
+        onClose={() => setShowDeactivateModal(false)}
+        onReasonChange={setDeactivateReason}
+        onConfirm={() => handleDeactivate(deactivateReason.trim() || undefined)}
+      />
     </div>
   );
 }

@@ -30,6 +30,161 @@ function getHistoricoSubtitle(activeTab: TabId, searchTotal: number, intelTotal:
   return 'Buscas, relatórios de lead e relatórios de inteligência.';
 }
 
+function HistoricoSearchDetail({
+  item,
+  onBack,
+  onNavigate,
+  formatDate,
+}: {
+  item: SearchHistoryItem & { resultsData?: Place[] };
+  onBack: () => void;
+  onNavigate: (path: string) => void;
+  formatDate: (iso: string) => string;
+}) {
+  const places = item.resultsData ?? [];
+  return (
+    <>
+      <HeaderDashboard
+        title={item.textQuery}
+        subtitle={`Resultados da busca em ${formatDate(item.createdAt)} — ${item.resultsCount} resultados`}
+        breadcrumb="Prospecção Ativa / Histórico / Detalhes"
+      />
+      <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full">
+        <Button variant="ghost" onClick={onBack} className="mb-4 inline-flex items-center gap-2 text-sm text-muted hover:text-foreground">
+          <ArrowLeft size={16} /> Voltar ao histórico
+        </Button>
+        {places.length === 0 ? (
+          <div className="rounded-2xl bg-card border border-border p-12 flex flex-col items-center justify-center gap-4 min-h-[240px]">
+            <Search size={48} className="text-muted" aria-hidden />
+            <h2 className="text-xl font-bold text-foreground">Resultados não disponíveis</h2>
+            <p className="text-sm text-muted text-center max-w-md">Os resultados desta busca não foram armazenados.</p>
+            <Button variant="primary" onClick={() => onNavigate('/dashboard')} className="mt-2">Realizar nova busca</Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {places.map((place, idx) => {
+              const name = place.displayName?.text || '—';
+              const address = place.formattedAddress || '';
+              const phone = place.nationalPhoneNumber || place.internationalPhoneNumber || '';
+              const website = place.websiteUri || '';
+              const rating = place.rating;
+              const reviews = place.userRatingCount ?? 0;
+              return (
+                <div key={place.id || idx} className="bg-card border border-border rounded-2xl p-4 sm:px-6 hover:border-violet-500/30 transition-colors">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-foreground truncate">{name}</p>
+                      {address && (
+                        <p className="text-xs text-muted mt-1 flex items-center gap-1 truncate">
+                          <MapPin size={12} className="shrink-0" /> {address}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted">
+                        {rating != null && (
+                          <span className="inline-flex items-center gap-1">
+                            <Star size={12} className="text-amber-400" /> {rating}/5
+                            {reviews > 0 && <span className="text-muted">({reviews})</span>}
+                          </span>
+                        )}
+                        {phone && (
+                          <span className="inline-flex items-center gap-1"><Phone size={12} /> {phone}</span>
+                        )}
+                        {website && (
+                          <a href={website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-violet-400 hover:text-violet-300">
+                            <Globe size={12} /> Website
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+function HistoricoIntelDetail({
+  item,
+  onBack,
+  onFavorite,
+  formatDate,
+}: {
+  item: IntelligenceReportItem & { resultsData?: unknown };
+  onBack: () => void;
+  onFavorite: (e: React.MouseEvent) => void;
+  formatDate: (iso: string) => string;
+}) {
+  const rd = item.resultsData as Record<string, unknown> | undefined;
+  const moduleLabel = MODULE_LABELS[item.module] || item.module;
+  return (
+    <>
+      <HeaderDashboard
+        title={`Relatório — ${moduleLabel}`}
+        subtitle={`${item.inputQuery}${item.inputCity ? ` · ${item.inputCity}` : ''} — ${formatDate(item.createdAt)}`}
+        breadcrumb="Prospecção Ativa / Histórico / Relatório de inteligência"
+      />
+      <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full">
+        <div className="flex items-center gap-3 mb-4">
+          <Button variant="ghost" onClick={onBack} className="inline-flex items-center gap-2 text-sm text-muted hover:text-foreground">
+            <ArrowLeft size={16} /> Voltar ao histórico
+          </Button>
+          <button
+            type="button"
+            onClick={onFavorite}
+            className="p-2 rounded-lg border border-border hover:bg-violet-500/10 text-amber-400"
+            title={item.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
+            aria-label={item.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
+          >
+            <Star size={18} className={item.isFavorite ? 'fill-current' : ''} />
+          </button>
+        </div>
+        <div className="rounded-2xl bg-card border border-border p-6">
+          {rd && typeof rd === 'object' && (
+            <div className="prose prose-invert max-w-none text-sm">
+              {item.module === 'VIABILITY' && 'score' in rd && (
+                <div className="space-y-2">
+                  <p><strong>Score:</strong> {String(rd.score)}/10</p>
+                  {'verdict' in rd && <p><strong>Veredito:</strong> {String(rd.verdict)}</p>}
+                  {'summary' in rd && <p className="text-muted">{String(rd.summary)}</p>}
+                </div>
+              )}
+              {item.module === 'COMPETITORS' && 'totalCount' in rd && (
+                <div className="space-y-2">
+                  <p><strong>Concorrentes mapeados:</strong> {String(rd.totalCount)}</p>
+                  {'avgRating' in rd && <p><strong>Rating médio:</strong> {String(rd.avgRating)}</p>}
+                </div>
+              )}
+              {item.module === 'MARKET' && 'totalBusinesses' in rd && (
+                <div className="space-y-2">
+                  <p><strong>Total de negócios:</strong> {String(rd.totalBusinesses)}</p>
+                </div>
+              )}
+              {item.module === 'MY_COMPANY' && ('summary' in rd || (typeof rd.socialNetworks === 'object' && rd.socialNetworks && 'presence' in rd.socialNetworks)) && (
+                <div className="space-y-2">
+                  {'summary' in rd && <p className="text-muted">{String(rd.summary)}</p>}
+                  {typeof rd.socialNetworks === 'object' && rd.socialNetworks && 'presence' in rd.socialNetworks && (
+                    <p className="text-muted"><strong>Redes sociais:</strong> {String((rd.socialNetworks as Record<string, unknown>).presence ?? '')}</p>
+                  )}
+                </div>
+              )}
+              {(!('score' in rd && item.module === 'VIABILITY') && !('totalCount' in rd && item.module === 'COMPETITORS') && !('totalBusinesses' in rd && item.module === 'MARKET') && !(item.module === 'MY_COMPANY' && 'summary' in rd)) && (
+                <p className="text-muted">Relatório salvo em {formatDate(item.createdAt)}. Dados completos disponíveis na geração do relatório.</p>
+              )}
+            </div>
+          )}
+          {(!rd || typeof rd !== 'object') && (
+            <p className="text-muted">Relatório salvo em {formatDate(item.createdAt)}.</p>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function HistoricoPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabFromUrl = (searchParams.get('tab') as TabId) || 'buscas';
@@ -197,157 +352,24 @@ export default function HistoricoPage() {
   };
 
   if (selectedSearchItem) {
-    const places = selectedSearchItem.resultsData ?? [];
     return (
-      <>
-        <HeaderDashboard
-          title={selectedSearchItem.textQuery}
-          subtitle={`Resultados da busca em ${formatDate(selectedSearchItem.createdAt)} — ${selectedSearchItem.resultsCount} resultados`}
-          breadcrumb="Prospecção Ativa / Histórico / Detalhes"
-        />
-        <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full">
-          <Button
-            variant="ghost"
-            onClick={() => setSelectedSearchItem(null)}
-            className="mb-4 inline-flex items-center gap-2 text-sm text-muted hover:text-foreground"
-          >
-            <ArrowLeft size={16} /> Voltar ao histórico
-          </Button>
-          {places.length === 0 ? (
-            <div className="rounded-2xl bg-card border border-border p-12 flex flex-col items-center justify-center gap-4 min-h-[240px]">
-              <Search size={48} className="text-muted" aria-hidden />
-              <h2 className="text-xl font-bold text-foreground">Resultados não disponíveis</h2>
-              <p className="text-sm text-muted text-center max-w-md">
-                Os resultados desta busca não foram armazenados.
-              </p>
-              <Button variant="primary" onClick={() => navigate('/dashboard')} className="mt-2">
-                Realizar nova busca
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {places.map((place, idx) => {
-                const name = place.displayName?.text || '—';
-                const address = place.formattedAddress || '';
-                const phone = place.nationalPhoneNumber || place.internationalPhoneNumber || '';
-                const website = place.websiteUri || '';
-                const rating = place.rating;
-                const reviews = place.userRatingCount ?? 0;
-                return (
-                  <div
-                    key={place.id || idx}
-                    className="bg-card border border-border rounded-2xl p-4 sm:px-6 hover:border-violet-500/30 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-foreground truncate">{name}</p>
-                        {address && (
-                          <p className="text-xs text-muted mt-1 flex items-center gap-1 truncate">
-                            <MapPin size={12} className="shrink-0" /> {address}
-                          </p>
-                        )}
-                        <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted">
-                          {rating != null && (
-                            <span className="inline-flex items-center gap-1">
-                              <Star size={12} className="text-amber-400" /> {rating}/5
-                              {reviews > 0 && <span className="text-muted">({reviews})</span>}
-                            </span>
-                          )}
-                          {phone && (
-                            <span className="inline-flex items-center gap-1">
-                              <Phone size={12} /> {phone}
-                            </span>
-                          )}
-                          {website && (
-                            <a href={website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-violet-400 hover:text-violet-300">
-                              <Globe size={12} /> Website
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </>
+      <HistoricoSearchDetail
+        item={selectedSearchItem}
+        onBack={() => setSelectedSearchItem(null)}
+        onNavigate={(path) => navigate(path)}
+        formatDate={formatDate}
+      />
     );
   }
 
   if (selectedIntelItem) {
-    const rd = selectedIntelItem.resultsData as Record<string, unknown> | undefined;
-    const moduleLabel = MODULE_LABELS[selectedIntelItem.module] || selectedIntelItem.module;
     return (
-      <>
-        <HeaderDashboard
-          title={`Relatório — ${moduleLabel}`}
-          subtitle={(() => {
-          const cityPart = selectedIntelItem.inputCity ? ` · ${selectedIntelItem.inputCity}` : '';
-          return `${selectedIntelItem.inputQuery}${cityPart} — ${formatDate(selectedIntelItem.createdAt)}`;
-        })()}
-          breadcrumb="Prospecção Ativa / Histórico / Relatório de inteligência"
-        />
-        <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full">
-          <div className="flex items-center gap-3 mb-4">
-            <Button
-              variant="ghost"
-              onClick={() => setSelectedIntelItem(null)}
-              className="inline-flex items-center gap-2 text-sm text-muted hover:text-foreground"
-            >
-              <ArrowLeft size={16} /> Voltar ao histórico
-            </Button>
-            <button
-              type="button"
-              onClick={(e) => handleIntelFavorite(selectedIntelItem, e)}
-              className="p-2 rounded-lg border border-border hover:bg-violet-500/10 text-amber-400"
-              title={selectedIntelItem?.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
-              aria-label={selectedIntelItem?.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
-            >
-              <Star size={18} className={selectedIntelItem?.isFavorite ? 'fill-current' : ''} />
-            </button>
-          </div>
-          <div className="rounded-2xl bg-card border border-border p-6">
-            {rd && typeof rd === 'object' && (
-              <div className="prose prose-invert max-w-none text-sm">
-                {selectedIntelItem.module === 'VIABILITY' && 'score' in rd && (
-                  <div className="space-y-2">
-                    <p><strong>Score:</strong> {String(rd.score)}/10</p>
-                    {'verdict' in rd && <p><strong>Veredito:</strong> {String(rd.verdict)}</p>}
-                    {'summary' in rd && <p className="text-muted">{String(rd.summary)}</p>}
-                  </div>
-                )}
-                {selectedIntelItem.module === 'COMPETITORS' && 'totalCount' in rd && (
-                  <div className="space-y-2">
-                    <p><strong>Concorrentes mapeados:</strong> {String(rd.totalCount)}</p>
-                    {'avgRating' in rd && <p><strong>Rating médio:</strong> {String(rd.avgRating)}</p>}
-                  </div>
-                )}
-                {selectedIntelItem.module === 'MARKET' && 'totalBusinesses' in rd && (
-                  <div className="space-y-2">
-                    <p><strong>Total de negócios:</strong> {String(rd.totalBusinesses)}</p>
-                  </div>
-                )}
-                {selectedIntelItem.module === 'MY_COMPANY' && ('summary' in rd || (typeof rd.socialNetworks === 'object' && rd.socialNetworks && 'presence' in rd.socialNetworks)) && (
-                  <div className="space-y-2">
-                    {'summary' in rd && <p className="text-muted">{String(rd.summary)}</p>}
-                    {typeof rd.socialNetworks === 'object' && rd.socialNetworks && 'presence' in rd.socialNetworks && (
-                      <p className="text-muted"><strong>Redes sociais:</strong> {String((rd.socialNetworks as Record<string, unknown>).presence ?? '')}</p>
-                    )}
-                  </div>
-                )}
-                {(!('score' in rd && selectedIntelItem.module === 'VIABILITY') && !('totalCount' in rd && selectedIntelItem.module === 'COMPETITORS') && !('totalBusinesses' in rd && selectedIntelItem.module === 'MARKET') && !(selectedIntelItem.module === 'MY_COMPANY' && 'summary' in rd)) && (
-                  <p className="text-muted">Relatório salvo em {formatDate(selectedIntelItem.createdAt)}. Dados completos disponíveis na geração do relatório.</p>
-                )}
-              </div>
-            )}
-            {(!rd || typeof rd !== 'object') && (
-              <p className="text-muted">Relatório salvo em {formatDate(selectedIntelItem.createdAt)}.</p>
-            )}
-          </div>
-        </div>
-      </>
+      <HistoricoIntelDetail
+        item={selectedIntelItem}
+        onBack={() => setSelectedIntelItem(null)}
+        onFavorite={(e) => handleIntelFavorite(selectedIntelItem, e)}
+        formatDate={formatDate}
+      />
     );
   }
 

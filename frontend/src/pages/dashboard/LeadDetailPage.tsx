@@ -23,6 +23,60 @@ const TAG_COLORS: Record<string, string> = {
   gray: 'bg-surface text-muted border-border',
 };
 
+function LeadContactActions({
+  place,
+  copiedPhone,
+  onCopyPhone,
+  trackAction,
+}: {
+  place: PlaceDetail | Place;
+  copiedPhone: boolean;
+  onCopyPhone: () => void;
+  trackAction: (action: string) => void;
+}) {
+  const phoneRaw = place.nationalPhoneNumber || place.internationalPhoneNumber || '';
+  const phoneDigits = phoneRaw.replace(/\D/g, '');
+  const whatsappNumber = phoneDigits.startsWith('55') ? phoneDigits : `55${phoneDigits}`;
+  const hasPhone = !!phoneDigits;
+  const websiteUrl = place.websiteUri ?? (place as PlaceDetail).website;
+  const hasWebsite = !!websiteUrl;
+  const hasAddress = !!(place.formattedAddress);
+  if (!hasPhone && !hasWebsite && !hasAddress) return null;
+  return (
+    <section className="rounded-xl border border-border bg-card p-5 space-y-3">
+      <h2 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
+        <Phone size={14} className="text-violet-400" /> Ações de Contato
+      </h2>
+      <div className="flex flex-wrap gap-2">
+        {hasPhone && (
+          <>
+            <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noopener noreferrer" onClick={() => trackAction('WHATSAPP_CLICK')} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors shadow-lg shadow-emerald-600/25">
+              <MessageCircle size={18} /> WhatsApp
+            </a>
+            <a href={`tel:${place.internationalPhoneNumber ?? place.nationalPhoneNumber}`} onClick={() => trackAction('CALL_CLICK')} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors shadow-lg shadow-blue-600/25">
+              <Phone size={16} /> Ligar
+            </a>
+            <button type="button" onClick={onCopyPhone} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-surface border border-border text-foreground hover:bg-violet-500/10 transition-colors">
+              {copiedPhone ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
+              {copiedPhone ? 'Copiado!' : 'Copiar Nº'}
+            </button>
+          </>
+        )}
+        {hasWebsite && websiteUrl && (
+          <a href={websiteUrl} target="_blank" rel="noopener noreferrer" onClick={() => trackAction('WEBSITE_CLICK')} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-violet-600 hover:bg-violet-500 text-white transition-colors shadow-lg shadow-violet-600/25">
+            <Globe size={16} /> Abrir Site
+          </a>
+        )}
+        {hasAddress && (
+          <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.formattedAddress ?? '')}`} target="_blank" rel="noopener noreferrer" onClick={() => trackAction('MAPS_CLICK')} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-surface border border-border text-foreground hover:bg-violet-500/10 transition-colors">
+            <MapPin size={16} /> Ver no Mapa
+          </a>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export default function LeadDetailPage() {
   const { placeId } = useParams<{ placeId: string }>();
   const navigate = useNavigate();
@@ -98,6 +152,16 @@ export default function LeadDetailPage() {
 
   const trackAction = (action: string) => {
     activityApi.track({ action, metadata: { placeId, leadName: place?.displayName?.text || placeId } }).catch(() => { });
+  };
+
+  const handleCopyPhone = () => {
+    const phoneRaw = place?.nationalPhoneNumber || place?.internationalPhoneNumber || '';
+    if (!phoneRaw) return;
+    navigator.clipboard.writeText(phoneRaw).then(() => {
+      setCopiedPhone(true);
+      setTimeout(() => setCopiedPhone(false), 2000);
+    });
+    trackAction('COPY_PHONE');
   };
 
   const handleAddTag = async (label: string, color: string) => {
@@ -285,85 +349,7 @@ export default function LeadDetailPage() {
           </div>
         </section>
 
-        {/* Contact Action Buttons */}
-        {(() => {
-          const phoneRaw = place.nationalPhoneNumber || place.internationalPhoneNumber || '';
-          const phoneDigits = phoneRaw.replace(/\D/g, '');
-          const whatsappNumber = phoneDigits.startsWith('55') ? phoneDigits : `55${phoneDigits}`;
-          const hasPhone = !!phoneDigits;
-          const hasWebsite = !!(place.websiteUri);
-          const hasAddress = !!(place.formattedAddress);
-
-          if (!hasPhone && !hasWebsite && !hasAddress) return null;
-
-          const handleCopyPhone = () => {
-            navigator.clipboard.writeText(phoneRaw).then(() => {
-              setCopiedPhone(true);
-              setTimeout(() => setCopiedPhone(false), 2000);
-            });
-            trackAction('COPY_PHONE');
-          };
-
-          return (
-            <section className="rounded-xl border border-border bg-card p-5 space-y-3">
-              <h2 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
-                <Phone size={14} className="text-violet-400" /> Ações de Contato
-              </h2>
-              <div className="flex flex-wrap gap-2">
-                {hasPhone && (
-                  <>
-                    <a
-                      href={`https://wa.me/${whatsappNumber}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={() => trackAction('WHATSAPP_CLICK')}
-                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors shadow-lg shadow-emerald-600/25"
-                    >
-                      <MessageCircle size={18} /> WhatsApp
-                    </a>
-                    <a
-                      href={`tel:${place.internationalPhoneNumber ?? place.nationalPhoneNumber}`}
-                      onClick={() => trackAction('CALL_CLICK')}
-                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors shadow-lg shadow-blue-600/25"
-                    >
-                      <Phone size={16} /> Ligar
-                    </a>
-                    <button
-                      type="button"
-                      onClick={handleCopyPhone}
-                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-surface border border-border text-foreground hover:bg-violet-500/10 transition-colors"
-                    >
-                      {copiedPhone ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
-                      {copiedPhone ? 'Copiado!' : 'Copiar Nº'}
-                    </button>
-                  </>
-                )}
-                {hasWebsite && (
-                  <a
-                    href={place.websiteUri!}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => trackAction('WEBSITE_CLICK')}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-violet-600 hover:bg-violet-500 text-white transition-colors shadow-lg shadow-violet-600/25"
-                  >
-                    <Globe size={16} /> Abrir Site
-                  </a>
-                )}
-                {hasAddress && (
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.formattedAddress!)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => trackAction('MAPS_CLICK')}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-surface border border-border text-foreground hover:bg-violet-500/10 transition-colors"
-                  >
-                    <MapPin size={16} /> Ver no Mapa
-                  </a>
-                )}
-              </div>
-            </section>
-          );
-        })()}
+        <LeadContactActions place={place} copiedPhone={copiedPhone} onCopyPhone={handleCopyPhone} trackAction={trackAction} />
 
         {/* Smart Tags */}
         <section className="rounded-xl border border-border bg-card p-5 space-y-3">

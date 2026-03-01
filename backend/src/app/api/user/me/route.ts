@@ -21,6 +21,31 @@ function buildWorkspaceProfile(w: { companyName?: string | null; productService?
     };
 }
 
+const userMeSelect = {
+    id: true,
+    name: true,
+    email: true,
+    image: true,
+    plan: true,
+    leadsUsed: true,
+    leadsLimit: true,
+    companyName: true,
+    productService: true,
+    targetAudience: true,
+    mainBenefit: true,
+    phone: true,
+    address: true,
+    linkedInUrl: true,
+    instagramUrl: true,
+    facebookUrl: true,
+    websiteUrl: true,
+    onboardingCompletedAt: true,
+    notifyByEmail: true,
+    notifyWeeklyReport: true,
+    notifyLeadAlerts: true,
+    workspaces: { include: { workspace: true }, take: 1 },
+} as const;
+
 /** Garante que o usuário tenha ao menos um workspace (OAuth e outros fluxos podem criar user sem workspace). */
 async function ensureUserHasWorkspace(userId: string, userName: string | null): Promise<void> {
     const existing = await prisma.workspaceMember.findFirst({
@@ -28,29 +53,79 @@ async function ensureUserHasWorkspace(userId: string, userName: string | null): 
         select: { id: true },
     });
     if (existing) return;
-
-    const workspaceName = (userName && userName.trim())
-        ? `${userName.trim()} - Workspace`
-        : 'Meu Workspace';
-
+    const workspaceName = (userName && userName.trim()) ? `${userName.trim()} - Workspace` : 'Meu Workspace';
     await prisma.$transaction(async (tx) => {
         const workspace = await tx.workspace.create({
-            data: {
-                name: workspaceName,
-                plan: 'FREE',
-                leadsLimit: 10,
-                leadsUsed: 0,
-            },
+            data: { name: workspaceName, plan: 'FREE', leadsLimit: 10, leadsUsed: 0 },
         });
         await tx.workspaceMember.create({
-            data: {
-                userId,
-                workspaceId: workspace.id,
-                role: 'OWNER',
-            },
+            data: { userId, workspaceId: workspace.id, role: 'OWNER' },
         });
         logger.info('Workspace created for user without workspace', { userId, workspaceId: workspace.id });
     });
+}
+
+async function fetchUserWithWorkspace(userId: string) {
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: userMeSelect,
+    });
+    if (!user) return null;
+    if (user.workspaces.length === 0) {
+        await ensureUserHasWorkspace(user.id, user.name);
+        return prisma.user.findUnique({
+            where: { id: userId },
+            select: userMeSelect,
+        });
+    }
+    return user;
+}
+
+type WorkspaceAfterExpiry = {
+    plan?: string | null;
+    leadsUsed?: number | null;
+    leadsLimit?: number | null;
+    subscriptionStatus?: string | null;
+    currentPeriodEnd?: Date | null;
+    gracePeriodEnd?: Date | null;
+    pendingPlanId?: string | null;
+    pendingPlanEffectiveAt?: Date | null;
+    companyName?: string | null;
+    productService?: string | null;
+    targetAudience?: string | null;
+    mainBenefit?: string | null;
+    address?: string | null;
+    linkedInUrl?: string | null;
+    instagramUrl?: string | null;
+    facebookUrl?: string | null;
+    websiteUrl?: string | null;
+    logoUrl?: string | null;
+};
+
+function buildUiUser(
+    user: { workspaces?: Array<{ workspace?: WorkspaceAfterExpiry | null }>; [k: string]: unknown },
+    w: WorkspaceAfterExpiry | null | undefined,
+): Record<string, unknown> {
+    return {
+        ...user,
+        companyName: w?.companyName ?? user.companyName ?? null,
+        productService: w?.productService ?? user.productService ?? null,
+        targetAudience: w?.targetAudience ?? user.targetAudience ?? null,
+        mainBenefit: w?.mainBenefit ?? user.mainBenefit ?? null,
+        plan: w?.plan || user.plan || 'FREE',
+        leadsUsed: w?.leadsUsed ?? user.leadsUsed ?? 0,
+        leadsLimit: w?.leadsLimit ?? user.leadsLimit ?? 10,
+        subscriptionStatus: w?.subscriptionStatus ?? null,
+        currentPeriodEnd: w?.currentPeriodEnd?.toISOString() ?? null,
+        gracePeriodEnd: w?.gracePeriodEnd?.toISOString() ?? null,
+        pendingPlanId: w?.pendingPlanId ?? null,
+        pendingPlanEffectiveAt: w?.pendingPlanEffectiveAt?.toISOString() ?? null,
+        workspaces: undefined,
+        requiresOnboarding: user.onboardingCompletedAt == null,
+        notifyByEmail: user.notifyByEmail,
+        notifyWeeklyReport: user.notifyWeeklyReport,
+        notifyLeadAlerts: user.notifyLeadAlerts,
+    };
 }
 
 export async function GET(req: NextRequest) {
@@ -58,81 +133,13 @@ export async function GET(req: NextRequest) {
     try {
         const session = await auth();
         if (!session?.user?.id) {
-            // Return 200 with null user to avoid browser console 401 errors on landpage
             return jsonWithRequestId({ user: null }, { requestId });
         }
-
-        let user = await prisma.user.findUnique({
-            where: { id: session.user.id },
-            select: {
-                id: true,
-                name: true,
-                email: true,
-                image: true,
-                plan: true,
-                leadsUsed: true,
-                leadsLimit: true,
-                companyName: true,
-                productService: true,
-                targetAudience: true,
-                mainBenefit: true,
-                phone: true,
-                address: true,
-                linkedInUrl: true,
-                instagramUrl: true,
-                facebookUrl: true,
-                websiteUrl: true,
-                onboardingCompletedAt: true,
-                notifyByEmail: true,
-                notifyWeeklyReport: true,
-                notifyLeadAlerts: true,
-                workspaces: {
-                    include: { workspace: true },
-                    take: 1
-                }
-            }
-        });
-
+        const user = await fetchUserWithWorkspace(session.user.id);
         if (!user) {
             return jsonWithRequestId({ error: 'User not found' }, { status: 404, requestId });
         }
-
-        if (user.workspaces.length === 0) {
-            await ensureUserHasWorkspace(user.id, user.name);
-            const refetched = await prisma.user.findUnique({
-                where: { id: session.user.id },
-                select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    image: true,
-                    plan: true,
-                    leadsUsed: true,
-                    leadsLimit: true,
-                    companyName: true,
-                    productService: true,
-                    targetAudience: true,
-                    mainBenefit: true,
-                    phone: true,
-                    address: true,
-                    linkedInUrl: true,
-                    instagramUrl: true,
-                    facebookUrl: true,
-                    websiteUrl: true,
-                    onboardingCompletedAt: true,
-                    notifyByEmail: true,
-                    notifyWeeklyReport: true,
-                    notifyLeadAlerts: true,
-                    workspaces: {
-                        include: { workspace: true },
-                        take: 1
-                    }
-                }
-            });
-            if (refetched) user = refetched;
-        }
-
-        const activeWorkspace = user.workspaces?.[0]?.workspace;
+        const activeWorkspace = user.workspaces?.[0]?.workspace as WorkspaceAfterExpiry & { id?: string } | undefined;
         if (activeWorkspace?.id) {
             await applyGracePeriodExpiryIfNeeded(activeWorkspace.id);
         }
@@ -161,35 +168,9 @@ export async function GET(req: NextRequest) {
                 },
             })
             : null;
-        const w = workspaceAfterExpiry ?? activeWorkspace;
+        const w = workspaceAfterExpiry ?? activeWorkspace ?? null;
         const workspaceProfile = buildWorkspaceProfile(w);
-
-        const companyName = w?.companyName ?? user.companyName ?? null;
-        const productService = w?.productService ?? user.productService ?? null;
-        const targetAudience = w?.targetAudience ?? user.targetAudience ?? null;
-        const mainBenefit = w?.mainBenefit ?? user.mainBenefit ?? null;
-
-        const uiUser = {
-            ...user,
-            companyName,
-            productService,
-            targetAudience,
-            mainBenefit,
-            plan: w?.plan || user.plan || 'FREE',
-            leadsUsed: w?.leadsUsed ?? user.leadsUsed ?? 0,
-            leadsLimit: w?.leadsLimit ?? user.leadsLimit ?? 10,
-            subscriptionStatus: w?.subscriptionStatus ?? null,
-            currentPeriodEnd: w?.currentPeriodEnd?.toISOString() ?? null,
-            gracePeriodEnd: w?.gracePeriodEnd?.toISOString() ?? null,
-            pendingPlanId: w?.pendingPlanId ?? null,
-            pendingPlanEffectiveAt: w?.pendingPlanEffectiveAt?.toISOString() ?? null,
-            workspaces: undefined,
-            requiresOnboarding: user.onboardingCompletedAt == null,
-            notifyByEmail: user.notifyByEmail,
-            notifyWeeklyReport: user.notifyWeeklyReport,
-            notifyLeadAlerts: user.notifyLeadAlerts,
-        };
-
+        const uiUser = buildUiUser(user, w);
         return jsonWithRequestId({ user: uiUser, workspaceProfile }, { requestId });
     } catch (error) {
         const { logger } = await import('@/lib/logger');

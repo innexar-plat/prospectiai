@@ -73,6 +73,90 @@ async function request<T>(path: string, opts?: RequestInit): Promise<T> {
     return res.json();
 }
 
+function TeamInviteForm({
+    email,
+    onEmailChange,
+    inviting,
+    onSubmit,
+}: {
+    email: string;
+    onEmailChange: (v: string) => void;
+    inviting: boolean;
+    onSubmit: (e: React.SyntheticEvent<HTMLFormElement>) => void;
+}) {
+    return (
+        <form onSubmit={onSubmit} className="rounded-3xl bg-card border border-emerald-500/20 p-6 flex flex-col sm:flex-row gap-4">
+            <input
+                type="email"
+                value={email}
+                onChange={(e) => onEmailChange(e.target.value)}
+                placeholder="Email do vendedor"
+                className="flex-1 h-12 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                required
+            />
+            <Button
+                type="submit"
+                variant="primary"
+                disabled={inviting || !email.trim()}
+                icon={inviting ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
+                className="h-12 px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 border-0"
+            >
+                {inviting ? 'Convidando...' : 'Enviar Convite'}
+            </Button>
+        </form>
+    );
+}
+
+function TeamPendingInvitationsList({
+    invitations,
+    resendCooldownMs,
+    resendingId,
+    onResend,
+    nowMs,
+}: {
+    invitations: PendingInvitation[];
+    resendCooldownMs: number;
+    resendingId: string | null;
+    onResend: (id: string) => void;
+    nowMs: number;
+}) {
+    const canResend = (lastSentAt: string) => nowMs - new Date(lastSentAt).getTime() >= resendCooldownMs;
+    if (invitations.length === 0) return null;
+    return (
+        <div className="rounded-3xl bg-card border border-amber-500/20 p-6 flex flex-col gap-3">
+            <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Convites enviados (aguardando aceite)</h3>
+            <ul className="space-y-2">
+                {invitations.map((p) => {
+                    const cooldown = !canResend(p.lastSentAt);
+                    const secondsLeft = cooldown
+                        ? Math.ceil((resendCooldownMs - (nowMs - new Date(p.lastSentAt).getTime())) / 1000)
+                        : 0;
+                    return (
+                        <li key={p.id} className="flex items-center justify-between gap-4 py-2 border-b border-border/50 last:border-0">
+                            <span className="text-sm text-foreground">{p.email}</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted">Convite enviado</span>
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    size="sm"
+                                    disabled={cooldown || resendingId === p.id}
+                                    onClick={() => onResend(p.id)}
+                                    icon={resendingId === p.id ? <Loader2 size={14} className="animate-spin" /> : undefined}
+                                    className="min-w-[100px]"
+                                >
+                                    {resendingId === p.id ? 'Enviando...' : cooldown ? `Reenviar (${secondsLeft}s)` : 'Reenviar'}
+                                </Button>
+                            </div>
+                        </li>
+                    );
+                })}
+            </ul>
+            <p className="text-xs text-muted">A pessoa só entra na equipe após aceitar o convite pelo link do email.</p>
+        </div>
+    );
+}
+
 export default function EquipePage() {
     const { user } = useOutletContext<{ user: SessionUser }>();
     const navigate = useNavigate();
@@ -93,6 +177,7 @@ export default function EquipePage() {
     const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([]);
     const [resendingId, setResendingId] = useState<string | null>(null);
     const [, setCooldownTick] = useState(0);
+    const [nowMs, setNowMs] = useState(() => Date.now());
     const [actionsOpenId, setActionsOpenId] = useState<string | null>(null);
     const [actionsMenuPosition, setActionsMenuPosition] = useState<{ top: number; left: number; width: number; openAbove: boolean; bottom?: number } | null>(null);
     const [editModalMember, setEditModalMember] = useState<TeamMember | null>(null);
@@ -107,9 +192,13 @@ export default function EquipePage() {
     const RESEND_COOLDOWN_MS = 40_000;
 
     useEffect(() => {
+        setNowMs(Date.now());
         const anyCooldown = pendingInvitations.some((p) => Date.now() - new Date(p.lastSentAt).getTime() < RESEND_COOLDOWN_MS);
         if (!anyCooldown) return;
-        const t = setInterval(() => setCooldownTick((n) => n + 1), 1000);
+        const t = setInterval(() => {
+            setCooldownTick((n) => n + 1);
+            setNowMs(Date.now());
+        }, 1000);
         return () => clearInterval(t);
     }, [pendingInvitations]);
 
@@ -201,8 +290,6 @@ export default function EquipePage() {
             setInviting(false);
         }
     };
-
-    const canResend = (lastSentAt: string) => Date.now() - new Date(lastSentAt).getTime() >= RESEND_COOLDOWN_MS;
 
     const handleResendInvite = async (invitationId: string) => {
         setResendingId(invitationId);
@@ -355,67 +442,22 @@ export default function EquipePage() {
                     </div>
                 )}
 
-                {/* Invite Form */}
                 {showInvite && (
-                    <form onSubmit={handleInvite} className="rounded-3xl bg-card border border-emerald-500/20 p-6 flex flex-col sm:flex-row gap-4">
-                        <input
-                            type="email"
-                            value={inviteEmail}
-                            onChange={(e) => setInviteEmail(e.target.value)}
-                            placeholder="Email do vendedor"
-                            className="flex-1 h-12 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-                            required
-                        />
-                        <Button
-                            type="submit"
-                            variant="primary"
-                            disabled={inviting || !inviteEmail.trim()}
-                            icon={inviting ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
-                            className="h-12 px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 border-0"
-                        >
-                            {inviting ? 'Convidando...' : 'Enviar Convite'}
-                        </Button>
-                    </form>
+                    <TeamInviteForm
+                        email={inviteEmail}
+                        onEmailChange={setInviteEmail}
+                        inviting={inviting}
+                        onSubmit={handleInvite}
+                    />
                 )}
 
-                {/* Lista de convites pendentes: Convite enviado + Reenviar (40s) */}
-                {pendingInvitations.length > 0 && (
-                    <div className="rounded-3xl bg-card border border-amber-500/20 p-6 flex flex-col gap-3">
-                        <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Convites enviados (aguardando aceite)</h3>
-                        <ul className="space-y-2">
-                            {pendingInvitations.map((p) => {
-                                const cooldown = !canResend(p.lastSentAt);
-                                const secondsLeft = cooldown
-                                    ? Math.ceil((RESEND_COOLDOWN_MS - (Date.now() - new Date(p.lastSentAt).getTime())) / 1000)
-                                    : 0;
-                                return (
-                                    <li key={p.id} className="flex items-center justify-between gap-4 py-2 border-b border-border/50 last:border-0">
-                                        <span className="text-sm text-foreground">{p.email}</span>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs text-muted">Convite enviado</span>
-                                            <Button
-                                                type="button"
-                                                variant="secondary"
-                                                size="sm"
-                                                disabled={cooldown || resendingId === p.id}
-                                                onClick={() => handleResendInvite(p.id)}
-                                                icon={resendingId === p.id ? <Loader2 size={14} className="animate-spin" /> : undefined}
-                                                className="min-w-[100px]"
-                                            >
-                                                {(() => {
-                                                if (resendingId === p.id) return 'Enviando...';
-                                                if (cooldown) return `Reenviar (${secondsLeft}s)`;
-                                                return 'Reenviar';
-                                              })()}
-                                            </Button>
-                                        </div>
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                        <p className="text-xs text-muted">A pessoa só entra na equipe após aceitar o convite pelo link do email.</p>
-                    </div>
-                )}
+                <TeamPendingInvitationsList
+                    invitations={pendingInvitations}
+                    resendCooldownMs={RESEND_COOLDOWN_MS}
+                    resendingId={resendingId}
+                    onResend={handleResendInvite}
+                    nowMs={nowMs}
+                />
 
                 {loading ? (
                     <div className="flex items-center justify-center p-12 text-muted gap-3">
