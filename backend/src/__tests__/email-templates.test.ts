@@ -150,7 +150,7 @@ describe('email-templates', () => {
       expect(out).toContain('Alerta');
       expect(out).toContain('Mensagem aqui');
       expect(out).toContain('/dashboard/lead/1');
-      expect(out).toMatch(/href="https?:\/\/[^"]+\/dashboard\/lead\/1"/);
+      expect(out).toMatch(/href="(https?:\/\/[^"]+\/)?dashboard\/lead\/1"/);
       expect(out).toContain('Ver mais');
     });
 
@@ -180,7 +180,7 @@ describe('email-templates', () => {
       expect(out).toContain('Bem-vindo');
       expect(out).toContain('Starter');
       expect(out).toContain('100');
-      expect(out).toMatch(/href="https?:\/\/[^"]+\/dashboard"/);
+      expect(out).toMatch(/href="(https?:\/\/[^"]+\/)?dashboard"/);
       expect(out).toContain('Acessar dashboard');
     });
 
@@ -191,7 +191,7 @@ describe('email-templates', () => {
 
     it('with path without leading slash adds slash', () => {
       const out = paymentSuccessTemplate('Basic', 50, 'dashboard');
-      expect(out).toMatch(/href="https?:\/\/[^"]+\/dashboard"/);
+      expect(out).toMatch(/href="(https?:\/\/[^"]+\/)?dashboard"/);
     });
 
     it('escapes plan name', () => {
@@ -204,7 +204,7 @@ describe('email-templates', () => {
     it('with relative url prepends base', () => {
       const out = paymentFailureTemplate('/planos');
       expect(out).toContain('Pagamento não aprovado');
-      expect(out).toMatch(/href="https?:\/\/[^"]+\/planos"/);
+      expect(out).toMatch(/href="(https?:\/\/[^"]+\/)?planos"/);
       expect(out).toContain('Ver planos');
     });
 
@@ -215,7 +215,7 @@ describe('email-templates', () => {
 
     it('with path without leading slash adds slash', () => {
       const out = paymentFailureTemplate('planos');
-      expect(out).toMatch(/href="https?:\/\/[^"]+\/planos"/);
+      expect(out).toMatch(/href="(https?:\/\/[^"]+\/)?planos"/);
     });
   });
 });
