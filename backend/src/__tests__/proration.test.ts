@@ -54,4 +54,19 @@ describe('proration', () => {
         expect(result!.amountBrl).toBe(0);
         expect(result!.amountUsd).toBe(0);
     });
+
+    it('uses annual cycle for period calculation when cycle is annual', () => {
+        const now = new Date();
+        const in180Days = new Date(now.getTime() + 180 * 24 * 60 * 60 * 1000);
+        const result = computeProratedUpgradeAmount({
+            currentPlan: 'BASIC',
+            targetPlan: 'PRO',
+            cycle: 'annual',
+            currentPeriodEnd: in180Days,
+        });
+        expect(result).not.toBeNull();
+        expect(result!.remainingRatio).toBeGreaterThan(0);
+        expect(result!.amountBrl).toBeGreaterThanOrEqual(0);
+        expect(result!.amountUsd).toBeGreaterThanOrEqual(0);
+    });
 });

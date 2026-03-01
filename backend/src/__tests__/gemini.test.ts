@@ -161,4 +161,76 @@ describe('Gemini AI Lib', () => {
         expect(prompt).toContain('DADOS DO LEAD:');
         expect(prompt).toContain('Nome do Negócio: Loja PT');
     });
+
+    it('when AI throws returns fallback analysis with translated error message', async () => {
+        jest.mocked(generateCompletionForRole).mockRejectedValueOnce(new Error('429 quota exceeded'));
+        const business: BusinessData = { placeId: 'p-err', name: 'Err Lead' };
+        const result = await analyzeLead(business, undefined, 'pt');
+        expect(result.analysis.score).toBe(0);
+        expect(result.analysis.scoreLabel).toBe('Indisponível');
+        expect(result.analysis.summary).toContain('Limite de uso');
+    });
+
+    it('when AI throws 401 returns fallback with API key message', async () => {
+        jest.mocked(generateCompletionForRole).mockRejectedValueOnce(new Error('401 invalid api key'));
+        const business: BusinessData = { placeId: 'p-401', name: 'Lead' };
+        const result = await analyzeLead(business, undefined, 'pt');
+        expect(result.analysis.summary).toContain('Chave da API inválida');
+    });
+
+    it('when AI throws no ai config returns fallback with config message', async () => {
+        jest.mocked(generateCompletionForRole).mockRejectedValueOnce(new Error('no ai config for role'));
+        const business: BusinessData = { placeId: 'p-noconf', name: 'Lead' };
+        const result = await analyzeLead(business, undefined, 'pt');
+        expect(result.analysis.summary).toContain('IA não configurada');
+    });
+
+    it('when AI throws 403 returns fallback with restriction message', async () => {
+        jest.mocked(generateCompletionForRole).mockRejectedValueOnce(new Error('403 restriction'));
+        const business: BusinessData = { placeId: 'p-403', name: 'Lead' };
+        const result = await analyzeLead(business, undefined, 'pt');
+        expect(result.analysis.summary).toContain('restrição');
+    });
+
+    it('when AI throws 500 returns fallback with unavailable message', async () => {
+        jest.mocked(generateCompletionForRole).mockRejectedValueOnce(new Error('500 unavailable'));
+        const business: BusinessData = { placeId: 'p-500', name: 'Lead' };
+        const result = await analyzeLead(business, undefined, 'pt');
+        expect(result.analysis.summary).toContain('indisponível');
+    });
+
+    it('when AI throws 404 model returns fallback with model message', async () => {
+        jest.mocked(generateCompletionForRole).mockRejectedValueOnce(new Error('404 no longer available'));
+        const business: BusinessData = { placeId: 'p-404', name: 'Lead' };
+        const result = await analyzeLead(business, undefined, 'pt');
+        expect(result.analysis.summary).toContain('não está mais disponível');
+    });
+
+    it('when userProfile not provided but userId provided loads profile from DB', async () => {
+        prisma.user.findUnique.mockResolvedValueOnce({
+            id: 'user-1',
+            companyName: 'DB Company',
+            productService: 'DB Service',
+            targetAudience: 'DB Audience',
+            mainBenefit: 'DB Benefit',
+        } as never);
+        const business: BusinessData = { placeId: 'p-db', name: 'Lead' };
+        await analyzeLead(business, undefined, 'pt', 'user-1');
+        const callArgs = jest.mocked(generateCompletionForRole).mock.calls;
+        const prompt = callArgs[callArgs.length - 1][1].prompt as string;
+        expect(prompt).toContain('DB Company');
+        expect(prompt).toContain('DB Service');
+    });
+
+    it('when business has website prompt includes website note', async () => {
+        const business: BusinessData = {
+            placeId: 'p-web',
+            name: 'With Web',
+            websiteUri: 'https://example.com',
+        };
+        await analyzeLead(business, undefined, 'pt');
+        const callArgs = jest.mocked(generateCompletionForRole).mock.calls;
+        const prompt = callArgs[callArgs.length - 1][1].prompt as string;
+        expect(prompt).toContain('POSSUI website');
+    });
 });

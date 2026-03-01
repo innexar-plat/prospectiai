@@ -56,6 +56,24 @@ describe('db-sync', () => {
         })
       );
     });
+    it('uses internationalPhoneNumber when national is missing', async () => {
+      prisma.lead.upsert.mockResolvedValue({});
+      await syncLead({
+        ...minimalPlace,
+        nationalPhoneNumber: null,
+        internationalPhoneNumber: '+351123456789',
+      });
+      const call = prisma.lead.upsert.mock.calls[0][0];
+      expect(call.update.phone).toBe('+351123456789');
+      expect(call.create.phone).toBe('+351123456789');
+    });
+    it('uses empty array when types is null', async () => {
+      prisma.lead.upsert.mockResolvedValue({});
+      await syncLead({ ...minimalPlace, types: null });
+      const call = prisma.lead.upsert.mock.calls[0][0];
+      expect(call.update.types).toEqual([]);
+      expect(call.create.types).toEqual([]);
+    });
     it('returns null and does not throw when upsert fails', async () => {
       prisma.lead.upsert.mockRejectedValue(new Error('DB error'));
       const result = await syncLead(minimalPlace);

@@ -105,9 +105,8 @@ jobs:
         env:
           DATABASE_URL: postgres://app:app@localhost:5433/app
         run: |
-          (cd backend && npx prisma generate && npm run test -- --coverage --coverageReporters=lcov --coverageReporters=text) || true
-          mkdir -p backend/coverage
-          if [ ! -f backend/coverage/lcov.info ]; then echo -e "SF:\nend_of_record" > backend/coverage/lcov.info; fi
+          (cd backend && npx prisma generate && npm run test -- --coverage --coverageReporters=lcov --coverageReporters=text)
+          if [ ! -f backend/coverage/lcov.info ]; then echo "Backend lcov.info was not generated" && exit 1; fi
 
       - name: Frontend coverage
         run: npm run test:coverage -w frontend

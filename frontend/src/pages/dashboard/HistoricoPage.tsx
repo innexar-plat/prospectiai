@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Clock, Search, CalendarDays, ChevronRight, ArrowLeft, Star, Phone, Globe, MapPin, FileText, User, BarChart3, Loader2, AlertTriangle, CheckCircle2, Lock } from 'lucide-react';
+import { Clock, Search, CalendarDays, ChevronRight, ArrowLeft, Star, Phone, Globe, MapPin, FileText, User, BarChart3, Loader2 } from 'lucide-react';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import {
   searchApi,

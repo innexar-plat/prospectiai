@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { SidebarNav } from './SidebarNav';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
+import type { SessionUser } from '@/lib/api';
 
 // Mock Lucide
 vi.mock('lucide-react', async () => {
@@ -57,7 +58,7 @@ describe('SidebarNav', () => {
     it('renders correctly in expanded state', () => {
         render(
             <MemoryRouter>
-                <SidebarNav user={mockUser as any} onLogout={vi.fn()} />
+                <SidebarNav user={mockUser as SessionUser} onLogout={vi.fn()} />
             </MemoryRouter>
         );
 
@@ -70,7 +71,7 @@ describe('SidebarNav', () => {
         localStorage.setItem('prospector_sidebar_collapsed', '1');
         render(
             <MemoryRouter>
-                <SidebarNav user={mockUser as any} onLogout={vi.fn()} />
+                <SidebarNav user={mockUser as SessionUser} onLogout={vi.fn()} />
             </MemoryRouter>
         );
 
@@ -81,7 +82,7 @@ describe('SidebarNav', () => {
     it('shows user information in footer', () => {
         render(
             <MemoryRouter>
-                <SidebarNav user={mockUser as any} onLogout={vi.fn()} />
+                <SidebarNav user={mockUser as SessionUser} onLogout={vi.fn()} />
             </MemoryRouter>
         );
 

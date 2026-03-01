@@ -3,7 +3,7 @@ import { Search, Clock, Target, BarChart3, User, Settings, LogOut, Swords, Trend
 import { cn } from '@/lib/utils';
 import type { SessionUser } from '@/lib/api';
 import { getPlanDisplayName } from '@/lib/billing-config';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Logo } from '@/components/brand/Logo';
 
@@ -104,6 +104,7 @@ export function SidebarNav({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(getStoredSidebarCollapsed);
   const [upgradeModal, setUpgradeModal] = useState<{ planName: string; feature: string } | null>(null);
   const location = useLocation();
+  const prevPathnameRef = useRef(location.pathname);
 
   const toggleSection = (title: string) =>
     setSectionCollapsed((prev) => ({ ...prev, [title]: !prev[title] }));
@@ -117,8 +118,10 @@ export function SidebarNav({
   };
 
   useEffect(() => {
-    if (mobileOpen && onMobileClose) onMobileClose();
-  }, [location.pathname, mobileOpen, onMobileClose]);
+    if (prevPathnameRef.current === location.pathname) return;
+    prevPathnameRef.current = location.pathname;
+    onMobileClose?.();
+  }, [location.pathname, onMobileClose]);
 
   useEffect(() => {
     if (!upgradeModal) return;

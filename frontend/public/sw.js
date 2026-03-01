@@ -24,22 +24,28 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
-// Fetch — Network-first with cache fallback
+// Fetch — Network-first with cache fallback. Always return a valid Response (required by respondWith).
 self.addEventListener('fetch', (event) => {
-    // Skip non-GET and API calls
     if (event.request.method !== 'GET' || event.request.url.includes('/api/')) return;
 
     event.respondWith(
         fetch(event.request)
             .then((response) => {
-                // Cache only full responses (200). Cache API does not support 206 Partial Content
                 if (response.status === 200) {
                     const clone = response.clone();
                     caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
                 }
                 return response;
             })
-            .catch(() => caches.match(event.request))
+            .catch(() =>
+                caches.match(event.request).then((cached) => {
+                    if (cached) return cached;
+                    if (event.request.mode === 'navigate') {
+                        return caches.match('/') || new Response('', { status: 503, statusText: 'Offline' });
+                    }
+                    return new Response('', { status: 503, statusText: 'Service Unavailable' });
+                })
+            )
     );
 });
 

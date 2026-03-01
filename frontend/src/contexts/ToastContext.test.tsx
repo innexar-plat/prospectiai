@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock crypto.randomUUID
 if (!global.crypto) {
-    (global as any).crypto = {};
+    (global as unknown as { crypto: Record<string, unknown> }).crypto = {};
 }
 if (!global.crypto.randomUUID) {
     global.crypto.randomUUID = vi.fn().mockReturnValue('test-uuid');

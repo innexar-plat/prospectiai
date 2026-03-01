@@ -37,4 +37,14 @@ describe('billing-config', () => {
         expect(isDowngrade('PRO', 'BASIC')).toBe(true);
         expect(isUpgrade('BASIC', 'PRO')).toBe(true);
     });
+
+    it('isDowngrade returns false for unknown plan', () => {
+        expect(isDowngrade('UNKNOWN' as PlanType, 'BASIC')).toBe(false);
+        expect(isDowngrade('BASIC', 'UNKNOWN' as PlanType)).toBe(false);
+    });
+
+    it('isUpgrade returns false for unknown plan', () => {
+        expect(isUpgrade('UNKNOWN' as PlanType, 'PRO')).toBe(false);
+        expect(isUpgrade('BASIC', 'UNKNOWN' as PlanType)).toBe(false);
+    });
 });
