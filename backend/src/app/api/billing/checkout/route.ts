@@ -51,6 +51,24 @@ function computeCheckoutFlags(
     return { isDowngradeRequest, isUpgradeRequest, isStripeSubscription };
 }
 
+function logScheduleAtPeriodEndNotDowngrade(
+    userId: string,
+    planId: string,
+    workspace: WorkspaceForCheckout | undefined,
+): void {
+    const reasons: string[] = [];
+    if (workspace?.plan == null) reasons.push('no_current_plan');
+    if (!workspace) reasons.push('no_workspace');
+    if (workspace?.plan != null && !isDowngrade(workspace.plan, planId as PlanType)) reasons.push('not_downgrade_tier');
+    logger.info('Checkout: scheduleAtPeriodEnd true but not treating as downgrade', {
+        userId,
+        planId,
+        currentPlan: workspace?.plan ?? null,
+        hasWorkspace: !!workspace,
+        reasons,
+    });
+}
+
 async function getCheckoutContext(
     session: { user: SessionUser },
     parsed: { data: { planId: string; interval?: string; cycle?: string; locale?: string; card_token_id?: string; scheduleAtPeriodEnd?: boolean } },
@@ -68,20 +86,8 @@ async function getCheckoutContext(
     const workspace = userWithWorkspace?.workspaces?.[0]?.workspace as WorkspaceForCheckout | undefined;
     const { isDowngradeRequest, isUpgradeRequest, isStripeSubscription } = computeCheckoutFlags(workspace, planId, scheduleAtPeriodEnd === true);
     if (scheduleAtPeriodEnd === true && !isDowngradeRequest) {
-        const reasons: string[] = [];
-        if (workspace?.plan == null) reasons.push('no_current_plan');
-        if (!workspace) reasons.push('no_workspace');
-        if (workspace?.plan != null && !isDowngrade(workspace.plan, planId as PlanType)) reasons.push('not_downgrade_tier');
-        logger.info('Checkout: scheduleAtPeriodEnd true but not treating as downgrade', {
-            userId: session.user.id,
-            planId,
-            currentPlan: workspace?.plan ?? null,
-            hasWorkspace: !!workspace,
-            reasons,
-        });
+        logScheduleAtPeriodEndNotDowngrade(session.user.id, planId, workspace);
     }
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
-    const localePath = locale || 'pt';
     const { price_brl: priceBrl, price_usd: priceUsd } = getPlanPrices(plan, cycle);
     return {
         ok: true,
@@ -90,8 +96,8 @@ async function getCheckoutContext(
             plan,
             cycle,
             planId,
-            appUrl,
-            localePath,
+            appUrl: process.env.NEXT_PUBLIC_APP_URL || '',
+            localePath: locale || 'pt',
             isDowngradeRequest,
             isUpgradeRequest,
             isStripeSubscription,

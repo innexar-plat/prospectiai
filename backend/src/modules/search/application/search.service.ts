@@ -122,6 +122,28 @@ async function tryCacheOrDbSearch(
     return { places: slice, fromLocalDb: true };
 }
 
+async function resolveSearchLocationBias(
+    cityTrim: string | undefined,
+    pageToken: string | undefined | null,
+    state: string | undefined | null,
+    country: string | undefined | null,
+    radiusKm: number | undefined | null,
+): Promise<{ center: { latitude: number; longitude: number }; radius: number } | undefined> {
+    if (!cityTrim || pageToken) return undefined;
+    const coords = await geocodeAddress(cityTrim, state ?? null, country ?? 'Brasil');
+    if (!coords) {
+        logger.info('Search: geocode failed, no locationBias', { city: cityTrim });
+        return undefined;
+    }
+    const radiusKmNum = radiusKm ?? DEFAULT_LOCATION_RADIUS_KM;
+    const radiusM = Math.min(
+        MAX_LOCATION_RADIUS_M,
+        Math.round(radiusKmNum * RADIUS_KM_TO_M) || Math.round(DEFAULT_LOCATION_RADIUS_KM * RADIUS_KM_TO_M)
+    );
+    logger.info('Search: locationBias applied', { city: cityTrim, radiusKm: radiusKmNum, radiusM });
+    return { center: coords, radius: radiusM };
+}
+
 export async function runSearch(input: SearchInput, userId: string): Promise<SearchResult> {
     const { textQuery, includedType, pageSize, pageToken, hasWebsite, hasPhone, city, state, country, radiusKm } = input;
     const effectivePageSize = Math.min(PLACES_PAGE_SIZE_MAX, Math.max(1, pageSize ?? PLACES_PAGE_SIZE_MAX));
@@ -167,22 +189,7 @@ export async function runSearch(input: SearchInput, userId: string): Promise<Sea
     );
     if (earlyResult) return earlyResult;
 
-    let locationBias: { center: { latitude: number; longitude: number }; radius: number } | undefined;
-    const cityTrim = city?.trim();
-    if (cityTrim && !pageToken) {
-        const coords = await geocodeAddress(cityTrim, state ?? null, country ?? 'Brasil');
-        if (coords) {
-            const radiusKmNum = radiusKm ?? DEFAULT_LOCATION_RADIUS_KM;
-            const radiusM = Math.min(
-                MAX_LOCATION_RADIUS_M,
-                Math.round(radiusKmNum * RADIUS_KM_TO_M) || Math.round(DEFAULT_LOCATION_RADIUS_KM * RADIUS_KM_TO_M)
-            );
-            locationBias = { center: coords, radius: radiusM };
-            logger.info('Search: locationBias applied', { city: cityTrim, radiusKm: radiusKmNum, radiusM });
-        } else {
-            logger.info('Search: geocode failed, no locationBias', { city: cityTrim });
-        }
-    }
+    const locationBias = await resolveSearchLocationBias(city?.trim(), pageToken, state, country, radiusKm);
 
     if (pageToken) {
         await new Promise((r) => setTimeout(r, NEXT_PAGE_TOKEN_DELAY_MS));

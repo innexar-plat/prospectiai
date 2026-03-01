@@ -51,6 +51,32 @@ function buildAnalysisRequestBody(
     return mode === 'profile' ? buildProfileRequestBody(profile) : buildSearchRequestBody(search);
 }
 
+function MinhaEmpresaNoAccess({ onUpgrade }: { onUpgrade: () => void }) {
+    return (
+        <>
+            <HeaderDashboard title="Análise da minha empresa" subtitle="Diagnóstico com Reclame Aqui, Google e redes sociais." breadcrumb="Inteligência / Minha empresa" />
+            <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full">
+                <div className="rounded-[2.4rem] bg-gradient-to-br from-violet-900/30 via-emerald-900/20 to-background border border-violet-500/20 p-12 flex flex-col items-center justify-center gap-6 min-h-[400px] text-center shadow-2xl relative overflow-hidden">
+                    <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-violet-500/10 blur-[100px] -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none" />
+                    <div className="w-20 h-20 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center relative z-10">
+                        <Lock size={32} className="text-violet-400" />
+                    </div>
+                    <div className="space-y-2 relative z-10 max-w-xl">
+                        <h2 className="text-2xl font-black text-foreground">Análise da minha empresa</h2>
+                        <p className="text-muted leading-relaxed">
+                            A IA analisa <span className="text-violet-400 font-bold">Reclame Aqui</span>, avaliações Google,
+                            <span className="text-violet-400 font-bold"> redes sociais</span> (link + dados públicos) e sugere nicho e modelo de negócio.
+                        </p>
+                    </div>
+                    <Button variant="primary" onClick={onUpgrade} className="mt-4 min-h-[56px] px-8 rounded-xl font-bold text-white bg-gradient-to-r from-violet-600 to-violet-700 hover:from-violet-500 hover:to-violet-600 shadow-lg shadow-violet-500/25 border-0 relative z-10">
+                        Faça upgrade para acessar
+                    </Button>
+                </div>
+            </div>
+        </>
+    );
+}
+
 export default function MinhaEmpresaPage() {
     const { user } = useOutletContext<{ user: SessionUser }>();
     const navigate = useNavigate();
@@ -111,29 +137,7 @@ export default function MinhaEmpresaPage() {
     };
 
     if (!hasAccess) {
-        return (
-            <>
-                <HeaderDashboard title="Análise da minha empresa" subtitle="Diagnóstico com Reclame Aqui, Google e redes sociais." breadcrumb="Inteligência / Minha empresa" />
-                <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full">
-                    <div className="rounded-[2.4rem] bg-gradient-to-br from-violet-900/30 via-emerald-900/20 to-background border border-violet-500/20 p-12 flex flex-col items-center justify-center gap-6 min-h-[400px] text-center shadow-2xl relative overflow-hidden">
-                        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-violet-500/10 blur-[100px] -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none" />
-                        <div className="w-20 h-20 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center relative z-10">
-                            <Lock size={32} className="text-violet-400" />
-                        </div>
-                        <div className="space-y-2 relative z-10 max-w-xl">
-                            <h2 className="text-2xl font-black text-foreground">Análise da minha empresa</h2>
-                            <p className="text-muted leading-relaxed">
-                                A IA analisa <span className="text-violet-400 font-bold">Reclame Aqui</span>, avaliações Google,
-                                <span className="text-violet-400 font-bold"> redes sociais</span> (link + dados públicos) e sugere nicho e modelo de negócio.
-                            </p>
-                        </div>
-                        <Button variant="primary" onClick={() => navigate('/dashboard/planos')} className="mt-4 min-h-[56px] px-8 rounded-xl font-bold text-white bg-gradient-to-r from-violet-600 to-violet-700 hover:from-violet-500 hover:to-violet-600 shadow-lg shadow-violet-500/25 border-0 relative z-10">
-                            Faça upgrade para acessar
-                        </Button>
-                    </div>
-                </div>
-            </>
-        );
+        return <MinhaEmpresaNoAccess onUpgrade={() => navigate('/dashboard/planos')} />;
     }
 
     return (

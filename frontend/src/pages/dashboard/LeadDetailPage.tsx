@@ -215,6 +215,28 @@ function LeadContactActions({
   );
 }
 
+function LeadDetailLoading() {
+  return (
+    <div className="p-8 max-w-3xl mx-auto">
+      <div className="flex items-center gap-3 text-muted">
+        <Loader2 size={24} className="animate-spin" />
+        <span>Carregando detalhes do lead...</span>
+      </div>
+    </div>
+  );
+}
+
+function LeadDetailNotFound({ onBack }: { onBack: () => void }) {
+  return (
+    <div className="p-8 max-w-3xl mx-auto">
+      <p className="text-muted mb-4">Lead não encontrado.</p>
+      <Button variant="secondary" onClick={onBack}>
+        Voltar aos resultados
+      </Button>
+    </div>
+  );
+}
+
 export default function LeadDetailPage() {
   const { placeId } = useParams<{ placeId: string }>();
   const navigate = useNavigate();
@@ -366,28 +388,8 @@ export default function LeadDetailPage() {
   };
 
   if (!placeId) return null;
-
-  if (loadingDetails && !place) {
-    return (
-      <div className="p-8 max-w-3xl mx-auto">
-        <div className="flex items-center gap-3 text-muted">
-          <Loader2 size={24} className="animate-spin" />
-          <span>Carregando detalhes do lead...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (!place) {
-    return (
-      <div className="p-8 max-w-3xl mx-auto">
-        <p className="text-muted mb-4">Lead não encontrado.</p>
-        <Button variant="secondary" onClick={() => navigate(-1)}>
-          Voltar aos resultados
-        </Button>
-      </div>
-    );
-  }
+  if (loadingDetails && !place) return <LeadDetailLoading />;
+  if (!place) return <LeadDetailNotFound onBack={() => navigate(-1)} />;
 
   const name = place.displayName?.text ?? place.id;
 

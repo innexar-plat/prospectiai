@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { CreditCard, Zap, Crown, Rocket, Check, Loader2, Clock, ArrowUpRight, ArrowDownRight, RefreshCw } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
@@ -103,6 +103,22 @@ interface PlanCardActionButtonProps {
     onUpgrade: (key: string) => void;
 }
 
+function renderPlanCardFooter(
+    isCurrent: boolean,
+    planKey: string,
+    loadingPlan: string | null,
+    isDowngrade: (key: string) => boolean,
+    onUpgrade: (key: string) => void,
+): ReactNode {
+    if (isCurrent) {
+        return <div className="text-center text-xs font-bold text-violet-400 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20">Plano Atual</div>;
+    }
+    if (planKey === 'FREE') {
+        return <div className="text-center text-xs text-muted py-2">Plano gratuito</div>;
+    }
+    return <PlanCardActionButton planKey={planKey} loadingPlan={loadingPlan} isDowngrade={isDowngrade} onUpgrade={onUpgrade} />;
+}
+
 function PlanosGridContent({
     plansLoading,
     plansError,
@@ -184,13 +200,7 @@ function PlanosGridContent({
                                 </li>
                             ))}
                         </ul>
-                        {isCurrent ? (
-                            <div className="text-center text-xs font-bold text-violet-400 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20">Plano Atual</div>
-                        ) : plan.key === 'FREE' ? (
-                            <div className="text-center text-xs text-muted py-2">Plano gratuito</div>
-                        ) : (
-                            <PlanCardActionButton planKey={plan.key} loadingPlan={loadingPlan} isDowngrade={isDowngrade} onUpgrade={onUpgrade} />
-                        )}
+                        {renderPlanCardFooter(isCurrent, plan.key, loadingPlan, isDowngrade, onUpgrade)}
                     </div>
                 );
             })}

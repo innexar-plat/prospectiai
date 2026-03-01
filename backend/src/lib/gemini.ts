@@ -83,6 +83,16 @@ async function resolveFinalProfile(userProfile?: UserBusinessProfile, userId?: s
     return finalProfile;
 }
 
+function buildTaskDescription(isEn: boolean): string {
+    return isEn
+        ? `Your task is to generate a DEEP, DETAILED, and ACTIONABLE strategic prospecting report for the lead below.
+Be like a senior consultant who has researched this company thoroughly. Avoid generic statements.
+Every insight must be specific to THIS business and how YOUR product/service can help them.`
+        : `Sua tarefa é gerar um relatório estratégico de prospecção PROFUNDO, DETALHADO e ACIONÁVEL para o lead abaixo.
+Seja como um consultor sênior que pesquisou a fundo esta empresa. Evite afirmações genéricas.
+Cada análise deve ser específica para ESTE negócio e como o SEU produto/serviço pode ajudá-los.`;
+}
+
 function buildCompanyContext(finalProfile: UserBusinessProfile | undefined, isEn: boolean): string {
     const fallbackRole = isEn
         ? 'You are a Senior B2B Strategic Consultant specialized in commercial prospecting.'
@@ -137,14 +147,7 @@ export async function analyzeLead(
         : noReviewsLabel;
 
     const companyContext = buildCompanyContext(finalProfile, isEn);
-
-    const taskDescription = isEn
-        ? `Your task is to generate a DEEP, DETAILED, and ACTIONABLE strategic prospecting report for the lead below.
-Be like a senior consultant who has researched this company thoroughly. Avoid generic statements.
-Every insight must be specific to THIS business and how YOUR product/service can help them.`
-        : `Sua tarefa é gerar um relatório estratégico de prospecção PROFUNDO, DETALHADO e ACIONÁVEL para o lead abaixo.
-Seja como um consultor sênior que pesquisou a fundo esta empresa. Evite afirmações genéricas.
-Cada análise deve ser específica para ESTE negócio e como o SEU produto/serviço pode ajudá-los.`;
+    const taskDescription = buildTaskDescription(isEn);
 
     const prompt = `${companyContext}
 
@@ -298,24 +301,25 @@ ${((): string => {
 
 async function ensureGuestUserIfNeeded(userId: string | undefined, profile?: UserBusinessProfile): Promise<string> {
     const finalUserId = userId || 'cl_guest_default';
-    if (userId) return finalUserId;
-    await prisma.user.upsert({
-        where: { id: finalUserId },
-        update: {
-            companyName: profile?.companyName,
-            productService: profile?.productService,
-            targetAudience: profile?.targetAudience,
-            mainBenefit: profile?.mainBenefit,
-        },
-        create: {
-            id: finalUserId,
-            name: 'Guest User',
-            companyName: profile?.companyName,
-            productService: profile?.productService,
-            targetAudience: profile?.targetAudience,
-            mainBenefit: profile?.mainBenefit,
-        }
-    });
+    if (!userId) {
+        await prisma.user.upsert({
+            where: { id: finalUserId },
+            update: {
+                companyName: profile?.companyName,
+                productService: profile?.productService,
+                targetAudience: profile?.targetAudience,
+                mainBenefit: profile?.mainBenefit,
+            },
+            create: {
+                id: finalUserId,
+                name: 'Guest User',
+                companyName: profile?.companyName,
+                productService: profile?.productService,
+                targetAudience: profile?.targetAudience,
+                mainBenefit: profile?.mainBenefit,
+            }
+        });
+    }
     return finalUserId;
 }
 

@@ -120,6 +120,44 @@ function buildSegmentBreakdownWithOpportunity(marketData: { segments: Array<{ ty
     });
 }
 
+function parseViabilityAiReport(
+    rawText: string,
+    city: string,
+): {
+    score: number;
+    verdict: string;
+    goNoGo: string;
+    summary: string;
+    strengths: string[];
+    risks: string[];
+    recommendations: string[];
+    estimatedInvestment: string;
+    bestLocations: string[];
+    dailyLeadsTarget: number;
+    suggestedOffer: string;
+    suggestedTicket: string;
+} {
+    try {
+        const cleaned = rawText.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+        return JSON.parse(cleaned);
+    } catch {
+        return {
+            score: 5,
+            verdict: 'Análise parcial',
+            goNoGo: 'CAUTION',
+            summary: 'Não foi possível gerar análise completa. Tente novamente.',
+            strengths: ['Dados de mercado coletados com sucesso'],
+            risks: ['Análise de IA incompleta'],
+            recommendations: ['Tente novamente com termos mais específicos'],
+            estimatedInvestment: 'Não estimado',
+            bestLocations: [city],
+            dailyLeadsTarget: 5,
+            suggestedOffer: 'Pacote Website + SEO Local',
+            suggestedTicket: 'Consultar valores',
+        };
+    }
+}
+
 function buildViabilityContext(
     input: ViabilityInput,
     competitorData: { totalCount: number; rankingByRating: Array<{ name: string; rating: number }>; rankingByReviews: Array<{ name: string; reviewCount: number }>; digitalPresence: { withWebsite: number; withoutWebsite: number; withPhone: number; withoutPhone: number }; opportunities: unknown[]; topOpportunities: Array<{ score: number }> },
@@ -197,42 +235,7 @@ export async function runViabilityAnalysis(
         });
     }
 
-    const rawText = result.text;
-
-    let aiReport: {
-        score: number;
-        verdict: string;
-        goNoGo: string;
-        summary: string;
-        strengths: string[];
-        risks: string[];
-        recommendations: string[];
-        estimatedInvestment: string;
-        bestLocations: string[];
-        dailyLeadsTarget: number;
-        suggestedOffer: string;
-        suggestedTicket: string;
-    };
-
-    try {
-        const cleaned = rawText.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
-        aiReport = JSON.parse(cleaned);
-    } catch {
-        aiReport = {
-            score: 5,
-            verdict: 'Análise parcial',
-            goNoGo: 'CAUTION',
-            summary: 'Não foi possível gerar análise completa. Tente novamente.',
-            strengths: ['Dados de mercado coletados com sucesso'],
-            risks: ['Análise de IA incompleta'],
-            recommendations: ['Tente novamente com termos mais específicos'],
-            estimatedInvestment: 'Não estimado',
-            bestLocations: [input.city],
-            dailyLeadsTarget: 5,
-            suggestedOffer: 'Pacote Website + SEO Local',
-            suggestedTicket: 'Consultar valores',
-        };
-    }
+    const aiReport = parseViabilityAiReport(result.text, input.city);
 
     // Normalize goNoGo
     const goNoGo = (['GO', 'CAUTION', 'NO_GO'].includes(aiReport.goNoGo) ? aiReport.goNoGo : 'CAUTION') as 'GO' | 'CAUTION' | 'NO_GO';
