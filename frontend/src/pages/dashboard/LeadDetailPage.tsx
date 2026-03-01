@@ -237,6 +237,205 @@ function LeadDetailNotFound({ onBack }: { onBack: () => void }) {
   );
 }
 
+interface LeadDetailContentProps {
+  place: PlaceDetail | Place;
+  analysis: Analysis | null;
+  tags: LeadTagItem[];
+  leadAnalysisItem: LeadAnalysisListItem | null;
+  togglingFavorite: boolean;
+  showTagInput: boolean;
+  newTag: string;
+  analyzing: boolean;
+  copiedPhone: boolean;
+  onBack: () => void;
+  onToggleFavorite: () => void;
+  onCopyPhone: () => void;
+  onAddTag: (label: string, color: string) => Promise<void>;
+  onRemoveTag: (tagId: string) => Promise<void>;
+  setNewTag: (v: string) => void;
+  setShowTagInput: (v: boolean) => void;
+  onAnalyze: () => void;
+  trackAction: (action: string) => void;
+}
+
+function LeadDetailContent({
+  place,
+  analysis,
+  tags,
+  leadAnalysisItem,
+  togglingFavorite,
+  showTagInput,
+  newTag,
+  analyzing,
+  copiedPhone,
+  onBack,
+  onToggleFavorite,
+  onCopyPhone,
+  onAddTag,
+  onRemoveTag,
+  setNewTag,
+  setShowTagInput,
+  onAnalyze,
+  trackAction,
+}: LeadDetailContentProps) {
+  const name = place.displayName?.text ?? place.id;
+  return (
+    <>
+      <HeaderDashboard
+        title={name}
+        subtitle="Detalhes e análise com IA"
+        breadcrumb="Prospecção Ativa / Resultados / Lead"
+      />
+      <div className="p-6 sm:p-8 max-w-4xl mx-auto space-y-6">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted hover:text-foreground -ml-2"
+            icon={<ArrowLeft size={16} />}
+            onClick={onBack}
+          >
+            Voltar aos resultados
+          </Button>
+          {leadAnalysisItem && (
+            <button
+              type="button"
+              onClick={onToggleFavorite}
+              disabled={togglingFavorite}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium bg-surface border border-border text-foreground hover:bg-violet-500/10 hover:border-violet-500/30 transition-colors disabled:opacity-50"
+              title={leadAnalysisItem.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
+              aria-label={leadAnalysisItem.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
+            >
+              {togglingFavorite ? (
+                <Loader2 size={18} className="animate-spin shrink-0" />
+              ) : (
+                <Star size={18} className={leadAnalysisItem.isFavorite ? 'fill-amber-400 text-amber-400' : 'shrink-0'} />
+              )}
+              {leadAnalysisItem.isFavorite ? 'Favorito' : 'Favoritar'}
+            </button>
+          )}
+        </div>
+
+        <section className="rounded-xl border border-border bg-card p-5 space-y-4">
+          <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">Informações do lead</h2>
+          <div className="grid gap-3 text-sm">
+            {place.formattedAddress && (
+              <div className="flex items-start gap-2 text-muted">
+                <MapPin size={16} className="shrink-0 mt-0.5" />
+                <span>{place.formattedAddress}</span>
+              </div>
+            )}
+            {(place.nationalPhoneNumber || place.internationalPhoneNumber) && (
+              <div className="flex items-center gap-2">
+                <Phone size={16} className="shrink-0 text-muted" />
+                <a
+                  href={`tel:${place.internationalPhoneNumber ?? place.nationalPhoneNumber}`}
+                  className="text-violet-500 hover:underline"
+                  onClick={() => trackAction('CALL_CLICK')}
+                >
+                  {place.nationalPhoneNumber ?? place.internationalPhoneNumber}
+                </a>
+              </div>
+            )}
+            {place.websiteUri && (
+              <div className="flex items-center gap-2">
+                <Globe size={16} className="shrink-0 text-muted" />
+                <a
+                  href={place.websiteUri}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-violet-500 hover:underline inline-flex items-center gap-1"
+                >
+                  Abrir site <ExternalLink size={12} />
+                </a>
+              </div>
+            )}
+            {(place.rating != null || place.userRatingCount != null) && (
+              <p className="text-muted mt-2">
+                {place.rating != null && <>Avaliação: {place.rating}</>}
+                {place.userRatingCount != null && <> · {place.userRatingCount} avaliações</>}
+              </p>
+            )}
+          </div>
+        </section>
+
+        <LeadContactActions place={place} copiedPhone={copiedPhone} onCopyPhone={onCopyPhone} trackAction={trackAction} />
+
+        <section className="rounded-xl border border-border bg-card p-5 space-y-3">
+          <h2 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
+            <Tag size={14} className="text-violet-400" /> Tags
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {tags.map((t) => (
+              <span key={t.id} className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${TAG_COLORS[t.color] || TAG_COLORS.gray}`}>
+                {t.label}
+                <button type="button" onClick={() => onRemoveTag(t.id)} className="hover:opacity-70"><X size={12} /></button>
+              </span>
+            ))}
+            {!tags.find((t) => t.label === 'Quente') && (
+              <button type="button" onClick={() => onAddTag('Quente', 'green')} className="px-3 py-1 rounded-full text-xs font-bold border border-dashed border-emerald-500/30 text-emerald-400/60 hover:bg-emerald-500/10 transition-colors">+ Quente</button>
+            )}
+            {!tags.find((t) => t.label === 'Morno') && (
+              <button type="button" onClick={() => onAddTag('Morno', 'amber')} className="px-3 py-1 rounded-full text-xs font-bold border border-dashed border-amber-500/30 text-amber-400/60 hover:bg-amber-500/10 transition-colors">+ Morno</button>
+            )}
+            {!tags.find((t) => t.label === 'Frio') && (
+              <button type="button" onClick={() => onAddTag('Frio', 'blue')} className="px-3 py-1 rounded-full text-xs font-bold border border-dashed border-blue-500/30 text-blue-400/60 hover:bg-blue-500/10 transition-colors">+ Frio</button>
+            )}
+            {showTagInput ? (
+              <form onSubmit={(e) => { e.preventDefault(); onAddTag(newTag, 'violet'); }} className="flex items-center gap-1">
+                <input
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  placeholder="Nova tag..."
+                  className="h-7 w-28 px-2 bg-surface border border-border rounded-lg text-xs text-foreground placeholder:text-muted focus:outline-none"
+                  autoFocus
+                />
+                <button type="submit" className="text-violet-400 hover:text-violet-300 text-xs font-bold">OK</button>
+                <button type="button" onClick={() => setShowTagInput(false)} className="text-muted hover:text-foreground"><X size={14} /></button>
+              </form>
+            ) : (
+              <button type="button" onClick={() => setShowTagInput(true)} className="px-3 py-1 rounded-full text-xs font-bold border border-dashed border-violet-500/30 text-violet-400/60 hover:bg-violet-500/10 transition-colors inline-flex items-center gap-1">
+                <Plus size={12} /> Custom
+              </button>
+            )}
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-sm">
+          <h2 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
+            <Sparkles size={16} className="text-violet-500" />
+            Análise Estratégica
+          </h2>
+          {!analysis ? (
+            <div className="flex flex-col items-start gap-4 pb-2">
+              <p className="text-sm text-muted">
+                Descubra oportunidades ocultas, pontos fracos da concorrência e receba um relatório completo
+                de como abordar este lead de forma imbatível usando nossa Inteligência Artificial Mapeadora.
+              </p>
+              <Button
+                variant="primary"
+                onClick={onAnalyze}
+                disabled={analyzing}
+                icon={analyzing ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
+                className="w-full sm:w-auto mt-2 min-h-[52px] px-8 rounded-xl font-bold text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 shadow-lg shadow-violet-500/25 border-0 transition-all hover:-translate-y-0.5"
+              >
+                {analyzing ? 'Gerando inteligência avançada...' : 'Mapear Lead com IA'}
+              </Button>
+            </div>
+          ) : (
+            <LeadDetailAnalysisView
+              analysis={analysis}
+              onReanalyze={onAnalyze}
+              analyzing={analyzing}
+              getProviderLabel={getAnalysisProviderLabel}
+            />
+          )}
+        </section>
+      </div>
+    </>
+  );
+}
+
 export default function LeadDetailPage() {
   const { placeId } = useParams<{ placeId: string }>();
   const navigate = useNavigate();
@@ -391,165 +590,26 @@ export default function LeadDetailPage() {
   if (loadingDetails && !place) return <LeadDetailLoading />;
   if (!place) return <LeadDetailNotFound onBack={() => navigate(-1)} />;
 
-  const name = place.displayName?.text ?? place.id;
-
   return (
-    <>
-      <HeaderDashboard
-        title={name}
-        subtitle="Detalhes e análise com IA"
-        breadcrumb="Prospecção Ativa / Resultados / Lead"
-      />
-      <div className="p-6 sm:p-8 max-w-4xl mx-auto space-y-6">
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted hover:text-foreground -ml-2"
-            icon={<ArrowLeft size={16} />}
-            onClick={() => navigate(-1)}
-          >
-            Voltar aos resultados
-          </Button>
-          {leadAnalysisItem && (
-            <button
-              type="button"
-              onClick={handleToggleFavorite}
-              disabled={togglingFavorite}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium bg-surface border border-border text-foreground hover:bg-violet-500/10 hover:border-violet-500/30 transition-colors disabled:opacity-50"
-              title={leadAnalysisItem.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
-              aria-label={leadAnalysisItem.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
-            >
-              {togglingFavorite ? (
-                <Loader2 size={18} className="animate-spin shrink-0" />
-              ) : (
-                <Star size={18} className={leadAnalysisItem.isFavorite ? 'fill-amber-400 text-amber-400' : 'shrink-0'} />
-              )}
-              {leadAnalysisItem.isFavorite ? 'Favorito' : 'Favoritar'}
-            </button>
-          )}
-        </div>
-
-        <section className="rounded-xl border border-border bg-card p-5 space-y-4">
-          <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">Informações do lead</h2>
-          <div className="grid gap-3 text-sm">
-            {place.formattedAddress && (
-              <div className="flex items-start gap-2 text-muted">
-                <MapPin size={16} className="shrink-0 mt-0.5" />
-                <span>{place.formattedAddress}</span>
-              </div>
-            )}
-            {(place.nationalPhoneNumber || place.internationalPhoneNumber) && (
-              <div className="flex items-center gap-2">
-                <Phone size={16} className="shrink-0 text-muted" />
-                <a
-                  href={`tel:${place.internationalPhoneNumber ?? place.nationalPhoneNumber}`}
-                  className="text-violet-500 hover:underline"
-                  onClick={() => trackAction('CALL_CLICK')}
-                >
-                  {place.nationalPhoneNumber ?? place.internationalPhoneNumber}
-                </a>
-              </div>
-            )}
-            {place.websiteUri && (
-              <div className="flex items-center gap-2">
-                <Globe size={16} className="shrink-0 text-muted" />
-                <a
-                  href={place.websiteUri}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-violet-500 hover:underline inline-flex items-center gap-1"
-                >
-                  Abrir site <ExternalLink size={12} />
-                </a>
-              </div>
-            )}
-            {(place.rating != null || place.userRatingCount != null) && (
-              <p className="text-muted mt-2">
-                {place.rating != null && <>Avaliação: {place.rating}</>}
-                {place.userRatingCount != null && <> · {place.userRatingCount} avaliações</>}
-              </p>
-            )}
-          </div>
-        </section>
-
-        <LeadContactActions place={place} copiedPhone={copiedPhone} onCopyPhone={handleCopyPhone} trackAction={trackAction} />
-
-        {/* Smart Tags */}
-        <section className="rounded-xl border border-border bg-card p-5 space-y-3">
-          <h2 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
-            <Tag size={14} className="text-violet-400" /> Tags
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {tags.map((t) => (
-              <span key={t.id} className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${TAG_COLORS[t.color] || TAG_COLORS.gray}`}>
-                {t.label}
-                <button type="button" onClick={() => handleRemoveTag(t.id)} className="hover:opacity-70"><X size={12} /></button>
-              </span>
-            ))}
-            {/* Preset Tags */}
-            {!tags.find((t) => t.label === 'Quente') && (
-              <button type="button" onClick={() => handleAddTag('Quente', 'green')} className="px-3 py-1 rounded-full text-xs font-bold border border-dashed border-emerald-500/30 text-emerald-400/60 hover:bg-emerald-500/10 transition-colors">+ Quente</button>
-            )}
-            {!tags.find((t) => t.label === 'Morno') && (
-              <button type="button" onClick={() => handleAddTag('Morno', 'amber')} className="px-3 py-1 rounded-full text-xs font-bold border border-dashed border-amber-500/30 text-amber-400/60 hover:bg-amber-500/10 transition-colors">+ Morno</button>
-            )}
-            {!tags.find((t) => t.label === 'Frio') && (
-              <button type="button" onClick={() => handleAddTag('Frio', 'blue')} className="px-3 py-1 rounded-full text-xs font-bold border border-dashed border-blue-500/30 text-blue-400/60 hover:bg-blue-500/10 transition-colors">+ Frio</button>
-            )}
-            {/* Custom Tag */}
-            {showTagInput ? (
-              <form onSubmit={(e) => { e.preventDefault(); handleAddTag(newTag, 'violet'); }} className="flex items-center gap-1">
-                <input
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  placeholder="Nova tag..."
-                  className="h-7 w-28 px-2 bg-surface border border-border rounded-lg text-xs text-foreground placeholder:text-muted focus:outline-none"
-                  autoFocus
-                />
-                <button type="submit" className="text-violet-400 hover:text-violet-300 text-xs font-bold">OK</button>
-                <button type="button" onClick={() => setShowTagInput(false)} className="text-muted hover:text-foreground"><X size={14} /></button>
-              </form>
-            ) : (
-              <button type="button" onClick={() => setShowTagInput(true)} className="px-3 py-1 rounded-full text-xs font-bold border border-dashed border-violet-500/30 text-violet-400/60 hover:bg-violet-500/10 transition-colors inline-flex items-center gap-1">
-                <Plus size={12} /> Custom
-              </button>
-            )}
-          </div>
-        </section>
-
-        <section className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-sm">
-          <h2 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
-            <Sparkles size={16} className="text-violet-500" />
-            Análise Estratégica
-          </h2>
-
-          {!analysis ? (
-            <div className="flex flex-col items-start gap-4 pb-2">
-              <p className="text-sm text-muted">
-                Descubra oportunidades ocultas, pontos fracos da concorrência e receba um relatório completo
-                de como abordar este lead de forma imbatível usando nossa Inteligência Artificial Mapeadora.
-              </p>
-              <Button
-                variant="primary"
-                onClick={handleAnalyze}
-                disabled={analyzing}
-                icon={analyzing ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-                className="w-full sm:w-auto mt-2 min-h-[52px] px-8 rounded-xl font-bold text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 shadow-lg shadow-violet-500/25 border-0 transition-all hover:-translate-y-0.5"
-              >
-                {analyzing ? 'Gerando inteligência avançada...' : 'Mapear Lead com IA'}
-              </Button>
-            </div>
-          ) : (
-            <LeadDetailAnalysisView
-              analysis={analysis}
-              onReanalyze={handleAnalyze}
-              analyzing={analyzing}
-              getProviderLabel={getAnalysisProviderLabel}
-            />
-          )}
-        </section>
-      </div>
-    </>
+    <LeadDetailContent
+      place={place}
+      analysis={analysis}
+      tags={tags}
+      leadAnalysisItem={leadAnalysisItem}
+      togglingFavorite={togglingFavorite}
+      showTagInput={showTagInput}
+      newTag={newTag}
+      analyzing={analyzing}
+      copiedPhone={copiedPhone}
+      onBack={() => navigate(-1)}
+      onToggleFavorite={handleToggleFavorite}
+      onCopyPhone={handleCopyPhone}
+      onAddTag={handleAddTag}
+      onRemoveTag={handleRemoveTag}
+      setNewTag={setNewTag}
+      setShowTagInput={setShowTagInput}
+      onAnalyze={handleAnalyze}
+      trackAction={trackAction}
+    />
   );
 }

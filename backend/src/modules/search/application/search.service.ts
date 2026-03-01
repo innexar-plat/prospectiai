@@ -16,6 +16,8 @@ import type { SearchResult, PlaceLike } from '../domain/types';
 
 /** UI sempre em km; conversão para metros só na chamada à API (locationBias.radius). */
 const RADIUS_KM_TO_M = 1000;
+
+type SaveHistoryFn = (resultsCount: number, places?: unknown[]) => Promise<void>;
 const DEFAULT_LOCATION_RADIUS_KM = 15;
 /** Places API locationBias circle max radius (meters) = 50km */
 const MAX_LOCATION_RADIUS_M = 50000;
@@ -72,7 +74,7 @@ async function getSearchUserAndWorkspaceOrThrow(userId: string) {
 async function tryCacheOrDbSearch(
     pageToken: string | undefined | null,
     params: { textQuery: string; includedType?: string | null; effectivePageSize: number; hasWebsite?: string | null; hasPhone?: string | null },
-    saveHistory: (resultsCount: number, places?: unknown[]) => Promise<void>,
+    saveHistory: SaveHistoryFn,
 ): Promise<SearchResult | null> {
     if (pageToken) return null;
     const { textQuery, includedType, effectivePageSize, hasWebsite, hasPhone } = params;
@@ -120,6 +122,42 @@ async function tryCacheOrDbSearch(
     logger.info('Search: local DB used', { dbTotal: dbLeads.length, afterFilter: filtered.length, returned: slice.length });
     await saveHistory(slice.length, slice);
     return { places: slice, fromLocalDb: true };
+}
+
+async function persistSearchResult(
+    activeWorkspace: { id: string },
+    userId: string,
+    places: unknown[],
+    textQuery: string,
+    effectivePageSize: number,
+    filtersPayload: { includedType: string | null; hasWebsite: string | null; hasPhone: string | null },
+): Promise<void> {
+    recordUsageEvent({
+        workspaceId: activeWorkspace.id,
+        userId,
+        type: 'GOOGLE_PLACES_SEARCH',
+        quantity: 1,
+    });
+    syncLeads(places as PlaceResult[]).catch((err) =>
+        logger.error('Background sync error', { error: err instanceof Error ? err.message : 'Unknown' })
+    );
+    await prisma.$transaction([
+        prisma.workspace.update({
+            where: { id: activeWorkspace.id },
+            data: { leadsUsed: { increment: 1 } },
+        }),
+        prisma.searchHistory.create({
+            data: {
+                workspaceId: activeWorkspace.id,
+                userId,
+                textQuery,
+                pageSize: effectivePageSize,
+                filters: filtersPayload,
+                resultsCount: places.length,
+                resultsData: JSON.parse(JSON.stringify(places)),
+            },
+        }),
+    ]);
 }
 
 async function resolveSearchLocationBias(
@@ -212,36 +250,7 @@ export async function runSearch(input: SearchInput, userId: string): Promise<Sea
     logger.info('Search: Google Places response', { rawCount, afterFilter: finalCount, hasWebsite: hasWebsite ?? null, hasPhone: hasPhone ?? null });
 
     if (result.places && result.places.length > 0) {
-        recordUsageEvent({
-            workspaceId: activeWorkspace.id,
-            userId,
-            type: 'GOOGLE_PLACES_SEARCH',
-            quantity: 1,
-        });
-
-        syncLeads(result.places).catch((err) =>
-            logger.error('Background sync error', {
-                error: err instanceof Error ? err.message : 'Unknown',
-            })
-        );
-
-        await prisma.$transaction([
-            prisma.workspace.update({
-                where: { id: activeWorkspace.id },
-                data: { leadsUsed: { increment: 1 } },
-            }),
-            prisma.searchHistory.create({
-                data: {
-                    workspaceId: activeWorkspace.id,
-                    userId,
-                    textQuery,
-                    pageSize: effectivePageSize,
-                    filters: filtersPayload,
-                    resultsCount: result.places.length,
-                    resultsData: JSON.parse(JSON.stringify(result.places)),
-                },
-            }),
-        ]);
+        await persistSearchResult(activeWorkspace, userId, result.places, textQuery, effectivePageSize, filtersPayload);
     }
 
     logger.info('Search: result', { resultCount: finalCount });

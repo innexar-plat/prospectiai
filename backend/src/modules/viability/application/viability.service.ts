@@ -11,6 +11,7 @@ import { runMarketReport } from '@/modules/market';
 import { recordUsageEvent } from '@/lib/usage';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import type { ScoredPlace } from '@/modules/scoring';
 import type { ViabilityInput, ViabilityReport, SegmentBreakdown, ViabilityMode } from '../domain/types';
 
 type PromptContext = {
@@ -236,11 +237,23 @@ export async function runViabilityAnalysis(
     }
 
     const aiReport = parseViabilityAiReport(result.text, input.city);
+    const viabilityResult = buildViabilityReportResult(aiReport, competitorData, marketData, segmentBreakdown);
 
-    // Normalize goNoGo
+    if (workspaceId) {
+        persistViabilityReport(workspaceId, userId, input, viabilityResult);
+    }
+
+    return viabilityResult;
+}
+
+function buildViabilityReportResult(
+    aiReport: { score: number; verdict: string; goNoGo: string; summary: string; strengths: string[]; risks: string[]; recommendations: string[]; estimatedInvestment: string; bestLocations: string[]; dailyLeadsTarget: number; suggestedOffer: string; suggestedTicket: string },
+    competitorData: { totalCount: number; topOpportunities: ScoredPlace[] },
+    marketData: { saturationIndex: number; digitalMaturity: { withWebsitePercent: number } },
+    segmentBreakdown: SegmentBreakdown[],
+): ViabilityReport {
     const goNoGo = (['GO', 'CAUTION', 'NO_GO'].includes(aiReport.goNoGo) ? aiReport.goNoGo : 'CAUTION') as 'GO' | 'CAUTION' | 'NO_GO';
-
-    const viabilityResult: ViabilityReport = {
+    return {
         score: Math.min(10, Math.max(0, aiReport.score)),
         verdict: aiReport.verdict,
         goNoGo,
@@ -259,21 +272,18 @@ export async function runViabilityAnalysis(
         suggestedTicket: aiReport.suggestedTicket || 'Consultar valores',
         topOpportunities: competitorData.topOpportunities.slice(0, 20),
     };
+}
 
-    // Persist to IntelligenceReport
-    if (workspaceId) {
-        prisma.intelligenceReport.create({
-            data: {
-                workspaceId,
-                userId,
-                module: 'VIABILITY',
-                inputQuery: `${input.businessType} em ${input.city}`,
-                inputCity: input.city,
-                inputState: input.state,
-                resultsData: JSON.parse(JSON.stringify(viabilityResult)),
-            },
-        }).catch((err) => logger.error('Failed to persist viability report', { error: err instanceof Error ? err.message : 'Unknown' }));
-    }
-
-    return viabilityResult;
+function persistViabilityReport(workspaceId: string, userId: string, input: ViabilityInput, viabilityResult: ViabilityReport): void {
+    prisma.intelligenceReport.create({
+        data: {
+            workspaceId,
+            userId,
+            module: 'VIABILITY',
+            inputQuery: `${input.businessType} em ${input.city}`,
+            inputCity: input.city,
+            inputState: input.state,
+            resultsData: JSON.parse(JSON.stringify(viabilityResult)),
+        },
+    }).catch((err) => logger.error('Failed to persist viability report', { error: err instanceof Error ? err.message : 'Unknown' }));
 }

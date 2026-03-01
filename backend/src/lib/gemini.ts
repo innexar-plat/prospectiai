@@ -83,6 +83,23 @@ async function resolveFinalProfile(userProfile?: UserBusinessProfile, userId?: s
     return finalProfile;
 }
 
+function getWebsiteNote(website: string, isEn: boolean): string {
+    if (!website) return '';
+    return isEn
+        ? '\nCRITICAL: This lead HAS a website (URL above). You MUST acknowledge it, analyze it when relevant (content, UX, SEO, gaps in the site itself), and NEVER list "no website" or "missing website" as a gap.'
+        : '\nCRÍTICO: Este lead POSSUI website (URL acima). Você DEVE reconhecê-lo, analisá-lo quando relevante (conteúdo, UX, SEO, lacunas no próprio site) e NUNCA listar "sem website" ou "ausência de site" como lacuna.';
+}
+
+function getWebContextBlock(webContext: string, isBusinessPlan: boolean, isEn: boolean): string {
+    if (!webContext) return '';
+    const businessPlanNote = isBusinessPlan
+        ? (isEn
+            ? '\nIMPORTANT: The web context above contains REAL data collected from Reclame Aqui, JusBrasil, CNPJ databases, and general web searches. You MUST analyze this data carefully and incorporate it into your report. Cite specific findings and sources. If Reclame Aqui shows complaints, detail them. If JusBrasil shows lawsuits, flag the risks. If CNPJ data reveals information about the company, use it.'
+            : '\nIMPORTANTE: O contexto da web acima contém dados REAIS coletados do Reclame Aqui, JusBrasil, bases de CNPJ e buscas web gerais. Você DEVE analisar esses dados cuidadosamente e incorporá-los ao seu relatório. Cite achados e fontes específicas. Se o Reclame Aqui mostra reclamações, detalhe-as. Se o JusBrasil mostra processos, sinalize os riscos. Se dados de CNPJ revelam informações sobre a empresa, use-os.')
+        : '';
+    return `\n\n${webContext}\n${businessPlanNote}\n\n`;
+}
+
 function buildTaskDescription(isEn: boolean): string {
     return isEn
         ? `Your task is to generate a DEEP, DETAILED, and ACTIONABLE strategic prospecting report for the lead below.
@@ -162,25 +179,11 @@ ${isEn ? 'LEAD DATA:' : 'DADOS DO LEAD:'}
 - ${isEn ? 'Google Rating' : 'Avaliação Google'}: ${business.rating ?? (isEn ? 'No rating' : 'Sem avaliação')}/5
 - ${isEn ? 'Total Reviews' : 'Total de Avaliações'}: ${reviewCount}
 - ${isEn ? 'Business Status' : 'Status do Negócio'}: ${business.businessStatus || 'OPERATIONAL'}
-${((): string => {
-        if (!website) return '';
-        return isEn
-            ? '\nCRITICAL: This lead HAS a website (URL above). You MUST acknowledge it, analyze it when relevant (content, UX, SEO, gaps in the site itself), and NEVER list "no website" or "missing website" as a gap.'
-            : '\nCRÍTICO: Este lead POSSUI website (URL acima). Você DEVE reconhecê-lo, analisá-lo quando relevante (conteúdo, UX, SEO, lacunas no próprio site) e NUNCA listar "sem website" ou "ausência de site" como lacuna.';
-    })()}
+${getWebsiteNote(website, isEn)}
 
 ${isEn ? 'RECENT CUSTOMER REVIEWS:' : 'AVALIAÇÕES RECENTES DE CLIENTES:'}
 ${reviewsText}
-${((): string => {
-        if (!webContext) return '';
-        let businessPlanNote = '';
-        if (isBusinessPlan) {
-            businessPlanNote = isEn
-                ? '\nIMPORTANT: The web context above contains REAL data collected from Reclame Aqui, JusBrasil, CNPJ databases, and general web searches. You MUST analyze this data carefully and incorporate it into your report. Cite specific findings and sources. If Reclame Aqui shows complaints, detail them. If JusBrasil shows lawsuits, flag the risks. If CNPJ data reveals information about the company, use it.'
-                : '\nIMPORTANTE: O contexto da web acima contém dados REAIS coletados do Reclame Aqui, JusBrasil, bases de CNPJ e buscas web gerais. Você DEVE analisar esses dados cuidadosamente e incorporá-los ao seu relatório. Cite achados e fontes específicas. Se o Reclame Aqui mostra reclamações, detalhe-as. Se o JusBrasil mostra processos, sinalize os riscos. Se dados de CNPJ revelam informações sobre a empresa, use-os.';
-        }
-        return `\n\n${webContext}\n${businessPlanNote}\n\n`;
-    })()}
+${getWebContextBlock(webContext, isBusinessPlan, isEn)}
 
 ${isEn ? 'ANALYSIS REQUIREMENTS (be extremely specific, not generic):' : 'REQUISITOS DA ANÁLISE (seja extremamente específico, não genérico):'}
 
