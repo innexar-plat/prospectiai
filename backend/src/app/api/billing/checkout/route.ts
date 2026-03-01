@@ -31,6 +31,26 @@ type CheckoutContext = {
 
 type CheckoutContextResult = { ok: true; ctx: CheckoutContext } | { ok: false; error: NextResponse };
 
+function computeCheckoutFlags(
+    workspace: WorkspaceForCheckout | undefined,
+    planId: string,
+    scheduleAtPeriodEnd: boolean,
+): { isDowngradeRequest: boolean; isUpgradeRequest: boolean; isStripeSubscription: boolean } {
+    const currentPlan = workspace?.plan;
+    const isDowngradeRequest =
+        scheduleAtPeriodEnd === true &&
+        currentPlan != null &&
+        workspace != null &&
+        isDowngrade(currentPlan, planId as PlanType);
+    const isStripeSubscription = workspace?.subscriptionId != null && workspace.subscriptionId.startsWith('sub_');
+    const isUpgradeRequest =
+        currentPlan != null &&
+        currentPlan !== 'FREE' &&
+        workspace != null &&
+        isUpgrade(currentPlan as PlanType, planId as PlanType);
+    return { isDowngradeRequest, isUpgradeRequest, isStripeSubscription };
+}
+
 async function getCheckoutContext(
     session: { user: SessionUser },
     parsed: { data: { planId: string; interval?: string; cycle?: string; locale?: string; card_token_id?: string; scheduleAtPeriodEnd?: boolean } },
@@ -46,33 +66,22 @@ async function getCheckoutContext(
         include: { workspaces: { take: 1, include: { workspace: true } } },
     });
     const workspace = userWithWorkspace?.workspaces?.[0]?.workspace as WorkspaceForCheckout | undefined;
-    const currentPlan = workspace?.plan;
-    const isDowngradeRequest =
-        scheduleAtPeriodEnd === true &&
-        currentPlan != null &&
-        workspace != null &&
-        isDowngrade(currentPlan, planId as PlanType);
+    const { isDowngradeRequest, isUpgradeRequest, isStripeSubscription } = computeCheckoutFlags(workspace, planId, scheduleAtPeriodEnd === true);
     if (scheduleAtPeriodEnd === true && !isDowngradeRequest) {
         const reasons: string[] = [];
-        if (currentPlan == null) reasons.push('no_current_plan');
+        if (workspace?.plan == null) reasons.push('no_current_plan');
         if (!workspace) reasons.push('no_workspace');
-        if (currentPlan != null && !isDowngrade(currentPlan, planId as PlanType)) reasons.push('not_downgrade_tier');
+        if (workspace?.plan != null && !isDowngrade(workspace.plan, planId as PlanType)) reasons.push('not_downgrade_tier');
         logger.info('Checkout: scheduleAtPeriodEnd true but not treating as downgrade', {
             userId: session.user.id,
             planId,
-            currentPlan: currentPlan ?? null,
+            currentPlan: workspace?.plan ?? null,
             hasWorkspace: !!workspace,
             reasons,
         });
     }
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
     const localePath = locale || 'pt';
-    const isStripeSubscription = workspace?.subscriptionId != null && workspace.subscriptionId.startsWith('sub_');
-    const isUpgradeRequest =
-        currentPlan != null &&
-        currentPlan !== 'FREE' &&
-        workspace != null &&
-        isUpgrade(currentPlan as PlanType, planId as PlanType);
     const { price_brl: priceBrl, price_usd: priceUsd } = getPlanPrices(plan, cycle);
     return {
         ok: true,

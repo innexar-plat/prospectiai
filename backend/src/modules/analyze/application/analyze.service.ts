@@ -38,10 +38,7 @@ export type AnalyzeOutput = {
     aiProvider?: string;
 };
 
-export async function runAnalyze(input: AnalyzeInput, userId: string): Promise<AnalyzeOutput> {
-    const { userProfile, locale, placeId, name: businessName, ...rest } = input;
-    const businessData = { ...rest, placeId, name: businessName };
-
+async function getUserAndWorkspaceOrThrow(userId: string) {
     const user = await prisma.user.findUnique({
         where: { id: userId },
         select: {
@@ -53,50 +50,84 @@ export async function runAnalyze(input: AnalyzeInput, userId: string): Promise<A
             workspaces: { include: { workspace: true }, take: 1 },
         },
     });
-
-    if (!user || user.workspaces.length === 0) {
-        throw new AnalyzeHttpError(404, { error: 'Workspace not found' });
-    }
-
+    if (!user || user.workspaces.length === 0) throw new AnalyzeHttpError(404, { error: 'Workspace not found' });
     if (user.onboardingCompletedAt == null) {
-        throw new AnalyzeHttpError(403, {
-            error: 'Complete onboarding before analyzing leads',
-            code: 'REQUIRES_ONBOARDING',
-        });
+        throw new AnalyzeHttpError(403, { error: 'Complete onboarding before analyzing leads', code: 'REQUIRES_ONBOARDING' });
     }
+    return { user, activeWorkspace: user.workspaces[0].workspace };
+}
 
-    const activeWorkspace = user.workspaces[0].workspace;
-
-    const existingAnalysis = await prisma.leadAnalysis.findFirst({
-        where: {
-            userId,
-            lead: { placeId: businessData.placeId },
+function mapExistingAnalysisToOutput(existingAnalysis: {
+    score: number | null;
+    scoreLabel: string | null;
+    summary: string | null;
+    strengths: unknown;
+    weaknesses: unknown;
+    painPoints: unknown;
+    gaps: unknown;
+    approach: string | null;
+    contactStrategy: string | null;
+    firstContactMessage: string | null;
+    suggestedWhatsAppMessage: string | null;
+    fullReport: string | null;
+    socialInstagram: string | null;
+    socialFacebook: string | null;
+    socialLinkedin: string | null;
+}): AnalyzeOutput {
+    return {
+        score: existingAnalysis.score ?? 0,
+        scoreLabel: existingAnalysis.scoreLabel ?? '',
+        summary: existingAnalysis.summary ?? '',
+        strengths: (existingAnalysis.strengths as string[]) ?? [],
+        weaknesses: (existingAnalysis.weaknesses as string[]) ?? [],
+        painPoints: Array.isArray(existingAnalysis.painPoints) ? (existingAnalysis.painPoints as string[]) : [],
+        gaps: Array.isArray(existingAnalysis.gaps) ? (existingAnalysis.gaps as string[]) : [],
+        approach: existingAnalysis.approach ?? '',
+        contactStrategy: existingAnalysis.contactStrategy ?? '',
+        firstContactMessage: existingAnalysis.firstContactMessage ?? '',
+        suggestedWhatsAppMessage: existingAnalysis.suggestedWhatsAppMessage ?? '',
+        fullReport: existingAnalysis.fullReport ?? null,
+        socialMedia: {
+            instagram: existingAnalysis.socialInstagram ?? undefined,
+            facebook: existingAnalysis.socialFacebook ?? undefined,
+            linkedin: existingAnalysis.socialLinkedin ?? undefined,
         },
-        include: { lead: true },
-    });
+        aiProvider: undefined,
+    };
+}
 
-    if (existingAnalysis) {
+function buildAnalyzeProfile(
+    userProfile: AnalyzeInput['userProfile'],
+    user: { companyName: string | null; productService: string | null; targetAudience: string | null; mainBenefit: string | null },
+    activeWorkspace: { companyName: string | null; productService: string | null; targetAudience: string | null; mainBenefit: string | null },
+): UserBusinessProfile {
+    if (userProfile) {
         return {
-            score: existingAnalysis.score ?? 0,
-            scoreLabel: existingAnalysis.scoreLabel ?? '',
-            summary: existingAnalysis.summary ?? '',
-            strengths: (existingAnalysis.strengths as string[]) ?? [],
-            weaknesses: (existingAnalysis.weaknesses as string[]) ?? [],
-            painPoints: Array.isArray(existingAnalysis.painPoints) ? (existingAnalysis.painPoints as string[]) : [],
-            gaps: Array.isArray(existingAnalysis.gaps) ? (existingAnalysis.gaps as string[]) : [],
-            approach: existingAnalysis.approach ?? '',
-            contactStrategy: existingAnalysis.contactStrategy ?? '',
-            firstContactMessage: existingAnalysis.firstContactMessage ?? '',
-            suggestedWhatsAppMessage: existingAnalysis.suggestedWhatsAppMessage ?? '',
-            fullReport: existingAnalysis.fullReport ?? null,
-            socialMedia: {
-                instagram: existingAnalysis.socialInstagram ?? undefined,
-                facebook: existingAnalysis.socialFacebook ?? undefined,
-                linkedin: existingAnalysis.socialLinkedin ?? undefined,
-            },
-            aiProvider: undefined,
+            companyName: String(userProfile.companyName ?? ''),
+            productService: String(userProfile.productService ?? ''),
+            targetAudience: String(userProfile.targetAudience ?? ''),
+            mainBenefit: String(userProfile.mainBenefit ?? ''),
         };
     }
+    return {
+        companyName: activeWorkspace.companyName ?? user.companyName ?? '',
+        productService: activeWorkspace.productService ?? user.productService ?? '',
+        targetAudience: activeWorkspace.targetAudience ?? user.targetAudience ?? '',
+        mainBenefit: activeWorkspace.mainBenefit ?? user.mainBenefit ?? '',
+    };
+}
+
+export async function runAnalyze(input: AnalyzeInput, userId: string): Promise<AnalyzeOutput> {
+    const { userProfile, locale, placeId, name: businessName, ...rest } = input;
+    const businessData = { ...rest, placeId, name: businessName };
+
+    const { user, activeWorkspace } = await getUserAndWorkspaceOrThrow(userId);
+
+    const existingAnalysis = await prisma.leadAnalysis.findFirst({
+        where: { userId, lead: { placeId: businessData.placeId } },
+        include: { lead: true },
+    });
+    if (existingAnalysis) return mapExistingAnalysisToOutput(existingAnalysis);
 
     if (activeWorkspace.leadsUsed >= activeWorkspace.leadsLimit) {
         throw new AnalyzeHttpError(403, {
@@ -107,21 +138,7 @@ export async function runAnalyze(input: AnalyzeInput, userId: string): Promise<A
     }
 
     const isBusinessPlan = activeWorkspace.plan === 'BUSINESS' || activeWorkspace.plan === 'SCALE';
-
-    // Profile: request body > workspace (one per workspace) > user fallback
-    const profile: UserBusinessProfile = userProfile
-        ? {
-              companyName: String(userProfile.companyName ?? ''),
-              productService: String(userProfile.productService ?? ''),
-              targetAudience: String(userProfile.targetAudience ?? ''),
-              mainBenefit: String(userProfile.mainBenefit ?? ''),
-          }
-        : {
-              companyName: activeWorkspace.companyName ?? user.companyName ?? '',
-              productService: activeWorkspace.productService ?? user.productService ?? '',
-              targetAudience: activeWorkspace.targetAudience ?? user.targetAudience ?? '',
-              mainBenefit: activeWorkspace.mainBenefit ?? user.mainBenefit ?? '',
-          };
+    const profile = buildAnalyzeProfile(userProfile, user, activeWorkspace);
 
     const { config } = await resolveAiForRole('lead_analysis');
     const { logger } = await import('@/lib/logger');

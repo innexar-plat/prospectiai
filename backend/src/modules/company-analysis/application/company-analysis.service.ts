@@ -118,44 +118,53 @@ function buildPlacesBlock(placesContext: { rating?: number; userRatingCount?: nu
     return parts.join('\n');
 }
 
-export async function runCompanyAnalysis(input: CompanyAnalysisInput, userId: string): Promise<CompanyAnalysisReport> {
-    let workspaceId: string | undefined;
+async function getWorkspaceIdForUser(userId: string): Promise<string | undefined> {
     const user = await prisma.user.findFirst({
         where: { id: userId },
         include: { workspaces: { include: { workspace: true }, take: 1 } },
     });
-    if (user?.workspaces?.length) {
-        workspaceId = user.workspaces[0].workspace.id;
-    }
+    return user?.workspaces?.length ? user.workspaces[0].workspace.id : undefined;
+}
 
-    const queries = buildSerperQueries(input);
-    const webContext = await getWebContextForRole('company_analysis', queries, {
-        workspaceId: workspaceId ?? undefined,
-        userId,
-    });
+function parseSocialNetworks(sn: unknown): CompanyAnalysisReport['socialNetworks'] {
+    if (!sn || typeof sn !== 'object' || Array.isArray(sn)) return { presence: '' };
+    const o = sn as Record<string, unknown>;
+    return {
+        presence: typeof o.presence === 'string' ? o.presence : '',
+        perNetwork: Array.isArray(o.perNetwork) ? (o.perNetwork as CompanyAnalysisReport['socialNetworks']['perNetwork']) : undefined,
+        consistency: typeof o.consistency === 'string' ? o.consistency : undefined,
+        recommendations: Array.isArray(o.recommendations) ? (o.recommendations as string[]) : undefined,
+    };
+}
 
-    const city = input.city?.trim();
-    const state = input.state?.trim();
-    const placesContext =
-        workspaceId && (city || input.address)
-            ? await fetchGooglePlacesContext(
-                  input.companyName,
-                  city,
-                  state,
-                  input.address,
-                  workspaceId
-              )
-            : null;
+function parseCompanyAnalysisResult(parsed: Record<string, unknown>): CompanyAnalysisReport {
+    return {
+        summary: typeof parsed.summary === 'string' ? parsed.summary : 'Análise gerada.',
+        strengths: Array.isArray(parsed.strengths) ? (parsed.strengths as string[]) : [],
+        weaknesses: Array.isArray(parsed.weaknesses) ? (parsed.weaknesses as string[]) : [],
+        opportunities: Array.isArray(parsed.opportunities) ? (parsed.opportunities as string[]) : [],
+        reclameAquiSummary: typeof parsed.reclameAquiSummary === 'string' ? parsed.reclameAquiSummary : undefined,
+        googlePresenceScore: typeof parsed.googlePresenceScore === 'number' ? parsed.googlePresenceScore : undefined,
+        googleRating: typeof parsed.googleRating === 'number' ? parsed.googleRating : undefined,
+        googleReviewCount: typeof parsed.googleReviewCount === 'number' ? parsed.googleReviewCount : undefined,
+        googleReviewsSnippets: Array.isArray(parsed.googleReviewsSnippets) ? (parsed.googleReviewsSnippets as string[]) : undefined,
+        socialNetworks: parseSocialNetworks(parsed.socialNetworks),
+        suggestedNiche: typeof parsed.suggestedNiche === 'string' ? parsed.suggestedNiche : undefined,
+        suggestedBusinessModel: typeof parsed.suggestedBusinessModel === 'string' ? parsed.suggestedBusinessModel : undefined,
+        recommendations: Array.isArray(parsed.recommendations) ? (parsed.recommendations as string[]) : [],
+    };
+}
 
-    const profileBlock = buildProfileBlock(input);
-    const placesBlock = buildPlacesBlock(placesContext);
-    const noBusinessTypeDeclared =
-        !input.productService?.trim() && !input.targetAudience?.trim() && !input.mainBenefit?.trim();
+function buildCompanyAnalysisPrompt(
+    profileBlock: string,
+    webContext: string,
+    placesBlock: string,
+    noBusinessTypeDeclared: boolean,
+): string {
     const inferInstruction = noBusinessTypeDeclared
         ? '\nO tipo de negócio não foi declarado; infira a partir das fontes (web e avaliações Google).\n'
         : '';
-
-    const prompt = `Você é um consultor de negócios especializado em diagnóstico de empresas no Brasil.
+    return `Você é um consultor de negócios especializado em diagnóstico de empresas no Brasil.
 Analise a empresa com base APENAS nos dados fornecidos abaixo. Cite as fontes quando fizer afirmações.
 ${inferInstruction}
 ## Perfil da empresa (dados declarados)
@@ -192,6 +201,35 @@ Responda EXCLUSIVAMENTE em JSON válido, sem markdown, sem backticks:
 }
 
 REGRAS: Baseie-se APENAS nos dados fornecidos. Se não houver dados para um campo, use null ou string vazia ou "Não encontrado" conforme o caso.`;
+}
+
+export async function runCompanyAnalysis(input: CompanyAnalysisInput, userId: string): Promise<CompanyAnalysisReport> {
+    const workspaceId = await getWorkspaceIdForUser(userId);
+
+    const queries = buildSerperQueries(input);
+    const webContext = await getWebContextForRole('company_analysis', queries, {
+        workspaceId: workspaceId ?? undefined,
+        userId,
+    });
+
+    const city = input.city?.trim();
+    const state = input.state?.trim();
+    const placesContext =
+        workspaceId && (city || input.address)
+            ? await fetchGooglePlacesContext(
+                  input.companyName,
+                  city,
+                  state,
+                  input.address,
+                  workspaceId
+              )
+            : null;
+
+    const profileBlock = buildProfileBlock(input);
+    const placesBlock = buildPlacesBlock(placesContext);
+    const noBusinessTypeDeclared =
+        !input.productService?.trim() && !input.targetAudience?.trim() && !input.mainBenefit?.trim();
+    const prompt = buildCompanyAnalysisPrompt(profileBlock, webContext, placesBlock, noBusinessTypeDeclared);
 
     const { config } = await resolveAiForRole('company_analysis');
     const result = await generateCompletionForRole('company_analysis', {
@@ -219,38 +257,7 @@ REGRAS: Baseie-se APENAS nos dados fornecidos. Se não houver dados para um camp
     try {
         const cleaned = result.text.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
         const parsed = JSON.parse(cleaned) as Record<string, unknown>;
-        aiReport = {
-            summary: typeof parsed.summary === 'string' ? parsed.summary : 'Análise gerada.',
-            strengths: Array.isArray(parsed.strengths) ? (parsed.strengths as string[]) : [],
-            weaknesses: Array.isArray(parsed.weaknesses) ? (parsed.weaknesses as string[]) : [],
-            opportunities: Array.isArray(parsed.opportunities) ? (parsed.opportunities as string[]) : [],
-            reclameAquiSummary:
-                typeof parsed.reclameAquiSummary === 'string' ? parsed.reclameAquiSummary : undefined,
-            googlePresenceScore:
-                typeof parsed.googlePresenceScore === 'number' ? parsed.googlePresenceScore : undefined,
-            googleRating: typeof parsed.googleRating === 'number' ? parsed.googleRating : undefined,
-            googleReviewCount: typeof parsed.googleReviewCount === 'number' ? parsed.googleReviewCount : undefined,
-            googleReviewsSnippets: Array.isArray(parsed.googleReviewsSnippets)
-                ? (parsed.googleReviewsSnippets as string[])
-                : undefined,
-            socialNetworks: (() => {
-                const sn = parsed.socialNetworks;
-                if (sn && typeof sn === 'object' && !Array.isArray(sn)) {
-                    const o = sn as Record<string, unknown>;
-                    return {
-                        presence: typeof o.presence === 'string' ? o.presence : '',
-                        perNetwork: Array.isArray(o.perNetwork) ? (o.perNetwork as CompanyAnalysisReport['socialNetworks']['perNetwork']) : undefined,
-                        consistency: typeof o.consistency === 'string' ? o.consistency : undefined,
-                        recommendations: Array.isArray(o.recommendations) ? (o.recommendations as string[]) : undefined,
-                    };
-                }
-                return { presence: '' };
-            })(),
-            suggestedNiche: typeof parsed.suggestedNiche === 'string' ? parsed.suggestedNiche : undefined,
-            suggestedBusinessModel:
-                typeof parsed.suggestedBusinessModel === 'string' ? parsed.suggestedBusinessModel : undefined,
-            recommendations: Array.isArray(parsed.recommendations) ? (parsed.recommendations as string[]) : [],
-        };
+        aiReport = parseCompanyAnalysisResult(parsed);
     } catch {
         aiReport = {
             summary: 'Não foi possível gerar a análise completa. Tente novamente.',

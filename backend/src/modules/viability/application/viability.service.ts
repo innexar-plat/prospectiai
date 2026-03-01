@@ -100,53 +100,35 @@ REGRAS CRÍTICAS:
     return basePrompt + webSuffix;
 }
 
-export async function runViabilityAnalysis(
-    input: ViabilityInput,
-    userId: string
-): Promise<ViabilityReport> {
-    const statePart = input.state ? ', ' + input.state : '';
-    const textQuery = input.businessType + ' em ' + input.city + statePart;
-
-    let workspaceId: string | undefined;
+async function getViabilityWorkspaceId(userId: string): Promise<string | undefined> {
     const user = await prisma.user.findFirst({
         where: { id: userId },
         include: { workspaces: { include: { workspace: true }, take: 1 } },
     });
-    if (user?.workspaces && user.workspaces.length > 0) {
-        workspaceId = user.workspaces[0].workspace.id;
-    }
+    return user?.workspaces?.length ? user.workspaces[0].workspace.id : undefined;
+}
 
-    const webQueries = [
-        textQuery,
-        `notícias ${input.businessType} ${input.city}`,
-        `tendências ${input.businessType} ${input.city}`,
-    ].filter(Boolean);
-    const webContext = await getWebContextForRole('viability', webQueries, workspaceId ? { workspaceId, userId } : undefined);
-
-    // Run both analyses in parallel
-    const [competitorData, marketData] = await Promise.all([
-        runCompetitorAnalysis({ textQuery, pageSize: 60 }, userId),
-        runMarketReport({ textQuery, pageSize: 60 }, userId),
-    ]);
-
-    // Build segment breakdown with opportunity levels
-    const segmentBreakdown: SegmentBreakdown[] = marketData.segments.slice(0, 10).map((s) => {
-        const digitalWeakPct = marketData.digitalMaturity.total > 0
-            ? Math.round(((marketData.digitalMaturity.total - marketData.digitalMaturity.withWebsite) / marketData.digitalMaturity.total) * 100)
-            : 0;
+function buildSegmentBreakdownWithOpportunity(marketData: { segments: Array<{ type: string; count: number; avgRating: number | null }>; digitalMaturity: { total: number; withWebsite: number } }): SegmentBreakdown[] {
+    const digitalWeakPct = marketData.digitalMaturity.total > 0
+        ? Math.round(((marketData.digitalMaturity.total - marketData.digitalMaturity.withWebsite) / marketData.digitalMaturity.total) * 100)
+        : 0;
+    return marketData.segments.slice(0, 10).map((s) => {
         let opportunityLevel: 'alta' | 'media' | 'baixa' = 'media';
         if (digitalWeakPct > 50 && (s.avgRating == null || s.avgRating < 4.0)) opportunityLevel = 'alta';
         else if (digitalWeakPct < 20 && s.avgRating != null && s.avgRating >= 4.5) opportunityLevel = 'baixa';
-        return {
-            segment: s.type,
-            count: s.count,
-            avgRating: s.avgRating,
-            opportunityLevel,
-        };
+        return { segment: s.type, count: s.count, avgRating: s.avgRating, opportunityLevel };
     });
+}
 
-    // Build context for Gemini
-    const context = {
+function buildViabilityContext(
+    input: ViabilityInput,
+    competitorData: { totalCount: number; rankingByRating: Array<{ name: string; rating: number }>; rankingByReviews: Array<{ name: string; reviewCount: number }>; digitalPresence: { withWebsite: number; withoutWebsite: number; withPhone: number; withoutPhone: number }; opportunities: unknown[]; topOpportunities: Array<{ score: number }> },
+    marketData: { segments: Array<{ type: string; count: number; avgRating: number | null }>; digitalMaturity: { withWebsitePercent: number }; saturationIndex: number; avgRating: number | null },
+): PromptContext {
+    const avgScore = competitorData.topOpportunities.length > 0
+        ? Math.round(competitorData.topOpportunities.reduce((a, b) => a + b.score, 0) / competitorData.topOpportunities.length)
+        : 0;
+    return {
         businessType: input.businessType,
         city: input.city,
         state: input.state,
@@ -163,10 +145,33 @@ export async function runViabilityAnalysis(
         saturationIndex: marketData.saturationIndex,
         avgRating: marketData.avgRating,
         topScoredCount: competitorData.topOpportunities.length,
-        avgScore: competitorData.topOpportunities.length > 0
-            ? Math.round(competitorData.topOpportunities.reduce((a, b) => a + b.score, 0) / competitorData.topOpportunities.length)
-            : 0,
+        avgScore,
     };
+}
+
+export async function runViabilityAnalysis(
+    input: ViabilityInput,
+    userId: string
+): Promise<ViabilityReport> {
+    const statePart = input.state ? ', ' + input.state : '';
+    const textQuery = input.businessType + ' em ' + input.city + statePart;
+
+    const workspaceId = await getViabilityWorkspaceId(userId);
+
+    const webQueries = [
+        textQuery,
+        `notícias ${input.businessType} ${input.city}`,
+        `tendências ${input.businessType} ${input.city}`,
+    ].filter(Boolean);
+    const webContext = await getWebContextForRole('viability', webQueries, workspaceId ? { workspaceId, userId } : undefined);
+
+    const [competitorData, marketData] = await Promise.all([
+        runCompetitorAnalysis({ textQuery, pageSize: 60 }, userId),
+        runMarketReport({ textQuery, pageSize: 60 }, userId),
+    ]);
+
+    const segmentBreakdown = buildSegmentBreakdownWithOpportunity(marketData);
+    const context = buildViabilityContext(input, competitorData, marketData);
 
     const prompt = buildViabilityPrompt(input.mode, input, context, webContext);
 

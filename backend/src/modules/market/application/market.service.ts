@@ -26,6 +26,30 @@ function getPlaceType(place: Record<string, unknown>): string {
   return 'establishment';
 }
 
+function aggregatePlacesByTypeAndContact(places: Array<Record<string, unknown>>): {
+  byType: Map<string, { count: number; sumRating: number; countRating: number }>;
+  withWebsite: number;
+  withPhone: number;
+} {
+  const byType = new Map<string, { count: number; sumRating: number; countRating: number }>();
+  let withWebsite = 0;
+  let withPhone = 0;
+  for (const p of places) {
+    const type = getPlaceType(p);
+    const entry = byType.get(type) ?? { count: 0, sumRating: 0, countRating: 0 };
+    entry.count += 1;
+    const rating = p.rating as number | undefined;
+    if (rating != null && rating > 0) {
+      entry.sumRating += rating;
+      entry.countRating += 1;
+    }
+    byType.set(type, entry);
+    if ((p.websiteUri ?? p.website)?.toString()?.trim()) withWebsite += 1;
+    if ((p.nationalPhoneNumber ?? p.phone)?.toString()?.trim()) withPhone += 1;
+  }
+  return { byType, withWebsite, withPhone };
+}
+
 export { SearchHttpError };
 
 async function generateMarketInsights(
@@ -132,24 +156,7 @@ export async function runMarketReport(
   const places = rawPlaces as Array<Record<string, unknown>>;
   const total = places.length;
 
-  const byType = new Map<string, { count: number; sumRating: number; countRating: number }>();
-  let withWebsite = 0;
-  let withPhone = 0;
-
-  for (const p of places) {
-    const type = getPlaceType(p);
-    const entry = byType.get(type) ?? { count: 0, sumRating: 0, countRating: 0 };
-    entry.count += 1;
-    const rating = p.rating as number | undefined;
-    if (rating != null && rating > 0) {
-      entry.sumRating += rating;
-      entry.countRating += 1;
-    }
-    byType.set(type, entry);
-
-    if ((p.websiteUri ?? p.website)?.toString()?.trim()) withWebsite += 1;
-    if ((p.nationalPhoneNumber ?? p.phone)?.toString()?.trim()) withPhone += 1;
-  }
+  const { byType, withWebsite, withPhone } = aggregatePlacesByTypeAndContact(places);
 
   const segments: MarketSegment[] = Array.from(byType.entries())
     .map(([type, data]) => ({

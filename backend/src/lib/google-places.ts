@@ -109,6 +109,50 @@ function cleanupPageTokenCache() {
     }
 }
 
+function buildSearchBodyNoToken(
+    params: TextSearchParams,
+    pageSizeClamped: number,
+): Record<string, unknown> {
+    const body: Record<string, unknown> = {
+        textQuery: params.textQuery,
+        pageSize: pageSizeClamped,
+        languageCode: params.languageCode || 'pt-BR',
+        regionCode: params.regionCode || 'BR',
+    };
+    if (params.includedType) body.includedType = params.includedType;
+    if (params.locationBias?.center && params.locationBias?.radius != null) {
+        const radius = Math.min(50000, Math.max(0, params.locationBias.radius));
+        body.locationBias = {
+            circle: {
+                center: {
+                    latitude: params.locationBias.center.latitude,
+                    longitude: params.locationBias.center.longitude,
+                },
+                radius,
+            },
+        };
+    }
+    return body;
+}
+
+function buildSearchBody(
+    params: TextSearchParams,
+    pageSizeClamped: number,
+): Record<string, unknown> {
+    if (params.pageToken) {
+        const cached = pageTokenBodyCache.get(params.pageToken);
+        if (cached) return { ...cached.body, pageToken: params.pageToken };
+        return {
+            textQuery: params.textQuery,
+            pageSize: pageSizeClamped,
+            languageCode: params.languageCode || 'pt-BR',
+            regionCode: params.regionCode || 'BR',
+            pageToken: params.pageToken,
+        };
+    }
+    return buildSearchBodyNoToken(params, pageSizeClamped);
+}
+
 export async function textSearch(params: TextSearchParams): Promise<TextSearchResponse> {
     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
     if (!apiKey) throw new Error('GOOGLE_PLACES_API_KEY not configured');
@@ -117,46 +161,7 @@ export async function textSearch(params: TextSearchParams): Promise<TextSearchRe
         PLACES_PAGE_SIZE_MAX,
         Math.max(1, params.pageSize ?? PLACES_PAGE_SIZE_MAX)
     );
-
-    let body: Record<string, unknown>;
-
-    if (params.pageToken) {
-        // Pagination: replay the EXACT original body + pageToken
-        const cached = pageTokenBodyCache.get(params.pageToken);
-        if (cached) {
-            body = { ...cached.body, pageToken: params.pageToken };
-        } else {
-            // Fallback: build body with only textQuery + pageToken (no extra filters)
-            body = {
-                textQuery: params.textQuery,
-                pageSize: pageSizeClamped,
-                languageCode: params.languageCode || 'pt-BR',
-                regionCode: params.regionCode || 'BR',
-                pageToken: params.pageToken,
-            };
-        }
-    } else {
-        // Initial request: build full body with all filters
-        body = {
-            textQuery: params.textQuery,
-            pageSize: pageSizeClamped,
-            languageCode: params.languageCode || 'pt-BR',
-            regionCode: params.regionCode || 'BR',
-        };
-        if (params.includedType) body.includedType = params.includedType;
-        if (params.locationBias?.center && params.locationBias?.radius != null) {
-            const radius = Math.min(50000, Math.max(0, params.locationBias.radius));
-            body.locationBias = {
-                circle: {
-                    center: {
-                        latitude: params.locationBias.center.latitude,
-                        longitude: params.locationBias.center.longitude,
-                    },
-                    radius,
-                },
-            };
-        }
-    }
+    const body = buildSearchBody(params, pageSizeClamped);
 
     const res = await fetchWithRetry(
         `${PLACES_API_BASE}:searchText`,

@@ -64,6 +64,105 @@ interface TeamTotals {
     belowGoalCount: number;
 }
 
+function TeamDashboardView({ loading, data }: { loading: boolean; data: { members: DashboardMember[]; totals: TeamTotals } | null }) {
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center p-12 text-muted gap-3">
+                <Loader2 size={24} className="animate-spin" />
+                <span>Carregando dashboard...</span>
+            </div>
+        );
+    }
+    if (!data) {
+        return <div className="rounded-3xl bg-card border border-border p-8 text-center text-muted">Nenhum dado do dashboard.</div>;
+    }
+    const { totals, members } = data;
+    return (
+        <>
+            <div className="rounded-3xl bg-card border border-border p-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div>
+                    <p className="text-xs text-muted uppercase tracking-wider">Leads hoje</p>
+                    <p className="text-2xl font-bold text-foreground tabular-nums">{totals.todayLeads}</p>
+                </div>
+                <div>
+                    <p className="text-xs text-muted uppercase tracking-wider">Análises hoje</p>
+                    <p className="text-2xl font-bold text-violet-400 tabular-nums">{totals.todayAnalyses}</p>
+                </div>
+                <div>
+                    <p className="text-xs text-muted uppercase tracking-wider">Leads no mês</p>
+                    <p className="text-2xl font-bold text-foreground tabular-nums">{totals.monthLeads}</p>
+                </div>
+                <div>
+                    <p className="text-xs text-muted uppercase tracking-wider">Abaixo da meta</p>
+                    <p className="text-2xl font-bold tabular-nums">
+                        {totals.belowGoalCount > 0 ? <span className="text-amber-400 flex items-center gap-1"><AlertCircle size={20} /> {totals.belowGoalCount}</span> : <span className="text-emerald-400">0</span>}
+                    </p>
+                </div>
+            </div>
+            <div className="rounded-3xl bg-card border border-border overflow-hidden">
+                <div className="p-5 border-b border-border">
+                    <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Meta vs Realizado</h3>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="border-b border-border text-left">
+                                <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">Membro</th>
+                                <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase text-right">Hoje (L/A)</th>
+                                <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">Meta vs Dia</th>
+                                <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">Conversões mês</th>
+                                <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase w-20">Alerta</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {[...members].sort((a, b) => b.month.leads - a.month.leads).map((m) => (
+                                <tr key={m.memberId} className="border-b border-border/30 hover:bg-surface/50">
+                                    <td className="py-3 px-5">
+                                        <p className="font-medium text-foreground">{m.name}</p>
+                                        <p className="text-[10px] text-muted">{m.email}</p>
+                                    </td>
+                                    <td className="py-3 px-5 text-right tabular-nums">{m.today.leads} / {m.today.analyses}</td>
+                                    <td className="py-3 px-5">
+                                        <div className="space-y-1">
+                                            {m.goals.dailyLeadsGoal != null && (
+                                                <div className="flex items-center gap-2">
+                                                    <div className="flex-1 h-2 bg-surface rounded-full overflow-hidden max-w-[120px]">
+                                                        <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(m.progress.dailyLeadsPct ?? 0, 100)}%` }} />
+                                                    </div>
+                                                    <span className="text-xs text-muted tabular-nums">{m.progress.dailyLeadsPct ?? 0}%</span>
+                                                </div>
+                                            )}
+                                            {m.goals.dailyAnalysesGoal != null && (
+                                                <div className="flex items-center gap-2">
+                                                    <div className="flex-1 h-2 bg-surface rounded-full overflow-hidden max-w-[120px]">
+                                                        <div className="h-full bg-violet-500 rounded-full" style={{ width: `${Math.min(m.progress.dailyAnalysesPct ?? 0, 100)}%` }} />
+                                                    </div>
+                                                    <span className="text-xs text-muted tabular-nums">{m.progress.dailyAnalysesPct ?? 0}%</span>
+                                                </div>
+                                            )}
+                                            {m.goals.dailyLeadsGoal == null && m.goals.dailyAnalysesGoal == null && <span className="text-muted text-xs">—</span>}
+                                        </div>
+                                    </td>
+                                    <td className="py-3 px-5">
+                                        {m.goals.monthlyConversionsGoal != null ? (
+                                            <span className="tabular-nums">{m.month.actions} / {m.goals.monthlyConversionsGoal} ({m.progress.monthlyConvPct ?? 0}%)</span>
+                                        ) : (
+                                            <span className="text-muted">—</span>
+                                        )}
+                                    </td>
+                                    <td className="py-3 px-5">
+                                        {m.belowGoal ? <span className="text-amber-400 flex items-center gap-1"><AlertCircle size={14} /> Abaixo</span> : <span className="text-muted">—</span>}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </>
+    );
+}
+
 async function request<T>(path: string, opts?: RequestInit): Promise<T> {
     const res = await fetch(`${API_BASE}${path}`, { credentials: 'include', headers: { 'Content-Type': 'application/json' }, ...opts });
     if (!res.ok) {
@@ -491,105 +590,7 @@ export default function EquipePage() {
 
                         {viewMode === 'dashboard' && isAdminOrOwner ? (
                             <div className="space-y-6">
-                                {(() => {
-                                    if (loadingDashboard) {
-                                        return (
-                                            <div className="flex items-center justify-center p-12 text-muted gap-3">
-                                                <Loader2 size={24} className="animate-spin" />
-                                                <span>Carregando dashboard...</span>
-                                            </div>
-                                        );
-                                    }
-                                    if (!dashboardData) {
-                                        return (
-                                            <div className="rounded-3xl bg-card border border-border p-8 text-center text-muted">Nenhum dado do dashboard.</div>
-                                        );
-                                    }
-                                    return (
-                                    <>
-                                        <div className="rounded-3xl bg-card border border-border p-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                            <div>
-                                                <p className="text-xs text-muted uppercase tracking-wider">Leads hoje</p>
-                                                <p className="text-2xl font-bold text-foreground tabular-nums">{dashboardData.totals.todayLeads}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-xs text-muted uppercase tracking-wider">Análises hoje</p>
-                                                <p className="text-2xl font-bold text-violet-400 tabular-nums">{dashboardData.totals.todayAnalyses}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-xs text-muted uppercase tracking-wider">Leads no mês</p>
-                                                <p className="text-2xl font-bold text-foreground tabular-nums">{dashboardData.totals.monthLeads}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-xs text-muted uppercase tracking-wider">Abaixo da meta</p>
-                                                <p className="text-2xl font-bold tabular-nums">{dashboardData.totals.belowGoalCount > 0 ? <span className="text-amber-400 flex items-center gap-1"><AlertCircle size={20} /> {dashboardData.totals.belowGoalCount}</span> : <span className="text-emerald-400">0</span>}</p>
-                                            </div>
-                                        </div>
-                                        <div className="rounded-3xl bg-card border border-border overflow-hidden">
-                                            <div className="p-5 border-b border-border">
-                                                <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Meta vs Realizado</h3>
-                                            </div>
-                                            <div className="overflow-x-auto">
-                                                <table className="w-full text-sm">
-                                                    <thead>
-                                                        <tr className="border-b border-border text-left">
-                                                            <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">Membro</th>
-                                                            <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase text-right">Hoje (L/A)</th>
-                                                            <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">Meta vs Dia</th>
-                                                            <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">Conversões mês</th>
-                                                            <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase w-20">Alerta</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {[...dashboardData.members]
-                                                            .sort((a, b) => b.month.leads - a.month.leads)
-                                                            .map((m) => (
-                                                                <tr key={m.memberId} className="border-b border-border/30 hover:bg-surface/50">
-                                                                    <td className="py-3 px-5">
-                                                                        <p className="font-medium text-foreground">{m.name}</p>
-                                                                        <p className="text-[10px] text-muted">{m.email}</p>
-                                                                    </td>
-                                                                    <td className="py-3 px-5 text-right tabular-nums">{m.today.leads} / {m.today.analyses}</td>
-                                                                    <td className="py-3 px-5">
-                                                                        <div className="space-y-1">
-                                                                            {m.goals.dailyLeadsGoal != null && (
-                                                                                <div className="flex items-center gap-2">
-                                                                                    <div className="flex-1 h-2 bg-surface rounded-full overflow-hidden max-w-[120px]">
-                                                                                        <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(m.progress.dailyLeadsPct ?? 0, 100)}%` }} />
-                                                                                    </div>
-                                                                                    <span className="text-xs text-muted tabular-nums">{m.progress.dailyLeadsPct ?? 0}%</span>
-                                                                                </div>
-                                                                            )}
-                                                                            {m.goals.dailyAnalysesGoal != null && (
-                                                                                <div className="flex items-center gap-2">
-                                                                                    <div className="flex-1 h-2 bg-surface rounded-full overflow-hidden max-w-[120px]">
-                                                                                        <div className="h-full bg-violet-500 rounded-full" style={{ width: `${Math.min(m.progress.dailyAnalysesPct ?? 0, 100)}%` }} />
-                                                                                    </div>
-                                                                                    <span className="text-xs text-muted tabular-nums">{m.progress.dailyAnalysesPct ?? 0}%</span>
-                                                                                </div>
-                                                                            )}
-                                                                            {m.goals.dailyLeadsGoal == null && m.goals.dailyAnalysesGoal == null && <span className="text-muted text-xs">—</span>}
-                                                                        </div>
-                                                                    </td>
-                                                                    <td className="py-3 px-5">
-                                                                        {m.goals.monthlyConversionsGoal != null ? (
-                                                                            <span className="tabular-nums">{m.month.actions} / {m.goals.monthlyConversionsGoal} ({m.progress.monthlyConvPct ?? 0}%)</span>
-                                                                        ) : (
-                                                                            <span className="text-muted">—</span>
-                                                                        )}
-                                                                    </td>
-                                                                    <td className="py-3 px-5">
-                                                                        {m.belowGoal ? <span className="text-amber-400 flex items-center gap-1"><AlertCircle size={14} /> Abaixo</span> : <span className="text-muted">—</span>}
-                                                                    </td>
-                                                                </tr>
-                                                            ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    </>
-                                    );
-                                })()}
+                                <TeamDashboardView loading={loadingDashboard} data={dashboardData} />
                             </div>
                         ) : (
                         <>

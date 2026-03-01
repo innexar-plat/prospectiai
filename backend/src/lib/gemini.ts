@@ -64,14 +64,7 @@ export interface AnalyzeLeadContext {
     userId?: string;
 }
 
-export async function analyzeLead(
-    business: BusinessData,
-    userProfile?: UserBusinessProfile,
-    locale: string = 'pt',
-    userId?: string,
-    isBusinessPlan: boolean = false,
-    context?: AnalyzeLeadContext
-): Promise<{ analysis: LeadAnalysis; usage?: { inputTokens: number; outputTokens: number }; provider?: string }> {
+async function resolveFinalProfile(userProfile?: UserBusinessProfile, userId?: string): Promise<UserBusinessProfile | undefined> {
     let finalProfile = userProfile;
     if (!finalProfile && userId) {
         const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -84,11 +77,41 @@ export async function analyzeLead(
             };
         }
     }
-    // Treat as "no profile" when company and product are empty so we don't pass ambiguous context
     if (finalProfile && !finalProfile.companyName?.trim() && !finalProfile.productService?.trim()) {
-        finalProfile = undefined;
+        return undefined;
     }
+    return finalProfile;
+}
 
+function buildCompanyContext(finalProfile: UserBusinessProfile | undefined, isEn: boolean): string {
+    const fallbackRole = isEn
+        ? 'You are a Senior B2B Strategic Consultant specialized in commercial prospecting.'
+        : 'Você é um Consultor Estratégico B2B Sênior especializado em prospecção comercial.';
+    if (!finalProfile) return fallbackRole;
+    return isEn
+        ? `You are a Senior B2B Commercial Consultant for "${finalProfile.companyName}".
+"${finalProfile.companyName}" offers: "${finalProfile.productService}".
+Target audience: "${finalProfile.targetAudience}".
+Main competitive advantage: "${finalProfile.mainBenefit}".
+CRUCIAL CONTEXT: Analyze the "website" gap through the lens of YOUR product ("${finalProfile.productService}"). If you sell websites/marketing, a missing website is a massive sales opportunity. If you sell Insurance, Cleaning, Logistics, Real Estate, or other physical/B2B services, a missing website is just a minor communication detail, NOT a critical flaw.
+MANDATORY: The ENTIRE report (summary, strengths, weaknesses, gaps, painPoints, approachStrategy, suggestedScripts, fullReport) must be from the perspective of "${finalProfile.companyName}" selling ONLY "${finalProfile.productService}". Do NOT recommend or offer services that are not what this company sells (e.g. if they sell real estate, do NOT suggest offering websites, SEO, or digital marketing to the lead; suggest only real estate services such as finding space, listings, rentals).`
+        : `Você é um Consultor Comercial B2B Sênior trabalhando para "${finalProfile.companyName}".
+"${finalProfile.companyName}" oferece: "${finalProfile.productService}".
+Público-alvo: "${finalProfile.targetAudience}".
+Principal diferencial: "${finalProfile.mainBenefit}".
+CONTEXTO CRUCIAL: Analise a lacuna de "website" através da lente do SEU produto ("${finalProfile.productService}"). Se você vende sites/marketing, a falta de um site é uma enorme oportunidade de venda. Se você vende Seguros, Limpeza, Logística, Imobiliária ou outros serviços físicos/B2B, a falta de um site é apenas um detalhe de comunicação menor, NÃO uma falha crítica.
+OBRIGATÓRIO: O relatório INTEIRO (resumo, pontos fortes, fraquezas, lacunas, dores, estratégia de abordagem, scripts sugeridos, relatório completo) deve ser na perspectiva de "${finalProfile.companyName}" vendendo APENAS "${finalProfile.productService}". NÃO recomende nem ofereça serviços que não sejam o que esta empresa vende (ex.: se for imobiliária, NÃO sugira oferecer site, SEO ou marketing digital ao lead; sugira apenas serviços imobiliários como encontrar espaço, imóveis para locação/venda).`;
+}
+
+export async function analyzeLead(
+    business: BusinessData,
+    userProfile?: UserBusinessProfile,
+    locale: string = 'pt',
+    userId?: string,
+    isBusinessPlan: boolean = false,
+    context?: AnalyzeLeadContext
+): Promise<{ analysis: LeadAnalysis; usage?: { inputTokens: number; outputTokens: number }; provider?: string }> {
+    const finalProfile = await resolveFinalProfile(userProfile, userId);
     const isEn = locale === 'en';
 
     const address = business.formattedAddress || business.address || '';
@@ -106,7 +129,6 @@ export async function analyzeLead(
     const website = business.websiteUri || business.website || '';
     const reviewCount = business.userRatingCount || business.reviewCount || 0;
 
-    // Format reviews for analysis
     const noReviewsLabel = isEn ? 'No recent reviews available' : 'Nenhuma avaliação recente disponível';
     const reviewsText = business.reviews && business.reviews.length > 0
         ? business.reviews.slice(0, 5).map(r =>
@@ -114,27 +136,7 @@ export async function analyzeLead(
         ).join('\n')
         : noReviewsLabel;
 
-    const fallbackRole = isEn
-        ? 'You are a Senior B2B Strategic Consultant specialized in commercial prospecting.'
-        : 'Você é um Consultor Estratégico B2B Sênior especializado em prospecção comercial.';
-    let companyContext: string;
-    if (finalProfile) {
-        companyContext = isEn
-            ? `You are a Senior B2B Commercial Consultant for "${finalProfile.companyName}".
-"${finalProfile.companyName}" offers: "${finalProfile.productService}".
-Target audience: "${finalProfile.targetAudience}".
-Main competitive advantage: "${finalProfile.mainBenefit}".
-CRUCIAL CONTEXT: Analyze the "website" gap through the lens of YOUR product ("${finalProfile.productService}"). If you sell websites/marketing, a missing website is a massive sales opportunity. If you sell Insurance, Cleaning, Logistics, Real Estate, or other physical/B2B services, a missing website is just a minor communication detail, NOT a critical flaw.
-MANDATORY: The ENTIRE report (summary, strengths, weaknesses, gaps, painPoints, approachStrategy, suggestedScripts, fullReport) must be from the perspective of "${finalProfile.companyName}" selling ONLY "${finalProfile.productService}". Do NOT recommend or offer services that are not what this company sells (e.g. if they sell real estate, do NOT suggest offering websites, SEO, or digital marketing to the lead; suggest only real estate services such as finding space, listings, rentals).`
-            : `Você é um Consultor Comercial B2B Sênior trabalhando para "${finalProfile.companyName}".
-"${finalProfile.companyName}" oferece: "${finalProfile.productService}".
-Público-alvo: "${finalProfile.targetAudience}".
-Principal diferencial: "${finalProfile.mainBenefit}".
-CONTEXTO CRUCIAL: Analise a lacuna de "website" através da lente do SEU produto ("${finalProfile.productService}"). Se você vende sites/marketing, a falta de um site é uma enorme oportunidade de venda. Se você vende Seguros, Limpeza, Logística, Imobiliária ou outros serviços físicos/B2B, a falta de um site é apenas um detalhe de comunicação menor, NÃO uma falha crítica.
-OBRIGATÓRIO: O relatório INTEIRO (resumo, pontos fortes, fraquezas, lacunas, dores, estratégia de abordagem, scripts sugeridos, relatório completo) deve ser na perspectiva de "${finalProfile.companyName}" vendendo APENAS "${finalProfile.productService}". NÃO recomende nem ofereça serviços que não sejam o que esta empresa vende (ex.: se for imobiliária, NÃO sugira oferecer site, SEO ou marketing digital ao lead; sugira apenas serviços imobiliários como encontrar espaço, imóveis para locação/venda).`;
-    } else {
-        companyContext = fallbackRole;
-    }
+    const companyContext = buildCompanyContext(finalProfile, isEn);
 
     const taskDescription = isEn
         ? `Your task is to generate a DEEP, DETAILED, and ACTIONABLE strategic prospecting report for the lead below.
@@ -294,33 +296,51 @@ ${((): string => {
     }
 }
 
+async function ensureGuestUserIfNeeded(userId: string | undefined, profile?: UserBusinessProfile): Promise<string> {
+    const finalUserId = userId || 'cl_guest_default';
+    if (userId) return finalUserId;
+    await prisma.user.upsert({
+        where: { id: finalUserId },
+        update: {
+            companyName: profile?.companyName,
+            productService: profile?.productService,
+            targetAudience: profile?.targetAudience,
+            mainBenefit: profile?.mainBenefit,
+        },
+        create: {
+            id: finalUserId,
+            name: 'Guest User',
+            companyName: profile?.companyName,
+            productService: profile?.productService,
+            targetAudience: profile?.targetAudience,
+            mainBenefit: profile?.mainBenefit,
+        }
+    });
+    return finalUserId;
+}
+
+async function sendAnalysisReadyNotification(userId: string, placeId: string, workspaceId: string | undefined): Promise<void> {
+    const { createNotification } = await import('@/lib/notification-service');
+    createNotification({
+        userId,
+        workspaceId: workspaceId ?? null,
+        title: 'Sua análise está pronta',
+        message: 'A análise do lead foi concluída. Clique para ver.',
+        type: 'INFO',
+        link: `/dashboard/lead/${placeId}`,
+        sendEmailIfPreferred: true,
+        emailSubject: 'Sua análise está pronta',
+        channel: 'lead_analysis_ready',
+    }).catch((err) =>
+        import('@/lib/logger').then(({ logger }) => logger.error('Create notification after analysis', { error: err instanceof Error ? err.message : 'Unknown' }))
+    );
+}
+
 async function saveAnalysisToDb(placeId: string, analysis: LeadAnalysis, profile?: UserBusinessProfile, userId?: string, workspaceId?: string) {
     try {
         const lead = await prisma.lead.findUnique({ where: { placeId } });
         if (!lead) return;
-
-        const finalUserId = userId || 'cl_guest_default';
-
-        if (!userId) {
-            await prisma.user.upsert({
-                where: { id: finalUserId },
-                update: {
-                    companyName: profile?.companyName,
-                    productService: profile?.productService,
-                    targetAudience: profile?.targetAudience,
-                    mainBenefit: profile?.mainBenefit,
-                },
-                create: {
-                    id: finalUserId,
-                    name: 'Guest User',
-                    companyName: profile?.companyName,
-                    productService: profile?.productService,
-                    targetAudience: profile?.targetAudience,
-                    mainBenefit: profile?.mainBenefit,
-                }
-            });
-        }
-
+        const finalUserId = await ensureGuestUserIfNeeded(userId, profile);
         await prisma.leadAnalysis.create({
             data: {
                 userId: finalUserId,
@@ -343,23 +363,8 @@ async function saveAnalysisToDb(placeId: string, analysis: LeadAnalysis, profile
                 socialLinkedin: analysis.socialMedia?.linkedin,
             }
         });
-
         if (userId && userId !== 'cl_guest_default') {
-            const { createNotification } = await import('@/lib/notification-service');
-            const leadLink = `/dashboard/lead/${placeId}`;
-            createNotification({
-                userId,
-                workspaceId: workspaceId ?? null,
-                title: 'Sua análise está pronta',
-                message: 'A análise do lead foi concluída. Clique para ver.',
-                type: 'INFO',
-                link: leadLink,
-                sendEmailIfPreferred: true,
-                emailSubject: 'Sua análise está pronta',
-                channel: 'lead_analysis_ready',
-            }).catch((err) =>
-                import('@/lib/logger').then(({ logger }) => logger.error('Create notification after analysis', { error: err instanceof Error ? err.message : 'Unknown' }))
-            );
+            await sendAnalysisReadyNotification(userId, placeId, workspaceId);
         }
     } catch (error) {
         const msg = error instanceof Error ? error.message : 'Unknown';

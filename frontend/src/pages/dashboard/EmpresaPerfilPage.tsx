@@ -40,6 +40,28 @@ const emptyProfile: Record<keyof WorkspaceProfile, string> = {
   logoUrl: '',
 };
 
+function profileToForm(profile: WorkspaceProfile): Record<keyof WorkspaceProfile, string> {
+  return {
+    companyName: profile.companyName ?? '',
+    productService: profile.productService ?? '',
+    targetAudience: profile.targetAudience ?? '',
+    mainBenefit: profile.mainBenefit ?? '',
+    address: profile.address ?? '',
+    linkedInUrl: profile.linkedInUrl ?? '',
+    instagramUrl: profile.instagramUrl ?? '',
+    facebookUrl: profile.facebookUrl ?? '',
+    websiteUrl: profile.websiteUrl ?? '',
+    logoUrl: profile.logoUrl ?? '',
+  };
+}
+
+function getProfileLoadErrorMessage(err: unknown): string {
+  const msg = err instanceof Error ? err.message : '';
+  return msg.includes('404') || msg.includes('Not Found')
+    ? 'Recurso não encontrado. Faça o deploy da versão mais recente do backend.'
+    : 'Não foi possível carregar o perfil da empresa.';
+}
+
 function EmpresaPerfilForm({
   form,
   saving,
@@ -108,36 +130,15 @@ export default function EmpresaPerfilPage() {
     workspaceProfileApi
       .get()
       .then((profile) => {
-        if (!cancelled) {
-          setForm({
-            companyName: profile.companyName ?? '',
-            productService: profile.productService ?? '',
-            targetAudience: profile.targetAudience ?? '',
-            mainBenefit: profile.mainBenefit ?? '',
-            address: profile.address ?? '',
-            linkedInUrl: profile.linkedInUrl ?? '',
-            instagramUrl: profile.instagramUrl ?? '',
-            facebookUrl: profile.facebookUrl ?? '',
-            websiteUrl: profile.websiteUrl ?? '',
-            logoUrl: profile.logoUrl ?? '',
-          });
-        }
+        if (!cancelled) setForm(profileToForm(profile));
       })
       .catch((err: unknown) => {
-        if (cancelled) return;
-        const msg = err instanceof Error ? err.message : '';
-        if (msg.includes('404') || msg.includes('Not Found')) {
-          addToast('error', 'Recurso não encontrado. Faça o deploy da versão mais recente do backend.');
-        } else {
-          addToast('error', 'Não foi possível carregar o perfil da empresa.');
-        }
+        if (!cancelled) addToast('error', getProfileLoadErrorMessage(err));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [addToast]);
 
   const handleChange = (key: keyof WorkspaceProfile, value: string) => {

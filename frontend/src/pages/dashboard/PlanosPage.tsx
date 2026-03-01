@@ -43,11 +43,159 @@ function renderFeatureCellValue(val: boolean | string | undefined) {
     return <span className="text-xs font-bold text-violet-400 tabular-nums">{String(val ?? '—')}</span>;
 }
 
+function PlanosCurrentPlanCard({
+    user,
+    plans,
+    usagePercent,
+}: { user: SessionUser; plans: PlanFromApi[]; usagePercent: number }) {
+    const pendingPlanName = user.pendingPlanId ? plans.find((p) => p.key === user.pendingPlanId)?.name ?? user.pendingPlanId : null;
+    return (
+        <div className="rounded-3xl bg-card border border-border p-6 sm:p-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h2 className="text-xl font-bold text-foreground">Seu Plano</h2>
+                    <p className="text-sm text-muted mt-1">
+                        Plano atual: <span className="text-violet-400 font-bold">{getPlanDisplayName(user.plan)}</span>
+                    </p>
+                    {user.plan !== 'FREE' && user.currentPeriodEnd && (
+                        <p className="text-xs text-muted mt-1">Próxima renovação: {new Date(user.currentPeriodEnd).toLocaleDateString('pt-BR')}</p>
+                    )}
+                    {user.plan !== 'FREE' && (
+                        <p className="text-xs text-muted mt-2">O cartão cadastrado será utilizado para cobranças mensais de renovação. Você pode alterar ou cancelar na próxima renovação.</p>
+                    )}
+                    {user.pendingPlanId && user.pendingPlanEffectiveAt && pendingPlanName && (
+                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 font-medium">
+                            Downgrade agendado: seu plano será alterado para {pendingPlanName} em {new Date(user.pendingPlanEffectiveAt).toLocaleDateString('pt-BR')}.
+                        </p>
+                    )}
+                </div>
+                <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-surface border border-border">
+                    <Zap size={20} className="text-violet-400" />
+                    <div>
+                        <div className="text-lg font-bold text-foreground tabular-nums">{user.leadsUsed} / {user.leadsLimit}</div>
+                        <div className="text-[10px] text-muted uppercase tracking-wider">Créditos Usados</div>
+                    </div>
+                </div>
+            </div>
+            <div className="mt-4">
+                <div className="flex justify-between text-xs text-muted mb-2">
+                    <span>Uso de créditos</span>
+                    <span className="tabular-nums">{usagePercent}%</span>
+                </div>
+                <div className="w-full h-3 bg-surface rounded-full overflow-hidden border border-border">
+                    <div
+                        className="h-full rounded-full transition-all duration-500 ease-out"
+                        style={{
+                            width: `${usagePercent}%`,
+                            background: usagePercent > 80 ? 'linear-gradient(90deg, #ef4444, #f97316)' : 'linear-gradient(90deg, #8b5cf6, #6366f1)',
+                        }}
+                    />
+                </div>
+            </div>
+        </div>
+    );
+}
+
 interface PlanCardActionButtonProps {
     planKey: string;
     loadingPlan: string | null;
     isDowngrade: (key: string) => boolean;
     onUpgrade: (key: string) => void;
+}
+
+function PlanosGridContent({
+    plansLoading,
+    plansError,
+    plans,
+    user,
+    loadingPlan,
+    isDowngrade,
+    onUpgrade,
+    onRetry,
+    formatPrice,
+}: {
+    plansLoading: boolean;
+    plansError: string | null;
+    plans: PlanFromApi[];
+    user: SessionUser;
+    loadingPlan: string | null;
+    isDowngrade: (key: string) => boolean;
+    onUpgrade: (key: string) => void;
+    onRetry: () => void;
+    formatPrice: (n: number) => string;
+}) {
+    if (plansLoading) {
+        return (
+            <div className="flex justify-center py-12">
+                <Loader2 size={32} className="text-violet-400 animate-spin" />
+            </div>
+        );
+    }
+    if (plansError) {
+        return (
+            <div className="rounded-3xl bg-card border border-border p-8 text-center">
+                <p className="text-muted mb-4">{plansError}</p>
+                <Button variant="secondary" size="sm" onClick={onRetry} icon={<RefreshCw size={14} />}>
+                    Tentar novamente
+                </Button>
+            </div>
+        );
+    }
+    if (plans.length === 0) {
+        return (
+            <div className="rounded-3xl bg-card border border-border p-8 text-center text-muted">
+                Nenhum plano disponível no momento.
+            </div>
+        );
+    }
+    return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {plans.map((plan) => {
+                const isCurrent = plan.key === user.plan;
+                const ui = PLAN_UI[plan.key] ?? { icon: Zap, color: 'text-muted', borderColor: 'border-border', features: [] };
+                const Icon = ui.icon;
+                const creditsLabel = `${plan.leadsLimit.toLocaleString('pt-BR')} créditos/mês`;
+                const features = [...ui.features, creditsLabel];
+                const cardBgClass = ui.popular ? 'bg-gradient-to-b from-violet-900/30 to-card border-violet-500/40 shadow-lg shadow-violet-500/10' : `bg-card ${ui.borderColor}`;
+                const ringClass = isCurrent ? 'ring-2 ring-violet-500' : '';
+                return (
+                    <div key={plan.key} className={`rounded-3xl border p-6 flex flex-col gap-4 transition-all relative ${cardBgClass} ${ringClass}`}>
+                        {ui.popular && (
+                            <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-violet-600 text-white text-[10px] font-bold uppercase tracking-wider rounded-full">Popular</span>
+                        )}
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-surface border border-border">
+                                <Icon size={20} className={ui.color} />
+                            </div>
+                            <div>
+                                <div className="font-bold text-foreground">{plan.name}</div>
+                                <div className="text-xs text-muted">{creditsLabel}</div>
+                            </div>
+                        </div>
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-2xl font-black text-foreground">{formatPrice(plan.priceMonthlyBrl)}</span>
+                            <span className="text-xs text-muted">/mês</span>
+                        </div>
+                        <ul className="text-xs text-muted space-y-2 flex-1">
+                            {features.map((f) => (
+                                <li key={`${plan.key}-feat-${f}`} className="flex items-start gap-2">
+                                    <Check size={14} className="text-emerald-400 shrink-0 mt-0.5" />
+                                    <span>{f}</span>
+                                </li>
+                            ))}
+                        </ul>
+                        {isCurrent ? (
+                            <div className="text-center text-xs font-bold text-violet-400 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20">Plano Atual</div>
+                        ) : plan.key === 'FREE' ? (
+                            <div className="text-center text-xs text-muted py-2">Plano gratuito</div>
+                        ) : (
+                            <PlanCardActionButton planKey={plan.key} loadingPlan={loadingPlan} isDowngrade={isDowngrade} onUpgrade={onUpgrade} />
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
 }
 
 function PlanCardActionButton({ planKey, loadingPlan, isDowngrade, onUpgrade }: PlanCardActionButtonProps) {
@@ -141,153 +289,26 @@ export default function PlanosPage() {
             <HeaderDashboard title="Planos & Pagamentos" subtitle="Gerencie seu plano e histórico de cobrança." breadcrumb="Conta / Planos" />
             <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full space-y-8">
 
-                {/* Current Plan & Credits */}
-                <div className="rounded-3xl bg-card border border-border p-6 sm:p-8">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                        <div>
-                            <h2 className="text-xl font-bold text-foreground">Seu Plano</h2>
-                            <p className="text-sm text-muted mt-1">
-                                Plano atual: <span className="text-violet-400 font-bold">{getPlanDisplayName(user.plan)}</span>
-                            </p>
-                            {user.plan !== 'FREE' && user.currentPeriodEnd && (
-                                <p className="text-xs text-muted mt-1">
-                                    Próxima renovação: {new Date(user.currentPeriodEnd).toLocaleDateString('pt-BR')}
-                                </p>
-                            )}
-                            {user.plan !== 'FREE' && (
-                                <p className="text-xs text-muted mt-2">
-                                    O cartão cadastrado será utilizado para cobranças mensais de renovação. Você pode alterar ou cancelar na próxima renovação.
-                                </p>
-                            )}
-                            {user.pendingPlanId && user.pendingPlanEffectiveAt && (
-                                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 font-medium">
-                                    Downgrade agendado: seu plano será alterado para {plans.find((p) => p.key === user.pendingPlanId)?.name ?? user.pendingPlanId} em {new Date(user.pendingPlanEffectiveAt).toLocaleDateString('pt-BR')}.
-                                </p>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-surface border border-border">
-                            <Zap size={20} className="text-violet-400" />
-                            <div>
-                                <div className="text-lg font-bold text-foreground tabular-nums">{user.leadsUsed} / {user.leadsLimit}</div>
-                                <div className="text-[10px] text-muted uppercase tracking-wider">Créditos Usados</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="mt-4">
-                        <div className="flex justify-between text-xs text-muted mb-2">
-                            <span>Uso de créditos</span>
-                            <span className="tabular-nums">{usagePercent}%</span>
-                        </div>
-                        <div className="w-full h-3 bg-surface rounded-full overflow-hidden border border-border">
-                            <div
-                                className="h-full rounded-full transition-all duration-500 ease-out"
-                                style={{
-                                    width: `${usagePercent}%`,
-                                    background: usagePercent > 80
-                                        ? 'linear-gradient(90deg, #ef4444, #f97316)'
-                                        : 'linear-gradient(90deg, #8b5cf6, #6366f1)',
-                                }}
-                            />
-                        </div>
-                    </div>
-                </div>
+                <PlanosCurrentPlanCard user={user} plans={plans} usagePercent={usagePercent} />
 
                 {/* Plans Grid (from API / PlanConfig) */}
                 <div>
                     <h3 className="text-lg font-bold text-foreground mb-6 text-center">Planos Disponíveis</h3>
-                    {(() => {
-                        if (plansLoading) return (
-                            <div className="flex justify-center py-12">
-                                <Loader2 size={32} className="text-violet-400 animate-spin" />
-                            </div>
-                        );
-                        if (plansError) return (
-                            <div className="rounded-3xl bg-card border border-border p-8 text-center">
-                                <p className="text-muted mb-4">{plansError}</p>
-                                <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    onClick={() => {
-                                        setPlansError(null);
-                                        setPlansLoading(true);
-                                        plansApi.list().then(setPlans).catch((err: unknown) => setPlansError(err instanceof Error ? err.message : 'Falha ao carregar planos.')).finally(() => setPlansLoading(false));
-                                    }}
-                                    icon={<RefreshCw size={14} />}
-                                >
-                                    Tentar novamente
-                                </Button>
-                            </div>
-                        );
-                        if (plans.length === 0) return (
-                            <div className="rounded-3xl bg-card border border-border p-8 text-center text-muted">
-                                Nenhum plano disponível no momento.
-                            </div>
-                        );
-                        return (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                            {plans.map((plan) => {
-                                const isCurrent = plan.key === user.plan;
-                                const ui = PLAN_UI[plan.key] ?? { icon: Zap, color: 'text-muted', borderColor: 'border-border', features: [] };
-                                const Icon = ui.icon;
-                                const creditsLabel = `${plan.leadsLimit.toLocaleString('pt-BR')} créditos/mês`;
-                                const features = [...ui.features, creditsLabel];
-                                const cardBgClass = ui.popular ? 'bg-gradient-to-b from-violet-900/30 to-card border-violet-500/40 shadow-lg shadow-violet-500/10' : `bg-card ${ui.borderColor}`;
-                                const ringClass = isCurrent ? 'ring-2 ring-violet-500' : '';
-                                return (
-                                    <div
-                                        key={plan.key}
-                                        className={`rounded-3xl border p-6 flex flex-col gap-4 transition-all relative ${cardBgClass} ${ringClass}`}
-                                    >
-                                        {ui.popular && (
-                                            <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-violet-600 text-white text-[10px] font-bold uppercase tracking-wider rounded-full">
-                                                Popular
-                                            </span>
-                                        )}
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-surface border border-border">
-                                                <Icon size={20} className={ui.color} />
-                                            </div>
-                                            <div>
-                                                <div className="font-bold text-foreground">{plan.name}</div>
-                                                <div className="text-xs text-muted">{creditsLabel}</div>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-baseline gap-1">
-                                            <span className="text-2xl font-black text-foreground">{formatPrice(plan.priceMonthlyBrl)}</span>
-                                            <span className="text-xs text-muted">/mês</span>
-                                        </div>
-                                        <ul className="text-xs text-muted space-y-2 flex-1">
-                                            {features.map((f) => (
-                                                <li key={`${plan.key}-feat-${f}`} className="flex items-start gap-2">
-                                                    <Check size={14} className="text-emerald-400 shrink-0 mt-0.5" />
-                                                    <span>{f}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                        {(() => {
-                                            if (isCurrent) return (
-                                                <div className="text-center text-xs font-bold text-violet-400 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20">
-                                                    Plano Atual
-                                                </div>
-                                            );
-                                            if (plan.key === 'FREE') return (
-                                                <div className="text-center text-xs text-muted py-2">Plano gratuito</div>
-                                            );
-                                            return (
-                                                <PlanCardActionButton
-                                                    planKey={plan.key}
-                                                    loadingPlan={loadingPlan}
-                                                    isDowngrade={isDowngrade}
-                                                    onUpgrade={handleUpgrade}
-                                                />
-                                            );
-                                        })()}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                        );
-                    })()}
+                    <PlanosGridContent
+                        plansLoading={plansLoading}
+                        plansError={plansError}
+                        plans={plans}
+                        user={user}
+                        loadingPlan={loadingPlan}
+                        isDowngrade={isDowngrade}
+                        onUpgrade={handleUpgrade}
+                        onRetry={() => {
+                            setPlansError(null);
+                            setPlansLoading(true);
+                            plansApi.list().then(setPlans).catch((err: unknown) => setPlansError(err instanceof Error ? err.message : 'Falha ao carregar planos.')).finally(() => setPlansLoading(false));
+                        }}
+                        formatPrice={formatPrice}
+                    />
                 </div>
 
                 {/* Feature Comparison (dynamic from plans) */}

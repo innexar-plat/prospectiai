@@ -14,6 +14,25 @@ function getAnalysisProviderLabel(provider: string | undefined): string | undefi
   return provider;
 }
 
+function buildAnalyzePayload(place: PlaceDetail | Place) {
+  return {
+    placeId: place.id,
+    name: place.displayName?.text ?? place.id,
+    locale: 'pt-BR',
+    websiteUri: place.websiteUri ?? undefined,
+    website: place.website ?? undefined,
+    formattedAddress: place.formattedAddress ?? undefined,
+    nationalPhoneNumber: place.nationalPhoneNumber ?? undefined,
+    internationalPhoneNumber: place.internationalPhoneNumber ?? undefined,
+    rating: place.rating ?? undefined,
+    userRatingCount: place.userRatingCount ?? undefined,
+    types: place.types ?? undefined,
+    primaryType: place.primaryType ?? undefined,
+    businessStatus: place.businessStatus ?? undefined,
+    reviews: place.reviews ?? undefined,
+  };
+}
+
 const TAG_COLORS: Record<string, string> = {
   green: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
   amber: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
@@ -332,25 +351,9 @@ export default function LeadDetailPage() {
 
   const handleAnalyze = async () => {
     if (!place?.id) return;
-    const name = place.displayName?.text ?? place.id;
     setAnalyzing(true);
     try {
-      const result = await searchApi.analyze({
-        placeId: place.id,
-        name,
-        locale: 'pt-BR',
-        websiteUri: place.websiteUri ?? undefined,
-        website: place.website ?? undefined,
-        formattedAddress: place.formattedAddress ?? undefined,
-        nationalPhoneNumber: place.nationalPhoneNumber ?? undefined,
-        internationalPhoneNumber: place.internationalPhoneNumber ?? undefined,
-        rating: place.rating ?? undefined,
-        userRatingCount: place.userRatingCount ?? undefined,
-        types: place.types ?? undefined,
-        primaryType: place.primaryType ?? undefined,
-        businessStatus: place.businessStatus ?? undefined,
-        reviews: place.reviews ?? undefined,
-      });
+      const result = await searchApi.analyze(buildAnalyzePayload(place));
       setAnalysis(result);
       window.dispatchEvent(new Event('refresh-user'));
       addToast('success', result.aiProvider ? `Análise concluída (${getAnalysisProviderLabel(result.aiProvider)}).` : 'Análise concluída.');

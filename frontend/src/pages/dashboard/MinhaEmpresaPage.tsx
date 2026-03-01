@@ -11,6 +11,46 @@ const UF_OPTIONS = ['', 'AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO', 'M
 
 type AnalysisMode = 'profile' | 'search';
 
+function buildProfileRequestBody(profile: { companyName: string; city: string; state: string }) {
+    return {
+        useProfile: true as const,
+        companyName: profile.companyName.trim() || undefined,
+        city: profile.city.trim() || undefined,
+        state: profile.state || undefined,
+    };
+}
+
+function buildSearchRequestBody(search: {
+    companyName: string;
+    city: string;
+    state: string;
+    productService: string;
+    websiteUrl: string;
+    linkedInUrl: string;
+    instagramUrl: string;
+    facebookUrl: string;
+}) {
+    return {
+        useProfile: false as const,
+        companyName: search.companyName.trim(),
+        city: search.city.trim() || undefined,
+        state: search.state || undefined,
+        productService: search.productService.trim() || undefined,
+        websiteUrl: search.websiteUrl.trim() || undefined,
+        linkedInUrl: search.linkedInUrl.trim() || undefined,
+        instagramUrl: search.instagramUrl.trim() || undefined,
+        facebookUrl: search.facebookUrl.trim() || undefined,
+    };
+}
+
+function buildAnalysisRequestBody(
+    mode: AnalysisMode,
+    profile: { companyName: string; city: string; state: string },
+    search: Parameters<typeof buildSearchRequestBody>[0],
+) {
+    return mode === 'profile' ? buildProfileRequestBody(profile) : buildSearchRequestBody(search);
+}
+
 export default function MinhaEmpresaPage() {
     const { user } = useOutletContext<{ user: SessionUser }>();
     const navigate = useNavigate();
@@ -45,25 +85,20 @@ export default function MinhaEmpresaPage() {
         setLoading(true);
         setReport(null);
         try {
-            const body =
-                mode === 'profile'
-                    ? {
-                          useProfile: true,
-                          companyName: companyName.trim() || undefined,
-                          city: city.trim() || undefined,
-                          state: state || undefined,
-                      }
-                    : {
-                          useProfile: false,
-                          companyName: searchCompanyName.trim(),
-                          city: searchCity.trim() || undefined,
-                          state: searchState || undefined,
-                          productService: searchProductService.trim() || undefined,
-                          websiteUrl: searchWebsiteUrl.trim() || undefined,
-                          linkedInUrl: searchLinkedInUrl.trim() || undefined,
-                          instagramUrl: searchInstagramUrl.trim() || undefined,
-                          facebookUrl: searchFacebookUrl.trim() || undefined,
-                      };
+            const body = buildAnalysisRequestBody(
+                mode,
+                { companyName, city, state },
+                {
+                    companyName: searchCompanyName,
+                    city: searchCity,
+                    state: searchState,
+                    productService: searchProductService,
+                    websiteUrl: searchWebsiteUrl,
+                    linkedInUrl: searchLinkedInUrl,
+                    instagramUrl: searchInstagramUrl,
+                    facebookUrl: searchFacebookUrl,
+                },
+            );
             const result = await companyAnalysisApi.run(body);
             setReport(result);
             addToast('success', 'Análise concluída!');

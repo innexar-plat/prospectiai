@@ -89,6 +89,31 @@ function formatSections(sections: SearchSection[]): string {
     return parts.join('\n');
 }
 
+async function fetchSerperSectionItems(
+    config: { provider: string; apiKey: string; maxResults: number },
+    query: string,
+): Promise<{ items: Array<{ title: string; link: string; snippet: string }>; used: boolean }> {
+    if (config.provider !== 'SERPER') return { items: [], used: false };
+    try {
+        const items = await searchSerper(config.apiKey, query.trim(), Math.min(config.maxResults, 5));
+        return {
+            items: items.map((item) => ({ title: item.title, link: item.link, snippet: item.snippet ?? '' })),
+            used: true,
+        };
+    } catch {
+        return { items: [], used: false };
+    }
+}
+
+async function runOneQuerySection(
+    config: { provider: string; apiKey: string; maxResults: number },
+    query: string,
+): Promise<{ section: SearchSection; usedSerper: boolean }> {
+    const { label, emoji } = inferSectionLabel(query);
+    const { items, used } = await fetchSerperSectionItems(config, query);
+    return { section: { label, emoji, items }, usedSerper: used };
+}
+
 /**
  * Run search for each query and return a single context block with labeled sections.
  * Each query generates its own section (Reclame Aqui, JusBrasil, CNPJ, etc.).
@@ -102,34 +127,11 @@ export async function getWebContextForRole(
     const config = await getWebSearchConfig(role);
     if (!config || queries.length === 0) return '';
 
-    const sections: SearchSection[] = [];
-    let serperQueryCount = 0;
-
     const maxQueries = role === 'company_analysis' ? 6 : 5;
-    for (const q of queries.slice(0, maxQueries)) {
-        if (!q.trim()) continue;
-        const { label, emoji } = inferSectionLabel(q);
-        const section: SearchSection = { label, emoji, items: [] };
-
-        try {
-            if (config.provider === 'SERPER') {
-                const items = await searchSerper(config.apiKey, q.trim(), Math.min(config.maxResults, 5));
-                serperQueryCount += 1;
-                for (const item of items) {
-                    section.items.push({
-                        title: item.title,
-                        link: item.link,
-                        snippet: item.snippet ?? '',
-                    });
-                }
-            }
-            // TAVILY: adapter not implemented yet; skip query
-        } catch {
-            // skip failed query
-        }
-
-        sections.push(section);
-    }
+    const toRun = queries.slice(0, maxQueries).filter((q) => q.trim());
+    const results = await Promise.all(toRun.map((q) => runOneQuerySection(config, q)));
+    const sections = results.map((r) => r.section);
+    const serperQueryCount = results.filter((r) => r.usedSerper).length;
 
     if (options?.workspaceId && serperQueryCount > 0) {
         const { recordUsageEvent } = await import('@/lib/usage');
