@@ -79,8 +79,6 @@ describe('GET /api/user/me', () => {
       websiteUrl: null,
       onboardingCompletedAt: null,
       notifyByEmail: true,
-      notifyWeeklyReport: false,
-      notifyLeadAlerts: false,
       workspaces: [{ workspace: { id: 'w1', ...baseWorkspace } }],
     };
     prisma.user.findUnique.mockResolvedValue(userWithWorkspace);
@@ -118,8 +116,6 @@ describe('GET /api/user/me', () => {
       websiteUrl: null,
       onboardingCompletedAt: new Date(),
       notifyByEmail: true,
-      notifyWeeklyReport: false,
-      notifyLeadAlerts: false,
       workspaces: [{ workspace: workspaceData }],
     });
     prisma.workspace.findUnique.mockResolvedValue(workspaceData);

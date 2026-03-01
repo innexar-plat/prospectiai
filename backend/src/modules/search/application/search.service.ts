@@ -18,6 +18,30 @@ import type { SearchResult, PlaceLike } from '../domain/types';
 const RADIUS_KM_TO_M = 1000;
 
 type SaveHistoryFn = (resultsCount: number, places?: unknown[]) => Promise<void>;
+
+/** Page token from request (optional or null). */
+type PageTokenParam = string | undefined | null;
+
+type TryCacheOrDbSearchParams = {
+    textQuery: string;
+    includedType?: string | null;
+    effectivePageSize: number;
+    hasWebsite?: string | null;
+    hasPhone?: string | null;
+};
+
+type ExecuteSearchInput = {
+    textQuery: string;
+    includedType: string | null;
+    pageToken: string | undefined;
+    hasWebsite: string | null;
+    hasPhone: string | null;
+    effectivePageSize: number;
+};
+
+type LocationBias = { center: { latitude: number; longitude: number }; radius: number };
+type FiltersPayload = { includedType: string | null; hasWebsite: string | null; hasPhone: string | null };
+
 const DEFAULT_LOCATION_RADIUS_KM = 15;
 /** Places API locationBias circle max radius (meters) = 50km */
 const MAX_LOCATION_RADIUS_M = 50000;
@@ -72,8 +96,8 @@ async function getSearchUserAndWorkspaceOrThrow(userId: string) {
 }
 
 async function tryCacheOrDbSearch(
-    pageToken: string | undefined | null,
-    params: { textQuery: string; includedType?: string | null; effectivePageSize: number; hasWebsite?: string | null; hasPhone?: string | null },
+    pageToken: PageTokenParam,
+    params: TryCacheOrDbSearchParams,
     saveHistory: SaveHistoryFn,
 ): Promise<SearchResult | null> {
     if (pageToken) return null;
@@ -162,11 +186,11 @@ async function persistSearchResult(
 
 async function resolveSearchLocationBias(
     cityTrim: string | undefined,
-    pageToken: string | undefined | null,
+    pageToken: PageTokenParam,
     state: string | undefined | null,
     country: string | undefined | null,
     radiusKm: number | undefined | null,
-): Promise<{ center: { latitude: number; longitude: number }; radius: number } | undefined> {
+): Promise<LocationBias | undefined> {
     if (!cityTrim || pageToken) return undefined;
     const coords = await geocodeAddress(cityTrim, state ?? null, country ?? 'Brasil');
     if (!coords) {
@@ -180,6 +204,75 @@ async function resolveSearchLocationBias(
     );
     logger.info('Search: locationBias applied', { city: cityTrim, radiusKm: radiusKmNum, radiusM });
     return { center: coords, radius: radiusM };
+}
+
+function createSaveHistoryForSearch(
+    activeWorkspace: { id: string },
+    userId: string,
+    textQuery: string,
+    effectivePageSize: number,
+    filtersPayload: FiltersPayload,
+): SaveHistoryFn {
+    return async (resultsCount: number, places?: unknown[]): Promise<void> => {
+        await prisma.searchHistory
+            .create({
+                data: {
+                    workspaceId: activeWorkspace.id,
+                    userId,
+                    textQuery,
+                    pageSize: effectivePageSize,
+                    filters: filtersPayload,
+                    resultsCount,
+                    resultsData: places ? JSON.parse(JSON.stringify(places)) : undefined,
+                },
+            })
+            .catch((err) =>
+                logger.error('SearchHistory create error', {
+                    error: err instanceof Error ? err.message : 'Unknown',
+                })
+            );
+    };
+}
+
+async function executeGoogleSearchAndPersist(
+    input: ExecuteSearchInput,
+    locationBias: LocationBias | undefined,
+    activeWorkspace: { id: string },
+    userId: string,
+    filtersPayload: FiltersPayload,
+): Promise<SearchResult> {
+    if (input.pageToken) {
+        await new Promise((r) => setTimeout(r, NEXT_PAGE_TOKEN_DELAY_MS));
+    }
+    logger.info('Search: calling Google Places API', {
+        textQuery: input.textQuery,
+        includedType: input.includedType,
+        hasLocationBias: !!locationBias,
+        hasPageToken: !!input.pageToken,
+    });
+    const result = await textSearch({
+        textQuery: input.textQuery,
+        includedType: input.includedType || undefined,
+        pageSize: input.effectivePageSize,
+        pageToken: input.pageToken || undefined,
+        locationBias,
+    });
+    const rawCount = result.places?.length ?? 0;
+    if (result.places) {
+        result.places = filterPlaces(result.places, input.hasWebsite, input.hasPhone).slice(0, input.effectivePageSize);
+    }
+    const finalCount = result.places?.length ?? 0;
+    logger.info('Search: Google Places response', {
+        rawCount,
+        afterFilter: finalCount,
+        hasWebsite: input.hasWebsite,
+        hasPhone: input.hasPhone,
+    });
+    if (result.places && result.places.length > 0) {
+        await persistSearchResult(activeWorkspace, userId, result.places, input.textQuery, input.effectivePageSize, filtersPayload);
+    }
+    logger.info('Search: result', { resultCount: finalCount });
+    return result;
 }
 
 export async function runSearch(input: SearchInput, userId: string): Promise<SearchResult> {
@@ -199,26 +292,7 @@ export async function runSearch(input: SearchInput, userId: string): Promise<Sea
     });
 
     const { activeWorkspace } = await getSearchUserAndWorkspaceOrThrow(userId);
-
-    const saveHistory = async (resultsCount: number, places?: unknown[]): Promise<void> => {
-        await prisma.searchHistory
-            .create({
-                data: {
-                    workspaceId: activeWorkspace.id,
-                    userId,
-                    textQuery,
-                    pageSize: effectivePageSize,
-                    filters: filtersPayload,
-                    resultsCount,
-                    resultsData: places ? JSON.parse(JSON.stringify(places)) : undefined,
-                },
-            })
-            .catch((err) =>
-                logger.error('SearchHistory create error', {
-                    error: err instanceof Error ? err.message : 'Unknown',
-                })
-            );
-    };
+    const saveHistory = createSaveHistoryForSearch(activeWorkspace, userId, textQuery, effectivePageSize, filtersPayload);
 
     const earlyResult = await tryCacheOrDbSearch(
         pageToken,
@@ -228,33 +302,20 @@ export async function runSearch(input: SearchInput, userId: string): Promise<Sea
     if (earlyResult) return earlyResult;
 
     const locationBias = await resolveSearchLocationBias(city?.trim(), pageToken, state, country, radiusKm);
-
-    if (pageToken) {
-        await new Promise((r) => setTimeout(r, NEXT_PAGE_TOKEN_DELAY_MS));
-    }
-
-    logger.info('Search: calling Google Places API', { textQuery, includedType: includedType ?? null, hasLocationBias: !!locationBias, hasPageToken: !!pageToken });
-    const result = await textSearch({
-        textQuery,
-        includedType: includedType || undefined,
-        pageSize: effectivePageSize,
-        pageToken: pageToken || undefined,
+    return executeGoogleSearchAndPersist(
+        {
+            textQuery,
+            includedType: includedType ?? null,
+            pageToken: pageToken ?? undefined,
+            hasWebsite: hasWebsite ?? null,
+            hasPhone: hasPhone ?? null,
+            effectivePageSize,
+        },
         locationBias,
-    });
-
-    const rawCount = result.places?.length ?? 0;
-    if (result.places) {
-        result.places = filterPlaces(result.places, hasWebsite, hasPhone).slice(0, effectivePageSize);
-    }
-    const finalCount = result.places?.length ?? 0;
-    logger.info('Search: Google Places response', { rawCount, afterFilter: finalCount, hasWebsite: hasWebsite ?? null, hasPhone: hasPhone ?? null });
-
-    if (result.places && result.places.length > 0) {
-        await persistSearchResult(activeWorkspace, userId, result.places, textQuery, effectivePageSize, filtersPayload);
-    }
-
-    logger.info('Search: result', { resultCount: finalCount });
-    return result;
+        activeWorkspace,
+        userId,
+        filtersPayload,
+    );
 }
 
 /** Max places to fetch in one runSearchAllPages call (intelligence modules). */

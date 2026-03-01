@@ -139,7 +139,7 @@ export default function SignInPage() {
                         </div>
 
                         {error && (
-                            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-sm font-bold text-center animate-shake">
+                            <div className="p-4 bg-red-200 dark:bg-red-500/10 border border-red-600 dark:border-red-500/20 rounded-2xl text-red-900 dark:text-red-400 text-sm font-bold text-center animate-shake">
                                 {error}
                             </div>
                         )}

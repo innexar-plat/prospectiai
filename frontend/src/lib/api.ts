@@ -469,14 +469,12 @@ export interface SessionUser {
     pendingPlanId?: string | null;
     pendingPlanEffectiveAt?: string | null;
     notifyByEmail?: boolean;
-    notifyWeeklyReport?: boolean;
-    notifyLeadAlerts?: boolean;
 }
 
 /** Payload for POST /api/user/profile (personal profile only) */
 export type UserProfileUpdate = Partial<Pick<SessionUser,
     'name' | 'phone' | 'address' | 'linkedInUrl' | 'instagramUrl' | 'facebookUrl' | 'websiteUrl' | 'image'
-    | 'notifyByEmail' | 'notifyWeeklyReport' | 'notifyLeadAlerts'>>;
+    | 'notifyByEmail'>>;
 
 /** Response from POST /api/user/profile */
 export interface UserProfileResponse {
@@ -491,8 +489,6 @@ export interface UserProfileResponse {
     facebookUrl: string | null;
     websiteUrl: string | null;
     notifyByEmail: boolean;
-    notifyWeeklyReport: boolean;
-    notifyLeadAlerts: boolean;
 }
 
 export interface Place {
@@ -502,10 +498,18 @@ export interface Place {
     nationalPhoneNumber?: string;
     internationalPhoneNumber?: string;
     websiteUri?: string;
+    website?: string;
     rating?: number;
     userRatingCount?: number;
     types?: string[];
+    primaryType?: string;
     businessStatus?: string;
+    reviews?: Array<{
+        rating: number;
+        text?: { text: string };
+        authorAttribution?: { displayName: string };
+        relativePublishTimeDescription?: string;
+    }>;
 }
 
 export type PlaceDetail = Place & {

@@ -8,8 +8,13 @@
 - `make logs`
 - `make logs SERVICE=backend` (ou `frontend`, `admin`, `db`, `redis`)
 
+## Health e readiness
+- **GET /api/health** — liveness: retorna 200 quando o processo está de pé (usado pelo healthcheck do Docker).
+- **GET /api/ready** — readiness: retorna 200 só se o banco responder (`SELECT 1`). Use em orquestradores (ex.: Kubernetes readinessProbe) para não enviar tráfego antes do DB estar disponível.
+
 ## Variáveis de ambiente
 - Lista completa em **`.env.example`** na raiz do repositório.
+- **Validação no startup:** o entrypoint do backend exige `AUTH_SECRET`, `DATABASE_URL` e (`NEXTAUTH_URL` ou `AUTH_URL`). Se faltar algum, o container sai com erro antes de subir o servidor.
 - Principais: `DATABASE_URL`, `AUTH_SECRET`, `NEXTAUTH_URL`, `NEXT_PUBLIC_APP_URL`, `GOOGLE_PLACES_API_KEY`, `GEMINI_API_KEY`.
 - Billing: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` e/ou `MERCADOPAGO_ACCESS_TOKEN`.
 - Cron de billing: `BILLING_CRON_SECRET` (ver seção abaixo).

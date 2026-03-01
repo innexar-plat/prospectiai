@@ -473,6 +473,12 @@
       "namedRegex": "^/api/product/modules(?:/)?$"
     },
     {
+      "page": "/api/ready",
+      "regex": "^/api/ready(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/ready(?:/)?$"
+    },
+    {
       "page": "/api/search",
       "regex": "^/api/search(?:/)?$",
       "routeKeys": {},
@@ -527,6 +533,18 @@
       "namedRegex": "^/api/team/invite(?:/)?$"
     },
     {
+      "page": "/api/team/invite/accept",
+      "regex": "^/api/team/invite/accept(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/team/invite/accept(?:/)?$"
+    },
+    {
+      "page": "/api/team/invite/resend",
+      "regex": "^/api/team/invite/resend(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/team/invite/resend(?:/)?$"
+    },
+    {
       "page": "/api/team/members",
       "regex": "^/api/team/members(?:/)?$",
       "routeKeys": {},
@@ -543,6 +561,12 @@
       "regex": "^/api/team/remove(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/team/remove(?:/)?$"
+    },
+    {
+      "page": "/api/team/role",
+      "regex": "^/api/team/role(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/team/role(?:/)?$"
     },
     {
       "page": "/api/user/me",

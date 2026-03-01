@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export default function middleware(req: NextRequest) {
     const { pathname } = req.nextUrl;
-    console.log(`[REQ] ${req.method} ${pathname}`);
-    console.log(`[HEADERS] host: ${req.headers.get('host')}`);
-    console.log(`[HEADERS] x-forwarded-host: ${req.headers.get('x-forwarded-host')}`);
-    console.log(`[HEADERS] cookie: ${req.headers.get('cookie')}`);
+    // Log only method + path in development; never log cookie or other sensitive headers (security).
+    if (process.env.NODE_ENV === 'development') {
+        console.log(`[REQ] ${req.method} ${pathname}`);
+    }
 
     // Handle CORS preflight requests
     if (req.method === 'OPTIONS') {

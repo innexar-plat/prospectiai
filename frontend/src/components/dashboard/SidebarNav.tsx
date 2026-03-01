@@ -133,7 +133,7 @@ export function SidebarNav({
     const logoBlock = (
       <div className={cn('flex items-center gap-2 shrink-0', isNarrow ? 'mb-4 justify-center px-2' : 'mb-5 justify-between')}>
         <Logo
-          iconSize={isNarrow ? 28 : 28}
+          iconSize={isNarrow ? 28 : 24}
           iconOnly={isNarrow}
           className="shrink-0"
           textClassName={isNarrow ? '' : 'font-bold text-sm tracking-tight truncate'}
@@ -153,14 +153,14 @@ export function SidebarNav({
 
     const itemClass = (active: boolean) =>
       cn(
-        'w-full flex rounded-lg transition-colors text-[13px] border border-transparent',
+        'w-full flex items-center rounded-lg transition-colors text-[13px] border border-transparent',
         active
           ? 'bg-violet-600/10 text-violet-500 border-violet-500/20'
           : 'text-muted hover:text-foreground hover:bg-surface'
       );
 
     const navContent = (
-      <nav className="flex-1 space-y-4 overflow-y-auto scrollbar-thin" aria-label="Navegação do dashboard">
+      <nav className="flex-1 space-y-5 overflow-y-auto scrollbar-thin" aria-label="Navegação do dashboard">
         {SIDEBAR_SECTIONS.map((section) => {
           const isSecCollapsed = sectionCollapsed[section.title];
           return (
@@ -170,17 +170,17 @@ export function SidebarNav({
                   type="button"
                   onClick={() => section.collapsible && toggleSection(section.title)}
                   className={cn(
-                    'w-full flex items-center justify-between px-2 py-1.5 mb-1',
+                    'w-full flex items-center justify-between px-3 py-1 mb-1.5',
                     section.collapsible ? 'cursor-pointer hover:opacity-80' : 'cursor-default'
                   )}
                 >
-                  <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-muted/70 select-none">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted/60 select-none">
                     {section.title}
                   </span>
                   {section.collapsible && (
                     <ChevronDown
                       size={12}
-                      className={cn('text-muted/50 transition-transform', isSecCollapsed && '-rotate-90')}
+                      className={cn('text-muted/40 transition-transform', isSecCollapsed && '-rotate-90')}
                     />
                   )}
                 </button>
@@ -191,10 +191,12 @@ export function SidebarNav({
                     const locked = badge && !hasPlanAccess(user.plan, badge);
                     const planName = badge ? BADGE_TO_PLAN_NAME[badge] : '';
                     const linkContent = (
-                      <>
-                        <Icon size={isNarrow ? 20 : 15} aria-hidden />
-                        {!isNarrow && <span className="font-medium">{label}</span>}
-                      </>
+                      <span className={cn('flex items-center min-w-0', isNarrow ? 'justify-center' : 'gap-2.5')}>
+                        <span className="shrink-0 flex items-center justify-center" style={{ width: isNarrow ? undefined : 18 }}>
+                          <Icon size={isNarrow ? 20 : 16} aria-hidden />
+                        </span>
+                        {!isNarrow && <span className="font-medium truncate">{label}</span>}
+                      </span>
                     );
                     if (locked) {
                       return (
@@ -205,11 +207,11 @@ export function SidebarNav({
                           title={isNarrow ? label : undefined}
                           className={cn(
                             itemClass(false),
-                            isNarrow ? 'justify-center p-3 min-h-[44px]' : 'justify-between px-3 py-2.5 min-h-[40px] gap-2.5'
+                            isNarrow ? 'justify-center p-3 min-h-[44px]' : 'justify-between px-3 py-2 min-h-[38px]'
                           )}
                         >
                           {linkContent}
-                          {!isNarrow && <Lock size={14} className="shrink-0 text-muted" aria-hidden />}
+                          {!isNarrow && <Lock size={13} className="shrink-0 text-muted/50 ml-auto" aria-hidden />}
                         </button>
                       );
                     }
@@ -222,7 +224,7 @@ export function SidebarNav({
                         className={({ isActive }) =>
                           cn(
                             itemClass(isActive),
-                            isNarrow ? 'justify-center p-3 min-h-[44px]' : 'justify-between px-3 py-2.5 min-h-[40px] gap-2.5'
+                            isNarrow ? 'justify-center p-3 min-h-[44px]' : 'justify-between px-3 py-2 min-h-[38px]'
                           )
                         }
                       >
@@ -276,7 +278,7 @@ export function SidebarNav({
             </>
           )}
         </div>
-        <div className={cn('flex rounded-lg border border-transparent hover:bg-surface/50', isNarrow ? 'justify-center p-2 gap-0' : 'items-center gap-2 px-1 py-1.5')}>
+        <div className={cn('flex rounded-lg border border-transparent hover:bg-surface/50 transition-colors', isNarrow ? 'justify-center p-2 gap-0' : 'items-center gap-2.5 px-2 py-2')}>
           <div className="w-8 h-8 rounded-full bg-violet-600/20 flex items-center justify-center font-semibold text-xs text-violet-400 shrink-0" title={isNarrow ? `${user.name || 'Usuário'} · ${getPlanDisplayName(user.plan)}` : undefined}>
             {user.name?.[0] || user.email?.[0] || 'U'}
           </div>

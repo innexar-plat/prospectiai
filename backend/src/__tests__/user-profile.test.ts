@@ -17,8 +17,6 @@ const updatedUserSelect = {
   facebookUrl: null,
   websiteUrl: null,
   notifyByEmail: true,
-  notifyWeeklyReport: false,
-  notifyLeadAlerts: false,
 };
 
 describe('POST /api/user/profile', () => {
@@ -46,8 +44,6 @@ describe('POST /api/user/profile', () => {
       name: 'New Name',
       email: 'u@x.com',
       notifyByEmail: true,
-      notifyWeeklyReport: false,
-      notifyLeadAlerts: false,
     });
     expect(prisma.user.update).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: 'u1' },

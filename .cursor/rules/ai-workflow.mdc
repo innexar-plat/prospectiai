@@ -1,5 +1,5 @@
 ---
-description: Fluxo obrigatório do agente: ler .ai/, planejar, validar no Docker
+description: Fluxo obrigatório do agente: ler .ai/, planejar, validar no Docker e pós-alteração (build, testes, commit, push, sonar)
 alwaysApply: true
 ---
 
@@ -14,3 +14,32 @@ Antes de qualquer mudança de código ou infra:
 5. **Entrega**: checklist de `.ai/CHECKLIST.md` + evidências no PR (outputs de build/test/health/logs)
 
 Nenhuma entrega é considerada feita sem build e health ok no Docker.
+
+---
+
+# Pós-alteração (OBRIGATÓRIO após qualquer alteração de código)
+
+Depois de **qualquer** alteração, executar nesta ordem:
+
+1. **Build**  
+   - Backend: `cd backend && npm run build`  
+   - Frontend: `cd frontend && npm run build`  
+   - Admin (se alterado): `cd admin && npm run build`  
+   - Ou `make build` quando aplicável.
+
+2. **Testes**  
+   - `make test` (ou `npm run test` nos workspaces afetados).  
+   - Nenhuma entrega com testes falhando.
+
+3. **Commit e push**  
+   - `git add` dos arquivos alterados, `git commit` com mensagem clara, `git push`.  
+   - Manter histórico rastreável.
+
+4. **Sonar**  
+   - Executar análise: `make sonar` (exige `SONAR_TOKEN` no ambiente) ou o comando Docker em `.ai/MANUTENCAO_SONAR.md`.
+
+5. **Analisar resultado e propor próxima etapa**  
+   - Consultar o dashboard (https://sonar.innexar.com.br/dashboard?id=Prospector-AI) ou a API:  
+     `curl -s -u "$SONAR_TOKEN": "https://sonar.innexar.com.br/api/issues/search?componentKeys=Prospector-AI&resolved=false&ps=100"`  
+   - Resumir: total de issues, por severidade e por regra (ex.: S3776).  
+   - Propor próxima etapa concreta (ex.: “corrigir S3776 nos arquivos X e Y”, “revisar Security Hotspots em Z”).

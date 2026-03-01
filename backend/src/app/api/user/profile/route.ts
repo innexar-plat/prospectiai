@@ -15,8 +15,6 @@ function buildProfileUpdate(data: ProfileInput): Record<string, unknown> {
     if (data.websiteUrl !== undefined) out.websiteUrl = data.websiteUrl;
     if (data.image !== undefined) out.image = data.image;
     if (data.notifyByEmail !== undefined) out.notifyByEmail = data.notifyByEmail;
-    if (data.notifyWeeklyReport !== undefined) out.notifyWeeklyReport = data.notifyWeeklyReport;
-    if (data.notifyLeadAlerts !== undefined) out.notifyLeadAlerts = data.notifyLeadAlerts;
     return out;
 }
 
@@ -53,8 +51,6 @@ export async function POST(req: NextRequest) {
                 facebookUrl: true,
                 websiteUrl: true,
                 notifyByEmail: true,
-                notifyWeeklyReport: true,
-                notifyLeadAlerts: true,
             },
         });
 
@@ -70,8 +66,6 @@ export async function POST(req: NextRequest) {
             facebookUrl: user.facebookUrl,
             websiteUrl: user.websiteUrl,
             notifyByEmail: user.notifyByEmail,
-            notifyWeeklyReport: user.notifyWeeklyReport,
-            notifyLeadAlerts: user.notifyLeadAlerts,
         });
     } catch (error) {
         const { logger } = await import('@/lib/logger');

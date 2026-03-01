@@ -147,7 +147,7 @@ export default function SignUpPage() {
                         </div>
 
                         {error && (
-                            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs font-bold text-center">
+                            <div className="p-3 bg-red-200 dark:bg-red-500/10 border border-red-600 dark:border-red-500/20 rounded-xl text-red-900 dark:text-red-400 text-xs font-bold text-center">
                                 {error}
                             </div>
                         )}

@@ -285,7 +285,7 @@ export default function Dashboard({ user }: { user: SessionUser }) {
                     </div>
 
                     {searchState.error && (
-                        <div className="flex items-center gap-3 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400">
+                        <div className="flex items-center gap-3 p-4 rounded-2xl bg-red-200 dark:bg-red-500/10 border border-red-600 dark:border-red-500/20 text-red-900 dark:text-red-400">
                             <AlertCircle size={20} />
                             <span className="text-sm font-medium">{searchState.error}</span>
                         </div>

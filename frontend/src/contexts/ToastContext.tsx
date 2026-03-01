@@ -24,7 +24,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const addToast = useCallback((type: ToastType, message: string, duration = DEFAULT_DURATION) => {
-    const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const id = `toast-${Date.now()}-${crypto.randomUUID()}`;
     setToasts((prev) => [...prev, { id, type, message, duration }]);
     if (duration > 0) {
       setTimeout(() => {
@@ -61,18 +61,19 @@ function ToastList() {
           key={t.id}
           role="alert"
           className={cn(
-            'rounded-xl border px-4 py-3 shadow-lg backdrop-blur-sm flex items-center justify-between gap-3 min-h-[44px]',
-            t.type === 'error' && 'bg-red-100 dark:bg-red-500/20 border-red-400 dark:border-red-500/40 text-red-800 dark:text-red-200',
-            t.type === 'success' && 'bg-emerald-100 dark:bg-emerald-500/20 border-emerald-500/40 text-emerald-800 dark:text-emerald-200',
-            t.type === 'warning' && 'bg-amber-100 dark:bg-amber-500/20 border-amber-500/40 text-amber-800 dark:text-amber-200',
-            t.type === 'info' && 'bg-violet-100 dark:bg-violet-500/20 border-violet-500/40 text-violet-800 dark:text-violet-200'
+            'rounded-xl border-2 px-4 py-3 shadow-lg backdrop-blur-sm flex items-center justify-between gap-3 min-h-[44px]',
+            'text-[#0f172a]',
+            t.type === 'error' && 'bg-red-200 dark:bg-red-500/20 border-red-600 dark:border-red-500/40 dark:text-red-200',
+            t.type === 'success' && 'bg-emerald-200 dark:bg-emerald-500/20 border-emerald-700 dark:border-emerald-500/40 dark:text-emerald-200',
+            t.type === 'warning' && 'bg-amber-200 dark:bg-amber-500/20 border-amber-600 dark:border-amber-500/40 dark:text-amber-200',
+            t.type === 'info' && 'bg-violet-200 dark:bg-violet-500/20 border-violet-700 dark:border-violet-500/40 dark:text-violet-200'
           )}
         >
           <span className="text-sm font-medium flex-1">{t.message}</span>
           <button
             type="button"
             onClick={() => removeToast(t.id)}
-            className="shrink-0 p-1 rounded-lg hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/50"
+            className="shrink-0 p-1 rounded-lg hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-currentColor opacity-70"
             aria-label="Fechar notificação"
           >
             ×

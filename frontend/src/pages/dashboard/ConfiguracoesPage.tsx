@@ -11,22 +11,18 @@ export default function ConfiguracoesPage() {
   const { addToast } = useToast();
 
   const [emailNotifs, setEmailNotifs] = useState(true);
-  const [weeklyReport, setWeeklyReport] = useState(false);
-  const [leadAlerts, setLeadAlerts] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (user) {
       setEmailNotifs(user.notifyByEmail ?? true);
-      setWeeklyReport(user.notifyWeeklyReport ?? false);
-      setLeadAlerts(user.notifyLeadAlerts ?? false);
     }
   }, [user]);
 
-  const savePref = async (field: 'notifyByEmail' | 'notifyWeeklyReport' | 'notifyLeadAlerts', value: boolean) => {
+  const savePref = async (value: boolean) => {
     setSaving(true);
     try {
-      await userApi.updateProfile({ [field]: value });
+      await userApi.updateProfile({ notifyByEmail: value });
       addToast('success', 'Preferência salva!');
     } catch {
       addToast('error', 'Não foi possível salvar.');
@@ -55,29 +51,7 @@ export default function ConfiguracoesPage() {
               onToggle={() => {
                 const next = !emailNotifs;
                 setEmailNotifs(next);
-                savePref('notifyByEmail', next).catch(() => {});
-              }}
-            />
-            <ToggleRow
-              label="Relatório semanal"
-              description="Receba um resumo semanal com suas métricas de prospecção."
-              enabled={weeklyReport}
-              disabled={saving}
-              onToggle={() => {
-                const next = !weeklyReport;
-                setWeeklyReport(next);
-                savePref('notifyWeeklyReport', next).catch(() => {});
-              }}
-            />
-            <ToggleRow
-              label="Alertas de leads"
-              description="Seja notificado quando novos leads forem encontrados na sua região."
-              enabled={leadAlerts}
-              disabled={saving}
-              onToggle={() => {
-                const next = !leadAlerts;
-                setLeadAlerts(next);
-                savePref('notifyLeadAlerts', next).catch(() => {});
+                savePref(next).catch(() => {});
               }}
             />
           </div>

@@ -41,8 +41,6 @@ const userMeSelect = {
     websiteUrl: true,
     onboardingCompletedAt: true,
     notifyByEmail: true,
-    notifyWeeklyReport: true,
-    notifyLeadAlerts: true,
     workspaces: { include: { workspace: true }, take: 1 },
 } as const;
 
@@ -123,8 +121,6 @@ function buildUiUser(
         workspaces: undefined,
         requiresOnboarding: user.onboardingCompletedAt == null,
         notifyByEmail: user.notifyByEmail,
-        notifyWeeklyReport: user.notifyWeeklyReport,
-        notifyLeadAlerts: user.notifyLeadAlerts,
     };
 }
 

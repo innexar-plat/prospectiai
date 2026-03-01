@@ -187,7 +187,7 @@ export function SearchParamsIntelligenceCard({
               aria-describedby={advancedTermError ? 'advanced-term-error' : undefined}
             />
             {advancedTermError && (
-              <p id="advanced-term-error" className="mt-1.5 ml-1 text-xs font-medium text-red-400" role="alert">
+              <p id="advanced-term-error" className="mt-1.5 ml-1 text-xs font-medium text-red-800 dark:text-red-400" role="alert">
                 {advancedTermError}
               </p>
             )}

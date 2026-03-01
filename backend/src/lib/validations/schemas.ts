@@ -76,8 +76,6 @@ export const profileSchema = z.object({
   websiteUrl: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
   image: z.string().max(2000).optional().transform((s) => (s?.trim() || undefined)),
   notifyByEmail: z.boolean().optional(),
-  notifyWeeklyReport: z.boolean().optional(),
-  notifyLeadAlerts: z.boolean().optional(),
 });
 
 /** POST /api/company-analysis — useProfile (default true) + optional overrides (defaults from workspace when useProfile) */
