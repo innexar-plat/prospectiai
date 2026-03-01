@@ -1,53 +1,37 @@
 import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
 import { OnboardingTour } from '@/components/dashboard/OnboardingTour';
-import {
-  getSectionIdFromPath,
-  TOUR_STEPS_BY_SECTION,
-  wasTourSeen,
-  markTourSeen,
-} from '@/lib/tour-steps';
+import { WELCOME_TOUR_STEPS, wasWelcomeTourDone, markWelcomeTourDone } from '@/lib/tour-steps';
 
 /**
- * Mostra o tour da seção na primeira visita. Rode dentro de DashboardLayout (após Outlet estar montado).
+ * Mostra o tour de boas-vindas uma única vez na primeira visita ao dashboard.
+ * Ao concluir ou pular, o tour não é mais exibido.
  */
 export function DashboardTourTrigger() {
-  const location = useLocation();
-  const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
-    const sectionId = getSectionIdFromPath(location.pathname);
-    if (!sectionId) {
-      const id = requestAnimationFrame(() => setActiveSectionId(null));
-      return () => cancelAnimationFrame(id);
-    }
-    const steps = TOUR_STEPS_BY_SECTION[sectionId];
-    if (!steps?.length || wasTourSeen(sectionId)) {
-      const id = requestAnimationFrame(() => setActiveSectionId(null));
-      return () => cancelAnimationFrame(id);
-    }
-    const id = requestAnimationFrame(() => setActiveSectionId(sectionId));
+    const id = requestAnimationFrame(() => {
+      setShowWelcome(!wasWelcomeTourDone());
+    });
     return () => cancelAnimationFrame(id);
-  }, [location.pathname]);
-
-  const steps = activeSectionId ? TOUR_STEPS_BY_SECTION[activeSectionId] : [];
+  }, []);
 
   const handleComplete = () => {
-    if (activeSectionId) markTourSeen(activeSectionId);
-    setActiveSectionId(null);
+    markWelcomeTourDone();
+    setShowWelcome(false);
   };
 
   const handleSkip = () => {
-    if (activeSectionId) markTourSeen(activeSectionId);
-    setActiveSectionId(null);
+    markWelcomeTourDone();
+    setShowWelcome(false);
   };
 
-  if (!activeSectionId || steps.length === 0) return null;
+  if (!showWelcome || WELCOME_TOUR_STEPS.length === 0) return null;
 
   return (
     <OnboardingTour
-      sectionId={activeSectionId}
-      steps={steps}
+      sectionId="welcome"
+      steps={WELCOME_TOUR_STEPS}
       onComplete={handleComplete}
       onSkip={handleSkip}
     />

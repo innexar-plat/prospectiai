@@ -1,5 +1,6 @@
 /**
- * Tour por seção do dashboard. sectionId vem do pathname; steps são exibidos na primeira visita à seção.
+ * Tour de boas-vindas: exibido uma única vez na primeira visita ao dashboard.
+ * O usuário pode concluir ou pular; em ambos os casos o tour não é mais exibido.
  */
 
 export type TourStep = {
@@ -8,6 +9,15 @@ export type TourStep = {
   body: string;
 };
 
+/** Tour unificado — única exibição na primeira vez no dashboard */
+export const WELCOME_TOUR_STEPS: TourStep[] = [
+  { target: null, title: 'Bem-vindo ao Prospector', body: 'Este rápido tour mostra o essencial para começar. Você pode pular a qualquer momento.' },
+  { target: 'nova-busca', title: 'Nova Busca', body: 'Aqui você define cidade, nicho e opcionalmente bairros. Clique em "Buscar" para encontrar leads na região.' },
+  { target: null, title: 'Menu lateral', body: 'Use o menu à esquerda para Histórico, Leads Salvos, Inteligência, Equipe e Conta. O ícone no rodapé recolhe o menu para ver só os ícones.' },
+  { target: null, title: 'Tudo pronto', body: 'Explore as buscas, salve leads e use as análises por plano. Em Suporte você pode refazer este tour se quiser.' },
+];
+
+/** Steps por seção (usado em Suporte "Ver tour do sistema" — refaz por seção) */
 const PROSPECAO_STEPS: TourStep[] = [
   { target: 'nova-busca', title: 'Nova Busca', body: 'Aqui você define cidade, nicho e opcionalmente bairros. Clique em "Buscar" para encontrar leads na região.' },
   { target: null, title: 'Histórico e Leads', body: 'No menu à esquerda: Histórico mostra todas as buscas; Leads Salvos reúne os negócios que você salvou para contato.' },
@@ -33,6 +43,7 @@ export const TOUR_STEPS_BY_SECTION: Record<string, TourStep[]> = {
 };
 
 export const TOUR_STORAGE_PREFIX = 'prospector_tour_';
+export const WELCOME_TOUR_STORAGE_KEY = 'prospector_tour_welcome_done';
 
 export function getSectionIdFromPath(pathname: string): string | null {
   const p = pathname.replace(/^\/dashboard\/?/, '') || 'index';
@@ -58,12 +69,22 @@ export function markTourSeen(sectionId: string): void {
   window.localStorage.setItem(getTourStorageKey(sectionId), '1');
 }
 
+export function wasWelcomeTourDone(): boolean {
+  if (typeof window === 'undefined') return true;
+  return window.localStorage.getItem(WELCOME_TOUR_STORAGE_KEY) === '1';
+}
+
+export function markWelcomeTourDone(): void {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(WELCOME_TOUR_STORAGE_KEY, '1');
+}
+
 export function clearAllTourFlags(): void {
   if (typeof window === 'undefined') return;
   const keys: string[] = [];
   for (let i = 0; i < window.localStorage.length; i++) {
     const k = window.localStorage.key(i);
-    if (k?.startsWith(TOUR_STORAGE_PREFIX)) keys.push(k);
+    if (k?.startsWith(TOUR_STORAGE_PREFIX) || k === WELCOME_TOUR_STORAGE_KEY) keys.push(k);
   }
   keys.forEach((k) => window.localStorage.removeItem(k));
 }

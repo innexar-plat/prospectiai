@@ -1,11 +1,15 @@
 import { NavLink, useLocation, Link } from 'react-router-dom';
-import { Search, Clock, Target, BarChart3, User, Settings, LogOut, Swords, TrendingUp, Users, LayoutDashboard, CreditCard, HelpCircle, ChevronDown, X, Lock, Building2 } from 'lucide-react';
+import { Search, Clock, Target, BarChart3, User, Settings, LogOut, Swords, TrendingUp, Users, LayoutDashboard, CreditCard, HelpCircle, ChevronDown, X, Lock, Building2, PanelLeftClose, PanelLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { SessionUser } from '@/lib/api';
 import { getPlanDisplayName } from '@/lib/billing-config';
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Logo } from '@/components/brand/Logo';
+
+const SIDEBAR_COLLAPSED_KEY = 'prospector_sidebar_collapsed';
+const SIDEBAR_WIDTH_EXPANDED = 224;
+const SIDEBAR_WIDTH_COLLAPSED = 72;
 
 const PLAN_ORDER: string[] = ['FREE', 'BASIC', 'PRO', 'BUSINESS', 'SCALE'];
 const BADGE_TO_PLAN_NAME: Record<string, string> = {
@@ -74,6 +78,17 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
   },
 ];
 
+function getStoredSidebarCollapsed(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
+}
+
+function setStoredSidebarCollapsed(value: boolean): void {
+  if (typeof window === 'undefined') return;
+  if (value) window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, '1');
+  else window.localStorage.removeItem(SIDEBAR_COLLAPSED_KEY);
+}
+
 export function SidebarNav({
   user,
   onLogout,
@@ -85,12 +100,21 @@ export function SidebarNav({
   mobileOpen?: boolean;
   onMobileClose?: () => void;
 }) {
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [sectionCollapsed, setSectionCollapsed] = useState<Record<string, boolean>>({});
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(getStoredSidebarCollapsed);
   const [upgradeModal, setUpgradeModal] = useState<{ planName: string; feature: string } | null>(null);
   const location = useLocation();
 
-  const toggle = (title: string) =>
-    setCollapsed((prev) => ({ ...prev, [title]: !prev[title] }));
+  const toggleSection = (title: string) =>
+    setSectionCollapsed((prev) => ({ ...prev, [title]: !prev[title] }));
+
+  const toggleSidebarCollapsed = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      setStoredSidebarCollapsed(next);
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (mobileOpen && onMobileClose) onMobileClose();
@@ -105,37 +129,48 @@ export function SidebarNav({
     return () => document.removeEventListener('keydown', onEscape);
   }, [upgradeModal]);
 
-  const logoBlock = (
-    <div className="mb-5 flex items-center justify-between gap-2">
-      <Logo iconSize={28} iconOnly={false} className="gap-2 shrink-0" textClassName="font-bold text-sm tracking-tight truncate" />
-      {onMobileClose && (
-        <button
-          type="button"
-          onClick={onMobileClose}
-          className="md:hidden p-2 -mr-2 rounded-lg text-muted hover:text-foreground hover:bg-surface transition-colors"
-          aria-label="Fechar menu"
-        >
-          <X size={20} />
-        </button>
-      )}
-    </div>
-  );
+  function renderContent(isNarrow: boolean, showCollapseToggle: boolean) {
+    const logoBlock = (
+      <div className={cn('flex items-center gap-2 shrink-0', isNarrow ? 'mb-4 justify-center px-2' : 'mb-5 justify-between')}>
+        <Logo
+          iconSize={isNarrow ? 28 : 28}
+          iconOnly={isNarrow}
+          className="shrink-0"
+          textClassName={isNarrow ? '' : 'font-bold text-sm tracking-tight truncate'}
+        />
+        {onMobileClose && !isNarrow && (
+          <button
+            type="button"
+            onClick={onMobileClose}
+            className="md:hidden p-2 -mr-2 rounded-lg text-muted hover:text-foreground hover:bg-surface transition-colors"
+            aria-label="Fechar menu"
+          >
+            <X size={20} />
+          </button>
+        )}
+      </div>
+    );
 
-  const sidebarContent = (
-    <div className="p-4 z-10 relative flex flex-col flex-1 min-h-0">
-      {logoBlock}
-      {/* Sections */}
-        <nav className="flex-1 space-y-4 overflow-y-auto scrollbar-thin" aria-label="Navegação do dashboard">
-          {SIDEBAR_SECTIONS.map((section) => {
-            const isCollapsed = collapsed[section.title];
-            return (
-              <div key={section.title}>
-                {/* Section Title */}
+    const itemClass = (active: boolean) =>
+      cn(
+        'w-full flex rounded-lg transition-colors text-[13px] border border-transparent',
+        active
+          ? 'bg-violet-600/10 text-violet-500 border-violet-500/20'
+          : 'text-muted hover:text-foreground hover:bg-surface'
+      );
+
+    const navContent = (
+      <nav className="flex-1 space-y-4 overflow-y-auto scrollbar-thin" aria-label="Navegação do dashboard">
+        {SIDEBAR_SECTIONS.map((section) => {
+          const isSecCollapsed = sectionCollapsed[section.title];
+          return (
+            <div key={section.title}>
+              {!isNarrow && (
                 <button
                   type="button"
-                  onClick={() => section.collapsible && toggle(section.title)}
+                  onClick={() => section.collapsible && toggleSection(section.title)}
                   className={cn(
-                    'w-full flex items-center justify-between px-2 mb-1.5',
+                    'w-full flex items-center justify-between px-2 py-1.5 mb-1',
                     section.collapsible ? 'cursor-pointer hover:opacity-80' : 'cursor-default'
                   )}
                 >
@@ -145,77 +180,74 @@ export function SidebarNav({
                   {section.collapsible && (
                     <ChevronDown
                       size={12}
-                      className={cn('text-muted/50 transition-transform', isCollapsed && '-rotate-90')}
+                      className={cn('text-muted/50 transition-transform', isSecCollapsed && '-rotate-90')}
                     />
                   )}
                 </button>
-
-                {/* Items */}
-                {!isCollapsed && (
-                  <div className="space-y-0.5">
-                    {section.items.map(({ to, end, icon: Icon, label, badge }) => {
-                      const locked = badge && !hasPlanAccess(user.plan, badge);
-                      const planName = badge ? BADGE_TO_PLAN_NAME[badge] : '';
-                      if (locked) {
-                        return (
-                          <button
-                            key={to}
-                            type="button"
-                            onClick={() => setUpgradeModal({ planName, feature: label })}
-                            className={cn(
-                              'w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors min-h-[34px] text-[13px] text-muted hover:text-foreground hover:bg-surface border border-transparent'
-                            )}
-                          >
-                            <span className="flex items-center gap-2.5 font-medium">
-                              <Icon size={15} aria-hidden />
-                              {label}
-                            </span>
-                            <Lock size={14} className="shrink-0 text-muted" aria-hidden />
-                          </button>
-                        );
-                      }
+              )}
+              {(!isNarrow && !isSecCollapsed) || isNarrow ? (
+                <div className={cn('space-y-0.5', isNarrow && 'space-y-1')}>
+                  {section.items.map(({ to, end, icon: Icon, label, badge }) => {
+                    const locked = badge && !hasPlanAccess(user.plan, badge);
+                    const planName = badge ? BADGE_TO_PLAN_NAME[badge] : '';
+                    const linkContent = (
+                      <>
+                        <Icon size={isNarrow ? 20 : 15} aria-hidden />
+                        {!isNarrow && <span className="font-medium">{label}</span>}
+                      </>
+                    );
+                    if (locked) {
                       return (
-                        <NavLink
+                        <button
                           key={to}
-                          to={to}
-                          end={end}
-                          className={({ isActive }) =>
-                            cn(
-                              'w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors min-h-[34px] text-[13px]',
-                              isActive
-                                ? 'bg-violet-600/10 text-violet-500 border border-violet-500/20'
-                                : 'text-muted hover:text-foreground hover:bg-surface border border-transparent'
-                            )
-                          }
-                        >
-                          {({ isActive }) => (
-                            <>
-                              <span className="flex items-center gap-2.5 font-medium">
-                                <Icon size={15} aria-hidden />
-                                {label}
-                              </span>
-                              {isActive ? <span className="w-1 h-1 rounded-full bg-violet-500 shrink-0" aria-hidden /> : null}
-                            </>
+                          type="button"
+                          onClick={() => setUpgradeModal({ planName, feature: label })}
+                          title={isNarrow ? label : undefined}
+                          className={cn(
+                            itemClass(false),
+                            isNarrow ? 'justify-center p-3 min-h-[44px]' : 'justify-between px-3 py-2.5 min-h-[40px] gap-2.5'
                           )}
-                        </NavLink>
+                        >
+                          {linkContent}
+                          {!isNarrow && <Lock size={14} className="shrink-0 text-muted" aria-hidden />}
+                        </button>
                       );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </nav>
-
-        {/* Footer */}
-        <div className="mt-auto pt-3 space-y-3 border-t border-border/50">
-          {/* Credits */}
-          <div className="px-3 py-2 rounded-lg bg-surface border border-border">
-            <div className="flex justify-between items-center text-[10px] font-semibold uppercase tracking-wider text-muted">
-              <span>Créditos</span>
-              <span className="text-violet-500 tabular-nums">{user.leadsUsed}/{user.leadsLimit}</span>
+                    }
+                    return (
+                      <NavLink
+                        key={to}
+                        to={to}
+                        end={end}
+                        title={isNarrow ? label : undefined}
+                        className={({ isActive }) =>
+                          cn(
+                            itemClass(isActive),
+                            isNarrow ? 'justify-center p-3 min-h-[44px]' : 'justify-between px-3 py-2.5 min-h-[40px] gap-2.5'
+                          )
+                        }
+                      >
+                        {({ isActive }) => (
+                          <>
+                            {linkContent}
+                            {!isNarrow && isActive && <span className="w-1 h-1 rounded-full bg-violet-500 shrink-0" aria-hidden />}
+                          </>
+                        )}
+                      </NavLink>
+                    );
+                  })}
+                </div>
+              ) : null}
             </div>
-            <div className="h-1 w-full bg-background rounded-full overflow-hidden mt-1.5">
+          );
+        })}
+      </nav>
+    );
+
+    const footerBlock = (
+      <div className={cn('mt-auto pt-3 border-t border-border/50', isNarrow ? 'space-y-2' : 'space-y-3')}>
+        <div className={cn('rounded-lg bg-surface border border-border', isNarrow ? 'px-2 py-2' : 'px-3 py-2')}>
+          {isNarrow ? (
+            <div className="h-1.5 w-full bg-background rounded-full overflow-hidden" title={`Créditos ${user.leadsUsed}/${user.leadsLimit}`}>
               <div
                 className="h-full bg-violet-600 rounded-full transition-all"
                 style={{ width: `${user.leadsLimit > 0 ? (user.leadsUsed / user.leadsLimit) * 100 : 0}%` }}
@@ -225,41 +257,91 @@ export function SidebarNav({
                 aria-valuemax={user.leadsLimit}
               />
             </div>
+          ) : (
+            <>
+              <div className="flex justify-between items-center text-[10px] font-semibold uppercase tracking-wider text-muted">
+                <span>Créditos</span>
+                <span className="text-violet-500 tabular-nums">{user.leadsUsed}/{user.leadsLimit}</span>
+              </div>
+              <div className="h-1 w-full bg-background rounded-full overflow-hidden mt-1.5">
+                <div
+                  className="h-full bg-violet-600 rounded-full transition-all"
+                  style={{ width: `${user.leadsLimit > 0 ? (user.leadsUsed / user.leadsLimit) * 100 : 0}%` }}
+                  role="progressbar"
+                  aria-valuenow={user.leadsUsed}
+                  aria-valuemin={0}
+                  aria-valuemax={user.leadsLimit}
+                />
+              </div>
+            </>
+          )}
+        </div>
+        <div className={cn('flex rounded-lg border border-transparent hover:bg-surface/50', isNarrow ? 'justify-center p-2 gap-0' : 'items-center gap-2 px-1 py-1.5')}>
+          <div className="w-8 h-8 rounded-full bg-violet-600/20 flex items-center justify-center font-semibold text-xs text-violet-400 shrink-0" title={isNarrow ? `${user.name || 'Usuário'} · ${getPlanDisplayName(user.plan)}` : undefined}>
+            {user.name?.[0] || user.email?.[0] || 'U'}
           </div>
-
-          {/* User */}
-          <div className="flex items-center gap-2 px-1 py-1.5 rounded-lg border border-transparent hover:bg-surface/50">
-            <div className="w-8 h-8 rounded-full bg-violet-600/20 flex items-center justify-center font-semibold text-xs text-violet-400 shrink-0">
-              {user.name?.[0] || user.email?.[0] || 'U'}
-            </div>
+          {!isNarrow && (
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold truncate text-foreground">{user.name || 'Usuário'}</p>
               <p className="text-[10px] text-muted truncate">{getPlanDisplayName(user.plan)}</p>
             </div>
-            <button
-              type="button"
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onLogout(); }}
-              className="shrink-0 p-2 text-muted hover:text-red-500 hover:bg-red-500/10 transition-colors rounded focus:outline-none focus:ring-2 focus:ring-red-500/50"
-              aria-label="Sair da conta"
-              title="Sair"
-            >
-              <LogOut size={16} />
-            </button>
-          </div>
+          )}
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onLogout(); }}
+            className="shrink-0 p-2 text-muted hover:text-red-500 hover:bg-red-500/10 transition-colors rounded focus:outline-none focus:ring-2 focus:ring-red-500/50"
+            aria-label="Sair da conta"
+            title="Sair"
+          >
+            <LogOut size={16} />
+          </button>
         </div>
+        {showCollapseToggle && (isNarrow ? (
+          <button
+            type="button"
+            onClick={toggleSidebarCollapsed}
+            className="w-full flex items-center justify-center p-2.5 rounded-lg text-muted hover:text-foreground hover:bg-surface transition-colors"
+            aria-label="Expandir menu"
+            title="Expandir menu"
+          >
+            <PanelLeft size={20} />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={toggleSidebarCollapsed}
+            className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-muted hover:text-foreground hover:bg-surface transition-colors text-xs font-medium"
+            aria-label="Recolher menu"
+            title="Recolher menu"
+          >
+            <PanelLeftClose size={18} />
+            <span>Recolher menu</span>
+          </button>
+        ))}
       </div>
-  );
+    );
+
+    return (
+      <div className={cn('z-10 relative flex flex-col flex-1 min-h-0', isNarrow ? 'px-2 py-4' : 'p-4')}>
+        {logoBlock}
+        {navContent}
+        {footerBlock}
+      </div>
+    );
+  }
 
   return (
     <>
-      {/* Desktop sidebar */}
       <aside
-        className="w-56 min-w-[224px] bg-card border-r border-border flex flex-col relative overflow-hidden hidden md:flex"
+        className="bg-card border-r border-border flex flex-col relative overflow-hidden hidden md:flex transition-[min-width] duration-200"
+        style={{
+          width: sidebarCollapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED,
+          minWidth: sidebarCollapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED,
+        }}
         aria-label="Menu principal"
       >
-        {sidebarContent}
+        {renderContent(sidebarCollapsed, true)}
       </aside>
-      {/* Mobile drawer: portal so it's above everything on mobile (avoids overflow/z-index issues) */}
       {mobileOpen && onMobileClose && typeof document !== 'undefined' && createPortal(
         <>
           <div
@@ -276,7 +358,7 @@ export function SidebarNav({
             style={{ zIndex: 9999 }}
             aria-label="Menu principal"
           >
-            {sidebarContent}
+            {renderContent(false, false)}
           </aside>
         </>,
         document.body
