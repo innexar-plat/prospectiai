@@ -22,6 +22,44 @@ function periodEndFromInterval(interval: string): Date {
     return d;
 }
 
+async function applyApprovedPaymentMp(userId: string, planId: PlanType, interval: string): Promise<void> {
+    const plan = PLANS[planId];
+    const userWithWorkspace = await prisma.user.findUnique({
+        where: { id: userId },
+        include: { workspaces: { take: 1 } }
+    });
+    const workspaceId = userWithWorkspace?.workspaces?.[0]?.workspaceId;
+    if (!workspaceId) return;
+    const billingCycle = interval === 'annual' ? 'annual' : 'monthly';
+    await prisma.workspace.update({
+        where: { id: workspaceId },
+        data: {
+            plan: planId,
+            subscriptionStatus: 'active',
+            leadsLimit: plan.leadsLimit,
+            leadsUsed: 0,
+            currentPeriodEnd: periodEndFromInterval(interval),
+            billingCycle,
+            gracePeriodEnd: null,
+        }
+    });
+    if (userWithWorkspace?.email) {
+        const html = paymentSuccessTemplate(plan.name, plan.leadsLimit, DASHBOARD_URL);
+        sendEmail(userWithWorkspace.email, 'Seu plano ProspectorAI está ativo — bem-vindo', html).catch((err) => {
+            logger.error('Payment success email failed', { userId, error: err instanceof Error ? err.message : 'Unknown' });
+        });
+    }
+}
+
+async function sendPaymentRejectedEmail(userId: string): Promise<void> {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+    if (!user?.email) return;
+    const html = paymentFailureTemplate(DASHBOARD_URL);
+    sendEmail(user.email, 'Pagamento não aprovado — ProspectorAI', html).catch((err) => {
+        logger.error('Payment failure email failed', { userId, error: err instanceof Error ? err.message : 'Unknown' });
+    });
+}
+
 async function handlePaymentTopic(id: string): Promise<void> {
     const payment = new Payment(mpConfig);
     const data = await payment.get({ id });
@@ -32,46 +70,12 @@ async function handlePaymentTopic(id: string): Promise<void> {
         const userId = data.metadata?.user_id;
         const planId = data.metadata?.plan_id as PlanType;
         const interval = (data.metadata?.interval as string) || 'monthly';
-        if (!userId || !planId) return;
-        const plan = PLANS[planId];
-        const userWithWorkspace = await prisma.user.findUnique({
-            where: { id: userId },
-            include: { workspaces: { take: 1 } }
-        });
-        const workspaceId = userWithWorkspace?.workspaces?.[0]?.workspaceId;
-        if (workspaceId) {
-            const billingCycle = interval === 'annual' ? 'annual' : 'monthly';
-            await prisma.workspace.update({
-                where: { id: workspaceId },
-                data: {
-                    plan: planId,
-                    subscriptionStatus: 'active',
-                    leadsLimit: plan.leadsLimit,
-                    leadsUsed: 0,
-                    currentPeriodEnd: periodEndFromInterval(interval),
-                    billingCycle,
-                    gracePeriodEnd: null,
-                }
-            });
-        }
-        if (userWithWorkspace?.email) {
-            const html = paymentSuccessTemplate(plan.name, plan.leadsLimit, DASHBOARD_URL);
-            sendEmail(userWithWorkspace.email, 'Seu plano ProspectorAI está ativo — bem-vindo', html).catch((err) => {
-                logger.error('Payment success email failed', { userId, error: err instanceof Error ? err.message : 'Unknown' });
-            });
-        }
+        if (userId && planId) await applyApprovedPaymentMp(userId, planId, interval);
         return;
     }
     if (data.status === 'rejected') {
         const userId = data.metadata?.user_id;
-        if (!userId) return;
-        const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
-        if (user?.email) {
-            const html = paymentFailureTemplate(DASHBOARD_URL);
-            sendEmail(user.email, 'Pagamento não aprovado — ProspectorAI', html).catch((err) => {
-                logger.error('Payment failure email failed', { userId, error: err instanceof Error ? err.message : 'Unknown' });
-            });
-        }
+        if (userId) await sendPaymentRejectedEmail(userId);
     }
 }
 

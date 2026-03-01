@@ -10,6 +10,32 @@ import { z } from 'zod';
 
 const SITE_URL = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
+type MemberWithUser = Awaited<ReturnType<typeof prisma.workspaceMember.findMany>>[number] & {
+    user: { id: string; name: string | null; email: string | null; image: string | null; leadsUsed: number };
+};
+
+function buildMembersResult(
+    members: MemberWithUser[],
+    activityMap: Map<string, number>,
+    leadMap: Map<string, number>,
+) {
+    return members.map((m) => ({
+        id: m.id,
+        userId: m.user.id,
+        name: m.user.name,
+        email: m.user.email,
+        image: m.user.image,
+        role: m.role,
+        leadsUsed: m.user.leadsUsed,
+        leadsAnalyzed: leadMap.get(m.user.id) ?? 0,
+        actionsLast30d: activityMap.get(m.user.id) ?? 0,
+        joinedAt: m.createdAt,
+        dailyLeadsGoal: m.dailyLeadsGoal ?? null,
+        dailyAnalysesGoal: m.dailyAnalysesGoal ?? null,
+        monthlyConversionsGoal: m.monthlyConversionsGoal ?? null,
+    }));
+}
+
 // GET /api/team/members — list workspace members + stats
 export async function GET(req: NextRequest) {
     const requestId = getOrCreateRequestId(req);
@@ -70,22 +96,7 @@ export async function GET(req: NextRequest) {
         });
 
         const leadMap = new Map(leadCounts.map((l) => [l.userId, l._count.id]));
-
-        const result = members.map((m) => ({
-            id: m.id,
-            userId: m.user.id,
-            name: m.user.name,
-            email: m.user.email,
-            image: m.user.image,
-            role: m.role,
-            leadsUsed: m.user.leadsUsed,
-            leadsAnalyzed: leadMap.get(m.user.id) ?? 0,
-            actionsLast30d: activityMap.get(m.user.id) ?? 0,
-            joinedAt: m.createdAt,
-            dailyLeadsGoal: m.dailyLeadsGoal ?? null,
-            dailyAnalysesGoal: m.dailyAnalysesGoal ?? null,
-            monthlyConversionsGoal: m.monthlyConversionsGoal ?? null,
-        }));
+        const result = buildMembersResult(members, activityMap, leadMap);
 
         const pendingInvitations = await prisma.workspaceInvitation.findMany({
             where: { workspaceId: membership.workspaceId, status: 'PENDING' },

@@ -29,6 +29,77 @@ export type EmailConfigPublic = {
   smtpUser?: string | null;
 };
 
+type EmailConfigRow = {
+  id: string;
+  provider: string;
+  resendApiKeyEncrypted: string | null;
+  fromEmail: string | null;
+  smtpHost: string | null;
+  smtpPort: number | null;
+  smtpUser: string | null;
+  smtpPasswordEncrypted: string | null;
+};
+
+function toEmailConfigPublic(row: EmailConfigRow | null): EmailConfigPublic {
+  if (!row) {
+    return {
+      configured: false,
+      provider: undefined,
+      fromEmail: undefined,
+      hasResendApiKey: false,
+      smtpHost: undefined,
+      smtpPort: undefined,
+      smtpUser: undefined,
+    };
+  }
+  const configured =
+    (row.provider === 'resend' && Boolean(row.resendApiKeyEncrypted)) ||
+    (row.provider === 'smtp' &&
+      Boolean(row.smtpHost && row.smtpPort && row.smtpUser && row.smtpPasswordEncrypted));
+  return {
+    configured,
+    provider: row.provider as 'resend' | 'smtp',
+    fromEmail: row.fromEmail,
+    hasResendApiKey: Boolean(row.resendApiKeyEncrypted),
+    smtpHost: row.smtpHost,
+    smtpPort: row.smtpPort,
+    smtpUser: row.smtpUser,
+  };
+}
+
+function buildEmailConfigUpdateData(
+  provider: 'resend' | 'smtp',
+  payload: { apiKey?: string; fromEmail?: string | null; smtpHost?: string | null; smtpPort?: number | null; smtpUser?: string | null; smtpPassword?: string },
+  existing: EmailConfigRow | null,
+): {
+  provider: string;
+  resendApiKeyEncrypted: string | null;
+  fromEmail: string | null;
+  smtpHost: string | null;
+  smtpPort: number | null;
+  smtpUser: string | null;
+  smtpPasswordEncrypted: string | null;
+} {
+  const data = {
+    provider,
+    resendApiKeyEncrypted: null as string | null,
+    fromEmail: payload.fromEmail ?? null,
+    smtpHost: null as string | null,
+    smtpPort: null as number | null,
+    smtpUser: null as string | null,
+    smtpPasswordEncrypted: null as string | null,
+  };
+  if (provider === 'resend') {
+    data.resendApiKeyEncrypted = payload.apiKey ? encryptEmailSecret(payload.apiKey) : existing?.resendApiKeyEncrypted ?? null;
+  } else {
+    data.smtpHost = payload.smtpHost ?? null;
+    data.smtpPort = payload.smtpPort ?? null;
+    data.smtpUser = payload.smtpUser ?? null;
+    data.smtpPasswordEncrypted = payload.smtpPassword ? encryptEmailSecret(payload.smtpPassword) : existing?.smtpPasswordEncrypted ?? null;
+  }
+  return data;
+}
+
 /**
  * GET /api/admin/email/config
  * Returns email config without secrets. Admin only.
@@ -39,30 +110,7 @@ export async function GET() {
   if (!isAdmin(session)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   try {
     const row = await prisma.emailConfig.findFirst({ orderBy: { updatedAt: 'desc' } });
-    if (!row) {
-      return NextResponse.json({
-        configured: false,
-        provider: undefined,
-        fromEmail: undefined,
-        hasResendApiKey: false,
-        smtpHost: undefined,
-        smtpPort: undefined,
-        smtpUser: undefined,
-      } satisfies EmailConfigPublic);
-    }
-    const configured =
-      (row.provider === 'resend' && Boolean(row.resendApiKeyEncrypted)) ||
-      (row.provider === 'smtp' &&
-        Boolean(row.smtpHost && row.smtpPort && row.smtpUser && row.smtpPasswordEncrypted));
-    return NextResponse.json({
-      configured,
-      provider: row.provider as 'resend' | 'smtp',
-      fromEmail: row.fromEmail,
-      hasResendApiKey: Boolean(row.resendApiKeyEncrypted),
-      smtpHost: row.smtpHost,
-      smtpPort: row.smtpPort,
-      smtpUser: row.smtpUser,
-    } satisfies EmailConfigPublic);
+    return NextResponse.json(toEmailConfigPublic(row));
   } catch (e) {
     const { logger } = await import('@/lib/logger');
     logger.error('Admin email config GET error', { error: e instanceof Error ? e.message : 'Unknown' });
@@ -85,59 +133,14 @@ export async function PATCH(req: NextRequest) {
       const msg = parsed.error.issues.map((e) => e.message).join('; ');
       return NextResponse.json({ error: msg }, { status: 400 });
     }
-    const { provider, apiKey, fromEmail, smtpHost, smtpPort, smtpUser, smtpPassword } = parsed.data;
-
-    const existing = await prisma.emailConfig.findFirst({ orderBy: { updatedAt: 'desc' } });
-
-    const data: {
-      provider: string;
-      resendApiKeyEncrypted: string | null;
-      fromEmail: string | null;
-      smtpHost: string | null;
-      smtpPort: number | null;
-      smtpUser: string | null;
-      smtpPasswordEncrypted: string | null;
-    } = {
-      provider,
-      resendApiKeyEncrypted: null,
-      fromEmail: fromEmail ?? null,
-      smtpHost: null,
-      smtpPort: null,
-      smtpUser: null,
-      smtpPasswordEncrypted: null,
-    };
-
-    if (provider === 'resend') {
-      data.resendApiKeyEncrypted = apiKey ? encryptEmailSecret(apiKey) : existing?.resendApiKeyEncrypted ?? null;
-    } else {
-      data.smtpHost = smtpHost ?? null;
-      data.smtpPort = smtpPort ?? null;
-      data.smtpUser = smtpUser ?? null;
-      data.smtpPasswordEncrypted = smtpPassword
-        ? encryptEmailSecret(smtpPassword)
-        : existing?.smtpPasswordEncrypted ?? null;
-    }
+    const existing = await prisma.emailConfig.findFirst({ orderBy: { updatedAt: 'desc' } }) as EmailConfigRow | null;
+    const data = buildEmailConfigUpdateData(parsed.data.provider, parsed.data, existing);
 
     const updated = existing
       ? await prisma.emailConfig.update({ where: { id: existing.id }, data })
       : await prisma.emailConfig.create({ data });
 
-    return NextResponse.json({
-      configured: Boolean(
-        (updated.provider === 'resend' && updated.resendApiKeyEncrypted) ||
-          (updated.provider === 'smtp' &&
-            updated.smtpHost &&
-            updated.smtpPort &&
-            updated.smtpUser &&
-            updated.smtpPasswordEncrypted)
-      ),
-      provider: updated.provider as 'resend' | 'smtp',
-      fromEmail: updated.fromEmail,
-      hasResendApiKey: Boolean(updated.resendApiKeyEncrypted),
-      smtpHost: updated.smtpHost,
-      smtpPort: updated.smtpPort,
-      smtpUser: updated.smtpUser,
-    } satisfies EmailConfigPublic);
+    return NextResponse.json(toEmailConfigPublic(updated as EmailConfigRow));
   } catch (e) {
     const { logger } = await import('@/lib/logger');
     logger.error('Admin email config PATCH error', { error: e instanceof Error ? e.message : 'Unknown' });

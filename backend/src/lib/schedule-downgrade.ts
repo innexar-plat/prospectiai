@@ -5,7 +5,7 @@
 
 import { stripe } from '@/lib/stripe';
 import { prisma } from '@/lib/prisma';
-import { PLANS, PlanType, isDowngrade, getPlanPrices, type BillingCycle } from '@/lib/billing-config';
+import { PLANS, PlanType, isDowngrade, getPlanPrices, type BillingCycle, type PlanWithPrices } from '@/lib/billing-config';
 import { logger } from '@/lib/logger';
 import type { Workspace } from '@prisma/client';
 
@@ -44,17 +44,12 @@ export class ScheduleDowngradeError extends Error implements ScheduleDowngradeEr
     }
 }
 
-/**
- * Validates and performs schedule-downgrade for the given workspace and target plan.
- * Updates workspace with pendingPlanId and pendingPlanEffectiveAt; for Stripe, creates/updates subscription schedule.
- */
-export async function performScheduleDowngrade(
-    workspace: Pick<Workspace, 'id' | 'plan' | 'subscriptionId' | 'currentPeriodEnd'>,
-    targetPlanId: string
-): Promise<ScheduleDowngradeResult> {
+function validateAndGetEffectiveAt(
+    workspace: Pick<Workspace, 'plan' | 'currentPeriodEnd'>,
+    targetPlanId: string,
+): { targetPlan: PlanWithPrices; effectiveAt: Date } {
     const currentPlan = workspace.plan as PlanType;
     const targetPlan = PLANS[targetPlanId as PlanType];
-
     if (!targetPlan || targetPlanId === 'FREE') {
         throw new ScheduleDowngradeError(400, 'Invalid plan or use cancel flow for Free.');
     }
@@ -64,67 +59,82 @@ export async function performScheduleDowngrade(
     if (currentPlan === 'FREE') {
         throw new ScheduleDowngradeError(400, 'Current plan is Free. Use checkout to subscribe.');
     }
-
-    const subscriptionId = workspace.subscriptionId;
     const now = new Date();
     const rawPeriodEnd = workspace.currentPeriodEnd;
     const effectiveAt =
         rawPeriodEnd != null && rawPeriodEnd > now
             ? new Date(rawPeriodEnd)
             : new Date(now.getTime() + DEFAULT_PERIOD_DAYS_MS);
+    return { targetPlan, effectiveAt };
+}
+
+async function applyStripeSchedule(
+    workspace: Pick<Workspace, 'id' | 'plan' | 'subscriptionId' | 'currentPeriodEnd'>,
+    targetPlanId: string,
+    targetPlan: PlanWithPrices,
+): Promise<void> {
+    const subscriptionId = workspace.subscriptionId;
+    if (subscriptionId == null || !isStripeSubscription(subscriptionId)) return;
+
+    const raw = await stripe.subscriptions.retrieve(subscriptionId, { expand: ['items.data.price'] });
+    const subscription = raw as unknown as { current_period_end: number; current_period_start: number; items: { data: Array<{ price: { id: string } }> } };
+    const currentPeriodEndUnix = subscription.current_period_end;
+    const item = subscription.items.data[0];
+    if (!item?.price) {
+        throw new ScheduleDowngradeError(400, 'Subscription has no price item');
+    }
+    const scheduleCreate = await stripe.subscriptionSchedules.create({ from_subscription: subscriptionId });
+    const newPriceCents = Math.round(getPlanPrices(targetPlan, CYCLE).price_usd * 100);
+    const phase2Items = [
+        {
+            price_data: {
+                currency: 'usd',
+                product_data: {
+                    name: `ProspectorAI ${targetPlan.name} Plan (monthly)`,
+                    description: `Subscription for ${targetPlan.leadsLimit} leads searches per month.`,
+                },
+                unit_amount: newPriceCents,
+                recurring: { interval: 'month' },
+            },
+            quantity: 1,
+        },
+    ];
+    await stripe.subscriptionSchedules.update(scheduleCreate.id, {
+        end_behavior: 'release',
+        phases: [
+            {
+                start_date: subscription.current_period_start,
+                end_date: currentPeriodEndUnix,
+                items: [{ price: item.price.id, quantity: 1 }],
+                metadata: { planId: workspace.plan },
+            },
+            {
+                start_date: currentPeriodEndUnix,
+                items: phase2Items as never,
+                metadata: { planId: targetPlanId },
+            },
+        ],
+    });
+}
+
+/**
+ * Validates and performs schedule-downgrade for the given workspace and target plan.
+ * Updates workspace with pendingPlanId and pendingPlanEffectiveAt; for Stripe, creates/updates subscription schedule.
+ */
+export async function performScheduleDowngrade(
+    workspace: Pick<Workspace, 'id' | 'plan' | 'subscriptionId' | 'currentPeriodEnd'>,
+    targetPlanId: string
+): Promise<ScheduleDowngradeResult> {
+    const { targetPlan, effectiveAt } = validateAndGetEffectiveAt(workspace, targetPlanId);
+    const now = new Date();
+    const rawPeriodEnd = workspace.currentPeriodEnd;
+    const subscriptionId = workspace.subscriptionId;
 
     if (subscriptionId != null && isStripeSubscription(subscriptionId)) {
         try {
-            const raw = await stripe.subscriptions.retrieve(subscriptionId, {
-                expand: ['items.data.price'],
-            });
-            const subscription = raw as unknown as { current_period_end: number; current_period_start: number; items: { data: Array<{ price: { id: string } }> } };
-
-            const currentPeriodEndUnix = subscription.current_period_end;
-            const item = subscription.items.data[0];
-            if (!item?.price) {
-                throw new ScheduleDowngradeError(400, 'Subscription has no price item');
-            }
-
-            const scheduleCreate = await stripe.subscriptionSchedules.create({
-                from_subscription: subscriptionId,
-            });
-
-            const newPriceCents = Math.round(getPlanPrices(targetPlan, CYCLE).price_usd * 100);
-            const phase2Items = [
-                {
-                    price_data: {
-                        currency: 'usd',
-                        product_data: {
-                            name: `ProspectorAI ${targetPlan.name} Plan (monthly)`,
-                            description: `Subscription for ${targetPlan.leadsLimit} leads searches per month.`,
-                        },
-                        unit_amount: newPriceCents,
-                        recurring: { interval: 'month' },
-                    },
-                    quantity: 1,
-                },
-            ];
-            await stripe.subscriptionSchedules.update(scheduleCreate.id, {
-                end_behavior: 'release',
-                phases: [
-                    {
-                        start_date: subscription.current_period_start,
-                        end_date: currentPeriodEndUnix,
-                        items: [{ price: item.price.id, quantity: 1 }],
-                        metadata: { planId: currentPlan },
-                    },
-                    {
-                        start_date: currentPeriodEndUnix,
-                        items: phase2Items as never,
-                        metadata: { planId: targetPlanId },
-                    },
-                ],
-            });
+            await applyStripeSchedule(workspace, targetPlanId, targetPlan);
         } catch (err: unknown) {
-            if (err instanceof ScheduleDowngradeError) {
-                throw err;
-            }
+            if (err instanceof ScheduleDowngradeError) throw err;
             const msg = err instanceof Error ? err.message : 'Stripe API error';
             logger.error('Stripe schedule downgrade failed', { subscriptionId, error: msg });
             throw new ScheduleDowngradeError(502, 'Could not schedule plan change with payment provider. Try again later.');
