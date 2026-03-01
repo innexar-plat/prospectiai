@@ -20,7 +20,7 @@ function HeaderNavLinks({ locale, onPlansClick, onCloseMenu, variant }: HeaderNa
     const linkClass = variant === 'desktop'
         ? 'px-3 py-2 rounded-xl text-sm font-semibold text-muted hover:text-foreground hover:bg-surface transition-colors'
         : 'py-3 px-4 rounded-xl font-semibold text-foreground hover:bg-surface transition-colors';
-    const Wrapper = variant === 'desktop' ? 'nav' : 'nav';
+    const Wrapper = 'nav';
     const wrapperClass = variant === 'desktop' ? 'hidden md:flex items-center gap-1 lg:gap-2 ml-5' : 'flex flex-col gap-1';
     return (
         <Wrapper className={wrapperClass} aria-label="Navegação principal">
@@ -134,7 +134,16 @@ function HeaderMobileNav({
                     </div>
                 </div>
                 {resultsLength > 0 && (
-                    <Button variant={isPremiumPlan ? 'primary' : 'secondary'} size="lg" onClick={() => { if (isPremiumPlan) onExport(); else onPricingRedirect(); onCloseMenu(); }} icon={isPremiumPlan ? <Download size={20} /> : <span>🔒</span>}>
+                    <Button
+                        variant={isPremiumPlan ? 'primary' : 'secondary'}
+                        size="lg"
+                        onClick={() => {
+                            if (isPremiumPlan) onExport();
+                            else onPricingRedirect();
+                            onCloseMenu();
+                        }}
+                        icon={isPremiumPlan ? <Download size={20} /> : <span>🔒</span>}
+                    >
                         {isPremiumPlan ? t('results.export') : 'Exportar Dados (Pro)'}
                     </Button>
                 )}

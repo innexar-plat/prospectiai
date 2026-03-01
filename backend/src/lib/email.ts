@@ -44,82 +44,73 @@ export interface SendResult {
   error?: string;
 }
 
+async function sendViaResend(apiKey: string, from: string, to: string, subject: string, html: string): Promise<SendResult> {
+  try {
+    const resend = new Resend(apiKey);
+    const { error } = await resend.emails.send({ from, to: [to], subject, html });
+    if (error) {
+      logger.warn('Resend send failed', { to, subject, error: error.message });
+      return { sent: false, error: error.message };
+    }
+    return { sent: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    logger.error('Email send error (Resend)', { to, subject, error: message });
+    return { sent: false, error: message };
+  }
+}
+
+type SmtpConfig = { smtpHost: string; smtpPort: number; smtpUser: string; smtpPasswordEncrypted: string };
+
+async function sendViaSmtp(config: SmtpConfig, from: string, to: string, subject: string, html: string): Promise<SendResult> {
+  try {
+    const password = decryptEmailSecret(config.smtpPasswordEncrypted);
+    const transporter = nodemailer.createTransport({
+      host: config.smtpHost,
+      port: config.smtpPort,
+      secure: config.smtpPort === 465,
+      auth: { user: config.smtpUser, pass: password },
+    });
+    await transporter.sendMail({ from, to, subject, html });
+    return { sent: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    logger.error('Email send error (SMTP)', { to, subject, error: message });
+    return { sent: false, error: message };
+  }
+}
+
 /**
  * Send a raw HTML email. Uses DB config first (Resend or SMTP), then env RESEND_API_KEY.
  * Returns { sent: true } on success, { sent: false, error } on failure. Does not throw.
  */
+async function sendWithDbConfig(
+  config: Awaited<ReturnType<typeof getEmailConfigFromDb>>,
+  from: string,
+  to: string,
+  subject: string,
+  html: string,
+): Promise<SendResult | null> {
+  if (config?.provider === 'resend' && config.resendApiKeyEncrypted) {
+    const key = decryptEmailSecret(config.resendApiKeyEncrypted);
+    return sendViaResend(key, from, to, subject, html);
+  }
+  if (config?.provider === 'smtp' && config.smtpHost && config.smtpPort != null && config.smtpUser && config.smtpPasswordEncrypted) {
+    return sendViaSmtp(
+      { smtpHost: config.smtpHost, smtpPort: config.smtpPort, smtpUser: config.smtpUser, smtpPasswordEncrypted: config.smtpPasswordEncrypted },
+      from, to, subject, html
+    );
+  }
+  return null;
+}
+
 export async function sendEmail(to: string, subject: string, html: string): Promise<SendResult> {
   const config = await getEmailConfigFromDb();
   const from = getFromAddress(config?.fromEmail);
-
-  if (config?.provider === 'resend' && config.resendApiKeyEncrypted) {
-    try {
-      const key = decryptEmailSecret(config.resendApiKeyEncrypted);
-      const resend = new Resend(key);
-      const { error } = await resend.emails.send({
-        from,
-        to: [to],
-        subject,
-        html,
-      });
-      if (error) {
-        logger.warn('Resend send failed', { to, subject, error: error.message });
-        return { sent: false, error: error.message };
-      }
-      return { sent: true };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      logger.error('Email send error (Resend from DB)', { to, subject, error: message });
-      return { sent: false, error: message };
-    }
-  }
-
-  if (config?.provider === 'smtp' && config.smtpHost && config.smtpPort != null && config.smtpUser && config.smtpPasswordEncrypted) {
-    try {
-      const password = decryptEmailSecret(config.smtpPasswordEncrypted);
-      const transporter = nodemailer.createTransport({
-        host: config.smtpHost,
-        port: config.smtpPort,
-        secure: config.smtpPort === 465,
-        auth: { user: config.smtpUser, pass: password },
-      });
-      await transporter.sendMail({
-        from,
-        to,
-        subject,
-        html,
-      });
-      return { sent: true };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      logger.error('Email send error (SMTP)', { to, subject, error: message });
-      return { sent: false, error: message };
-    }
-  }
-
-  // Fallback to env RESEND_API_KEY
-  const envKey = process.env.RESEND_API_KEY;
-  if (envKey && envKey.trim()) {
-    try {
-      const resend = new Resend(envKey.trim());
-      const { error } = await resend.emails.send({
-        from: getFromAddress(undefined),
-        to: [to],
-        subject,
-        html,
-      });
-      if (error) {
-        logger.warn('Resend send failed', { to, subject, error: error.message });
-        return { sent: false, error: error.message };
-      }
-      return { sent: true };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      logger.error('Email send error', { to, subject, error: message });
-      return { sent: false, error: message };
-    }
-  }
-
+  const dbResult = await sendWithDbConfig(config, from, to, subject, html);
+  if (dbResult) return dbResult;
+  const envKey = process.env.RESEND_API_KEY?.trim();
+  if (envKey) return sendViaResend(envKey, getFromAddress(undefined), to, subject, html);
   logger.info('Email skipped (no config)', { to, subject });
   return { sent: false };
 }

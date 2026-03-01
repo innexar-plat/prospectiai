@@ -125,28 +125,37 @@ async function handlePreapprovalTopic(id: string): Promise<void> {
     }
 }
 
+async function handlePaymentTopicSafe(id: string): Promise<void> {
+    try {
+        await handlePaymentTopic(id);
+    } catch (error) {
+        logger.error('Mercado Pago Webhook Error', { error: error instanceof Error ? error.message : 'Unknown' });
+    }
+}
+
+async function handlePreapprovalTopicSafe(id: string): Promise<void> {
+    try {
+        await handlePreapprovalTopic(id);
+    } catch (error) {
+        logger.error('MP Preapproval Webhook Error', { error: error instanceof Error ? error.message : 'Unknown' });
+    }
+}
+
+async function dispatchMpWebhook(topic: string | null, id: string | null): Promise<void> {
+    if (topic === 'payment' && id) {
+        await handlePaymentTopicSafe(id);
+        return;
+    }
+    if (topic === 'preapproval' && id) {
+        await handlePreapprovalTopicSafe(id);
+    }
+}
+
 export async function POST(req: Request) {
     const { searchParams } = new URL(req.url);
     const topic = searchParams.get('topic') || searchParams.get('type');
     const id = searchParams.get('id') || searchParams.get('data.id');
-
     logger.info('MP Webhook Received', { searchParams: searchParams.toString(), topic, id });
-
-    if (topic === 'payment' && id) {
-        try {
-            await handlePaymentTopic(id);
-        } catch (error) {
-            logger.error('Mercado Pago Webhook Error', { error: error instanceof Error ? error.message : 'Unknown' });
-        }
-    }
-
-    if (topic === 'preapproval' && id) {
-        try {
-            await handlePreapprovalTopic(id);
-        } catch (error) {
-            logger.error('MP Preapproval Webhook Error', { error: error instanceof Error ? error.message : 'Unknown' });
-        }
-    }
-
+    await dispatchMpWebhook(topic, id);
     return NextResponse.json({ received: true });
 }

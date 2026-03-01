@@ -28,6 +28,34 @@ async function buildResetUpdateData(
     return { updateData, token };
 }
 
+type PerformResetResult = { ok: true; message: string; devToken?: string } | { ok: false; error: NextResponse };
+
+function buildResetSuccessMessage(sendEmail: boolean, temporaryPassword: string | null | undefined): string {
+    const messages: string[] = [];
+    if (sendEmail) messages.push('Password reset email sent.');
+    if (temporaryPassword != null && temporaryPassword.length >= 8) messages.push('Temporary password set.');
+    return messages.join(' ') || 'Done.';
+}
+
+async function performResetPassword(
+    id: string,
+    data: { sendEmail?: boolean; temporaryPassword?: string | null },
+): Promise<PerformResetResult> {
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) return { ok: false, error: NextResponse.json({ error: 'User not found' }, { status: 404 }) };
+    if (!user.email) return { ok: false, error: NextResponse.json({ error: 'User has no email' }, { status: 400 }) };
+    const sendEmail = data.sendEmail === true;
+    const { updateData, token } = await buildResetUpdateData(data.temporaryPassword, sendEmail);
+    await prisma.user.update({ where: { id }, data: updateData });
+    if (sendEmail && token) {
+        const { sent } = await sendPasswordResetEmail(user.email, token);
+        const { logger } = await import('@/lib/logger');
+        if (!sent && process.env.NODE_ENV === 'development') logger.info('Admin reset-password: email not sent', { userId: id });
+    }
+    const devToken = sendEmail && token && process.env.NODE_ENV === 'development' ? token : undefined;
+    return { ok: true, message: buildResetSuccessMessage(sendEmail, data.temporaryPassword), devToken };
+}
+
 export async function POST(
     req: NextRequest,
     ctx: { params: Promise<{ id: string }> }
@@ -43,36 +71,13 @@ export async function POST(
         return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
     const parsed = adminResetPasswordSchema.safeParse(body);
-    if (!parsed.success) {
-        return NextResponse.json({ error: formatZodError(parsed) }, { status: 400 });
-    }
-    const { sendEmail, temporaryPassword } = parsed.data;
-    const user = await prisma.user.findUnique({ where: { id } });
-    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    if (!user.email) return NextResponse.json({ error: 'User has no email' }, { status: 400 });
-
-    const { updateData, token } = await buildResetUpdateData(temporaryPassword, sendEmail === true);
-    await prisma.user.update({ where: { id }, data: updateData });
-
-    if (sendEmail === true && token) {
-        const { sent } = await sendPasswordResetEmail(user.email, token);
-        const { logger } = await import('@/lib/logger');
-        if (!sent && process.env.NODE_ENV === 'development') {
-            logger.info('Admin reset-password: email not sent', { userId: id });
-        }
-    }
-
+    if (!parsed.success) return NextResponse.json({ error: formatZodError(parsed) }, { status: 400 });
+    const result = await performResetPassword(id, parsed.data);
+    if (!result.ok) return result.error;
     logAdminAction(session, 'admin.users.reset-password', {
         resource: 'users',
         resourceId: id,
-        details: { sendEmail: !!sendEmail, temporaryPassword: !!(temporaryPassword && temporaryPassword.length >= 8) },
+        details: { sendEmail: !!parsed.data.sendEmail, temporaryPassword: !!(parsed.data.temporaryPassword && parsed.data.temporaryPassword.length >= 8) },
     }).catch(() => {});
-
-    const messages: string[] = [];
-    if (sendEmail === true) messages.push('Password reset email sent.');
-    if (temporaryPassword != null && temporaryPassword.length >= 8) messages.push('Temporary password set.');
-    return NextResponse.json({
-        message: messages.join(' ') || 'Done.',
-        devToken: sendEmail === true && token && process.env.NODE_ENV === 'development' ? token : undefined,
-    });
+    return NextResponse.json({ message: result.message, devToken: result.devToken });
 }

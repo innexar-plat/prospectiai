@@ -145,7 +145,11 @@ function TeamPendingInvitationsList({
                                     icon={resendingId === p.id ? <Loader2 size={14} className="animate-spin" /> : undefined}
                                     className="min-w-[100px]"
                                 >
-                                    {resendingId === p.id ? 'Enviando...' : cooldown ? `Reenviar (${secondsLeft}s)` : 'Reenviar'}
+                                    {(() => {
+                                        if (resendingId === p.id) return 'Enviando...';
+                                        if (cooldown) return `Reenviar (${secondsLeft}s)`;
+                                        return 'Reenviar';
+                                    })()}
                                 </Button>
                             </div>
                         </li>

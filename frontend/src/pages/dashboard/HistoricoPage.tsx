@@ -120,11 +120,13 @@ function HistoricoIntelDetail({
 }) {
   const rd = item.resultsData as Record<string, unknown> | undefined;
   const moduleLabel = MODULE_LABELS[item.module] || item.module;
+  const cityPart = item.inputCity ? ' · ' + item.inputCity : '';
+  const subtitle = item.inputQuery + cityPart + ' — ' + formatDate(item.createdAt);
   return (
     <>
       <HeaderDashboard
-        title={`Relatório — ${moduleLabel}`}
-        subtitle={`${item.inputQuery}${item.inputCity ? ` · ${item.inputCity}` : ''} — ${formatDate(item.createdAt)}`}
+        title={'Relatório — ' + moduleLabel}
+        subtitle={subtitle}
         breadcrumb="Prospecção Ativa / Histórico / Relatório de inteligência"
       />
       <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full">
