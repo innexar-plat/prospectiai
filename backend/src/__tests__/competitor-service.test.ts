@@ -11,6 +11,7 @@ jest.mock('@/modules/search', () => ({
     }
   },
 }));
+jest.mock('@/lib/usage', () => ({ recordUsageEvent: jest.fn() }));
 jest.mock('@/lib/prisma', () => ({
   prisma: {
     user: {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { isAdmin } from '@/lib/admin';
 import { prisma } from '@/lib/prisma';
+import type { AffiliateStatus } from '@prisma/client';
 import { sendAffiliateApprovedEmail } from '@/lib/email';
 import { z } from 'zod';
 
@@ -57,9 +58,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!parsed.success) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
   const existing = await prisma.affiliate.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  const data: { status?: string; commissionRatePercent?: number; approvedAt?: Date | null; name?: string; email?: string; document?: string | null; notes?: string | null } = {};
+  const data: {
+    status?: AffiliateStatus;
+    commissionRatePercent?: number;
+    approvedAt?: Date | null;
+    name?: string;
+    email?: string;
+    document?: string | null;
+    notes?: string | null;
+  } = {};
   if (parsed.data.status != null) {
-    data.status = parsed.data.status;
+    data.status = parsed.data.status as AffiliateStatus;
     if (parsed.data.status === 'APPROVED') data.approvedAt = new Date();
   }
   if (parsed.data.commissionRatePercent != null) data.commissionRatePercent = parsed.data.commissionRatePercent;

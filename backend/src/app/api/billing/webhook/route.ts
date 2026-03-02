@@ -145,10 +145,11 @@ export async function POST(req: Request) {
     }
 
     if (event.type === 'charge.refunded') {
-        const charge = event.data.object as Stripe.Charge;
+        const charge = event.data.object as Stripe.Charge & { invoice?: string };
         try {
             if (charge.invoice) {
-                const invoice = await stripe.invoices.retrieve(charge.invoice as string);
+                const invoiceRaw = await stripe.invoices.retrieve(charge.invoice);
+                const invoice = invoiceRaw as { subscription?: string | { id?: string } };
                 const subId = typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id;
                 if (subId) {
                     const cancelled = await cancelCommissionsByOrderOrSubscription(null, subId);
@@ -163,10 +164,11 @@ export async function POST(req: Request) {
     }
 
     if (event.type === 'invoice.paid') {
-        const invoice = event.data.object as Stripe.Invoice;
+        const invoice = event.data.object as Stripe.Invoice & { subscription?: string | { id?: string }; amount_paid?: number; currency?: string };
         const billingReason = (invoice as { billing_reason?: string }).billing_reason;
         if (billingReason === 'subscription_cycle' && invoice.subscription) {
             const subId = typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription.id;
+            if (subId) {
             try {
                 const sub = await stripe.subscriptions.retrieve(subId);
                 const periodStart = (invoice as { period_start?: number }).period_start ?? 0;
@@ -193,6 +195,7 @@ export async function POST(req: Request) {
             } catch (e) {
                 const { logger } = await import('@/lib/logger');
                 logger.error('Affiliate recurring commission failed', { error: e instanceof Error ? e.message : 'Unknown' });
+            }
             }
         }
     }

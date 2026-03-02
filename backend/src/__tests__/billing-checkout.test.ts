@@ -4,6 +4,9 @@ const { auth } = require('@/auth');
 jest.mock('@/auth', () => ({ auth: jest.fn() }));
 jest.mock('@/lib/stripe', () => ({ stripe: { checkout: { sessions: { create: jest.fn() } } } }));
 jest.mock('@/lib/mercadopago', () => ({ preference: { create: jest.fn() } }));
+jest.mock('@/lib/ratelimit', () => ({
+  rateLimit: jest.fn().mockResolvedValue({ success: true, remaining: 10, reset: 0 }),
+}));
 
 describe('POST /api/billing/checkout', () => {
   beforeEach(() => { jest.clearAllMocks(); });

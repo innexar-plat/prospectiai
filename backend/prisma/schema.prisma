@@ -107,6 +107,7 @@ model User {
   tags                 LeadTag[]
   notifications        Notification[]
   affiliate            Affiliate?
+  referrals            Referral[]
 }
 
 model Account {
@@ -528,6 +529,7 @@ model Referral {
   updatedAt    DateTime  @updatedAt
 
   affiliate   Affiliate   @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Restrict)
   commissions AffiliateCommission[]
 
   @@index([affiliateId])

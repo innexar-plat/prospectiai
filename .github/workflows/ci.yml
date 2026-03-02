@@ -51,7 +51,10 @@ jobs:
           timeout 60 bash -c 'until docker compose -f docker/docker-compose.yml exec -T db pg_isready -U app -d app; do sleep 2; done'
 
       - name: Backend tests
-        run: docker compose -f docker/docker-compose.yml --profile test run --rm test
+        env:
+          DATABASE_URL: postgres://app:app@localhost:5433/app
+        run: |
+          (cd backend && npx prisma generate && npm run test)
 
       - name: Frontend tests
         run: npm run test -w frontend

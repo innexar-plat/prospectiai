@@ -39,21 +39,5 @@ services:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
 
-  test:
-    build:
-      context: ..
-      dockerfile: Dockerfile
-      target: builder
-    env_file:
-      - ../.env
-    environment:
-      DATABASE_URL: postgres://app:app@db:5432/app
-    command: ["npm", "run", "test", "-w", "backend"]
-    depends_on:
-      db:
-        condition: service_healthy
-    profiles:
-      - test
-
 volumes:
   pgdata:
