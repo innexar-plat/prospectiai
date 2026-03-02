@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Lock, UserPlus, Trophy, AlertCircle, MoreVertical, Pencil, Trash2, LayoutDashboard } from 'lucide-react';
+import { Lock, UserPlus, Trophy, AlertCircle, MoreVertical, Pencil, Trash2, LayoutDashboard, Loader2, Target } from 'lucide-react';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import type { SessionUser } from '@/lib/api';

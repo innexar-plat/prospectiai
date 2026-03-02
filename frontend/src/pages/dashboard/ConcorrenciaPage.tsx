@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Lock, Loader2, Search, Target, Globe, Star } from 'lucide-react';
+import { Lock, Loader2, Search, Target, Globe, Star, MessageSquare, Phone, Shield, CheckCircle2, Zap, AlertTriangle } from 'lucide-react';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { Link, useOutletContext, useNavigate } from 'react-router-dom';
 import type { SessionUser, CompetitorAnalysisResult } from '@/lib/api';
