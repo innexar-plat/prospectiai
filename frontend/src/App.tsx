@@ -24,6 +24,10 @@ import EquipePage from './pages/dashboard/EquipePage';
 import EquipeDashboardPage from './pages/dashboard/EquipeDashboardPage';
 import PlanosPage from './pages/dashboard/PlanosPage';
 import SuportePage from './pages/dashboard/SuportePage';
+import AfiliadoPage from './pages/dashboard/AfiliadoPage';
+import AfiliadoConversoesPage from './pages/dashboard/AfiliadoConversoesPage';
+import AfiliadoComissoesPage from './pages/dashboard/AfiliadoComissoesPage';
+import AfiliadoPagamentoPage from './pages/dashboard/AfiliadoPagamentoPage';
 import { AcceptInvitePage } from './pages/AcceptInvitePage';
 import Privacy from './pages/legal/Privacy';
 import Terms from './pages/legal/Terms';
@@ -124,6 +128,10 @@ function App() {
           <Route path="equipe/dashboard" element={<EquipeDashboardPage />} />
           <Route path="planos" element={<PlanosPage />} />
           <Route path="suporte" element={<SuportePage />} />
+          <Route path="afiliado" element={<AfiliadoPage />} />
+          <Route path="afiliado/conversoes" element={<AfiliadoConversoesPage />} />
+          <Route path="afiliado/comissoes" element={<AfiliadoComissoesPage />} />
+          <Route path="afiliado/pagamento" element={<AfiliadoPagamentoPage />} />
         </Route>
         {getWave1Slugs().map((e) => (
           <Route key={e.slug} path={`/${e.slug}`} element={<SeoLandingPage />} />

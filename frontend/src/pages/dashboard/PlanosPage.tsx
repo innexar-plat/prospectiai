@@ -6,6 +6,7 @@ import { useOutletContext } from 'react-router-dom';
 import type { SessionUser } from '@/lib/api';
 import { billingApi, plansApi, type PlanFromApi } from '@/lib/api';
 import { getPlanDisplayName } from '@/lib/billing-config';
+import { getAffiliateRef } from '@/lib/affiliate-ref';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/contexts/ToastContext';
 
@@ -267,10 +268,12 @@ export default function PlanosPage() {
         if (planId === 'FREE' || planId === user.plan) return;
         setLoadingPlan(planId);
         try {
+            const affiliateCode = getAffiliateRef();
             const res = await billingApi.checkout({
                 planId,
                 locale: 'pt',
                 scheduleAtPeriodEnd: isDowngrade(planId),
+                ...(affiliateCode && { affiliateCode }),
             });
             if (res.scheduled && res.url === null) {
                 addToast('success', res.message);

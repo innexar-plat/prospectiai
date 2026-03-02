@@ -1,10 +1,11 @@
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { Mail, Lock, User as UserIcon, Eye, EyeOff, Shield, Search, Brain, Zap } from "lucide-react"
 import { authApi } from "@/lib/api"
 import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
 import { AuthLayout } from "@/components/auth/AuthLayout"
+import { captureRefFromUrl, getAffiliateRef } from "@/lib/affiliate-ref"
 
 export default function SignUpPage() {
     const [name, setName] = useState('')
@@ -14,6 +15,10 @@ export default function SignUpPage() {
     const [showPassword, setShowPassword] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState('')
+
+    useEffect(() => {
+        captureRefFromUrl()
+    }, [])
 
     const handleEmailSignUp = async (e: React.SyntheticEvent<HTMLFormElement>) => {
         e.preventDefault()
@@ -26,8 +31,9 @@ export default function SignUpPage() {
         setIsLoading(true)
         setError('')
 
+        const affiliateCode = getAffiliateRef()
         try {
-            await authApi.register({ email, password, name })
+            await authApi.register({ email, password, name, ...(affiliateCode && { affiliateCode }) })
             await authApi.signIn({ email, password, callbackUrl: '/onboarding' })
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : 'Erro ao criar conta')

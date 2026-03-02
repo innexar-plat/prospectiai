@@ -14,6 +14,11 @@ import { AiConfigPage } from '@/pages/AiConfigPage';
 import { EmailPage } from '@/pages/EmailPage';
 import { NotificationsPage } from '@/pages/NotificationsPage';
 import { PlansPage } from '@/pages/PlansPage';
+import { AffiliatesPage } from '@/pages/AffiliatesPage';
+import { AffiliateDetailPage } from '@/pages/AffiliateDetailPage';
+import { AffiliateSettingsPage } from '@/pages/AffiliateSettingsPage';
+import { CommissionsPage } from '@/pages/CommissionsPage';
+import { ReferralsPage } from '@/pages/ReferralsPage';
 
 function App() {
   return (
@@ -32,6 +37,11 @@ function App() {
               <Route path="email" element={<EmailPage />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="plans" element={<PlansPage />} />
+              <Route path="affiliates" element={<AffiliatesPage />} />
+              <Route path="affiliates/:id" element={<AffiliateDetailPage />} />
+              <Route path="affiliate-settings" element={<AffiliateSettingsPage />} />
+              <Route path="commissions" element={<CommissionsPage />} />
+              <Route path="referrals" element={<ReferralsPage />} />
             </Route>
             <Route path="users" element={<UsersPage />} />
             <Route path="users/:id" element={<UserDetailPage />} />

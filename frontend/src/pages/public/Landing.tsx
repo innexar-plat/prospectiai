@@ -1,14 +1,20 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import LandingPage from '@/components/landing/LandingPage';
 import Header from '@/components/layout/Header';
 import CookieConsent from '@/components/legal/CookieConsent';
 import { useI18n } from '@/lib/i18n';
+import { captureRefFromUrl } from '@/lib/affiliate-ref';
 
 export default function PublicEntryClient({ locale: initialLocale }: { locale: string }) {
     const { t, locale, setLocale } = useI18n(initialLocale);
     const navigate = useNavigate();
+
+    useEffect(() => {
+        captureRefFromUrl();
+    }, []);
 
     const switchLanguage = (lang: string) => {
         setLocale(lang);

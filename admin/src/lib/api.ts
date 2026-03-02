@@ -447,7 +447,119 @@ export const adminApi = {
         body: JSON.stringify(body),
       }),
   },
+
+  affiliates: (params?: { limit?: number; offset?: number; status?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.limit != null) q.set('limit', String(params.limit));
+    if (params?.offset != null) q.set('offset', String(params.offset));
+    if (params?.status) q.set('status', params.status);
+    const suffix = q.toString() ? `?${q}` : '';
+    return request<{ items: AdminAffiliateListItem[]; total: number; limit: number; offset: number }>(`/admin/affiliates${suffix}`);
+  },
+  createAffiliate: (body: { name: string; email: string; document?: string; notes?: string }) =>
+    request<{ id: string; code: string; status: string; message: string }>('/admin/affiliates', { method: 'POST', body: JSON.stringify(body) }),
+  affiliate: (id: string) => request<AdminAffiliateDetail>(`/admin/affiliates/${id}`),
+  updateAffiliate: (id: string, body: { status?: string; commissionRatePercent?: number; name?: string; email?: string; document?: string | null; notes?: string | null }) =>
+    request<{ ok: boolean }>(`/admin/affiliates/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  markCommissionPaid: (affiliateId: string, commissionId: string) =>
+    request<{ ok: boolean }>(`/admin/affiliates/${affiliateId}/commissions/${commissionId}`, { method: 'PATCH', body: JSON.stringify({ status: 'PAID' }) }),
+
+  commissions: (params?: { limit?: number; offset?: number; status?: string; affiliateId?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.limit != null) q.set('limit', String(params.limit));
+    if (params?.offset != null) q.set('offset', String(params.offset));
+    if (params?.status) q.set('status', params.status);
+    if (params?.affiliateId) q.set('affiliateId', params.affiliateId);
+    const suffix = q.toString() ? `?${q}` : '';
+    return request<{ items: AdminCommissionListItem[]; total: number; limit: number; offset: number }>(`/admin/commissions${suffix}`);
+  },
+  referrals: (params?: { limit?: number; offset?: number; affiliateId?: string; converted?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.limit != null) q.set('limit', String(params.limit));
+    if (params?.offset != null) q.set('offset', String(params.offset));
+    if (params?.affiliateId) q.set('affiliateId', params.affiliateId);
+    if (params?.converted != null) q.set('converted', params.converted);
+    const suffix = q.toString() ? `?${q}` : '';
+    return request<{ items: AdminReferralListItem[]; total: number; limit: number; offset: number }>(`/admin/referrals${suffix}`);
+  },
+
+  affiliateSettings: {
+    get: () => request<AffiliateSettingsPublic>('/admin/affiliate-settings'),
+    update: (body: Partial<AffiliateSettingsUpdateBody>) =>
+      request<AffiliateSettingsPublic>('/admin/affiliate-settings', { method: 'PATCH', body: JSON.stringify(body) }),
+  },
 };
+
+export interface AffiliateSettingsPublic {
+  id: string;
+  defaultCommissionRatePercent: number;
+  cookieDurationDays: number;
+  commissionRule: string;
+  approvalHoldDays: number;
+  minPayoutCents: number;
+  allowSelfSignup: boolean;
+  updatedAt: string;
+}
+
+export interface AffiliateSettingsUpdateBody {
+  defaultCommissionRatePercent?: number;
+  cookieDurationDays?: number;
+  commissionRule?: 'FIRST_PAYMENT_ONLY' | 'RECURRING';
+  approvalHoldDays?: number;
+  minPayoutCents?: number;
+  allowSelfSignup?: boolean;
+}
+
+export interface AdminAffiliateListItem {
+  id: string;
+  code: string;
+  status: string;
+  commissionRatePercent: number;
+  email: string | null;
+  name: string | null;
+  approvedAt: string | null;
+  createdAt: string;
+  referralCount: number;
+  userId: string | null;
+}
+
+export interface AdminAffiliateDetail extends AdminAffiliateListItem {
+  userId?: string | null;
+  document?: string | null;
+  notes?: string | null;
+  referrals: Array<{ id: string; landedAt: string; signupAt: string; convertedAt: string | null; planId: string | null; valueCents: number | null }>;
+  commissions: Array<{ id: string; amountCents: number; currency: string; status: string; availableAt: string; paidAt: string | null; createdAt: string }>;
+  commissionPendingCents: number;
+  commissionPaidCents: number;
+}
+
+export interface AdminCommissionListItem {
+  id: string;
+  affiliateId: string;
+  affiliateCode: string;
+  affiliateName: string | null;
+  affiliateEmail: string | null;
+  amountCents: number;
+  currency: string;
+  status: string;
+  availableAt: string;
+  paidAt: string | null;
+  commissionType: string;
+  createdAt: string;
+}
+
+export interface AdminReferralListItem {
+  id: string;
+  affiliateId: string;
+  affiliateCode: string;
+  affiliateName: string | null;
+  landedAt: string;
+  signupAt: string;
+  convertedAt: string | null;
+  planId: string | null;
+  valueCents: number | null;
+  emailMasked: string | null;
+}
 
 export interface NotificationChannelItem {
   key: string;

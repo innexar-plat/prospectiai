@@ -5,6 +5,8 @@ export const registerSchema = z.object({
   email: z.email({ error: 'Invalid email' }).transform((s) => s.trim().toLowerCase()),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   name: z.string().max(200).optional().transform((s) => (s?.trim() || undefined)),
+  /** Código do afiliado (?ref=CODE). Opcional. */
+  affiliateCode: z.string().max(50).optional().transform((s) => (s?.trim() || undefined)),
 });
 
 /** POST /api/onboarding/complete */
@@ -118,6 +120,8 @@ export const checkoutSchema = z.object({
   card_token_id: z.string().max(500).optional(),
   /** If true and current plan > target plan, schedule downgrade at period end instead of creating new checkout. */
   scheduleAtPeriodEnd: z.boolean().optional(),
+  /** Código do afiliado (do cookie/ref). Repasse no metadata do pagamento para atribuição. */
+  affiliateCode: z.string().max(50).optional().transform((s) => (s?.trim() || undefined)),
 });
 
 /** POST /api/billing/schedule-downgrade — schedule plan change at end of current period (no immediate charge). */

@@ -1,5 +1,5 @@
 import { NavLink, useLocation, Link } from 'react-router-dom';
-import { Search, Clock, Target, BarChart3, User, Settings, LogOut, Swords, TrendingUp, Users, LayoutDashboard, CreditCard, HelpCircle, ChevronDown, X, Lock, Building2, PanelLeftClose, PanelLeft } from 'lucide-react';
+import { Search, Clock, Target, BarChart3, User, Settings, LogOut, Swords, TrendingUp, Users, LayoutDashboard, CreditCard, HelpCircle, ChevronDown, X, Lock, Building2, PanelLeftClose, PanelLeft, Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { SessionUser } from '@/lib/api';
 import { getPlanDisplayName } from '@/lib/billing-config';
@@ -72,6 +72,7 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
       { to: '/dashboard/perfil', end: false, icon: User, label: 'Perfil' },
       { to: '/dashboard/empresa', end: false, icon: Building2, label: 'Empresa' },
       { to: '/dashboard/planos', end: false, icon: CreditCard, label: 'Planos' },
+      { to: '/dashboard/afiliado', end: false, icon: Share2, label: 'Afiliado' },
       { to: '/dashboard/configuracoes', end: false, icon: Settings, label: 'Configurações' },
       { to: '/dashboard/suporte', end: false, icon: HelpCircle, label: 'Suporte' },
     ],

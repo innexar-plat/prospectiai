@@ -27,6 +27,7 @@ type CheckoutContext = {
     priceBrl: number;
     priceUsd: number;
     cardTokenId: string | undefined;
+    affiliateCode: string | undefined;
 };
 
 type CheckoutContextResult = { ok: true; ctx: CheckoutContext } | { ok: false; error: NextResponse };
@@ -71,9 +72,9 @@ function logScheduleAtPeriodEndNotDowngrade(
 
 async function getCheckoutContext(
     session: { user: SessionUser },
-    parsed: { data: { planId: string; interval?: string; cycle?: string; locale?: string; card_token_id?: string; scheduleAtPeriodEnd?: boolean } },
+    parsed: { data: { planId: string; interval?: string; cycle?: string; locale?: string; card_token_id?: string; scheduleAtPeriodEnd?: boolean; affiliateCode?: string } },
 ): Promise<CheckoutContextResult> {
-    const { planId, interval, cycle: cycleParam, locale, card_token_id, scheduleAtPeriodEnd } = parsed.data;
+    const { planId, interval, cycle: cycleParam, locale, card_token_id, scheduleAtPeriodEnd, affiliateCode } = parsed.data;
     const cycle: BillingCycle = (interval ?? cycleParam) === 'annual' ? 'annual' : 'monthly';
     const plan = PLANS[planId as PlanType];
     if (!plan || planId === 'FREE') {
@@ -104,6 +105,7 @@ async function getCheckoutContext(
             priceBrl,
             priceUsd,
             cardTokenId: card_token_id,
+            affiliateCode: affiliateCode ?? undefined,
         },
     };
 }
@@ -115,7 +117,10 @@ function executeStripeCheckout(
     cycle: BillingCycle,
     priceUsd: number,
     locale: string,
+    affiliateCode?: string,
 ): Promise<NextResponse> {
+    const metadata: Record<string, string> = { userId: sessionUser.id, planId, interval: cycle };
+    if (affiliateCode) metadata.affiliateCode = affiliateCode;
     return stripe.checkout.sessions
         .create({
             customer_email: sessionUser.email ?? undefined,
@@ -136,7 +141,7 @@ function executeStripeCheckout(
             mode: 'subscription',
             success_url: `${process.env.NEXT_PUBLIC_APP_URL}/${locale}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/${locale}/pricing`,
-            metadata: { userId: sessionUser.id, planId, interval: cycle },
+            metadata,
         })
         .then((stripeSession) => NextResponse.json({ url: stripeSession.url }));
 }
@@ -225,14 +230,18 @@ async function handlePtLocaleCheckout(params: {
     sessionUser: SessionUser;
     appUrl: string;
     localePath: string;
+    affiliateCode?: string;
 }): Promise<NextResponse> {
-    const { cardTokenId, planId, cycle, plan, priceBrl, sessionUser, appUrl, localePath } = params;
+    const { cardTokenId, planId, cycle, plan, priceBrl, sessionUser, appUrl, localePath, affiliateCode } = params;
     if (cardTokenId) {
+        const extRef = affiliateCode
+            ? `${sessionUser.id}:${planId}:${cycle}:${affiliateCode}`
+            : `${sessionUser.id}:${planId}:${cycle}`;
         const preApproval = await createPreApproval({
             payerEmail: sessionUser.email ?? '',
             cardTokenId,
             reason: `ProspectorAI Plano ${plan.name} (${cycle})`,
-            externalReference: `${sessionUser.id}:${planId}:${cycle}`,
+            externalReference: extRef,
             transactionAmount: priceBrl,
             cycle,
             backUrl: `${appUrl}/${localePath}/billing/success`,
@@ -242,7 +251,7 @@ async function handlePtLocaleCheckout(params: {
         const url = preApproval.init_point || `${appUrl}/${localePath}/billing/success`;
         return NextResponse.json({ url });
     }
-    const mpUrl = await createMPCheckoutUrl(planId, cycle, plan, priceBrl, sessionUser, appUrl, localePath);
+    const mpUrl = await createMPCheckoutUrl(planId, cycle, plan, priceBrl, sessionUser, appUrl, localePath, affiliateCode);
     return NextResponse.json({ url: mpUrl });
 }
 
@@ -254,6 +263,7 @@ async function createMPCheckoutUrl(
     user: SessionUser,
     appUrl: string,
     localePath: string,
+    affiliateCode?: string,
 ): Promise<string> {
     const fullName = user.name || 'Cliente ProspectorAI';
     const spaceIdx = fullName.trim().indexOf(' ');
@@ -278,7 +288,12 @@ async function createMPCheckoutUrl(
             },
             auto_return: 'approved',
             notification_url: `${appUrl}/api/billing/webhook/mercadopago`,
-            metadata: { user_id: user.id, plan_id: planId, interval: cycle },
+            metadata: {
+                user_id: user.id,
+                plan_id: planId,
+                interval: cycle,
+                ...(affiliateCode ? { affiliate_code: affiliateCode } : {}),
+            },
             payer: { email: user.email ?? '', name, surname: surname || '.' },
         }
     });
@@ -328,9 +343,10 @@ async function executeCheckoutFlow(
             sessionUser,
             appUrl: ctx.appUrl,
             localePath: ctx.localePath,
+            affiliateCode: ctx.affiliateCode,
         });
     }
-    return executeStripeCheckout(sessionUser, ctx.planId, ctx.plan, ctx.cycle, ctx.priceUsd, ctx.localePath);
+    return executeStripeCheckout(sessionUser, ctx.planId, ctx.plan, ctx.cycle, ctx.priceUsd, ctx.localePath, ctx.affiliateCode);
 }
 
 export async function POST(req: Request) {

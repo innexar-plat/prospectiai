@@ -53,8 +53,8 @@ export const authApi = {
     /** Get current logged-in user (null if not authenticated) */
     session: () => request<{ user: SessionUser | null }>('/auth/session'),
 
-    /** Register a new user with email + password */
-    register: (data: { email: string; password: string; name?: string }) =>
+    /** Register a new user with email + password. affiliateCode opcional (?ref=). */
+    register: (data: { email: string; password: string; name?: string; affiliateCode?: string }) =>
         request<{ message: string; id: string }>('/auth/register', {
             method: 'POST',
             body: JSON.stringify(data),
@@ -201,13 +201,56 @@ export const billingApi = {
         planId: string;
         interval?: 'monthly' | 'annual';
         locale?: string;
-        /** When true and current plan > target plan, schedules downgrade at period end (no redirect). */
         scheduleAtPeriodEnd?: boolean;
+        /** Código do afiliado (do cookie ref). */
+        affiliateCode?: string;
     }) =>
         request<CheckoutResponse>('/billing/checkout', {
             method: 'POST',
             body: JSON.stringify(data),
         }),
+};
+
+// ─── Affiliate ───────────────────────────────────────────────────────────────
+
+export type AffiliateMe = {
+    id: string;
+    code: string;
+    status: 'PENDING' | 'APPROVED' | 'SUSPENDED';
+    commissionRatePercent: number;
+    payoutType: string | null;
+    approvedAt: string | null;
+    createdAt: string;
+    referralCount: number;
+    commissionCount: number;
+};
+
+export type AffiliateStats = {
+    referralCount: number;
+    convertedCount: number;
+    commissionPendingCents: number;
+    commissionPaidCents: number;
+};
+
+export const affiliateApi = {
+    me: () => request<AffiliateMe>('/affiliate/me'),
+    register: () => request<{ id: string; code: string; status: string; message: string }>('/affiliate/register', { method: 'POST' }),
+    stats: () => request<AffiliateStats>('/affiliate/stats'),
+    referrals: (params?: { page?: number; limit?: number }) => {
+        const q = new URLSearchParams();
+        if (params?.page != null) q.set('page', String(params.page));
+        if (params?.limit != null) q.set('limit', String(params.limit));
+        return request<{ items: Array<{ id: string; landedAt: string; signupAt: string; convertedAt: string | null; refSource: string; planId: string | null; valueCents: number | null; emailMasked: string | null }>; total: number; page: number; limit: number }>(`/affiliate/referrals?${q}`);
+    },
+    commissions: (params?: { page?: number; limit?: number; status?: string }) => {
+        const q = new URLSearchParams();
+        if (params?.page != null) q.set('page', String(params.page));
+        if (params?.limit != null) q.set('limit', String(params.limit));
+        if (params?.status) q.set('status', params.status);
+        return request<{ items: Array<{ id: string; amountCents: number; currency: string; status: string; availableAt: string; paidAt: string | null; commissionType: string; createdAt: string }>; total: number; page: number; limit: number }>(`/affiliate/commissions?${q}`);
+    },
+    updatePayout: (data: { payoutType?: 'PIX' | 'BANK_TRANSFER'; payoutPayload?: string }) =>
+        request<{ ok: boolean }>('/affiliate/me', { method: 'PATCH', body: JSON.stringify(data) }),
 };
 
 // ─── Competitors ─────────────────────────────────────────────────────────────

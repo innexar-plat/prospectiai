@@ -6,6 +6,7 @@ import { rateLimit } from "@/lib/ratelimit"
 import { sendVerificationEmail } from "@/lib/email"
 import { registerSchema, formatZodError } from "@/lib/validations/schemas"
 import { logger } from "@/lib/logger"
+import { getAffiliateByCode, isSelfReferral, getOrCreateSettings } from "@/lib/affiliate"
 
 /**
  * POST /api/auth/register
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
         if (!parsed.success) {
             return NextResponse.json({ error: formatZodError(parsed) }, { status: 400 })
         }
-        const { email, password, name } = parsed.data
+        const { email, password, name, affiliateCode } = parsed.data
 
         const existingUser = await prisma.user.findUnique({
             where: { email }
@@ -69,6 +70,33 @@ export async function POST(req: Request) {
 
             return { user, workspace }
         })
+
+        // Atribuição afiliado: criar Referral se código válido e não auto-indicação (fora da tx)
+        if (affiliateCode) {
+            try {
+                const settings = await getOrCreateSettings()
+                if (settings.allowSelfSignup) {
+                    const affiliate = await getAffiliateByCode(affiliateCode)
+                    if (affiliate) {
+                        const selfRef = await isSelfReferral(affiliate.id, email)
+                        if (!selfRef) {
+                            await prisma.referral.create({
+                                data: {
+                                    affiliateId: affiliate.id,
+                                    userId: result.user.id,
+                                    workspaceId: result.workspace.id,
+                                    landedAt: new Date(),
+                                    signupAt: new Date(),
+                                    refSource: 'QUERYSTRING',
+                                }
+                            })
+                        }
+                    }
+                }
+            } catch (e) {
+                logger.error('Referral create failed after register', { error: e instanceof Error ? e.message : 'Unknown' })
+            }
+        }
 
         const verifyToken = crypto.randomBytes(32).toString("hex")
         const verifyExpires = new Date(Date.now() + 86400000) // 24h

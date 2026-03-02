@@ -249,3 +249,54 @@ export function paymentFailureTemplate(dashboardOrPlansUrl: string): string {
     ctaLabel: 'Ver planos',
   });
 }
+
+/**
+ * Afiliado aprovado: conta ativa, pode compartilhar link e receber comissões.
+ */
+export function affiliateApprovedTemplate(affiliateCode: string, loginUrl: string): string {
+  const safeCode = escapeHtml(affiliateCode);
+  const base = SITE_URL.replace(/\/$/, '');
+  const ctaHref = loginUrl.startsWith('http') ? loginUrl : `${base}${loginUrl}`;
+  return buildEmail({
+    title: 'Sua conta de afiliado foi aprovada',
+    body: [
+      `Sua conta de afiliado no ProspectorAI foi aprovada. Seu código exclusivo é: <strong>${safeCode}</strong>.`,
+      'Use o link de afiliado (com ?ref= seu código) para indicar clientes. Quando alguém se cadastrar e assinar um plano pago, você receberá comissão conforme a política do programa.',
+    ],
+    ctaHref,
+    ctaLabel: 'Acessar painel do afiliado',
+  });
+}
+
+/**
+ * Nova conversão: alguém indicado pelo afiliado assinou.
+ */
+export function affiliateConversionTemplate(conversionSummary: string, dashboardUrl: string): string {
+  const safeSummary = escapeHtml(conversionSummary);
+  const base = SITE_URL.replace(/\/$/, '');
+  const ctaHref = dashboardUrl.startsWith('http') ? dashboardUrl : `${base}${dashboardUrl}`;
+  return buildEmail({
+    title: 'Nova conversão no programa de afiliados',
+    body: [
+      safeSummary,
+      'Acesse o painel do afiliado para ver detalhes e o status da comissão.',
+    ],
+    ctaHref,
+    ctaLabel: 'Ver painel',
+  });
+}
+
+/**
+ * Comissão paga: valor foi enviado ao afiliado.
+ */
+export function affiliateCommissionPaidTemplate(amountFormatted: string, payoutInfo: string): string {
+  const safeAmount = escapeHtml(amountFormatted);
+  const safePayout = escapeHtml(payoutInfo);
+  return buildEmail({
+    title: 'Comissão paga — ProspectorAI',
+    body: [
+      `Uma comissão no valor de <strong>${safeAmount}</strong> foi paga conforme os dados de saque informados.`,
+      safePayout,
+    ],
+  });
+}

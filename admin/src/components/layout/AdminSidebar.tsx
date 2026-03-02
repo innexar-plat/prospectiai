@@ -10,6 +10,10 @@ import {
   CreditCard,
   Mail,
   Bell,
+  Share2,
+  Settings,
+  UserPlus,
+  DollarSign,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -24,6 +28,10 @@ const nav = [
   { to: 'email', end: false, label: 'Email', icon: Mail },
   { to: 'notifications', end: false, label: 'Notificações', icon: Bell },
   { to: 'plans', end: false, label: 'Planos', icon: CreditCard },
+  { to: 'affiliates', end: false, label: 'Afiliados', icon: Share2 },
+  { to: 'commissions', end: false, label: 'Comissões', icon: DollarSign },
+  { to: 'referrals', end: false, label: 'Referrals', icon: UserPlus },
+  { to: 'affiliate-settings', end: false, label: 'Config. Afiliados', icon: Settings },
 ] as const;
 
 export function AdminSidebar() {

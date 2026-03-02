@@ -10,6 +10,9 @@ import {
   passwordResetTemplate,
   verificationTemplate,
   teamInviteTemplate,
+  affiliateApprovedTemplate,
+  affiliateConversionTemplate,
+  affiliateCommissionPaidTemplate,
 } from '@/lib/email-templates';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
@@ -144,4 +147,19 @@ export async function sendTeamInviteEmail(
 ): Promise<SendResult> {
   const html = teamInviteTemplate(inviterName, workspaceName, acceptInviteUrl);
   return sendEmail(to, `Convite para o workspace "${workspaceName}" – ProspectorAI`, html);
+}
+
+export async function sendAffiliateApprovedEmail(to: string, code: string, loginUrl: string): Promise<SendResult> {
+  const html = affiliateApprovedTemplate(code, loginUrl);
+  return sendEmail(to, 'Sua conta de afiliado foi aprovada – ProspectorAI', html);
+}
+
+export async function sendAffiliateConversionEmail(to: string, summary: string, dashboardUrl: string): Promise<SendResult> {
+  const html = affiliateConversionTemplate(summary, dashboardUrl);
+  return sendEmail(to, 'Nova conversão no programa de afiliados – ProspectorAI', html);
+}
+
+export async function sendAffiliateCommissionPaidEmail(to: string, amountFormatted: string, payoutInfo: string): Promise<SendResult> {
+  const html = affiliateCommissionPaidTemplate(amountFormatted, payoutInfo);
+  return sendEmail(to, 'Comissão paga – ProspectorAI', html);
 }

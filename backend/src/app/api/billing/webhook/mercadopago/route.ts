@@ -3,10 +3,11 @@ import { mpConfig } from '@/lib/mercadopago';
 import { Payment } from 'mercadopago';
 import { getPreApproval } from '@/lib/mercadopago-subscription';
 import { prisma } from '@/lib/prisma';
-import { PLANS, PlanType } from '@/lib/billing-config';
+import { PLANS, PlanType, getPlanPrices } from '@/lib/billing-config';
 import { sendEmail } from '@/lib/email';
 import { paymentSuccessTemplate, paymentFailureTemplate } from '@/lib/email-templates';
 import { logger } from '@/lib/logger';
+import { createCommissionForFirstPayment, cancelCommissionsByOrderOrSubscription, createCommissionForRecurring } from '@/lib/affiliate';
 
 const GRACE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 const APP_BASE_URL = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
@@ -70,12 +71,74 @@ async function handlePaymentTopic(id: string): Promise<void> {
         const userId = data.metadata?.user_id;
         const planId = data.metadata?.plan_id as PlanType;
         const interval = (data.metadata?.interval as string) || 'monthly';
-        if (userId && planId) await applyApprovedPaymentMp(userId, planId, interval);
+        const affiliateCode = data.metadata?.affiliate_code as string | undefined;
+        const preapprovalId = (data.metadata?.preapproval_id ?? data.metadata?.subscription_id) as string | undefined;
+        if (userId && planId) {
+            await applyApprovedPaymentMp(userId, planId, interval);
+            const plan = PLANS[planId];
+            if (plan) {
+                const userWithWorkspace = await prisma.user.findUnique({
+                    where: { id: userId },
+                    include: { workspaces: { take: 1 } },
+                });
+                const workspaceId = userWithWorkspace?.workspaces?.[0]?.workspaceId;
+                if (workspaceId) {
+                    const { price_brl } = getPlanPrices(plan, interval === 'annual' ? 'annual' : 'monthly');
+                    const valueCents = Math.round(price_brl * 100);
+                    try {
+                        await createCommissionForFirstPayment({
+                            userId,
+                            workspaceId,
+                            userEmail: userWithWorkspace?.email ?? null,
+                            planId,
+                            valueCents,
+                            currency: 'BRL',
+                            orderId: id,
+                            affiliateCodeFromMetadata: affiliateCode,
+                        });
+                    } catch (e) {
+                        logger.error('Affiliate commission create failed (MP payment)', { error: e instanceof Error ? e.message : 'Unknown' });
+                    }
+                }
+            }
+        }
+        if (preapprovalId) {
+            try {
+                const workspace = await prisma.workspace.findFirst({
+                    where: { subscriptionId: preapprovalId },
+                    select: { id: true, plan: true },
+                });
+                if (workspace) {
+                    const transactionAmount = (data as { transaction_amount?: number }).transaction_amount;
+                    const valueCents = transactionAmount != null ? Math.round(transactionAmount * 100) : 0;
+                    if (valueCents > 0) {
+                        await createCommissionForRecurring({
+                            workspaceId: workspace.id,
+                            subscriptionId: preapprovalId,
+                            planId: (workspace.plan || 'BASIC') as PlanType,
+                            valueCents,
+                            currency: 'BRL',
+                            orderId: id,
+                        });
+                    }
+                }
+            } catch (e) {
+                logger.error('Affiliate recurring commission (MP) failed', { error: e instanceof Error ? e.message : 'Unknown' });
+            }
+        }
         return;
     }
     if (data.status === 'rejected') {
         const userId = data.metadata?.user_id;
         if (userId) await sendPaymentRejectedEmail(userId);
+    }
+    if (data.status === 'refunded' || data.status === 'cancelled') {
+        try {
+            const cancelled = await cancelCommissionsByOrderOrSubscription(id, undefined);
+            if (cancelled > 0) logger.info('Affiliate commissions cancelled (MP refund/cancel)', { paymentId: id, count: cancelled });
+        } catch (e) {
+            logger.error('Affiliate cancel commissions (MP) failed', { error: e instanceof Error ? e.message : 'Unknown' });
+        }
     }
 }
 
@@ -87,6 +150,7 @@ async function handlePreapprovalTopic(id: string): Promise<void> {
     const userId = parts[0];
     const planId = parts[1] as PlanType;
     const cycle = (parts[2] || 'monthly') as 'monthly' | 'annual';
+    const affiliateCode = parts[3] as string | undefined;
     const plan = PLANS[planId];
     if (!plan) return;
 
@@ -114,6 +178,23 @@ async function handlePreapprovalTopic(id: string): Promise<void> {
                 gracePeriodEnd: null,
             },
         });
+        const { price_brl } = getPlanPrices(plan, cycle);
+        const valueCents = Math.round(price_brl * 100);
+        try {
+            await createCommissionForFirstPayment({
+                userId,
+                workspaceId,
+                userEmail: userWithWorkspace?.email ?? null,
+                planId,
+                valueCents,
+                currency: 'BRL',
+                orderId: id,
+                subscriptionId: id,
+                affiliateCodeFromMetadata: affiliateCode,
+            });
+        } catch (e) {
+            logger.error('Affiliate commission create failed (MP preapproval)', { error: e instanceof Error ? e.message : 'Unknown' });
+        }
     } else if (status === 'cancelled' || status === 'pending' || status === 'paused') {
         await prisma.workspace.update({
             where: { id: workspaceId },
@@ -122,6 +203,14 @@ async function handlePreapprovalTopic(id: string): Promise<void> {
                 gracePeriodEnd: new Date(Date.now() + GRACE_DAYS_MS),
             },
         });
+        if (status === 'cancelled') {
+            try {
+                const cancelled = await cancelCommissionsByOrderOrSubscription(id, id);
+                if (cancelled > 0) logger.info('Affiliate commissions cancelled (MP preapproval cancelled)', { preapprovalId: id, count: cancelled });
+            } catch (e) {
+                logger.error('Affiliate cancel commissions (MP preapproval) failed', { error: e instanceof Error ? e.message : 'Unknown' });
+            }
+        }
     }
 }
 

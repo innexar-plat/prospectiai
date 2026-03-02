@@ -2,8 +2,9 @@ import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { prisma } from '@/lib/prisma';
-import { PLANS, PlanType } from '@/lib/billing-config';
+import { PLANS, PlanType, getPlanPrices } from '@/lib/billing-config';
 import Stripe from 'stripe';
+import { createCommissionForFirstPayment, cancelCommissionsByOrderOrSubscription, createCommissionForRecurring } from '@/lib/affiliate';
 
 type SubscriptionWithPeriod = Stripe.Subscription & { current_period_end: number };
 
@@ -14,6 +15,7 @@ function periodEnd(sub: SubscriptionWithPeriod): Date {
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<NextResponse | null> {
     const userId = session.metadata?.userId;
     const planId = session.metadata?.planId as PlanType;
+    const affiliateCode = session.metadata?.affiliateCode as string | undefined;
     if (!userId) return NextResponse.json({ error: 'Missing userId in metadata' }, { status: 400 });
 
     const raw = await stripe.subscriptions.retrieve(session.subscription as string);
@@ -25,11 +27,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
     });
 
     if (!userWithWorkspace?.workspaces[0]?.workspaceId) return null;
+    const workspaceId = userWithWorkspace.workspaces[0].workspaceId;
     const interval = (subscription as { items?: { data?: Array<{ price?: { recurring?: { interval?: string } } }> } })
         .items?.data?.[0]?.price?.recurring?.interval;
     const billingCycle = interval === 'year' ? 'annual' : 'monthly';
     await prisma.workspace.update({
-        where: { id: userWithWorkspace.workspaces[0].workspaceId },
+        where: { id: workspaceId },
         data: {
             subscriptionId: subscription.id,
             customerId: subscription.customer as string,
@@ -42,6 +45,26 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
             gracePeriodEnd: null,
         },
     });
+
+    // Comissão afiliado (primeira conversão)
+    const priceUsd = getPlanPrices(plan, billingCycle).price_usd;
+    const valueCents = Math.round(priceUsd * 100);
+    try {
+        await createCommissionForFirstPayment({
+            userId,
+            workspaceId,
+            userEmail: userWithWorkspace.email ?? null,
+            planId,
+            valueCents,
+            currency: 'USD',
+            orderId: session.id,
+            subscriptionId: subscription.id,
+            affiliateCodeFromMetadata: affiliateCode ?? undefined,
+        });
+    } catch (e) {
+        const { logger } = await import('@/lib/logger');
+        logger.error('Affiliate commission create failed', { error: e instanceof Error ? e.message : 'Unknown' });
+    }
     return null;
 }
 
@@ -118,6 +141,59 @@ export async function POST(req: Request) {
             await handleSubscriptionDeleted(subscription);
         } else {
             await handleSubscriptionUpdated(subscription);
+        }
+    }
+
+    if (event.type === 'charge.refunded') {
+        const charge = event.data.object as Stripe.Charge;
+        try {
+            if (charge.invoice) {
+                const invoice = await stripe.invoices.retrieve(charge.invoice as string);
+                const subId = typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id;
+                if (subId) {
+                    const cancelled = await cancelCommissionsByOrderOrSubscription(null, subId);
+                    const { logger } = await import('@/lib/logger');
+                    if (cancelled > 0) logger.info('Affiliate commissions cancelled (refund)', { subscriptionId: subId, count: cancelled });
+                }
+            }
+        } catch (e) {
+            const { logger } = await import('@/lib/logger');
+            logger.error('Affiliate cancel commissions on refund failed', { error: e instanceof Error ? e.message : 'Unknown' });
+        }
+    }
+
+    if (event.type === 'invoice.paid') {
+        const invoice = event.data.object as Stripe.Invoice;
+        const billingReason = (invoice as { billing_reason?: string }).billing_reason;
+        if (billingReason === 'subscription_cycle' && invoice.subscription) {
+            const subId = typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription.id;
+            try {
+                const sub = await stripe.subscriptions.retrieve(subId);
+                const periodStart = (invoice as { period_start?: number }).period_start ?? 0;
+                const isFirstInvoice = periodStart <= sub.created + 60;
+                if (!isFirstInvoice) {
+                    const workspace = await prisma.workspace.findFirst({
+                        where: { subscriptionId: subId },
+                        select: { id: true, plan: true },
+                    });
+                    if (workspace) {
+                        const planId = (workspace.plan || 'BASIC') as PlanType;
+                        const valueCents = invoice.amount_paid ?? 0;
+                        const currency = (invoice.currency ?? 'usd').toUpperCase();
+                        await createCommissionForRecurring({
+                            workspaceId: workspace.id,
+                            subscriptionId: subId,
+                            planId,
+                            valueCents,
+                            currency: currency === 'USD' ? 'USD' : 'BRL',
+                            orderId: invoice.id,
+                        });
+                    }
+                }
+            } catch (e) {
+                const { logger } = await import('@/lib/logger');
+                logger.error('Affiliate recurring commission failed', { error: e instanceof Error ? e.message : 'Unknown' });
+            }
         }
     }
 
