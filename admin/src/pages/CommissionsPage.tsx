@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { adminApi, type AdminCommissionListItem } from '@/lib/api';
 
@@ -10,8 +10,9 @@ export function CommissionsPage() {
   const [loading, setLoading] = useState(true);
   const [offset, setOffset] = useState(0);
   const [statusFilter, setStatusFilter] = useState('');
+  const [payingId, setPayingId] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchCommissions = useCallback(() => {
     setLoading(true);
     const params: { limit: number; offset: number; status?: string } = { limit: PAGE_SIZE, offset };
     if (statusFilter) params.status = statusFilter;
@@ -20,6 +21,21 @@ export function CommissionsPage() {
       .catch((err) => setError(err instanceof Error ? err.message : 'Erro ao carregar'))
       .finally(() => setLoading(false));
   }, [offset, statusFilter]);
+
+  useEffect(() => {
+    fetchCommissions();
+  }, [fetchCommissions]);
+
+  const handleMarkPaid = async (affiliateId: string, commissionId: string) => {
+    if (payingId) return;
+    setPayingId(commissionId);
+    try {
+      await adminApi.markCommissionPaid(affiliateId, commissionId);
+      fetchCommissions();
+    } finally {
+      setPayingId(null);
+    }
+  };
 
   if (loading && !data) return <div><h1 className="text-xl font-semibold text-white mb-6">Comissões</h1><div className="h-64 rounded-xl bg-zinc-800/50 animate-pulse" /></div>;
   if (error && !data) return <div><h1 className="text-xl font-semibold text-white mb-6">Comissões</h1><div className="rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3">{error}</div></div>;
@@ -50,16 +66,29 @@ export function CommissionsPage() {
               <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 font-medium">Disponível</th>
               <th className="px-4 py-3 font-medium">Pago</th>
+              <th className="px-4 py-3 font-medium">Ação</th>
             </tr>
           </thead>
           <tbody>
             {items.map((c) => (
               <tr key={c.id} className="border-b border-zinc-800/50">
-                <td className="px-4 py-3"><Link to={`affiliates/${c.affiliateId}`} className="text-violet-400 font-mono">{c.affiliateCode}</Link></td>
+                <td className="px-4 py-3"><Link to={`/affiliates/${c.affiliateId}`} className="text-violet-400 font-mono">{c.affiliateCode}</Link></td>
                 <td className="px-4 py-3">{c.currency === 'BRL' ? 'R$' : '$'} {(c.amountCents / 100).toFixed(2)}</td>
                 <td className="px-4 py-3">{c.status}</td>
                 <td className="px-4 py-3 text-zinc-400">{new Date(c.availableAt).toLocaleDateString('pt-BR')}</td>
                 <td className="px-4 py-3 text-zinc-400">{c.paidAt ? new Date(c.paidAt).toLocaleDateString('pt-BR') : '—'}</td>
+                <td className="px-4 py-3">
+                  {c.status === 'APPROVED' ? (
+                    <button
+                      type="button"
+                      onClick={() => handleMarkPaid(c.affiliateId, c.id)}
+                      disabled={payingId !== null}
+                      className="text-xs px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-50"
+                    >
+                      {payingId === c.id ? '…' : 'Marcar como pago'}
+                    </button>
+                  ) : '—'}
+                </td>
               </tr>
             ))}
           </tbody>

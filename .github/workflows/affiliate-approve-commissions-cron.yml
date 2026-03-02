@@ -1,0 +1,47 @@
+# Cron: aprova comissões de afiliados (PENDING → APPROVED após availableAt) e envia e-mail "comissão disponível".
+#
+# === Definir secrets no GitHub (obrigatório para o cron rodar) ===
+# Repositório → Settings → Secrets and variables → Actions → New repository secret
+#
+# 1) CRON_SECRET
+#    Nome: CRON_SECRET
+#    Valor: o mesmo que você definiu em CRON_SECRET no .env do backend (ex.: uma string longa e aleatória).
+#    Exemplo (gerar uma nova): openssl rand -hex 32
+#
+# 2) BACKEND_URL
+#    Nome: BACKEND_URL
+#    Valor: URL base do app em produção (mesmo host do frontend; a API fica em /api). SEM barra no final.
+#    Para este projeto: https://prospectorai.innexar.com.br
+#
+name: Affiliate approve commissions (cron)
+
+on:
+  schedule:
+    # Diariamente às 00:05 UTC
+    - cron: '5 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call affiliate-approve-commissions
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$BACKEND_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "BACKEND_URL and CRON_SECRET must be set in repository secrets. Skipping."
+            exit 0
+          fi
+          URL="${BACKEND_URL%/}/api/cron/affiliate-approve-commissions"
+          echo "Calling $URL ..."
+          HTTP=$(curl -s -o /tmp/out -w "%{http_code}" -H "x-cron-secret: $CRON_SECRET" "$URL")
+          cat /tmp/out
+          echo ""
+          if [ "$HTTP" = "200" ]; then
+            echo "Cron completed successfully (HTTP $HTTP)."
+          else
+            echo "Cron returned HTTP $HTTP."
+            exit 1
+          fi

@@ -18,6 +18,7 @@
 - Principais: `DATABASE_URL`, `AUTH_SECRET`, `NEXTAUTH_URL`, `NEXT_PUBLIC_APP_URL`, `GOOGLE_PLACES_API_KEY`, `GEMINI_API_KEY`.
 - Billing: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` e/ou `MERCADOPAGO_ACCESS_TOKEN`.
 - Cron de billing: `BILLING_CRON_SECRET` (ver seção abaixo).
+- Cron de afiliados: `CRON_SECRET` (ver seção "Cron affiliate-approve-commissions" abaixo).
 - Nunca commitar valores reais; usar `.env` local ou secrets do ambiente de deploy.
 
 ## Cron apply-pending-plans (produção)
@@ -27,6 +28,27 @@ Quando o billing usa Mercado Pago, planos pendentes (downgrade/upgrade agendados
 - **Header obrigatório:** `x-cron-secret: <valor de BILLING_CRON_SECRET>`
 - **Frequência sugerida:** a cada 5–15 minutos (ex.: cron ou agendador do provedor).
 - **Configuração:** Garantir que `BILLING_CRON_SECRET` esteja definido no ambiente do backend e que o agendador use o mesmo valor no header. Sem esse header, o endpoint retorna 401.
+
+## Cron affiliate-approve-commissions (produção)
+Aprova comissões de afiliados cujo período de carência já passou (PENDING → APPROVED) e envia e-mail "comissão disponível" aos afiliados. Deve ser chamado periodicamente em produção.
+
+- **Endpoint:** `GET /api/cron/affiliate-approve-commissions`
+- **Autenticação:** header `x-cron-secret: <valor de CRON_SECRET>` ou `Authorization: Bearer <CRON_SECRET>`
+- **Frequência:** diária (ex.: 00:05 UTC). Sem esse job, comissões permanecem PENDING mesmo após `availableAt`.
+
+### Configuração via GitHub Actions (recomendado)
+O workflow [.github/workflows/affiliate-approve-commissions-cron.yml](.github/workflows/affiliate-approve-commissions-cron.yml) já está configurado para rodar todo dia às 00:05 UTC. Para ativar:
+
+1. No repositório: **Settings → Secrets and variables → Actions**
+2. Criar os secrets:
+   - **BACKEND_URL:** URL base do backend em produção (ex.: `https://prospectorai.innexar.com.br`), sem barra final
+   - **CRON_SECRET:** mesmo valor da variável `CRON_SECRET` definida no ambiente do backend
+3. O workflow chama `GET $BACKEND_URL/api/cron/affiliate-approve-commissions` com o header `x-cron-secret`. Se os secrets não existirem, o job não falha (apenas ignora).
+
+Execução manual: **Actions → Affiliate approve commissions (cron) → Run workflow**.
+
+### Configuração alternativa (cron do SO ou outro agendador)
+Definir `CRON_SECRET` no ambiente do backend e agendar a chamada ao endpoint (ex.: `curl -H "x-cron-secret: $CRON_SECRET" https://seu-dominio/api/cron/affiliate-approve-commissions`). Sem autenticação correta, o endpoint retorna 401.
 
 ## Problemas comuns
 ### API não sobe
