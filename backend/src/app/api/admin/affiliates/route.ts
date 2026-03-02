@@ -12,13 +12,36 @@ const postSchema = z.object({
   notes: z.string().max(2000).optional(),
 });
 
+const affiliateStatusEnum = z.enum(['PENDING', 'APPROVED', 'SUSPENDED']);
+const getQuerySchema = z.object({
+  limit: z.coerce.number().min(1).max(100).default(20),
+  offset: z.coerce.number().min(0).default(0),
+  status: affiliateStatusEnum.optional(),
+  hasPendingCommissions: z
+    .string()
+    .optional()
+    .transform((v) => v === 'true'),
+});
+
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!isAdmin(session)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  const limit = Math.min(100, Math.max(1, parseInt(req.nextUrl.searchParams.get('limit') ?? '20', 10)));
-  const offset = Math.max(0, parseInt(req.nextUrl.searchParams.get('offset') ?? '0', 10));
+  const parsed = getQuerySchema.safeParse({
+    limit: req.nextUrl.searchParams.get('limit') ?? 20,
+    offset: req.nextUrl.searchParams.get('offset') ?? 0,
+    status: req.nextUrl.searchParams.get('status') ?? undefined,
+    hasPendingCommissions: req.nextUrl.searchParams.get('hasPendingCommissions') ?? undefined,
+  });
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid query', details: parsed.error.flatten() }, { status: 400 });
+  }
+  const { limit, offset, status, hasPendingCommissions } = parsed.data;
+  const where: { status?: 'PENDING' | 'APPROVED' | 'SUSPENDED'; commissions?: { some: { status: { in: ('PENDING' | 'APPROVED')[] } } } } = {};
+  if (status) where.status = status;
+  if (hasPendingCommissions) where.commissions = { some: { status: { in: ['PENDING', 'APPROVED'] } } };
   const items = await prisma.affiliate.findMany({
+    where,
     orderBy: { createdAt: 'desc' },
     take: limit,
     skip: offset,
@@ -29,7 +52,7 @@ export async function GET(req: NextRequest) {
       _count: { select: { referrals: true } },
     },
   });
-  const total = await prisma.affiliate.count();
+  const total = await prisma.affiliate.count({ where });
   const list = items.map((a) => ({
     id: a.id, code: a.code, status: a.status, commissionRatePercent: a.commissionRatePercent,
     email: a.email ?? a.user?.email, name: a.name ?? a.user?.name,

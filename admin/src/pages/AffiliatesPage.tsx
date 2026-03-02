@@ -4,11 +4,19 @@ import { adminApi, type AdminAffiliateListItem } from '@/lib/api';
 
 const PAGE_SIZE = 20;
 
+function affiliateSignupLink(code: string): string {
+  const base = typeof window !== 'undefined' ? window.location.origin : '';
+  return `${base}/auth/signup?ref=${encodeURIComponent(code)}`;
+}
+
 export function AffiliatesPage() {
   const [data, setData] = useState<{ items: AdminAffiliateListItem[]; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [offset, setOffset] = useState(0);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [hasPendingFilter, setHasPendingFilter] = useState(false);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [createForm, setCreateForm] = useState({ name: '', email: '', document: '', notes: '' });
   const [createSubmitting, setCreateSubmitting] = useState(false);
@@ -16,16 +24,30 @@ export function AffiliatesPage() {
 
   const load = useCallback(() => {
     setLoading(true);
+    const params: { limit: number; offset: number; status?: string; hasPendingCommissions?: boolean } = {
+      limit: PAGE_SIZE,
+      offset,
+    };
+    if (statusFilter) params.status = statusFilter;
+    if (hasPendingFilter) params.hasPendingCommissions = true;
     adminApi
-      .affiliates({ limit: PAGE_SIZE, offset })
+      .affiliates(params)
       .then((res) => setData({ items: res.items, total: res.total }))
       .catch((err) => setError(err instanceof Error ? err.message : 'Erro ao carregar'))
       .finally(() => setLoading(false));
-  }, [offset]);
+  }, [offset, statusFilter, hasPendingFilter]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  const copyLink = (code: string) => {
+    const url = affiliateSignupLink(code);
+    void navigator.clipboard.writeText(url).then(() => {
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode(null), 2000);
+    });
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,6 +105,27 @@ export function AffiliatesPage() {
           Novo afiliado externo
         </button>
       </div>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <select
+          value={statusFilter}
+          onChange={(e) => { setStatusFilter(e.target.value); setOffset(0); }}
+          className="rounded border border-zinc-700 bg-zinc-800 text-zinc-200 px-3 py-2 text-sm"
+        >
+          <option value="">Todos os status</option>
+          <option value="PENDING">PENDING</option>
+          <option value="APPROVED">APPROVED</option>
+          <option value="SUSPENDED">SUSPENDED</option>
+        </select>
+        <label className="flex items-center gap-2 text-sm text-zinc-400">
+          <input
+            type="checkbox"
+            checked={hasPendingFilter}
+            onChange={(e) => { setHasPendingFilter(e.target.checked); setOffset(0); }}
+            className="rounded border-zinc-600"
+          />
+          Com comissões pendentes
+        </label>
+      </div>
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="rounded-xl border border-zinc-700 bg-zinc-900 p-6 max-w-md w-full">
@@ -136,8 +179,15 @@ export function AffiliatesPage() {
                   </td>
                   <td className="px-4 py-3 text-zinc-300">{a.commissionRatePercent}%</td>
                   <td className="px-4 py-3 text-zinc-300">{a.referralCount}</td>
-                  <td className="px-4 py-3">
-                    <Link to={`affiliates/${a.id}`} className="text-violet-400 hover:text-violet-300">Detalhes</Link>
+                  <td className="px-4 py-3 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => copyLink(a.code)}
+                      className="text-xs px-2 py-1 rounded border border-zinc-600 text-zinc-300 hover:bg-zinc-800"
+                    >
+                      {copiedCode === a.code ? 'Copiado' : 'Copiar link'}
+                    </button>
+                    <Link to={`/affiliates/${a.id}`} className="text-violet-400 hover:text-violet-300 text-sm">Detalhes</Link>
                   </td>
                 </tr>
               ))}

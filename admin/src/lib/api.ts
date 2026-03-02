@@ -448,11 +448,12 @@ export const adminApi = {
       }),
   },
 
-  affiliates: (params?: { limit?: number; offset?: number; status?: string }) => {
+  affiliates: (params?: { limit?: number; offset?: number; status?: string; hasPendingCommissions?: boolean }) => {
     const q = new URLSearchParams();
     if (params?.limit != null) q.set('limit', String(params.limit));
     if (params?.offset != null) q.set('offset', String(params.offset));
     if (params?.status) q.set('status', params.status);
+    if (params?.hasPendingCommissions === true) q.set('hasPendingCommissions', 'true');
     const suffix = q.toString() ? `?${q}` : '';
     return request<{ items: AdminAffiliateListItem[]; total: number; limit: number; offset: number }>(`/admin/affiliates${suffix}`);
   },
@@ -461,8 +462,11 @@ export const adminApi = {
   affiliate: (id: string) => request<AdminAffiliateDetail>(`/admin/affiliates/${id}`),
   updateAffiliate: (id: string, body: { status?: string; commissionRatePercent?: number; name?: string; email?: string; document?: string | null; notes?: string | null }) =>
     request<{ ok: boolean }>(`/admin/affiliates/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
-  markCommissionPaid: (affiliateId: string, commissionId: string) =>
-    request<{ ok: boolean }>(`/admin/affiliates/${affiliateId}/commissions/${commissionId}`, { method: 'PATCH', body: JSON.stringify({ status: 'PAID' }) }),
+  markCommissionPaid: (affiliateId: string, commissionId: string, paymentProofUrl?: string | null) =>
+    request<{ ok: boolean }>(`/admin/affiliates/${affiliateId}/commissions/${commissionId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'PAID', ...(paymentProofUrl != null && paymentProofUrl.trim() !== '' && { paymentProofUrl: paymentProofUrl.trim() }) }),
+    }),
 
   commissions: (params?: { limit?: number; offset?: number; status?: string; affiliateId?: string }) => {
     const q = new URLSearchParams();
@@ -524,11 +528,10 @@ export interface AdminAffiliateListItem {
 }
 
 export interface AdminAffiliateDetail extends AdminAffiliateListItem {
-  userId?: string | null;
   document?: string | null;
   notes?: string | null;
   referrals: Array<{ id: string; landedAt: string; signupAt: string; convertedAt: string | null; planId: string | null; valueCents: number | null }>;
-  commissions: Array<{ id: string; amountCents: number; currency: string; status: string; availableAt: string; paidAt: string | null; createdAt: string }>;
+  commissions: Array<{ id: string; amountCents: number; currency: string; status: string; availableAt: string; paidAt: string | null; createdAt: string; paymentProofUrl?: string | null }>;
   commissionPendingCents: number;
   commissionPaidCents: number;
 }
