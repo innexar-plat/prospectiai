@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { AdminGuard } from '@/components/AdminGuard';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { AdminOnlyRoute } from '@/components/AdminOnlyRoute';
@@ -20,6 +20,11 @@ import { AffiliateSettingsPage } from '@/pages/AffiliateSettingsPage';
 import { CommissionsPage } from '@/pages/CommissionsPage';
 import { ReferralsPage } from '@/pages/ReferralsPage';
 
+function RedirectAffiliateDetail() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={id ? `/affiliates/${id}` : '/affiliates'} replace />;
+}
+
 function App() {
   return (
     <BrowserRouter basename="/admin">
@@ -38,6 +43,7 @@ function App() {
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="plans" element={<PlansPage />} />
               <Route path="affiliates" element={<AffiliatesPage />} />
+              <Route path="affiliates/affiliates/:id" element={<RedirectAffiliateDetail />} />
               <Route path="affiliates/:id" element={<AffiliateDetailPage />} />
               <Route path="affiliate-settings" element={<AffiliateSettingsPage />} />
               <Route path="commissions" element={<CommissionsPage />} />

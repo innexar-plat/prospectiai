@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import Landing from './pages/public/Landing';
 import SignIn from './pages/auth/SignIn';
 import SignUp from './pages/auth/SignUp';
+import AffiliateSignIn from './pages/auth/AffiliateSignIn';
+import AffiliateSignUp from './pages/auth/AffiliateSignUp';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import VerifyEmailPage from './pages/auth/VerifyEmailPage';
@@ -27,6 +29,7 @@ import SuportePage from './pages/dashboard/SuportePage';
 import AfiliadoPage from './pages/dashboard/AfiliadoPage';
 import AfiliadoConversoesPage from './pages/dashboard/AfiliadoConversoesPage';
 import AfiliadoComissoesPage from './pages/dashboard/AfiliadoComissoesPage';
+import AfiliadoMateriaisPage from './pages/dashboard/AfiliadoMateriaisPage';
 import AfiliadoPagamentoPage from './pages/dashboard/AfiliadoPagamentoPage';
 import { AcceptInvitePage } from './pages/AcceptInvitePage';
 import Privacy from './pages/legal/Privacy';
@@ -99,6 +102,8 @@ function App() {
         <Route path="/accept-invite" element={<AcceptInvitePage user={user} />} />
         <Route path="/auth/signin" element={user ? <Navigate to="/onboarding" replace /> : <SignIn />} />
         <Route path="/auth/signup" element={user ? <Navigate to="/onboarding" replace /> : <SignUp />} />
+        <Route path="/auth/afiliado/entrar" element={user ? <Navigate to="/dashboard/afiliado" replace /> : <AffiliateSignIn />} />
+        <Route path="/auth/afiliado/cadastro" element={user ? <Navigate to="/dashboard/afiliado" replace /> : <AffiliateSignUp />} />
         <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
@@ -131,6 +136,7 @@ function App() {
           <Route path="afiliado" element={<AfiliadoPage />} />
           <Route path="afiliado/conversoes" element={<AfiliadoConversoesPage />} />
           <Route path="afiliado/comissoes" element={<AfiliadoComissoesPage />} />
+          <Route path="afiliado/materiais" element={<AfiliadoMateriaisPage />} />
           <Route path="afiliado/pagamento" element={<AfiliadoPagamentoPage />} />
         </Route>
         {getWave1Slugs().map((e) => (

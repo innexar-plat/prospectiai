@@ -7,7 +7,7 @@ type TabId = 'overview' | 'referrals' | 'commissions';
 
 function affiliateSignupLink(code: string): string {
   const base = typeof window !== 'undefined' ? window.location.origin : '';
-  return `${base}/auth/signup?ref=${encodeURIComponent(code)}`;
+  return `${base}/api/affiliate/click?ref=${encodeURIComponent(code)}`;
 }
 
 export function AffiliateDetailPage() {

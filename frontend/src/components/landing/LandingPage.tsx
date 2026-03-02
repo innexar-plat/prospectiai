@@ -90,6 +90,15 @@ export default function LandingPage({ onViewPlans, t }: { locale: string, onView
                             {t('landing.ctaPlans')}
                         </Button>
                     </div>
+                    <p className="mt-5 text-center animate-fade animation-delay-300 animation-fill-both">
+                        <button
+                            type="button"
+                            onClick={() => navigate('/auth/afiliado/cadastro')}
+                            className="text-sm font-semibold text-muted hover:text-foreground transition-colors underline decoration-2 underline-offset-4 decoration-violet-500/50 hover:decoration-violet-500"
+                        >
+                            Seja um afiliado
+                        </button>
+                    </p>
                 </div>
 
                 {/* Dashboard Preview Mockup */}

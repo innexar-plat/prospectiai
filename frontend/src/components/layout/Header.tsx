@@ -28,6 +28,9 @@ function HeaderNavLinks({ locale, onPlansClick, onCloseMenu, variant }: HeaderNa
             <button type="button" onClick={() => { onPlansClick(); onCloseMenu?.(); }} className={variant === 'desktop' ? linkClass : 'text-left ' + linkClass}>
                 {locale === 'pt' ? 'Planos' : 'Plans'}
             </button>
+            <Link to="/auth/afiliado/cadastro" onClick={onCloseMenu} className={linkClass}>
+                {locale === 'pt' ? 'Seja um afiliado' : 'Become an affiliate'}
+            </Link>
             <Link to="/privacy" onClick={onCloseMenu} className={linkClass}>{locale === 'pt' ? 'Privacidade' : 'Privacy'}</Link>
             <Link to="/terms" onClick={onCloseMenu} className={linkClass}>{locale === 'pt' ? 'Termos' : 'Terms'}</Link>
         </Wrapper>

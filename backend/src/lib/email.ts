@@ -13,6 +13,7 @@ import {
   affiliateApprovedTemplate,
   affiliateConversionTemplate,
   affiliateCommissionPaidTemplate,
+  affiliateCommissionAvailableTemplate,
 } from '@/lib/email-templates';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
@@ -162,4 +163,12 @@ export async function sendAffiliateConversionEmail(to: string, summary: string, 
 export async function sendAffiliateCommissionPaidEmail(to: string, amountFormatted: string, payoutInfo: string): Promise<SendResult> {
   const html = affiliateCommissionPaidTemplate(amountFormatted, payoutInfo);
   return sendEmail(to, 'Comissão paga – ProspectorAI', html);
+}
+
+/**
+ * Notifica o afiliado que uma ou mais comissões estão disponíveis para saque (após aprovação pelo cron).
+ */
+export async function sendAffiliateCommissionAvailableEmail(to: string, dashboardUrl: string): Promise<SendResult> {
+  const html = affiliateCommissionAvailableTemplate(dashboardUrl);
+  return sendEmail(to, 'Comissão disponível para saque – ProspectorAI', html);
 }

@@ -11,6 +11,9 @@ down:
 build:
 	./docker/scripts/build.sh
 
+# Rebuild: build images then bring stack up.
+rebuild: build up
+
 logs:
 	./docker/scripts/logs.sh $(SERVICE)
 

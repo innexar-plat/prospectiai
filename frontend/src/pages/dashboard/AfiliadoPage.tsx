@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { useOutletContext } from 'react-router-dom';
 import type { SessionUser } from '@/lib/api';
@@ -11,6 +11,10 @@ const APP_URL = typeof window !== 'undefined' ? window.location.origin : '';
 
 export default function AfiliadoPage() {
   useOutletContext<{ user: SessionUser }>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const fromCadastro = searchParams.get('from') === 'afiliado-cadastro';
+  const didAutoRegister = useRef(false);
+
   const [affiliate, setAffiliate] = useState<AffiliateMe | null | undefined>(undefined);
   const [stats, setStats] = useState<AffiliateStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -34,6 +38,46 @@ export default function AfiliadoPage() {
       cancelled = true;
     };
   }, []);
+
+  // Auto-register as affiliate when landing from affiliate signup (cadastro or OAuth)
+  useEffect(() => {
+    if (loading || affiliate !== null || !fromCadastro || didAutoRegister.current) return;
+    didAutoRegister.current = true;
+    let cancelled = false;
+    const run = async () => {
+      queueMicrotask(() => {
+        if (!cancelled) setRegistering(true);
+      });
+      try {
+        const data = await affiliateApi.register();
+        if (cancelled) return;
+        setAffiliate({
+          id: data.id,
+          code: data.code,
+          status: data.status as 'PENDING' | 'APPROVED' | 'SUSPENDED',
+          commissionRatePercent: 20,
+          payoutType: null,
+          approvedAt: null,
+          createdAt: new Date().toISOString(),
+          referralCount: 0,
+          commissionCount: 0,
+        });
+        setSearchParams((prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete('from');
+          return next;
+        }, { replace: true });
+      } catch {
+        // ignore
+      } finally {
+        if (!cancelled) setRegistering(false);
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, affiliate, fromCadastro, setSearchParams]);
 
   useEffect(() => {
     if (affiliate?.id && affiliate.status === 'APPROVED') {
@@ -62,7 +106,7 @@ export default function AfiliadoPage() {
     setRegistering(false);
   };
 
-  const shareUrl = affiliate?.code ? `${APP_URL}/auth/signup?ref=${encodeURIComponent(affiliate.code)}` : '';
+  const shareUrl = affiliate?.code ? `${APP_URL}/api/affiliate/click?ref=${encodeURIComponent(affiliate.code)}` : '';
   const copyLink = () => {
     if (!shareUrl) return;
     navigator.clipboard.writeText(shareUrl).then(() => {
@@ -145,6 +189,9 @@ export default function AfiliadoPage() {
               </div>
             )}
             <div className="flex flex-wrap gap-2">
+              <Link to="/dashboard/afiliado/materiais">
+                <Button variant="secondary" size="sm">Materiais e links</Button>
+              </Link>
               <Link to="/dashboard/afiliado/conversoes">
                 <Button variant="secondary" size="sm">Ver conversões</Button>
               </Link>

@@ -6,7 +6,7 @@ const PAGE_SIZE = 20;
 
 function affiliateSignupLink(code: string): string {
   const base = typeof window !== 'undefined' ? window.location.origin : '';
-  return `${base}/auth/signup?ref=${encodeURIComponent(code)}`;
+  return `${base}/api/affiliate/click?ref=${encodeURIComponent(code)}`;
 }
 
 export function AffiliatesPage() {
@@ -166,6 +166,7 @@ export function AffiliatesPage() {
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium">Taxa %</th>
                 <th className="px-4 py-3 font-medium">Referrals</th>
+                <th className="px-4 py-3 font-medium">Cliques</th>
                 <th className="px-4 py-3 font-medium">Ações</th>
               </tr>
             </thead>
@@ -179,6 +180,7 @@ export function AffiliatesPage() {
                   </td>
                   <td className="px-4 py-3 text-zinc-300">{a.commissionRatePercent}%</td>
                   <td className="px-4 py-3 text-zinc-300">{a.referralCount}</td>
+                  <td className="px-4 py-3 text-zinc-300">{a.clickCount ?? 0}</td>
                   <td className="px-4 py-3 flex flex-wrap items-center gap-2">
                     <button
                       type="button"

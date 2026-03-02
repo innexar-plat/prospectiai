@@ -467,6 +467,15 @@ export const adminApi = {
       method: 'PATCH',
       body: JSON.stringify({ status: 'PAID', ...(paymentProofUrl != null && paymentProofUrl.trim() !== '' && { paymentProofUrl: paymentProofUrl.trim() }) }),
     }),
+  markCommissionsPaidBulk: (commissionIds: string[], paymentProofUrl?: string | null) =>
+    request<{ ok: boolean; updated: number }>('/admin/commissions/bulk', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        commissionIds,
+        status: 'PAID',
+        ...(paymentProofUrl != null && paymentProofUrl.trim() !== '' && { paymentProofUrl: paymentProofUrl.trim() }),
+      }),
+    }),
 
   commissions: (params?: { limit?: number; offset?: number; status?: string; affiliateId?: string }) => {
     const q = new URLSearchParams();
@@ -524,6 +533,7 @@ export interface AdminAffiliateListItem {
   approvedAt: string | null;
   createdAt: string;
   referralCount: number;
+  clickCount?: number;
   userId: string | null;
 }
 

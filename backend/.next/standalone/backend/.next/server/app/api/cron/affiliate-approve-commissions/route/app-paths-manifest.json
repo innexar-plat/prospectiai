@@ -1,0 +1,3 @@
+{
+  "/api/cron/affiliate-approve-commissions/route": "app/api/cron/affiliate-approve-commissions/route.js"
+}

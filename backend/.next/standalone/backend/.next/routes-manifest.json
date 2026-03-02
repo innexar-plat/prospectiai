@@ -75,6 +75,23 @@
   },
   "dynamicRoutes": [
     {
+      "page": "/api/admin/affiliates/[id]",
+      "regex": "^/api/admin/affiliates/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/affiliates/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/admin/affiliates/[id]/commissions/[commissionId]",
+      "regex": "^/api/admin/affiliates/([^/]+?)/commissions/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid",
+        "nxtPcommissionId": "nxtPcommissionId"
+      },
+      "namedRegex": "^/api/admin/affiliates/(?<nxtPid>[^/]+?)/commissions/(?<nxtPcommissionId>[^/]+?)(?:/)?$"
+    },
+    {
       "page": "/api/admin/ai-config/[id]",
       "regex": "^/api/admin/ai\\-config/([^/]+?)(?:/)?$",
       "routeKeys": {
@@ -215,6 +232,18 @@
       "namedRegex": "^/api/activity(?:/)?$"
     },
     {
+      "page": "/api/admin/affiliate-settings",
+      "regex": "^/api/admin/affiliate\\-settings(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/affiliate\\-settings(?:/)?$"
+    },
+    {
+      "page": "/api/admin/affiliates",
+      "regex": "^/api/admin/affiliates(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/affiliates(?:/)?$"
+    },
+    {
       "page": "/api/admin/ai-config",
       "regex": "^/api/admin/ai\\-config(?:/)?$",
       "routeKeys": {},
@@ -225,6 +254,18 @@
       "regex": "^/api/admin/audit\\-logs(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/admin/audit\\-logs(?:/)?$"
+    },
+    {
+      "page": "/api/admin/commissions",
+      "regex": "^/api/admin/commissions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/commissions(?:/)?$"
+    },
+    {
+      "page": "/api/admin/commissions/bulk",
+      "regex": "^/api/admin/commissions/bulk(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/commissions/bulk(?:/)?$"
     },
     {
       "page": "/api/admin/email",
@@ -275,6 +316,12 @@
       "namedRegex": "^/api/admin/plans(?:/)?$"
     },
     {
+      "page": "/api/admin/referrals",
+      "regex": "^/api/admin/referrals(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/referrals(?:/)?$"
+    },
+    {
       "page": "/api/admin/search-history",
       "regex": "^/api/admin/search\\-history(?:/)?$",
       "routeKeys": {},
@@ -303,6 +350,42 @@
       "regex": "^/api/admin/workspaces(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/admin/workspaces(?:/)?$"
+    },
+    {
+      "page": "/api/affiliate/click",
+      "regex": "^/api/affiliate/click(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/affiliate/click(?:/)?$"
+    },
+    {
+      "page": "/api/affiliate/commissions",
+      "regex": "^/api/affiliate/commissions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/affiliate/commissions(?:/)?$"
+    },
+    {
+      "page": "/api/affiliate/me",
+      "regex": "^/api/affiliate/me(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/affiliate/me(?:/)?$"
+    },
+    {
+      "page": "/api/affiliate/referrals",
+      "regex": "^/api/affiliate/referrals(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/affiliate/referrals(?:/)?$"
+    },
+    {
+      "page": "/api/affiliate/register",
+      "regex": "^/api/affiliate/register(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/affiliate/register(?:/)?$"
+    },
+    {
+      "page": "/api/affiliate/stats",
+      "regex": "^/api/affiliate/stats(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/affiliate/stats(?:/)?$"
     },
     {
       "page": "/api/analyze",
@@ -405,6 +488,12 @@
       "regex": "^/api/competitors(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/competitors(?:/)?$"
+    },
+    {
+      "page": "/api/cron/affiliate-approve-commissions",
+      "regex": "^/api/cron/affiliate\\-approve\\-commissions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/affiliate\\-approve\\-commissions(?:/)?$"
     },
     {
       "page": "/api/cron/grace-period",

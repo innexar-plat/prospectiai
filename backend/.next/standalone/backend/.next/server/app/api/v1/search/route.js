@@ -1,7 +1,7 @@
 var R=require("../../../../chunks/[turbopack]_runtime.js")("server/app/api/v1/search/route.js")
 R.c("server/chunks/node_modules_bcryptjs_index_42ebb250.js")
 R.c("server/chunks/node_modules_next_f5199d09._.js")
-R.c("server/chunks/[root-of-the-server]__d88db0b5._.js")
+R.c("server/chunks/[root-of-the-server]__42e9ed70._.js")
 R.c("server/chunks/node_modules_zod_v4_classic_external_fa90cebf.js")
 R.c("server/chunks/_351ad5db._.js")
 R.c("server/chunks/[root-of-the-server]__f408c708._.js")

@@ -102,6 +102,7 @@ async function handlePaymentTopic(id: string): Promise<void> {
                 }
             }
         }
+        // Recurring subscription payments (renewals): MP sends payment with preapproval_id in metadata.
         if (preapprovalId) {
             try {
                 const workspace = await prisma.workspace.findFirst({

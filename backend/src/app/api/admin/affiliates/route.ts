@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
       id: true, code: true, status: true, commissionRatePercent: true,
       email: true, name: true, approvedAt: true, createdAt: true,
       user: { select: { id: true, email: true, name: true } },
-      _count: { select: { referrals: true } },
+      _count: { select: { referrals: true, clicks: true } },
     },
   });
   const total = await prisma.affiliate.count({ where });
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
     id: a.id, code: a.code, status: a.status, commissionRatePercent: a.commissionRatePercent,
     email: a.email ?? a.user?.email, name: a.name ?? a.user?.name,
     approvedAt: a.approvedAt?.toISOString() ?? null, createdAt: a.createdAt.toISOString(),
-    referralCount: a._count.referrals, userId: a.user?.id ?? null,
+    referralCount: a._count.referrals, clickCount: a._count.clicks, userId: a.user?.id ?? null,
   }));
   return NextResponse.json({ items: list, total, limit, offset });
 }

@@ -12,13 +12,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const body = await req.json().catch(() => ({}));
   const status = body.status === 'PAID' ? 'PAID' : null;
   if (status !== 'PAID') return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+  const paymentProofUrl = typeof body.paymentProofUrl === 'string' && body.paymentProofUrl.trim() ? body.paymentProofUrl.trim() : null;
   const commission = await prisma.affiliateCommission.findFirst({
     where: { id: commissionId, affiliateId },
   });
   if (!commission) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   await prisma.affiliateCommission.update({
     where: { id: commissionId },
-    data: { status: 'PAID', paidAt: new Date(), paidByAdminId: session.user.id },
+    data: {
+      status: 'PAID',
+      paidAt: new Date(),
+      paidByAdminId: session.user.id,
+      ...(paymentProofUrl != null && { paymentProofUrl }),
+    },
   });
   const affiliate = await prisma.affiliate.findUnique({
     where: { id: affiliateId },

@@ -77,7 +77,7 @@ export function ReferralsPage() {
               {items.map((r) => (
                 <tr key={r.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/30">
                   <td className="px-4 py-3">
-                    <Link to={`affiliates/${r.affiliateId}`} className="text-violet-400 hover:text-violet-300 font-mono">{r.affiliateCode}</Link>
+                    <Link to={`/affiliates/${r.affiliateId}`} className="text-violet-400 hover:text-violet-300 font-mono">{r.affiliateCode}</Link>
                   </td>
                   <td className="px-4 py-3 text-zinc-400">{r.emailMasked ?? '—'}</td>
                   <td className="px-4 py-3 text-zinc-300">{new Date(r.signupAt).toLocaleDateString('pt-BR')}</td>

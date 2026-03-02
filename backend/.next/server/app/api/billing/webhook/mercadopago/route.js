@@ -1,5 +1,5 @@
 var R=require("../../../../../chunks/[turbopack]_runtime.js")("server/app/api/billing/webhook/mercadopago/route.js")
-R.c("server/chunks/[root-of-the-server]__061257cf._.js")
+R.c("server/chunks/[root-of-the-server]__e32281b4._.js")
 R.c("server/chunks/[root-of-the-server]__f408c708._.js")
 R.c("server/chunks/[root-of-the-server]__63fbfec1._.js")
 R.c("server/chunks/[root-of-the-server]__4f3e138b._.js")

@@ -1,0 +1,6 @@
+projectKey=Prospector-AI
+serverUrl=https://sonar.innexar.com.br
+serverVersion=9.9.8.100196
+dashboardUrl=https://sonar.innexar.com.br/dashboard?id=Prospector-AI
+ceTaskId=AZykHr1GHlbUjFxPWtBz
+ceTaskUrl=https://sonar.innexar.com.br/api/ce/task?id=AZykHr1GHlbUjFxPWtBz

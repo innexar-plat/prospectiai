@@ -257,11 +257,14 @@ export function affiliateApprovedTemplate(affiliateCode: string, loginUrl: strin
   const safeCode = escapeHtml(affiliateCode);
   const base = SITE_URL.replace(/\/$/, '');
   const ctaHref = loginUrl.startsWith('http') ? loginUrl : `${base}${loginUrl}`;
+  const affiliateLink = `${base}/api/affiliate/click?ref=${encodeURIComponent(affiliateCode)}`;
+  const affiliateLinkAttr = affiliateLink.replace(/"/g, '&quot;');
   return buildEmail({
     title: 'Sua conta de afiliado foi aprovada',
     body: [
       `Sua conta de afiliado no ProspectorAI foi aprovada. Seu código exclusivo é: <strong>${safeCode}</strong>.`,
-      'Use o link de afiliado (com ?ref= seu código) para indicar clientes. Quando alguém se cadastrar e assinar um plano pago, você receberá comissão conforme a política do programa.',
+      'Use o link abaixo para indicar clientes. Quando alguém se cadastrar por esse link e assinar um plano pago, você receberá comissão conforme a política do programa.',
+      `Seu link de indicação: <a href="${affiliateLinkAttr}" style="color:${BRAND_COLOR};word-break:break-all;">${escapeHtml(affiliateLink)}</a>`,
     ],
     ctaHref,
     ctaLabel: 'Acessar painel do afiliado',
@@ -298,5 +301,20 @@ export function affiliateCommissionPaidTemplate(amountFormatted: string, payoutI
       `Uma comissão no valor de <strong>${safeAmount}</strong> foi paga conforme os dados de saque informados.`,
       safePayout,
     ],
+  });
+}
+
+/**
+ * Comissão disponível: uma ou mais comissões passaram do período de carência e estão disponíveis para saque.
+ */
+export function affiliateCommissionAvailableTemplate(dashboardUrl: string): string {
+  return buildEmail({
+    title: 'Comissão disponível para saque — ProspectorAI',
+    body: [
+      'Uma ou mais comissões do programa de afiliados passaram do período de carência e estão disponíveis para saque.',
+      'Acesse o painel do afiliado para acompanhar os valores. O pagamento será processado conforme a política do programa.',
+    ],
+    ctaHref: dashboardUrl,
+    ctaLabel: 'Ver painel do afiliado',
   });
 }

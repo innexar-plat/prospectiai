@@ -508,9 +508,23 @@ model Affiliate {
   user         User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
   referrals    Referral[]
   commissions  AffiliateCommission[]
+  clicks       AffiliateClick[]
 
   @@index([status])
   @@index([userId])
+}
+
+model AffiliateClick {
+  id         String   @id @default(cuid())
+  affiliateId String
+  createdAt   DateTime @default(now())
+  ipHash      String?  // hash do IP para métricas (opcional)
+  userAgent   String?  @db.VarChar(500) // truncado
+
+  affiliate Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  @@index([affiliateId])
+  @@index([createdAt])
 }
 
 model Referral {
