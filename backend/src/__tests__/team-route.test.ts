@@ -211,4 +211,66 @@ describe('POST /api/team', () => {
     expect(json.ok).toBe(true);
     expect(json.pendingInvite).toMatchObject({ id: 'inv1', email: 'new@x.com' });
   });
+
+  it('returns 200 when invite created but email not sent (warn path)', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1', name: 'Alice', email: 'alice@x.com' }, expires: '' });
+    (prisma.workspaceMember.findFirst as jest.Mock)
+      .mockResolvedValueOnce({
+        id: 'wm1',
+        workspaceId: 'w1',
+        role: 'OWNER',
+        workspace: { id: 'w1', name: 'My Workspace', plan: 'SCALE', leadsUsed: 0, leadsLimit: 5000 },
+      })
+      .mockResolvedValueOnce(null);
+    (prisma.workspaceInvitation.upsert as jest.Mock).mockResolvedValue({
+      id: 'inv1',
+      email: 'new@x.com',
+      createdAt: new Date(),
+      lastSentAt: new Date(),
+    });
+    (sendTeamInviteEmail as jest.Mock).mockResolvedValue({ sent: false, error: 'no config' });
+
+    const res = await POST(req({ method: 'POST', body: { email: 'new@x.com' } }));
+    expect(res.status).toBe(200);
+    await new Promise((r) => setImmediate(r));
+  });
+
+  it('covers email send reject path with non-Error (catch branch)', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1', name: 'Alice' }, expires: '' });
+    (prisma.workspaceMember.findFirst as jest.Mock)
+      .mockResolvedValueOnce({
+        id: 'wm1',
+        workspaceId: 'w1',
+        role: 'OWNER',
+        workspace: { id: 'w1', name: 'WS', plan: 'SCALE', leadsUsed: 0, leadsLimit: 5000 },
+      })
+      .mockResolvedValueOnce(null);
+    (prisma.workspaceInvitation.upsert as jest.Mock).mockResolvedValue({
+      id: 'inv1',
+      email: 'new@x.com',
+      createdAt: new Date(),
+      lastSentAt: new Date(),
+    });
+    (sendTeamInviteEmail as jest.Mock).mockRejectedValue('non-Error rejection');
+    const res = await POST(req({ method: 'POST', body: { email: 'new@x.com' } }));
+    expect(res.status).toBe(200);
+    await new Promise((r) => setImmediate(r));
+  });
+
+  it('returns 500 when POST invite throws (e.g. upsert fails)', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1', name: 'Alice' }, expires: '' });
+    (prisma.workspaceMember.findFirst as jest.Mock)
+      .mockResolvedValueOnce({
+        id: 'wm1',
+        workspaceId: 'w1',
+        role: 'OWNER',
+        workspace: { id: 'w1', name: 'WS', plan: 'SCALE', leadsUsed: 0, leadsLimit: 5000 },
+      })
+      .mockResolvedValueOnce(null);
+    (prisma.workspaceInvitation.upsert as jest.Mock).mockRejectedValue(new Error('DB error'));
+
+    const res = await POST(req({ method: 'POST', body: { email: 'new@x.com' } }));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toMatchObject({ error: 'Internal server error' });
+  });
 });

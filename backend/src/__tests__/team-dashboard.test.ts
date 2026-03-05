@@ -97,4 +97,12 @@ describe('GET /api/team/dashboard', () => {
       membersCount: 1,
     });
   });
+
+  it('returns 500 when findFirst throws', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    (prisma.workspaceMember.findFirst as jest.Mock).mockRejectedValue(new Error('DB error'));
+    const res = await GET(req());
+    expect(res.status).toBe(500);
+    expect(await res.json()).toMatchObject({ error: 'Internal server error' });
+  });
 });

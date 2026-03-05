@@ -98,4 +98,17 @@ describe('PUT /api/team/role', () => {
       data: { role: 'ADMIN' },
     });
   });
+
+  it('returns 500 when update throws', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    const findFirst = prisma.workspaceMember.findFirst as jest.Mock;
+    findFirst.mockReset();
+    findFirst
+      .mockResolvedValueOnce({ id: 'wm1', workspaceId: 'w1', role: 'OWNER' })
+      .mockResolvedValueOnce({ id: 'wm2', workspaceId: 'w1', role: 'MEMBER' });
+    (prisma.workspaceMember.update as jest.Mock).mockRejectedValue(new Error('DB error'));
+    const res = await PUT(req({ memberId: 'wm2', role: 'MEMBER' }));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toMatchObject({ error: 'Internal server error' });
+  });
 });

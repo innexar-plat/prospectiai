@@ -52,6 +52,18 @@ describe('POST /api/team/invite/accept', () => {
     expect(await res.json()).toMatchObject({ error: 'Token inválido' });
   });
 
+  it('returns 400 when body is invalid JSON (catch returns {})', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1', email: 'a@x.com' }, expires: '' });
+    const badReq = new Request('http://localhost/api/team/invite/accept', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: 'not json',
+    });
+    const res = await POST(badReq);
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ error: 'Token inválido' });
+  });
+
   it('returns 404 when invitation not found or not PENDING', async () => {
     (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1', email: 'a@x.com' }, expires: '' });
     (mockPrisma.workspaceInvitation.findUnique as jest.Mock).mockResolvedValue(null);
@@ -150,5 +162,41 @@ describe('POST /api/team/invite/accept', () => {
     expect(json.ok).toBe(true);
     expect(json.alreadyMember).toBeUndefined();
     expect(mockPrisma.$transaction).toHaveBeenCalled();
+  });
+
+  it('returns 500 when transaction throws', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1', email: 'a@x.com' }, expires: '' });
+    (mockPrisma.workspaceInvitation.findUnique as jest.Mock).mockResolvedValue({
+      id: 'inv1',
+      email: 'a@x.com',
+      workspaceId: 'w1',
+      status: 'PENDING',
+      workspace: {},
+    });
+    (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({ id: 'u1' });
+    (mockPrisma.workspaceMember.findUnique as jest.Mock).mockResolvedValue(null);
+    (mockPrisma.$transaction as jest.Mock).mockRejectedValue(new Error('Transaction failed'));
+
+    const res = await POST(req({ token: 't1' }));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toMatchObject({ error: 'Internal server error' });
+  });
+
+  it('returns 500 when transaction throws non-Error (catch branch)', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1', email: 'a@x.com' }, expires: '' });
+    (mockPrisma.workspaceInvitation.findUnique as jest.Mock).mockResolvedValue({
+      id: 'inv1',
+      email: 'a@x.com',
+      workspaceId: 'w1',
+      status: 'PENDING',
+      workspace: {},
+    });
+    (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({ id: 'u1' });
+    (mockPrisma.workspaceMember.findUnique as jest.Mock).mockResolvedValue(null);
+    (mockPrisma.$transaction as jest.Mock).mockRejectedValue('string error');
+
+    const res = await POST(req({ token: 't1' }));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toMatchObject({ error: 'Internal server error' });
   });
 });

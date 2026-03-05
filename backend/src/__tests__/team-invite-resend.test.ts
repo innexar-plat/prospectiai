@@ -124,4 +124,12 @@ describe('POST /api/team/invite/resend', () => {
     );
     expect(sendTeamInviteEmail).toHaveBeenCalledWith('b@x.com', 'Alice', 'My WS', expect.stringMatching(/\/accept-invite\?token=/));
   });
+
+  it('returns 500 when findUnique or update throws', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    (prisma.workspaceInvitation.findUnique as jest.Mock).mockRejectedValue(new Error('DB error'));
+    const res = await POST(req({ invitationId: 'inv1' }));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toMatchObject({ error: 'Internal server error' });
+  });
 });

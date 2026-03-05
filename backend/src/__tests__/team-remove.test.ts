@@ -38,6 +38,14 @@ describe('DELETE /api/team/remove', () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ success: true, removedUserId: 'u2' });
   });
+  it('returns 400 when member not found or is OWNER (deleteMany count 0)', async () => {
+    auth.mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    prisma.user.findUnique.mockResolvedValue({ workspaces: [{ workspaceId: 'w1', role: 'OWNER' }] });
+    prisma.workspaceMember.deleteMany.mockResolvedValue({ count: 0 });
+    const res = await DELETE(body('u2'));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ error: 'Member not found or cannot be removed (Owner)' });
+  });
   it('returns 500 when deleteMany throws', async () => {
     auth.mockResolvedValue({ user: { id: 'u1' }, expires: '' });
     prisma.user.findUnique.mockResolvedValue({ workspaces: [{ workspaceId: 'w1', role: 'OWNER' }] });

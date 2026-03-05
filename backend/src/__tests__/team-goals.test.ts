@@ -88,4 +88,15 @@ describe('PUT /api/team/goals', () => {
       select: expect.any(Object),
     });
   });
+
+  it('returns 500 when update throws', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    (prisma.workspaceMember.findFirst as jest.Mock)
+      .mockResolvedValueOnce({ id: 'wm1', workspaceId: 'w1', role: 'OWNER' })
+      .mockResolvedValueOnce({ id: 'wm2', workspaceId: 'w1', role: 'MEMBER' });
+    (prisma.workspaceMember.update as jest.Mock).mockRejectedValue(new Error('DB error'));
+    const res = await PUT(req({ memberId: 'wm2', dailyLeadsGoal: 10 }));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toMatchObject({ error: 'Internal server error' });
+  });
 });

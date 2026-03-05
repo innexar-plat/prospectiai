@@ -92,4 +92,59 @@ describe('POST /api/team/invite', () => {
     expect(data.ok).toBe(true);
     expect(data.pendingInvite).toMatchObject({ email: 'new@x.com' });
   });
+  it('returns 200 when invite created but email not sent (warn path)', async () => {
+    auth.mockResolvedValue({ user: { id: 'u1', name: 'Alice' }, expires: '' });
+    prisma.user.findUnique.mockResolvedValue({
+      name: 'Alice',
+      workspaces: [{ workspaceId: 'w1', role: 'OWNER', workspace: { name: 'My Workspace' } }],
+    });
+    prisma.workspaceMember.findFirst.mockResolvedValue(null);
+    prisma.workspaceInvitation.upsert.mockResolvedValue({
+      id: 'inv1',
+      email: 'new@x.com',
+      createdAt: new Date(),
+      lastSentAt: new Date(),
+    });
+    sendTeamInviteEmail.mockResolvedValue({ sent: false, error: 'no config' });
+    const res = await POST(new Request('http://localhost/api/team/invite', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'new@x.com' }),
+    }));
+    expect(res.status).toBe(200);
+    await new Promise((r) => setImmediate(r));
+  });
+  it('returns 200 when invite created but sendTeamInviteEmail rejects (catch path)', async () => {
+    auth.mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    prisma.user.findUnique.mockResolvedValue({
+      workspaces: [{ workspaceId: 'w1', role: 'OWNER', workspace: { name: 'WS' } }],
+    });
+    prisma.workspaceMember.findFirst.mockResolvedValue(null);
+    prisma.workspaceInvitation.upsert.mockResolvedValue({
+      id: 'inv1',
+      email: 'new@x.com',
+      createdAt: new Date(),
+      lastSentAt: new Date(),
+    });
+    sendTeamInviteEmail.mockRejectedValue(new Error('SMTP error'));
+    const res = await POST(new Request('http://localhost/api/team/invite', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'new@x.com' }),
+    }));
+    expect(res.status).toBe(200);
+    await new Promise((r) => setImmediate(r));
+  });
+  it('returns 500 when upsert throws', async () => {
+    auth.mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    prisma.user.findUnique.mockResolvedValue({
+      workspaces: [{ workspaceId: 'w1', role: 'OWNER', workspace: { name: 'WS' } }],
+    });
+    prisma.workspaceMember.findFirst.mockResolvedValue(null);
+    prisma.workspaceInvitation.upsert.mockRejectedValue(new Error('DB error'));
+    const res = await POST(new Request('http://localhost/api/team/invite', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'new@x.com' }),
+    }));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toMatchObject({ error: 'Internal Server Error' });
+  });
 });
