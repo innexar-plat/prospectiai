@@ -1,11 +1,14 @@
 import { NextRequest } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { getMemberUsage } from '@/lib/team-credits';
 import { getOrCreateRequestId, jsonWithRequestId } from '@/lib/request-id';
 
 type MemberWithUser = Awaited<ReturnType<typeof prisma.workspaceMember.findMany>>[number] & {
     user: { id: string; name: string | null; email: string | null; image: string | null };
 };
+
+type UsageMap = Map<string, { today: number; week: number; month: number }>;
 
 function buildDashboardRows(
     members: MemberWithUser[],
@@ -14,6 +17,7 @@ function buildDashboardRows(
     monthSearchMap: Map<string, number>,
     monthAnalysisMap: Map<string, number>,
     monthActionMap: Map<string, number>,
+    usageMap: UsageMap,
     now: Date,
 ) {
     return members.map((m) => {
@@ -23,6 +27,7 @@ function buildDashboardRows(
         const monthLeads = monthSearchMap.get(uid) ?? 0;
         const monthAnal = monthAnalysisMap.get(uid) ?? 0;
         const monthActs = monthActionMap.get(uid) ?? 0;
+        const usage = usageMap.get(uid) ?? { today: 0, week: 0, month: 0 };
         const dailyLeadsPct = m.dailyLeadsGoal ? Math.round((todayLeads / m.dailyLeadsGoal) * 100) : null;
         const dailyAnalysesPct = m.dailyAnalysesGoal ? Math.round((todayAnal / m.dailyAnalysesGoal) * 100) : null;
         const monthlyConvPct = m.monthlyConversionsGoal ? Math.round((monthActs / m.monthlyConversionsGoal) * 100) : null;
@@ -43,8 +48,14 @@ function buildDashboardRows(
                 dailyAnalysesGoal: m.dailyAnalysesGoal,
                 monthlyConversionsGoal: m.monthlyConversionsGoal,
             },
+            limits: {
+                dailyLeadsLimit: m.dailyLeadsLimit ?? null,
+                weeklyLeadsLimit: m.weeklyLeadsLimit ?? null,
+                monthlyLeadsLimit: m.monthlyLeadsLimit ?? null,
+            },
             today: { leads: todayLeads, analyses: todayAnal },
             month: { leads: monthLeads, analyses: monthAnal, actions: monthActs },
+            usage: { today: usage.today, week: usage.week, month: usage.month },
             progress: { dailyLeadsPct, dailyAnalysesPct, monthlyConvPct },
             belowGoal,
         };
@@ -129,6 +140,12 @@ export async function GET(req: NextRequest) {
         });
         const monthActionMap = new Map(monthActions.map((a) => [a.userId, a._count.id]));
 
+        const usagePromises = members.map((m) =>
+            getMemberUsage(prisma, caller.workspaceId, m.user.id).then((u) => [m.user.id, u] as const),
+        );
+        const usageResults = await Promise.all(usagePromises);
+        const usageMap = new Map(usageResults);
+
         const dashboard = buildDashboardRows(
             members,
             todaySearchMap,
@@ -136,6 +153,7 @@ export async function GET(req: NextRequest) {
             monthSearchMap,
             monthAnalysisMap,
             monthActionMap,
+            usageMap,
             now,
         );
 

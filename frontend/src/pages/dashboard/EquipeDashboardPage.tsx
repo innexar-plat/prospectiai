@@ -15,8 +15,10 @@ interface DashboardMember {
   image: string | null;
   role: string;
   goals: { dailyLeadsGoal: number | null; dailyAnalysesGoal: number | null; monthlyConversionsGoal: number | null };
+  limits?: { dailyLeadsLimit: number | null; weeklyLeadsLimit: number | null; monthlyLeadsLimit: number | null };
   today: { leads: number; analyses: number };
   month: { leads: number; analyses: number; actions: number };
+  usage?: { today: number; week: number; month: number };
   progress: { dailyLeadsPct: number | null; dailyAnalysesPct: number | null; monthlyConvPct: number | null };
   belowGoal: boolean;
 }
@@ -178,6 +180,7 @@ export default function EquipeDashboardPage() {
                       <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">Membro</th>
                       <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase text-right">Hoje (L/A)</th>
                       <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">Meta vs Dia</th>
+                      <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">Uso vs Limite</th>
                       <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">Conversões mês</th>
                       <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase w-20">Alerta</th>
                     </tr>
@@ -222,6 +225,13 @@ export default function EquipeDashboardPage() {
                                 <span className="text-muted text-xs">—</span>
                               )}
                             </div>
+                          </td>
+                          <td className="py-3 px-5 text-xs text-muted tabular-nums">
+                            {m.limits && (m.limits.dailyLeadsLimit != null || m.limits.weeklyLeadsLimit != null || m.limits.monthlyLeadsLimit != null) && m.usage ? (
+                              <>D: {m.usage.today}/{m.limits.dailyLeadsLimit ?? '-'} · S: {m.usage.week}/{m.limits.weeklyLeadsLimit ?? '-'} · M: {m.usage.month}/{m.limits.monthlyLeadsLimit ?? '-'}</>
+                            ) : (
+                              '—'
+                            )}
                           </td>
                           <td className="py-3 px-5">
                             {m.goals.monthlyConversionsGoal != null ? (

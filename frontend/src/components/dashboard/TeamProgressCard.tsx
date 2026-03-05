@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Target, Loader2, Trophy, Flame } from 'lucide-react';
+import { Target, Loader2, Trophy, Flame, CreditCard } from 'lucide-react';
 import type { SessionUser } from '@/lib/api';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -10,6 +10,12 @@ interface ProgressResponse {
     dailyAnalysesGoal: number | null;
     monthlyConversionsGoal: number | null;
   };
+  limits?: {
+    dailyLeadsLimit: number | null;
+    weeklyLeadsLimit: number | null;
+    monthlyLeadsLimit: number | null;
+  };
+  usage?: { today: number; week: number; month: number };
   today: { searches: number; analyses: number };
   month: { searches: number; analyses: number; actions: number };
   streak: number;
@@ -87,8 +93,9 @@ export function TeamProgressCard({ plan }: { plan: SessionUser['plan'] }) {
     );
   }
 
-  const { goals, today, streak, ranking } = data;
+  const { goals, limits, usage, today, streak, ranking } = data;
   const hasDailyGoals = goals.dailyLeadsGoal != null || goals.dailyAnalysesGoal != null;
+  const hasLimits = limits && (limits.dailyLeadsLimit != null || limits.weeklyLeadsLimit != null || limits.monthlyLeadsLimit != null);
 
   return (
     <div className="rounded-3xl bg-card border border-border overflow-hidden">
@@ -98,6 +105,34 @@ export function TeamProgressCard({ plan }: { plan: SessionUser['plan'] }) {
         </h3>
       </div>
       <div className="p-5 space-y-5">
+        {/* Minha cota (uso vs limites) */}
+        {hasLimits && usage && (
+          <div className="space-y-2 pb-3 border-b border-border/50">
+            <p className="text-xs font-medium text-muted uppercase tracking-wider flex items-center gap-2">
+              <CreditCard size={14} className="text-emerald-400" /> Minha cota
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+              {limits.dailyLeadsLimit != null && (
+                <div className="rounded-lg bg-surface/50 px-3 py-2">
+                  <span className="text-muted">Hoje</span>
+                  <p className="font-semibold text-foreground tabular-nums">{usage.today} / {limits.dailyLeadsLimit}</p>
+                </div>
+              )}
+              {limits.weeklyLeadsLimit != null && (
+                <div className="rounded-lg bg-surface/50 px-3 py-2">
+                  <span className="text-muted">Semana</span>
+                  <p className="font-semibold text-foreground tabular-nums">{usage.week} / {limits.weeklyLeadsLimit}</p>
+                </div>
+              )}
+              {limits.monthlyLeadsLimit != null && (
+                <div className="rounded-lg bg-surface/50 px-3 py-2">
+                  <span className="text-muted">Mês</span>
+                  <p className="font-semibold text-foreground tabular-nums">{usage.month} / {limits.monthlyLeadsLimit}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         {/* Metas do dia com barras */}
         {hasDailyGoals && (
           <div className="space-y-3">

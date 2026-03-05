@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Lock, UserPlus, Trophy, AlertCircle, MoreVertical, Pencil, Trash2, LayoutDashboard, Loader2, Target } from 'lucide-react';
+import { Lock, UserPlus, Trophy, AlertCircle, MoreVertical, Pencil, Trash2, LayoutDashboard, Loader2, Target, CreditCard } from 'lucide-react';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import type { SessionUser } from '@/lib/api';
@@ -23,6 +23,8 @@ interface TeamMember {
     dailyLeadsGoal: number | null;
     dailyAnalysesGoal: number | null;
     monthlyConversionsGoal: number | null;
+    limits?: { dailyLeadsLimit: number | null; weeklyLeadsLimit: number | null; monthlyLeadsLimit: number | null };
+    usage?: { today: number; week: number; month: number };
 }
 
 interface WorkspaceInfo {
@@ -48,8 +50,10 @@ interface DashboardMember {
     image: string | null;
     role: string;
     goals: { dailyLeadsGoal: number | null; dailyAnalysesGoal: number | null; monthlyConversionsGoal: number | null };
+    limits?: { dailyLeadsLimit: number | null; weeklyLeadsLimit: number | null; monthlyLeadsLimit: number | null };
     today: { leads: number; analyses: number };
     month: { leads: number; analyses: number; actions: number };
+    usage?: { today: number; week: number; month: number };
     progress: { dailyLeadsPct: number | null; dailyAnalysesPct: number | null; monthlyConvPct: number | null };
     belowGoal: boolean;
 }
@@ -103,6 +107,7 @@ function TeamDashboardView({ loading, data }: { loading: boolean; data: { member
                                 <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">Membro</th>
                                 <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase text-right">Hoje (L/A)</th>
                                 <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">Meta vs Dia</th>
+                                <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">Uso vs Limite</th>
                                 <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">Conversões mês</th>
                                 <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase w-20">Alerta</th>
                             </tr>
@@ -135,6 +140,19 @@ function TeamDashboardView({ loading, data }: { loading: boolean; data: { member
                                             )}
                                             {m.goals.dailyLeadsGoal == null && m.goals.dailyAnalysesGoal == null && <span className="text-muted text-xs">—</span>}
                                         </div>
+                                    </td>
+                                    <td className="py-3 px-5 text-xs text-muted">
+                                        {m.limits && (m.limits.dailyLeadsLimit != null || m.limits.weeklyLeadsLimit != null || m.limits.monthlyLeadsLimit != null) && m.usage ? (
+                                            <span className="tabular-nums">
+                                                {m.limits.dailyLeadsLimit != null && <span>D: {m.usage.today}/{m.limits.dailyLeadsLimit}</span>}
+                                                {m.limits.dailyLeadsLimit != null && (m.limits.weeklyLeadsLimit != null || m.limits.monthlyLeadsLimit != null) && ' · '}
+                                                {m.limits.weeklyLeadsLimit != null && <span>S: {m.usage.week}/{m.limits.weeklyLeadsLimit}</span>}
+                                                {(m.limits.dailyLeadsLimit != null || m.limits.weeklyLeadsLimit != null) && m.limits.monthlyLeadsLimit != null && ' · '}
+                                                {m.limits.monthlyLeadsLimit != null && <span>M: {m.usage.month}/{m.limits.monthlyLeadsLimit}</span>}
+                                            </span>
+                                        ) : (
+                                            <span>—</span>
+                                        )}
                                     </td>
                                     <td className="py-3 px-5">
                                         {m.goals.monthlyConversionsGoal != null ? (
@@ -273,6 +291,9 @@ export default function EquipePage() {
     const [savingRole, setSavingRole] = useState(false);
     const [deleteConfirmMember, setDeleteConfirmMember] = useState<TeamMember | null>(null);
     const [removing, setRemoving] = useState(false);
+    const [creditsModalMember, setCreditsModalMember] = useState<TeamMember | null>(null);
+    const [creditsForm, setCreditsForm] = useState({ dailyLeadsLimit: '', weeklyLeadsLimit: '', monthlyLeadsLimit: '' });
+    const [savingCredits, setSavingCredits] = useState(false);
     const actionsRef = useRef<HTMLDivElement>(null);
 
     const hasAccess = user.plan === 'SCALE';
@@ -406,6 +427,41 @@ export default function EquipePage() {
             dailyAnalysesGoal: m.dailyAnalysesGoal != null ? String(m.dailyAnalysesGoal) : '',
             monthlyConversionsGoal: m.monthlyConversionsGoal != null ? String(m.monthlyConversionsGoal) : '',
         });
+    };
+
+    const openCreditsModal = (m: TeamMember) => {
+        setCreditsModalMember(m);
+        setCreditsForm({
+            dailyLeadsLimit: m.limits?.dailyLeadsLimit != null ? String(m.limits.dailyLeadsLimit) : '',
+            weeklyLeadsLimit: m.limits?.weeklyLeadsLimit != null ? String(m.limits.weeklyLeadsLimit) : '',
+            monthlyLeadsLimit: m.limits?.monthlyLeadsLimit != null ? String(m.limits.monthlyLeadsLimit) : '',
+        });
+    };
+
+    const handleSaveCredits = async (e: React.SyntheticEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (!creditsModalMember) return;
+        setSavingCredits(true);
+        try {
+            await request('/team/credits', {
+                method: 'PUT',
+                body: JSON.stringify({
+                    memberId: creditsModalMember.id,
+                    dailyLeadsLimit: creditsForm.dailyLeadsLimit === '' ? null : parseInt(creditsForm.dailyLeadsLimit, 10),
+                    weeklyLeadsLimit: creditsForm.weeklyLeadsLimit === '' ? null : parseInt(creditsForm.weeklyLeadsLimit, 10),
+                    monthlyLeadsLimit: creditsForm.monthlyLeadsLimit === '' ? null : parseInt(creditsForm.monthlyLeadsLimit, 10),
+                }),
+            });
+            addToast('success', 'Limites de créditos atualizados.');
+            setCreditsModalMember(null);
+            const data = await request<{ members: TeamMember[]; workspace: WorkspaceInfo; pendingInvitations: PendingInvitation[] }>('/team');
+            setMembers(data.members);
+            if (data.pendingInvitations != null) setPendingInvitations(data.pendingInvitations);
+        } catch (err: unknown) {
+            addToast('error', err instanceof Error ? err.message : 'Erro ao salvar limites.');
+        } finally {
+            setSavingCredits(false);
+        }
     };
 
     const handleSaveGoals = async (e: React.SyntheticEvent<HTMLFormElement>) => {
@@ -582,6 +638,7 @@ export default function EquipePage() {
                                                     <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">Meta leads/dia</th>
                                                     <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">Meta análises/dia</th>
                                                     <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">Meta conversões/mês</th>
+                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">Uso/Limite</th>
                                                     {isAdminOrOwner && <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider">Ações</th>}
                                                 </tr>
                                             </thead>
@@ -618,6 +675,11 @@ export default function EquipePage() {
                                                             <td className="py-3 px-5 text-right tabular-nums text-muted">{m.dailyLeadsGoal ?? '-'}</td>
                                                             <td className="py-3 px-5 text-right tabular-nums text-muted">{m.dailyAnalysesGoal ?? '-'}</td>
                                                             <td className="py-3 px-5 text-right tabular-nums text-muted">{m.monthlyConversionsGoal ?? '-'}</td>
+                                                            <td className="py-3 px-5 text-right text-xs text-muted tabular-nums">
+                                                                {m.limits && (m.limits.dailyLeadsLimit != null || m.limits.weeklyLeadsLimit != null || m.limits.monthlyLeadsLimit != null) && m.usage
+                                                                    ? `${m.usage.today}/${m.limits.dailyLeadsLimit ?? '-'} · ${m.usage.week}/${m.limits.weeklyLeadsLimit ?? '-'} · ${m.usage.month}/${m.limits.monthlyLeadsLimit ?? '-'}`
+                                                                    : '—'}
+                                                            </td>
                                                             {isAdminOrOwner && (
                                                                 <td className="py-3 px-5">
                                                                     <div className="flex justify-start" ref={actionsOpenId === m.id ? actionsRef : undefined}>
@@ -726,6 +788,57 @@ export default function EquipePage() {
                     </div>
                 )}
 
+                {/* Credits limits modal */}
+                {creditsModalMember && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 overflow-y-auto" onClick={() => !savingCredits && setCreditsModalMember(null)}>
+                        <div className="my-auto w-full max-w-md rounded-2xl sm:rounded-3xl bg-card border border-border shadow-xl p-4 sm:p-6 max-h-[90dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                            <h3 className="text-base sm:text-lg font-bold text-foreground mb-1">Limites de créditos — {creditsModalMember.name || creditsModalMember.email}</h3>
+                            <p className="text-xs text-muted mb-3 sm:mb-4">Teto de consumo por período (vazio = sem limite individual). Uso atual: dia {creditsModalMember.usage?.today ?? 0}, semana {creditsModalMember.usage?.week ?? 0}, mês {creditsModalMember.usage?.month ?? 0}.</p>
+                            <form onSubmit={handleSaveCredits} className="space-y-3 sm:space-y-4">
+                                <div>
+                                    <label className="block text-xs font-medium text-muted mb-1">Limite diário (créditos)</label>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        value={creditsForm.dailyLeadsLimit}
+                                        onChange={(e) => setCreditsForm((f) => ({ ...f, dailyLeadsLimit: e.target.value }))}
+                                        placeholder="Sem limite"
+                                        className="w-full min-w-0 h-10 sm:h-11 bg-surface border border-border rounded-xl px-3 text-sm text-foreground"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-muted mb-1">Limite semanal (créditos)</label>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        value={creditsForm.weeklyLeadsLimit}
+                                        onChange={(e) => setCreditsForm((f) => ({ ...f, weeklyLeadsLimit: e.target.value }))}
+                                        placeholder="Sem limite"
+                                        className="w-full min-w-0 h-10 sm:h-11 bg-surface border border-border rounded-xl px-3 text-sm text-foreground"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-muted mb-1">Limite mensal (créditos)</label>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        value={creditsForm.monthlyLeadsLimit}
+                                        onChange={(e) => setCreditsForm((f) => ({ ...f, monthlyLeadsLimit: e.target.value }))}
+                                        placeholder="Sem limite"
+                                        className="w-full min-w-0 h-10 sm:h-11 bg-surface border border-border rounded-xl px-3 text-sm text-foreground"
+                                    />
+                                </div>
+                                <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-2">
+                                    <Button type="button" variant="secondary" onClick={() => setCreditsModalMember(null)} disabled={savingCredits} className="w-full sm:flex-1">Cancelar</Button>
+                                    <Button type="submit" variant="primary" disabled={savingCredits} icon={savingCredits ? <Loader2 size={16} className="animate-spin" /> : undefined} className="w-full sm:flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 border-0">
+                                        {savingCredits ? 'Salvando...' : 'Salvar'}
+                                    </Button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
                 {/* Edit role modal — responsivo */}
                 {editModalMember && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 overflow-y-auto" onClick={() => !savingRole && setEditModalMember(null)}>
@@ -793,6 +906,13 @@ export default function EquipePage() {
                                 onClick={() => { openGoalsModal(m); closeActionsMenu(); }}
                             >
                                 <Target size={14} className="text-amber-500 shrink-0" /> Metas
+                            </button>
+                            <button
+                                type="button"
+                                className="w-full px-4 py-2.5 text-left text-sm text-foreground hover:bg-surface flex items-center gap-2"
+                                onClick={() => { openCreditsModal(m); closeActionsMenu(); }}
+                            >
+                                <CreditCard size={14} className="text-emerald-500 shrink-0" /> Limites de créditos
                             </button>
                             {m.role !== 'OWNER' && (
                                 <>

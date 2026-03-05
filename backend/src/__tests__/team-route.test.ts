@@ -12,7 +12,8 @@ jest.mock('@/lib/prisma', () => ({
     },
     workspaceInvitation: { findMany: jest.fn(), upsert: jest.fn() },
     auditLog: { groupBy: jest.fn() },
-    leadAnalysis: { groupBy: jest.fn() },
+    leadAnalysis: { groupBy: jest.fn(), count: jest.fn() },
+    searchHistory: { count: jest.fn() },
   },
 }));
 jest.mock('@/lib/email', () => ({ sendTeamInviteEmail: jest.fn().mockResolvedValue({ sent: true }) }));
@@ -85,6 +86,8 @@ describe('GET /api/team', () => {
     (prisma.workspaceInvitation.findMany as jest.Mock).mockResolvedValue([
       { id: 'inv1', email: 'b@x.com', createdAt: new Date(), lastSentAt: new Date() },
     ]);
+    (prisma.searchHistory.count as jest.Mock).mockResolvedValue(0);
+    (prisma.leadAnalysis.count as jest.Mock).mockResolvedValue(0);
 
     const res = await GET(req({ method: 'GET' }));
     expect(res.status).toBe(200);

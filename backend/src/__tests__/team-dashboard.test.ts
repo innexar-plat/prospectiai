@@ -6,8 +6,8 @@ jest.mock('@/auth', () => ({ auth: jest.fn() }));
 jest.mock('@/lib/prisma', () => ({
   prisma: {
     workspaceMember: { findFirst: jest.fn(), findMany: jest.fn() },
-    searchHistory: { groupBy: jest.fn() },
-    leadAnalysis: { groupBy: jest.fn() },
+    searchHistory: { groupBy: jest.fn(), count: jest.fn() },
+    leadAnalysis: { groupBy: jest.fn(), count: jest.fn() },
     auditLog: { groupBy: jest.fn() },
   },
 }));
@@ -71,6 +71,8 @@ describe('GET /api/team/dashboard', () => {
     (prisma.searchHistory.groupBy as jest.Mock).mockResolvedValue([{ userId: 'u1', _count: { id: 2 } }]);
     (prisma.leadAnalysis.groupBy as jest.Mock).mockResolvedValue([{ userId: 'u1', _count: { id: 1 } }]);
     (prisma.auditLog.groupBy as jest.Mock).mockResolvedValue([{ userId: 'u1', _count: { id: 10 } }]);
+    (prisma.searchHistory.count as jest.Mock).mockResolvedValue(0);
+    (prisma.leadAnalysis.count as jest.Mock).mockResolvedValue(0);
 
     const res = await GET(req());
     expect(res.status).toBe(200);

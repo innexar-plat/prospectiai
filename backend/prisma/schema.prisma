@@ -197,6 +197,11 @@ model WorkspaceMember {
   dailyAnalysesGoal      Int?  // target AI analyses per day
   monthlyConversionsGoal Int?  // target conversions per month
 
+  // Credit limits per member (null = no individual cap, uses workspace pool)
+  dailyLeadsLimit   Int?  // max consumptions (search + analysis) per calendar day
+  weeklyLeadsLimit  Int?  // max consumptions in rolling 7 days
+  monthlyLeadsLimit Int?  // max consumptions per calendar month
+
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 

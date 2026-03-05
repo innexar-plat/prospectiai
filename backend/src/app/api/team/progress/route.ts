@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { getMemberUsage } from '@/lib/team-credits';
 import { getOrCreateRequestId, jsonWithRequestId } from '@/lib/request-id';
 
 /**
@@ -118,12 +119,20 @@ export async function GET(req: NextRequest) {
 
         const myRank = ranking.findIndex((r) => r.userId === session.user.id) + 1;
 
+        const usage = await getMemberUsage(prisma, membership.workspaceId, session.user.id);
+
         return jsonWithRequestId({
             goals: {
                 dailyLeadsGoal: membership.dailyLeadsGoal,
                 dailyAnalysesGoal: membership.dailyAnalysesGoal,
                 monthlyConversionsGoal: membership.monthlyConversionsGoal,
             },
+            limits: {
+                dailyLeadsLimit: membership.dailyLeadsLimit ?? null,
+                weeklyLeadsLimit: membership.weeklyLeadsLimit ?? null,
+                monthlyLeadsLimit: membership.monthlyLeadsLimit ?? null,
+            },
+            usage: { today: usage.today, week: usage.week, month: usage.month },
             today: {
                 searches: todaySearches,
                 analyses: todayAnalyses,

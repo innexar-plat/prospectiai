@@ -5,6 +5,7 @@
  */
 
 import { prisma } from '@/lib/prisma';
+import { checkMemberLimits, MemberLimitExceededError } from '@/lib/team-credits';
 import { textSearch, textSearchAllPages, PLACES_PAGE_SIZE_MAX, type PlaceResult } from '@/lib/google-places';
 import { geocodeAddress } from '@/lib/geocode';
 import { getCached } from '@/lib/redis';
@@ -77,13 +78,20 @@ function filterPlaces<T extends PlaceLike>(
 async function getSearchUserAndWorkspaceOrThrow(userId: string) {
     const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { onboardingCompletedAt: true, workspaces: { include: { workspace: true }, take: 1 } },
+        select: {
+            onboardingCompletedAt: true,
+            workspaces: {
+                include: { workspace: true },
+                take: 1,
+            },
+        },
     });
     if (!user || user.workspaces.length === 0) throw new SearchHttpError(404, { error: 'Workspace not found' });
     if (user.onboardingCompletedAt == null) {
         throw new SearchHttpError(403, { error: 'Complete onboarding before searching', code: 'REQUIRES_ONBOARDING' });
     }
-    const activeWorkspace = user.workspaces[0].workspace;
+    const membership = user.workspaces[0];
+    const activeWorkspace = membership.workspace;
     if (activeWorkspace.leadsUsed >= activeWorkspace.leadsLimit) {
         throw new SearchHttpError(403, {
             error: 'Limit reached',
@@ -91,6 +99,29 @@ async function getSearchUserAndWorkspaceOrThrow(userId: string) {
             limit: activeWorkspace.leadsLimit,
             used: activeWorkspace.leadsUsed,
         });
+    }
+    try {
+        await checkMemberLimits(
+            prisma,
+            {
+                dailyLeadsLimit: membership.dailyLeadsLimit,
+                weeklyLeadsLimit: membership.weeklyLeadsLimit,
+                monthlyLeadsLimit: membership.monthlyLeadsLimit,
+            },
+            activeWorkspace.id,
+            userId,
+        );
+    } catch (err) {
+        if (err instanceof MemberLimitExceededError) {
+            throw new SearchHttpError(403, {
+                error: err.message,
+                code: err.code,
+                period: err.period,
+                used: err.used,
+                limit: err.limit,
+            });
+        }
+        throw err;
     }
     return { activeWorkspace };
 }

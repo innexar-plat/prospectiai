@@ -22,6 +22,10 @@ jest.mock('@/lib/prisma', () => ({
         },
         searchHistory: {
             create: jest.fn(),
+            count: jest.fn(),
+        },
+        leadAnalysis: {
+            count: jest.fn(),
         },
         $transaction: jest.fn((cb) => {
             if (typeof cb === 'function') {
@@ -83,6 +87,32 @@ describe('SearchService', () => {
     it('should throw 403 if onboarding is not completed', async () => {
         (prisma.user.findUnique as jest.Mock).mockResolvedValue({ ...mockUser, onboardingCompletedAt: null });
         await expect(runSearch({ textQuery: 'test' } as any, mockUserId)).rejects.toThrow(SearchHttpError);
+    });
+
+    it('should throw 403 with MEMBER_LIMIT_EXCEEDED when member daily limit reached', async () => {
+        const userWithLimit = {
+            ...mockUser,
+            workspaces: [{
+                workspace: { id: mockWorkspaceId, leadsUsed: 0, leadsLimit: 10 },
+                dailyLeadsLimit: 5,
+                weeklyLeadsLimit: null,
+                monthlyLeadsLimit: null,
+            }],
+        };
+        (prisma.user.findUnique as jest.Mock).mockResolvedValue(userWithLimit);
+        (prisma.searchHistory.count as jest.Mock).mockResolvedValue(3);
+        (prisma.leadAnalysis.count as jest.Mock).mockResolvedValue(3);
+        (redis.getCached as jest.Mock).mockResolvedValue(null);
+
+        let thrown: unknown;
+        try {
+            await runSearch({ textQuery: 'test' } as any, mockUserId);
+        } catch (e) {
+            thrown = e;
+        }
+        expect(thrown).toBeInstanceOf(SearchHttpError);
+        expect((thrown as SearchHttpError).status).toBe(403);
+        expect((thrown as SearchHttpError).body?.code).toBe('MEMBER_LIMIT_EXCEEDED');
     });
 
     it('should return cached results if available', async () => {

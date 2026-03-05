@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { getMemberUsage } from '@/lib/team-credits';
 import { getOrCreateRequestId, jsonWithRequestId } from '@/lib/request-id';
 import type { ProductPlan } from '@/lib/product-modules';
 import { sendTeamInviteEmail } from '@/lib/email';
@@ -82,10 +83,13 @@ type MemberWithUser = Awaited<ReturnType<typeof prisma.workspaceMember.findMany>
     user: { id: string; name: string | null; email: string | null; image: string | null; leadsUsed: number };
 };
 
+type UsageMap = Map<string, { today: number; week: number; month: number }>;
+
 function buildMembersResult(
     members: MemberWithUser[],
     activityMap: Map<string, number>,
     leadMap: Map<string, number>,
+    usageMap: UsageMap,
 ) {
     return members.map((m) => ({
         id: m.id,
@@ -101,6 +105,12 @@ function buildMembersResult(
         dailyLeadsGoal: m.dailyLeadsGoal ?? null,
         dailyAnalysesGoal: m.dailyAnalysesGoal ?? null,
         monthlyConversionsGoal: m.monthlyConversionsGoal ?? null,
+        limits: {
+            dailyLeadsLimit: m.dailyLeadsLimit ?? null,
+            weeklyLeadsLimit: m.weeklyLeadsLimit ?? null,
+            monthlyLeadsLimit: m.monthlyLeadsLimit ?? null,
+        },
+        usage: usageMap.get(m.user.id) ?? { today: 0, week: 0, month: 0 },
     }));
 }
 
@@ -136,13 +146,18 @@ async function fetchTeamData(membership: MembershipWithWorkspace) {
         _count: { id: true },
     });
     const leadMap = new Map(leadCounts.map((l) => [l.userId, l._count.id]));
+    const usagePromises = members.map((m) =>
+        getMemberUsage(prisma, membership.workspaceId, m.user.id).then((u) => [m.user.id, u] as const),
+    );
+    const usageResults = await Promise.all(usagePromises);
+    const usageMap = new Map(usageResults);
     const pendingInvitations = await prisma.workspaceInvitation.findMany({
         where: { workspaceId: membership.workspaceId, status: 'PENDING' },
         orderBy: { createdAt: 'desc' },
         select: { id: true, email: true, createdAt: true, lastSentAt: true },
     });
     return {
-        members: buildMembersResult(members, activityMap, leadMap),
+        members: buildMembersResult(members, activityMap, leadMap, usageMap),
         workspace: {
             id: membership.workspaceId,
             name: membership.workspace.name,

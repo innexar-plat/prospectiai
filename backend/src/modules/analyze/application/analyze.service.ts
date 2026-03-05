@@ -7,6 +7,7 @@
 import { analyzeLead, type BusinessData, type UserBusinessProfile } from '@/lib/gemini';
 import { resolveAiForRole } from '@/lib/ai';
 import { prisma } from '@/lib/prisma';
+import { checkMemberLimits, MemberLimitExceededError } from '@/lib/team-credits';
 import { recordUsageEvent } from '@/lib/usage';
 import type { AnalyzeInput } from '@/lib/validations/schemas';
 
@@ -54,7 +55,16 @@ async function getUserAndWorkspaceOrThrow(userId: string) {
     if (user.onboardingCompletedAt == null) {
         throw new AnalyzeHttpError(403, { error: 'Complete onboarding before analyzing leads', code: 'REQUIRES_ONBOARDING' });
     }
-    return { user, activeWorkspace: user.workspaces[0].workspace };
+    const membership = user.workspaces[0];
+    return {
+        user,
+        activeWorkspace: membership.workspace,
+        membership: {
+            dailyLeadsLimit: membership.dailyLeadsLimit,
+            weeklyLeadsLimit: membership.weeklyLeadsLimit,
+            monthlyLeadsLimit: membership.monthlyLeadsLimit,
+        },
+    };
 }
 
 function mapExistingAnalysisToOutput(existingAnalysis: {
@@ -121,7 +131,31 @@ export async function runAnalyze(input: AnalyzeInput, userId: string): Promise<A
     const { userProfile, locale, placeId, name: businessName, ...rest } = input;
     const businessData = { ...rest, placeId, name: businessName };
 
-    const { user, activeWorkspace } = await getUserAndWorkspaceOrThrow(userId);
+    const { user, activeWorkspace, membership } = await getUserAndWorkspaceOrThrow(userId);
+
+    try {
+        await checkMemberLimits(
+            prisma,
+            {
+                dailyLeadsLimit: membership.dailyLeadsLimit,
+                weeklyLeadsLimit: membership.weeklyLeadsLimit,
+                monthlyLeadsLimit: membership.monthlyLeadsLimit,
+            },
+            activeWorkspace.id,
+            userId,
+        );
+    } catch (err) {
+        if (err instanceof MemberLimitExceededError) {
+            throw new AnalyzeHttpError(403, {
+                error: err.message,
+                code: err.code,
+                period: err.period,
+                used: err.used,
+                limit: err.limit,
+            });
+        }
+        throw err;
+    }
 
     const existingAnalysis = await prisma.leadAnalysis.findFirst({
         where: { userId, lead: { placeId: businessData.placeId } },
