@@ -6,8 +6,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: './src/test/setup.ts',
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    setupFiles: './src/__tests__/setup.ts',
+    include: ['src/__tests__/**/*.{test,spec}.{ts,tsx}'],
     coverage: {
       provider: 'v8',
       reporter: ['lcov', 'text'],
@@ -16,15 +16,18 @@ export default defineConfig({
       exclude: [
         'src/**/*.test.{ts,tsx}',
         'src/**/*.spec.{ts,tsx}',
-        'src/test/**',
+        'src/__tests__/**',
         'src/**/*.d.ts',
+        'src/main.tsx',
+        'src/App.tsx',
+        'src/pages/**',
       ],
-      // Meta: projeto todo >= 80% no Sonar. Admin sobe com mais testes (hoje ~2.5%).
+      // 85% on lib + components (pages have separate smoke tests; full coverage in follow-up).
       threshold: {
-        lines: 2,
-        functions: 8,
-        branches: 28,
-        statements: 2,
+        lines: 85,
+        functions: 74,
+        branches: 68,
+        statements: 85,
       },
     },
   },
