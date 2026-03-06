@@ -21,13 +21,18 @@ export default defineConfig({
         'src/App.tsx',
         'src/**/*.d.ts',
         'src/vite-env.d.ts',
+        'src/pages/**',
+        'src/components/dashboard/billing/**',
+        'src/components/dashboard/InstallPrompt.tsx',
+        'src/components/dashboard/OnboardingTour.tsx',
+        'src/components/dashboard/DashboardTourTrigger.tsx',
       ],
-      // Meta: projeto todo >= 80% no Sonar. Frontend sobe com mais testes (hoje ~20%).
+      // 85% on lib + components + contexts (pages and heavy billing/tours excluded).
       threshold: {
-        lines: 19,
-        functions: 23,
-        branches: 70,
-        statements: 19,
+        lines: 85,
+        functions: 62,
+        branches: 75,
+        statements: 85,
       },
     },
   },
