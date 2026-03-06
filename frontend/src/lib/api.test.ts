@@ -110,6 +110,53 @@ describe('api', () => {
       await expect(authApi.register({ email: 'a@b.com', password: 'x' })).rejects.toThrow('Bad Gateway');
     });
 
+    it('initiateOAuthSignIn fetches CSRF and submits form', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ csrfToken: 'csrf-xyz' }),
+      } as Response);
+      const submitFn = vi.fn();
+      const form = {
+        method: '',
+        action: '',
+        appendChild: vi.fn(),
+        submit: submitFn,
+      };
+      vi.stubGlobal('window', { ...window, location: { ...window.location, origin: 'https://app.example.com' } });
+      vi.stubGlobal('document', {
+        ...document,
+        createElement: vi.fn((tag: string) => (tag === 'form' ? form : { name: '', type: '', value: '', appendChild: vi.fn() })),
+        body: { appendChild: vi.fn() },
+      });
+      await authApi.initiateOAuthSignIn('google', '/dashboard');
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/auth/csrf'), expect.any(Object));
+      expect(form.action).toBe('/api/auth/signin/google');
+      expect(form.method).toBe('POST');
+      expect(submitFn).toHaveBeenCalled();
+      vi.unstubAllGlobals();
+    });
+
+    it('signOut fetches CSRF then POSTs signout', async () => {
+      vi.stubGlobal('window', { ...window, location: { ...window.location, origin: 'https://app.example.com' } });
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ csrfToken: 't' }),
+        } as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ ok: true }),
+        } as Response);
+      const data = await authApi.signOut();
+      expect(data).toEqual({ ok: true });
+      expect(mockFetch).toHaveBeenNthCalledWith(1, expect.stringContaining('/auth/csrf'), expect.any(Object));
+      expect(mockFetch).toHaveBeenNthCalledWith(2, expect.stringContaining('/auth/signout'), expect.objectContaining({ method: 'POST' }));
+      vi.unstubAllGlobals();
+    });
+
     it('register sends affiliateCode when provided', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -170,6 +217,49 @@ describe('api', () => {
         expect.stringContaining('/search/history'),
         expect.any(Object)
       );
+    });
+
+    it('history without params calls /search/history without query', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ items: [], total: 0, limit: 20, offset: 0 }),
+      } as Response);
+      await searchApi.history();
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringMatching(/\/search\/history$/), expect.any(Object));
+    });
+
+    it('historyDetail fetches by id', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ id: 'h1', textQuery: 'cafes', resultsData: [] }),
+      } as Response);
+      const data = await searchApi.historyDetail('h1');
+      expect(data.id).toBe('h1');
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/search/history/h1'), expect.any(Object));
+    });
+
+    it('analyze sends POST with place body', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ score: 8, summary: 'Good' }),
+      } as Response);
+      const data = await searchApi.analyze({ placeId: 'p1', name: 'Cafe' });
+      expect(data.score).toBe(8);
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/analyze'), expect.objectContaining({ method: 'POST' }));
+    });
+
+    it('marketReport sends POST', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ totalCount: 100 }),
+      } as Response);
+      const data = await searchApi.marketReport({ textQuery: 'restaurants', pageSize: 10 });
+      expect(data).toEqual({ totalCount: 100 });
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/market-report'), expect.objectContaining({ method: 'POST' }));
     });
   });
 
@@ -443,6 +533,69 @@ describe('api', () => {
       const data = await affiliateApi.me();
       expect(data.code).toBe('ABC');
     });
+
+    it('register sends POST', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            id: 'a2',
+            code: 'XYZ',
+            status: 'PENDING',
+            commissionRatePercent: 15,
+            payoutType: null,
+            approvedAt: null,
+            createdAt: '',
+            referralCount: 0,
+            commissionCount: 0,
+          }),
+      } as Response);
+      const data = await affiliateApi.register();
+      expect(data.code).toBe('XYZ');
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/affiliate/register'), expect.objectContaining({ method: 'POST' }));
+    });
+
+    it('stats returns stats', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ referralCount: 10, commissionCount: 3, totalEarnings: 150 }),
+      } as Response);
+      const data = await affiliateApi.stats();
+      expect(data.referralCount).toBe(10);
+    });
+
+    it('referrals returns list', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ items: [], total: 0 }),
+      } as Response);
+      const data = await affiliateApi.referrals();
+      expect(data.total).toBe(0);
+    });
+
+    it('commissions returns list', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ items: [], total: 0 }),
+      } as Response);
+      const data = await affiliateApi.commissions();
+      expect(data.total).toBe(0);
+    });
+
+    it('updatePayout sends PATCH', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ ok: true }),
+      } as Response);
+      const data = await affiliateApi.updatePayout({ payoutType: 'PIX', payoutPayload: 'key' });
+      expect(data.ok).toBe(true);
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/affiliate/me'), expect.objectContaining({ method: 'PATCH' }));
+    });
   });
 
   describe('competitorApi', () => {
@@ -520,6 +673,20 @@ describe('api', () => {
       } as Response);
       const data = await intelligenceApi.detail('r1');
       expect(data.id).toBe('r1');
+    });
+
+    it('toggleFavorite sends PATCH', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ id: 'r1', isFavorite: true }),
+      } as Response);
+      const data = await intelligenceApi.toggleFavorite('r1', true);
+      expect(data.isFavorite).toBe(true);
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/intelligence/history/r1'),
+        expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ isFavorite: true }) })
+      );
     });
   });
 
