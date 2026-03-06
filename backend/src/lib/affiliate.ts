@@ -1,6 +1,7 @@
 /**
  * Lógica de afiliados: busca por código, settings, criação de comissão com antifraude.
  */
+import { randomInt } from 'node:crypto';
 import { prisma } from '@/lib/prisma';
 import type { Affiliate, Referral, AffiliateCommissionStatus } from '@prisma/client';
 
@@ -177,11 +178,12 @@ async function getAffiliateEmail(affiliateId: string): Promise<string | null> {
   return aff?.email ?? aff?.user?.email ?? null;
 }
 
+/** Generates a cryptographically secure 8-char affiliate code (no ambiguous chars: 0/O, 1/I/L). */
 export async function generateAffiliateCode(): Promise<string> {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
   for (let i = 0; i < 8; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
+    code += chars.charAt(randomInt(0, chars.length));
   }
   const exists = await prisma.affiliate.findUnique({ where: { code } });
   if (exists) return generateAffiliateCode();
