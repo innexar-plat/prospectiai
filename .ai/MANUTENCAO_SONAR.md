@@ -53,7 +53,25 @@ Manter o projeto com **0 issues** no SonarQube (bugs e code smells resolvidos), 
 | **S1854** | Atribuição inútil a variável | Usar o valor diretamente ou eliminar a variável. |
 | **S3696** | Lançar objeto em vez de Error | Lançar `new Error()` ou subclasse; não `throw { message: '...' }`. |
 
+## Cobertura mínima 80% (projeto todo)
+
+- **Meta:** Backend + frontend + admin com cobertura agregada ≥ 80% no Sonar.
+- **Hoje:** Backend ~90%+, frontend e admin com poucos testes; o Sonar recebe os três lcov (`backend/`, `frontend/`, `admin/coverage/lcov.info`).
+- **Para subir:** Aumentar testes no frontend (pages, components, hooks) e no admin (pages, lib, components). Ajustar os thresholds em `frontend/vitest.config.ts` e `admin/vitest.config.ts` conforme a cobertura subir.
+- **Quality Gate:** Configurar no Sonar (Quality Gate do projeto) a condição "Coverage" ≥ 80%.
+
 ## Configuração do projeto
 
 - **Arquivo:** `sonar-project.properties` na raiz.
 - **Exclusão atual:** Regra `css:S4662` em `**/index.css` (Tailwind v4 `@theme` não reconhecido pelo parser CSS do Sonar).
+
+## Security Hotspots (0% reviewed = Quality Gate Failed)
+
+O Quality Gate pode falhar se **Hotspots revisados** estiver em 0%. É necessário revisar manualmente no Sonar:
+
+1. Acesse o projeto: https://sonar.innexar.com.br/dashboard?id=Prospector-AI
+2. Abra a aba **Security** → **Security Hotspots**
+3. Para cada hotspot: clique, leia o contexto e marque como **Safe** (falso positivo / aceito) ou **Fix** (aplicar a correção sugerida)
+4. Após revisar todos, o percentual "Hotspots Reviewed" sobe e o gate pode passar
+
+Não é possível automatizar a revisão; deve ser feita por um desenvolvedor.
