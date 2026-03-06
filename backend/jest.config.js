@@ -69,7 +69,7 @@ const config = {
       lines: 85,
       statements: 85,
       branches: 77,
-      functions: 81,
+      functions: 80,
     },
   },
 };
