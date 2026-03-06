@@ -93,4 +93,34 @@ describe('GET /api/team/progress', () => {
     const data = await res.json();
     expect(data.error).toBe('Internal server error');
   });
+
+  it('returns ranking with member having 0 searches when not in groupBy', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    (prisma.workspaceMember.findFirst as jest.Mock).mockResolvedValue({
+      id: 'wm1',
+      workspaceId: 'w1',
+      userId: 'u1',
+      dailyLeadsGoal: 10,
+      dailyAnalysesGoal: 5,
+      monthlyConversionsGoal: 50,
+      dailyLeadsLimit: null,
+      weeklyLeadsLimit: null,
+      monthlyLeadsLimit: null,
+      workspace: {},
+    });
+    (prisma.workspaceMember.findMany as jest.Mock).mockResolvedValue([
+      { userId: 'u1', user: { name: 'Alice' } },
+      { userId: 'u2', user: { name: 'Bob' } },
+    ]);
+    (prisma.searchHistory.groupBy as jest.Mock).mockResolvedValue([{ userId: 'u1', _count: { id: 5 } }]);
+    const res = await GET(req());
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.ranking.top5).toHaveLength(2);
+    expect(data.ranking.total).toBe(2);
+    const bob = data.ranking.top5.find((r: { userId: string }) => r.userId === 'u2');
+    expect(bob).toBeDefined();
+    expect(bob.monthlySearches).toBe(0);
+    expect(bob.name).toBe('Bob');
+  });
 });

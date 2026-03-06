@@ -160,6 +160,12 @@ describe('runAnalyze', () => {
         expect(analyzeLead).not.toHaveBeenCalled();
     });
 
+    it('rethrows when checkMemberLimits throws non-MemberLimitExceededError', async () => {
+        (checkMemberLimits as jest.Mock).mockRejectedValue(new Error('DB connection failed'));
+        await expect(runAnalyze(defaultInput(), userId)).rejects.toThrow('DB connection failed');
+        expect(analyzeLead).not.toHaveBeenCalled();
+    });
+
     it('returns cached analysis without calling analyzeLead', async () => {
         const existing = {
             score: 9,

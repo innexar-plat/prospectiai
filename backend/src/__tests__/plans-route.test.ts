@@ -52,4 +52,10 @@ describe('GET /api/plans', () => {
     const data = await res.json();
     expect(data).toEqual(seeded);
   });
+
+  it('rejects when findMany throws', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    (prisma.planConfig.findMany as jest.Mock).mockRejectedValue(new Error('DB error'));
+    await expect(GET()).rejects.toThrow('DB error');
+  });
 });

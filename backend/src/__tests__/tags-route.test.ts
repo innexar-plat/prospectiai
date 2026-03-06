@@ -41,6 +41,14 @@ describe('GET /api/tags', () => {
       }),
     );
   });
+
+  it('returns 500 when findMany throws', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    (prisma.leadTag.findMany as jest.Mock).mockRejectedValue(new Error('DB error'));
+    const res = await GET(new NextRequest('http://localhost/api/tags'));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toMatchObject({ error: 'Internal server error' });
+  });
 });
 
 describe('POST /api/tags', () => {
@@ -85,6 +93,20 @@ describe('POST /api/tags', () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.tag).toBeDefined();
+  });
+
+  it('returns 500 when upsert throws', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    (prisma.leadTag.upsert as jest.Mock).mockRejectedValue(new Error('DB error'));
+    const res = await POST(
+      new NextRequest('http://localhost/api/tags', {
+        method: 'POST',
+        body: JSON.stringify({ leadId: 'l1', label: 'x' }),
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    expect(res.status).toBe(500);
+    expect(await res.json()).toMatchObject({ error: 'Internal server error' });
   });
 });
 

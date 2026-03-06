@@ -105,6 +105,20 @@ describe('PATCH /api/workspace/current/profile', () => {
     expect(res.status).toBe(429);
   });
 
+  it('returns 404 when no membership on PATCH', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    (prisma.workspaceMember.findFirst as jest.Mock).mockResolvedValue(null);
+    const res = await PATCH(
+      new NextRequest('http://localhost/api/workspace/current/profile', {
+        method: 'PATCH',
+        body: JSON.stringify({ companyName: 'X' }),
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    expect(res.status).toBe(404);
+    expect(await res.json()).toMatchObject({ error: 'Workspace not found' });
+  });
+
   it('returns 400 when body invalid', async () => {
     (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1' }, expires: '' });
     (prisma.workspaceMember.findFirst as jest.Mock).mockResolvedValue({ workspaceId: 'w1' });

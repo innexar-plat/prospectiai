@@ -7,10 +7,13 @@ import {
   passwordResetTemplate,
   verificationTemplate,
   teamInviteTemplate,
+  teamInviteAccountCreatedTemplate,
   testEmailTemplate,
   notificationTemplate,
   paymentSuccessTemplate,
   paymentFailureTemplate,
+  affiliateApprovedTemplate,
+  affiliateConversionTemplate,
 } from '@/lib/email-templates';
 
 describe('email-templates', () => {
@@ -136,6 +139,24 @@ describe('email-templates', () => {
     });
   });
 
+  describe('teamInviteAccountCreatedTemplate', () => {
+    it('returns email with set-password link and escaped names', () => {
+      const out = teamInviteAccountCreatedTemplate('Admin', 'Meu Workspace', 'https://app.com/reset-password?token=x');
+      expect(out).toContain('Você foi adicionado à equipe');
+      expect(out).toContain('Meu Workspace');
+      expect(out).toContain('Admin');
+      expect(out).toContain('https://app.com/reset-password?token=x');
+      expect(out).toContain('Definir senha');
+      expect(out).toContain('expira em 7 dias');
+    });
+
+    it('escapes HTML in inviter and workspace', () => {
+      const out = teamInviteAccountCreatedTemplate('<b>X</b>', 'A & B', 'https://x.com');
+      expect(out).toContain('&lt;b&gt;X&lt;/b&gt;');
+      expect(out).toContain('A &amp; B');
+    });
+  });
+
   describe('testEmailTemplate', () => {
     it('returns test email without CTA or muted', () => {
       const out = testEmailTemplate();
@@ -216,6 +237,47 @@ describe('email-templates', () => {
     it('with path without leading slash adds slash', () => {
       const out = paymentFailureTemplate('planos');
       expect(out).toMatch(/href="(https?:\/\/[^"]+\/)?\/?planos"/);
+    });
+  });
+
+  describe('affiliateApprovedTemplate', () => {
+    it('returns email with affiliate code and login link', () => {
+      const out = affiliateApprovedTemplate('AFF123', 'https://app.com/login');
+      expect(out).toContain('Sua conta de afiliado foi aprovada');
+      expect(out).toContain('AFF123');
+      expect(out).toContain('https://app.com/login');
+      expect(out).toContain('Acessar painel do afiliado');
+      expect(out).toContain('ref=AFF123');
+    });
+
+    it('with relative loginUrl prepends base', () => {
+      const out = affiliateApprovedTemplate('CODE', '/login');
+      expect(out).toMatch(/href="(https?:\/\/[^"]+)?\/login"/);
+    });
+
+    it('escapes affiliate code', () => {
+      const out = affiliateApprovedTemplate('<code>', '/x');
+      expect(out).toContain('&lt;code&gt;');
+    });
+  });
+
+  describe('affiliateConversionTemplate', () => {
+    it('returns email with conversion summary and dashboard link', () => {
+      const out = affiliateConversionTemplate('Cliente X assinou o plano Pro.', 'https://app.com/affiliate');
+      expect(out).toContain('Nova conversão no programa de afiliados');
+      expect(out).toContain('Cliente X assinou o plano Pro.');
+      expect(out).toContain('https://app.com/affiliate');
+      expect(out).toContain('Ver painel');
+    });
+
+    it('with relative dashboardUrl prepends base', () => {
+      const out = affiliateConversionTemplate('Summary', '/dashboard/affiliate');
+      expect(out).toMatch(/href="(https?:\/\/[^"]+)?\/dashboard\/affiliate"/);
+    });
+
+    it('escapes conversion summary', () => {
+      const out = affiliateConversionTemplate('<script>alert(1)</script>', '/d');
+      expect(out).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
     });
   });
 });
