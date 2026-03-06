@@ -14,6 +14,7 @@ import {
   Settings,
   UserPlus,
   DollarSign,
+  User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -65,22 +66,30 @@ export function AdminSidebar() {
         <h1 className="font-semibold text-white text-sm">Painel Admin</h1>
         <p className="text-xs text-zinc-500 mt-0.5">Prospector.AI</p>
       </div>
-      <nav className="flex-1 p-2 min-h-0 overflow-y-auto">
-        {sections.map((section) => (
-          <div key={section.title} className="mt-4 first:mt-0">
-            <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1 px-3">
-              {section.title}
-            </h2>
-            <div className="space-y-0.5">
-              {section.items.map(({ to, end, label, icon: Icon }) => (
-                <NavLink key={to} to={to} end={end} className={linkClass}>
-                  <Icon className="w-4 h-4 shrink-0" />
-                  {label}
-                </NavLink>
-              ))}
+      <nav className="flex-1 flex flex-col min-h-0 p-2">
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {sections.map((section) => (
+            <div key={section.title} className="mt-4 first:mt-0">
+              <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1 px-3">
+                {section.title}
+              </h2>
+              <div className="space-y-0.5">
+                {section.items.map(({ to, end, label, icon: Icon }) => (
+                  <NavLink key={to} to={to} end={end} className={linkClass}>
+                    <Icon className="w-4 h-4 shrink-0" />
+                    {label}
+                  </NavLink>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+        <div className="mt-auto pt-4 border-t border-zinc-800">
+          <NavLink to="profile" end={true} className={linkClass}>
+            <User className="w-4 h-4 shrink-0" />
+            Perfil
+          </NavLink>
+        </div>
       </nav>
     </aside>
   );

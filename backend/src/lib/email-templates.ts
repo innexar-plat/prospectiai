@@ -181,6 +181,28 @@ export function teamInviteTemplate(inviterName: string, workspaceName: string, a
 }
 
 /**
+ * Account created by team invite: user must set password via link.
+ */
+export function teamInviteAccountCreatedTemplate(
+  inviterName: string,
+  workspaceName: string,
+  setPasswordUrl: string,
+): string {
+  const safeInviter = escapeHtml(inviterName);
+  const safeWorkspace = escapeHtml(workspaceName);
+  return buildEmail({
+    title: `Você foi adicionado à equipe "${safeWorkspace}"`,
+    body: [
+      `${safeInviter} adicionou você ao workspace "${safeWorkspace}" no ProspectorAI.`,
+      'Sua conta foi criada. Clique no botão abaixo para definir sua senha e acessar o dashboard.',
+    ],
+    ctaHref: setPasswordUrl,
+    ctaLabel: 'Definir senha',
+    muted: 'Este link expira em 7 dias. Se não definir a senha, peça um novo envio ao administrador.',
+  });
+}
+
+/**
  * Admin test email template.
  */
 export function testEmailTemplate(): string {

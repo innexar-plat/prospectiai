@@ -10,6 +10,7 @@ import {
   passwordResetTemplate,
   verificationTemplate,
   teamInviteTemplate,
+  teamInviteAccountCreatedTemplate,
   affiliateApprovedTemplate,
   affiliateConversionTemplate,
   affiliateCommissionPaidTemplate,
@@ -148,6 +149,19 @@ export async function sendTeamInviteEmail(
 ): Promise<SendResult> {
   const html = teamInviteTemplate(inviterName, workspaceName, acceptInviteUrl);
   return sendEmail(to, `Convite para o workspace "${workspaceName}" – ProspectorAI`, html);
+}
+
+/**
+ * Send email when account was created by team invite; user must set password via link.
+ */
+export async function sendTeamInviteAccountCreatedEmail(
+  to: string,
+  inviterName: string,
+  workspaceName: string,
+  setPasswordUrl: string,
+): Promise<SendResult> {
+  const html = teamInviteAccountCreatedTemplate(inviterName, workspaceName, setPasswordUrl);
+  return sendEmail(to, `Defina sua senha – ${workspaceName} – ProspectorAI`, html);
 }
 
 export async function sendAffiliateApprovedEmail(to: string, code: string, loginUrl: string): Promise<SendResult> {

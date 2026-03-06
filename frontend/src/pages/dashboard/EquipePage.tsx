@@ -382,8 +382,12 @@ export default function EquipePage() {
         if (!inviteEmail.trim()) return;
         setInviting(true);
         try {
-            const res = await request<{ ok: boolean; pendingInvite: PendingInvitation }>('/team', { method: 'POST', body: JSON.stringify({ email: inviteEmail.trim() }) });
-            addToast('success', `Convite enviado para ${inviteEmail}. A pessoa só entra na equipe após aceitar.`);
+            const res = await request<{ ok: boolean; pendingInvite?: PendingInvitation; accountCreated?: boolean }>('/team', { method: 'POST', body: JSON.stringify({ email: inviteEmail.trim() }) });
+            if (res.accountCreated) {
+                addToast('success', `Conta criada e convite enviado para ${inviteEmail}. A pessoa receberá um email para definir a senha e acessar a equipe.`);
+            } else {
+                addToast('success', `Convite enviado para ${inviteEmail}. A pessoa só entra na equipe após aceitar.`);
+            }
             setInviteEmail('');
             setShowInvite(false);
             if (res.pendingInvite) {

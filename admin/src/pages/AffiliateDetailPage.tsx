@@ -187,7 +187,18 @@ export function AffiliateDetailPage() {
             <div><span className="text-zinc-500">Comissão pendente</span><br /><span className="text-zinc-200">R$ {((affiliate.commissionPendingCents ?? 0) / 100).toFixed(2)}</span></div>
             <div><span className="text-zinc-500">Comissão paga</span><br /><span className="text-zinc-200">R$ {((affiliate.commissionPaidCents ?? 0) / 100).toFixed(2)}</span></div>
           </div>
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="border-t border-zinc-800 pt-4 mt-4">
+            <h3 className="text-sm font-medium text-zinc-400 mb-2">Dados para pagamento</h3>
+            {affiliate.payoutType && affiliate.payoutPayload ? (
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div><span className="text-zinc-500">Tipo</span><br /><span className="text-zinc-200">{affiliate.payoutType === 'PIX' ? 'PIX' : 'Transferência bancária'}</span></div>
+                <div className="col-span-2"><span className="text-zinc-500">Chave / Dados</span><br /><span className="text-zinc-200 break-all">{affiliate.payoutPayload}</span></div>
+              </div>
+            ) : (
+              <p className="text-zinc-500 text-sm">Não cadastrado</p>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-4 mt-4">
             <label className="text-zinc-400 text-sm">Status</label>
             <select value={status} onChange={(e) => setStatus(e.target.value)} className="rounded border border-zinc-700 bg-zinc-800 text-zinc-200 px-3 py-2">
               <option value="PENDING">PENDING</option>

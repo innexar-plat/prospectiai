@@ -19,6 +19,7 @@ const pathToTitle: Record<string, string> = {
   commissions: 'Comissões',
   referrals: 'Referrals',
   'affiliate-settings': 'Config. Afiliados',
+  profile: 'Perfil',
 };
 
 function getPageTitle(pathname: string): string {

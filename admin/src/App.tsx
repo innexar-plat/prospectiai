@@ -19,6 +19,7 @@ import { AffiliateDetailPage } from '@/pages/AffiliateDetailPage';
 import { AffiliateSettingsPage } from '@/pages/AffiliateSettingsPage';
 import { CommissionsPage } from '@/pages/CommissionsPage';
 import { ReferralsPage } from '@/pages/ReferralsPage';
+import { ProfilePage } from '@/pages/ProfilePage';
 
 function RedirectAffiliateDetail() {
   const { id } = useParams<{ id: string }>();
@@ -48,6 +49,7 @@ function App() {
               <Route path="affiliate-settings" element={<AffiliateSettingsPage />} />
               <Route path="commissions" element={<CommissionsPage />} />
               <Route path="referrals" element={<ReferralsPage />} />
+              <Route path="profile" element={<ProfilePage />} />
             </Route>
             <Route path="users" element={<UsersPage />} />
             <Route path="users/:id" element={<UserDetailPage />} />

@@ -540,6 +540,8 @@ export interface AdminAffiliateListItem {
 export interface AdminAffiliateDetail extends AdminAffiliateListItem {
   document?: string | null;
   notes?: string | null;
+  payoutType?: string | null;
+  payoutPayload?: string | null;
   referrals: Array<{ id: string; landedAt: string; signupAt: string; convertedAt: string | null; planId: string | null; valueCents: number | null }>;
   commissions: Array<{ id: string; amountCents: number; currency: string; status: string; availableAt: string; paidAt: string | null; createdAt: string; paymentProofUrl?: string | null }>;
   commissionPendingCents: number;

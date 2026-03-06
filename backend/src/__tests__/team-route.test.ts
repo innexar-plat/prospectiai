@@ -1,22 +1,34 @@
 const { GET, POST } = require('@/app/api/team/route');
 const { auth } = require('@/auth');
 const { prisma } = require('@/lib/prisma');
-const { sendTeamInviteEmail } = require('@/lib/email');
+const { sendTeamInviteEmail, sendTeamInviteAccountCreatedEmail } = require('@/lib/email');
 
 jest.mock('@/auth', () => ({ auth: jest.fn() }));
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    workspaceMember: {
-      findFirst: jest.fn(),
-      findMany: jest.fn(),
+jest.mock('@/lib/prisma', () => {
+  const txMock = {
+    user: { create: jest.fn().mockResolvedValue({ id: 'new-user-1', email: 'new@x.com' }) },
+    workspaceMember: { create: jest.fn().mockResolvedValue({}) },
+    workspaceInvitation: { upsert: jest.fn().mockResolvedValue({}) },
+  };
+  return {
+    prisma: {
+      user: { findUnique: jest.fn() },
+      workspaceMember: {
+        findFirst: jest.fn(),
+        findMany: jest.fn(),
+      },
+      workspaceInvitation: { findMany: jest.fn(), upsert: jest.fn() },
+      auditLog: { groupBy: jest.fn() },
+      leadAnalysis: { groupBy: jest.fn(), count: jest.fn() },
+      searchHistory: { count: jest.fn() },
+      $transaction: jest.fn((cb: (tx: unknown) => Promise<unknown>) => cb(txMock)),
     },
-    workspaceInvitation: { findMany: jest.fn(), upsert: jest.fn() },
-    auditLog: { groupBy: jest.fn() },
-    leadAnalysis: { groupBy: jest.fn(), count: jest.fn() },
-    searchHistory: { count: jest.fn() },
-  },
+  };
+});
+jest.mock('@/lib/email', () => ({
+  sendTeamInviteEmail: jest.fn().mockResolvedValue({ sent: true }),
+  sendTeamInviteAccountCreatedEmail: jest.fn().mockResolvedValue({ sent: true }),
 }));
-jest.mock('@/lib/email', () => ({ sendTeamInviteEmail: jest.fn().mockResolvedValue({ sent: true }) }));
 
 function req(options: { method: string; body?: object }) {
   return new Request('http://localhost/api/team', {
@@ -177,14 +189,8 @@ describe('POST /api/team', () => {
     expect(await res.json()).toMatchObject({ error: 'Usuário já é membro do workspace' });
   });
 
-  it('returns 200 and creates pending invitation and sends email', async () => {
+  it('returns 200 and creates pending invitation and sends email when user exists', async () => {
     (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1', name: 'Alice', email: 'alice@x.com' }, expires: '' });
-    (prisma.workspaceMember.findFirst as jest.Mock).mockResolvedValue({
-      id: 'wm1',
-      workspaceId: 'w1',
-      role: 'OWNER',
-      workspace: { id: 'w1', name: 'My Workspace', plan: 'SCALE', leadsUsed: 0, leadsLimit: 5000 },
-    });
     (prisma.workspaceMember.findFirst as jest.Mock)
       .mockResolvedValueOnce({
         id: 'wm1',
@@ -193,6 +199,7 @@ describe('POST /api/team', () => {
         workspace: { id: 'w1', name: 'My Workspace', plan: 'SCALE', leadsUsed: 0, leadsLimit: 5000 },
       })
       .mockResolvedValueOnce(null);
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({ id: 'u2', email: 'new@x.com' });
     const createdInv = {
       id: 'inv1',
       email: 'new@x.com',
@@ -213,6 +220,7 @@ describe('POST /api/team', () => {
     const json = await res.json();
     expect(json.ok).toBe(true);
     expect(json.pendingInvite).toMatchObject({ id: 'inv1', email: 'new@x.com' });
+    expect(sendTeamInviteAccountCreatedEmail).not.toHaveBeenCalled();
   });
 
   it('returns 200 when invite created but email not sent (warn path)', async () => {
@@ -225,6 +233,7 @@ describe('POST /api/team', () => {
         workspace: { id: 'w1', name: 'My Workspace', plan: 'SCALE', leadsUsed: 0, leadsLimit: 5000 },
       })
       .mockResolvedValueOnce(null);
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({ id: 'u2', email: 'new@x.com' });
     (prisma.workspaceInvitation.upsert as jest.Mock).mockResolvedValue({
       id: 'inv1',
       email: 'new@x.com',
@@ -248,6 +257,7 @@ describe('POST /api/team', () => {
         workspace: { id: 'w1', name: 'WS', plan: 'SCALE', leadsUsed: 0, leadsLimit: 5000 },
       })
       .mockResolvedValueOnce(null);
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({ id: 'u2', email: 'new@x.com' });
     (prisma.workspaceInvitation.upsert as jest.Mock).mockResolvedValue({
       id: 'inv1',
       email: 'new@x.com',
@@ -270,10 +280,58 @@ describe('POST /api/team', () => {
         workspace: { id: 'w1', name: 'WS', plan: 'SCALE', leadsUsed: 0, leadsLimit: 5000 },
       })
       .mockResolvedValueOnce(null);
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({ id: 'u2', email: 'new@x.com' });
     (prisma.workspaceInvitation.upsert as jest.Mock).mockRejectedValue(new Error('DB error'));
 
     const res = await POST(req({ method: 'POST', body: { email: 'new@x.com' } }));
     expect(res.status).toBe(500);
     expect(await res.json()).toMatchObject({ error: 'Internal server error' });
+  });
+
+  it('returns 200 with accountCreated when email does not exist (Opção 2)', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1', name: 'Alice', email: 'alice@x.com' }, expires: '' });
+    (prisma.workspaceMember.findFirst as jest.Mock)
+      .mockResolvedValueOnce({
+        id: 'wm1',
+        workspaceId: 'w1',
+        role: 'OWNER',
+        workspace: { id: 'w1', name: 'My Workspace', plan: 'SCALE', leadsUsed: 0, leadsLimit: 5000 },
+      })
+      .mockResolvedValueOnce(null);
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+
+    const res = await POST(req({ method: 'POST', body: { email: 'new@x.com' } }));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.ok).toBe(true);
+    expect(json.accountCreated).toBe(true);
+    expect(sendTeamInviteAccountCreatedEmail).toHaveBeenCalledWith(
+      'new@x.com',
+      'Alice',
+      'My Workspace',
+      expect.stringMatching(/\/reset-password\?token=/)
+    );
+    expect(sendTeamInviteEmail).not.toHaveBeenCalled();
+  });
+
+  it('returns 200 accountCreated when race duplicate email (P2002)', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1', name: 'Alice', email: 'alice@x.com' }, expires: '' });
+    (prisma.workspaceMember.findFirst as jest.Mock)
+      .mockResolvedValueOnce({
+        id: 'wm1',
+        workspaceId: 'w1',
+        role: 'OWNER',
+        workspace: { id: 'w1', name: 'My Workspace', plan: 'SCALE', leadsUsed: 0, leadsLimit: 5000 },
+      })
+      .mockResolvedValueOnce(null);
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+    (prisma.$transaction as jest.Mock).mockRejectedValue(Object.assign(new Error('Unique constraint'), { code: 'P2002' }));
+
+    const res = await POST(req({ method: 'POST', body: { email: 'new@x.com' } }));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.ok).toBe(true);
+    expect(json.accountCreated).toBe(true);
+    expect(sendTeamInviteAccountCreatedEmail).not.toHaveBeenCalled();
   });
 });

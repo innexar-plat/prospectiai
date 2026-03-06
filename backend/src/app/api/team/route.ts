@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { getMemberUsage } from '@/lib/team-credits';
 import { getOrCreateRequestId, jsonWithRequestId } from '@/lib/request-id';
 import type { ProductPlan } from '@/lib/product-modules';
-import { sendTeamInviteEmail } from '@/lib/email';
+import { sendTeamInviteEmail, sendTeamInviteAccountCreatedEmail } from '@/lib/email';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
@@ -16,15 +17,15 @@ const inviteBodySchema = z.object({
     role: z.enum(['MEMBER', 'ADMIN']).optional().default('MEMBER'),
 });
 
-type CreateInvitationResult =
-    | { ok: true; invitation: { id: string; email: string; createdAt: Date; lastSentAt: Date }; inviterName: string; workspaceName: string; email: string; acceptInviteUrl: string }
+type ValidateInviteContextResult =
+    | { ok: true; email: string; workspaceId: string; inviterName: string; workspaceName: string; callerMembership: { workspaceId: string; workspace: { name: string | null } }; session: { user: { id: string; name?: string | null; email?: string | null } } }
     | { ok: false; error: NextResponse };
 
-async function createInvitationOrError(
+async function validateInviteContext(
     session: { user: { id: string; name?: string | null; email?: string | null } },
     body: unknown,
     requestId: string,
-): Promise<CreateInvitationResult> {
+): Promise<ValidateInviteContextResult> {
     const parsed = inviteBodySchema.safeParse(body);
     if (!parsed.success) {
         return { ok: false, error: jsonWithRequestId({ error: 'Email inválido' }, { status: 400, requestId }) };
@@ -48,34 +49,16 @@ async function createInvitationOrError(
     if (existingMember) {
         return { ok: false, error: jsonWithRequestId({ error: 'Usuário já é membro do workspace' }, { status: 409, requestId }) };
     }
-    const token = crypto.randomBytes(32).toString('hex');
-    const invitation = await prisma.workspaceInvitation.upsert({
-        where: { email_workspaceId: { email, workspaceId } },
-        create: {
-            email,
-            workspaceId,
-            invitedById: session.user.id,
-            token,
-            status: 'PENDING',
-        },
-        update: { token, lastSentAt: new Date(), status: 'PENDING' },
-    });
     const inviterName = session.user.name ?? session.user.email ?? 'A team member';
     const workspaceName = callerMembership.workspace.name ?? 'Workspace';
-    const baseUrl = SITE_URL.replace(/\/$/, '');
-    const acceptInviteUrl = `${baseUrl}/accept-invite?token=${encodeURIComponent(token)}`;
     return {
         ok: true,
-        invitation: {
-            id: invitation.id,
-            email: invitation.email,
-            createdAt: invitation.createdAt,
-            lastSentAt: invitation.lastSentAt,
-        },
+        email,
+        workspaceId,
         inviterName,
         workspaceName,
-        email,
-        acceptInviteUrl,
+        callerMembership,
+        session,
     };
 }
 
@@ -202,7 +185,7 @@ export async function GET(req: NextRequest) {
     }
 }
 
-// POST /api/team — create pending invitation and send email; user joins only after accepting
+// POST /api/team — create pending invitation and send email; or create account + member when user does not exist (Opção 2)
 export async function POST(req: NextRequest) {
     const requestId = getOrCreateRequestId(req);
     try {
@@ -210,17 +193,99 @@ export async function POST(req: NextRequest) {
         if (!session?.user?.id) {
             return jsonWithRequestId({ error: 'Unauthorized' }, { status: 401, requestId });
         }
-        const body = await req.json();
-        const result = await createInvitationOrError(session, body, requestId);
+        const body = await req.json().catch(() => ({}));
+        const result = await validateInviteContext(session, body, requestId);
         if (!result.ok) return result.error;
 
-        const { invitation, inviterName, workspaceName, email, acceptInviteUrl } = result;
-        sendTeamInviteEmail(email, inviterName, workspaceName, acceptInviteUrl)
+        const { email, workspaceId, inviterName, workspaceName, session: ctxSession } = result;
+        const baseUrl = SITE_URL.replace(/\/$/, '');
+
+        const existingUser = await prisma.user.findUnique({ where: { email } });
+
+        if (!existingUser) {
+            // Opção 2: create account + WorkspaceMember, send "define password" email; no onboarding
+            const resetToken = crypto.randomBytes(32).toString('hex');
+            const resetTokenExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+            const randomPassword = crypto.randomBytes(32).toString('hex');
+            const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+            try {
+                await prisma.$transaction(async (tx) => {
+                    const user = await tx.user.create({
+                        data: {
+                            email,
+                            name: 'Convidado',
+                            password: hashedPassword,
+                            resetToken,
+                            resetTokenExpires,
+                            plan: 'FREE',
+                            leadsLimit: 10,
+                            leadsUsed: 0,
+                            onboardingCompletedAt: new Date(),
+                        },
+                    });
+                    await tx.workspaceMember.create({
+                        data: {
+                            userId: user.id,
+                            workspaceId,
+                            role: 'MEMBER',
+                        },
+                    });
+                    await tx.workspaceInvitation.upsert({
+                        where: { email_workspaceId: { email, workspaceId } },
+                        create: {
+                            email,
+                            workspaceId,
+                            invitedById: ctxSession.user.id,
+                            token: resetToken,
+                            status: 'ACCEPTED',
+                        },
+                        update: { token: resetToken, status: 'ACCEPTED', lastSentAt: new Date() },
+                    });
+                });
+            } catch (err: unknown) {
+                const isDuplicateEmail =
+                    typeof err === 'object' &&
+                    err !== null &&
+                    'code' in err &&
+                    (err as { code?: string }).code === 'P2002';
+                if (isDuplicateEmail) {
+                    return jsonWithRequestId({ ok: true, accountCreated: true }, { requestId });
+                }
+                throw err;
+            }
+
+            const setPasswordUrl = `${baseUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
+            sendTeamInviteAccountCreatedEmail(email, inviterName, workspaceName, setPasswordUrl)
                 .then((res) => {
-                    if (!res.sent) logger.warn('Team invite email not sent', { email, reason: res.error ?? 'no config' }, requestId);
-                    else logger.info('Team invite email sent', { email }, requestId);
+                    if (!res.sent) logger.warn('Team account-created email not sent', { email, reason: res.error ?? 'no config' }, requestId);
+                    else logger.info('Team account-created email sent', { email }, requestId);
                 })
-                .catch((err) => logger.error('Team invite email failed', { email, error: err instanceof Error ? err.message : 'Unknown' }, requestId));
+                .catch((err) => logger.error('Team account-created email failed', { email, error: err instanceof Error ? err.message : 'Unknown' }, requestId));
+
+            return jsonWithRequestId({ ok: true, accountCreated: true }, { requestId });
+        }
+
+        // Existing user: create PENDING invitation, send accept-invite email
+        const token = crypto.randomBytes(32).toString('hex');
+        const invitation = await prisma.workspaceInvitation.upsert({
+            where: { email_workspaceId: { email, workspaceId } },
+            create: {
+                email,
+                workspaceId,
+                invitedById: ctxSession.user.id,
+                token,
+                status: 'PENDING',
+            },
+            update: { token, lastSentAt: new Date(), status: 'PENDING' },
+        });
+        const acceptInviteUrl = `${baseUrl}/accept-invite?token=${encodeURIComponent(token)}`;
+        sendTeamInviteEmail(email, inviterName, workspaceName, acceptInviteUrl)
+            .then((res) => {
+                if (!res.sent) logger.warn('Team invite email not sent', { email, reason: res.error ?? 'no config' }, requestId);
+                else logger.info('Team invite email sent', { email }, requestId);
+            })
+            .catch((err) => logger.error('Team invite email failed', { email, error: err instanceof Error ? err.message : 'Unknown' }, requestId));
 
         return jsonWithRequestId({
             ok: true,
