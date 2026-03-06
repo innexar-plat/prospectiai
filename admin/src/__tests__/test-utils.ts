@@ -6,7 +6,9 @@ export type MockFetchResponse =
 
 export function createMockFetch(responses: MockFetchResponse[] = []) {
   const queue = [...responses];
-  return vi.fn().mockImplementation((_url: string, _init?: RequestInit) => {
+  return vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+    void url;
+    void init;
     const next = queue.shift();
     if (!next) {
       return Promise.resolve({
