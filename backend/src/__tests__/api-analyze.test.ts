@@ -21,6 +21,15 @@ jest.mock('@/lib/ai', () => ({
 }));
 jest.mock('@/lib/gemini');
 jest.mock('@/lib/ratelimit', () => ({ rateLimit: jest.fn(() => Promise.resolve({ success: true })) }));
+jest.mock('@/lib/team-credits', () => ({
+    checkMemberLimits: jest.fn().mockResolvedValue(undefined),
+    MemberLimitExceededError: class MemberLimitExceededError extends Error {
+        constructor(message: string, public code: string, public period: string, public used: number, public limit: number) {
+            super(message);
+            this.name = 'MemberLimitExceededError';
+        }
+    },
+}));
 
 describe('POST /api/analyze API Cost Shield', () => {
     beforeEach(() => {
@@ -227,5 +236,29 @@ describe('POST /api/analyze API Cost Shield', () => {
         expect(res.status).toBe(401);
         const json = await res.json();
         expect(json.error).toBe('Unauthorized');
+    });
+
+    it('should return 500 when runAnalyze throws generic error', async () => {
+        jest.mocked(auth).mockResolvedValue({ user: { id: 'u1' } });
+        prisma.user.findUnique.mockResolvedValue({
+            id: 'u1',
+            onboardingCompletedAt: new Date(),
+            companyName: null,
+            productService: null,
+            targetAudience: null,
+            mainBenefit: null,
+            workspaces: [{ workspace: { id: 'w1', leadsUsed: 0, leadsLimit: 100, plan: 'PRO' } }],
+        });
+        prisma.leadAnalysis.findFirst.mockResolvedValue(null);
+        prisma.workspace.update.mockRejectedValue(new Error('DB connection failed'));
+        jest.mocked(analyzeLead).mockResolvedValue({ analysis: { score: 8, summary: 'X', gaps: [] } } as never);
+        const req = new NextRequest('http://localhost/api/analyze', {
+            method: 'POST',
+            body: JSON.stringify({ placeId: 'p1', name: 'Business' }),
+        });
+        const res = await POST(req);
+        expect(res.status).toBe(500);
+        const json = await res.json();
+        expect(json.error).toBe('Internal server error');
     });
 });

@@ -57,4 +57,16 @@ describe('GET /api/product/modules', () => {
     const json = await res.json();
     expect(json.plan).toBe('PRO');
   });
+
+  it('returns 200 with user plan when workspaces empty', async () => {
+    auth.mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    prisma.user.findUnique.mockResolvedValue({
+      plan: 'BUSINESS',
+      workspaces: [],
+    });
+    const res = await GET();
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.plan).toBe('BUSINESS');
+  });
 });
