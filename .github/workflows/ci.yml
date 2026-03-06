@@ -125,6 +125,12 @@ jobs:
           mkdir -p admin/coverage
           if [ ! -f admin/coverage/lcov.info ]; then echo -e "SF:\nend_of_record" > admin/coverage/lcov.info; fi
 
+      - name: Prefix lcov paths for Sonar (monorepo)
+        run: |
+          sed -i 's|^SF:src/|SF:backend/src/|g' backend/coverage/lcov.info
+          sed -i 's|^SF:src/|SF:frontend/src/|g' frontend/coverage/lcov.info
+          sed -i 's|^SF:src/|SF:admin/src/|g' admin/coverage/lcov.info
+
       - name: Create SonarQube project if not exists
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
