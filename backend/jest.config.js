@@ -59,17 +59,16 @@ const config = {
     '!src/modules/market/index.ts',
     '!src/lib/admin.ts',
     '!src/lib/ratelimit.ts',
-    '!src/modules/analyze/application/analyze.service.ts',
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['lcov', 'text'],
-  // Goal 85% for all; branches/functions raised as more tests are added
+  // Goal 85% lines/statements; branches/functions raised as more tests are added
   coverageThreshold: {
     global: {
       lines: 85,
       statements: 85,
-      branches: 77,
-      functions: 80,
+      branches: 79,
+      functions: 82,
     },
   },
 };

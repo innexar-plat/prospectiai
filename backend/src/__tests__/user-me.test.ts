@@ -11,8 +11,16 @@ jest.mock('@/lib/grace-period', () => ({ applyGracePeriodExpiryIfNeeded: jest.fn
 jest.mock('@/lib/prisma', () => ({
   prisma: {
     user: { findUnique: jest.fn() },
-    workspace: { findUnique: jest.fn() },
-    workspaceMember: { findFirst: jest.fn() },
+    workspace: { findUnique: jest.fn(), create: jest.fn() },
+    workspaceMember: { findFirst: jest.fn(), create: jest.fn() },
+    $transaction: jest.fn((cb) => {
+      if (typeof cb !== 'function') return Promise.resolve();
+      const tx = {
+        workspace: { create: jest.fn().mockResolvedValue({ id: 'w-new' }) },
+        workspaceMember: { create: jest.fn().mockResolvedValue({}) },
+      };
+      return Promise.resolve(cb(tx));
+    }),
   },
 }));
 
@@ -126,5 +134,87 @@ describe('GET /api/user/me', () => {
     expect(json.user.leadsUsed).toBe(5);
     expect(json.user.leadsLimit).toBe(100);
     expect(json.user.requiresOnboarding).toBe(false);
+  });
+
+  it('creates workspace when user has no workspaces', async () => {
+    auth.mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    const userNoWorkspace = {
+      id: 'u1',
+      name: 'New User',
+      email: 'new@example.com',
+      image: null,
+      plan: 'FREE',
+      leadsUsed: 0,
+      leadsLimit: 10,
+      companyName: null,
+      productService: null,
+      targetAudience: null,
+      mainBenefit: null,
+      phone: null,
+      address: null,
+      linkedInUrl: null,
+      instagramUrl: null,
+      facebookUrl: null,
+      websiteUrl: null,
+      onboardingCompletedAt: null,
+      notifyByEmail: false,
+      workspaces: [],
+    };
+    const userWithWorkspace = {
+      ...userNoWorkspace,
+      workspaces: [{ workspace: { id: 'w-new', ...baseWorkspace } }],
+    };
+    prisma.user.findUnique
+      .mockResolvedValueOnce(userNoWorkspace)
+      .mockResolvedValueOnce(userWithWorkspace);
+    prisma.workspaceMember.findFirst.mockResolvedValue(null);
+    prisma.workspace.findUnique.mockResolvedValue({ id: 'w-new', ...baseWorkspace });
+    const res = await GET(new Request('http://localhost/api/user/me'));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.user).toBeDefined();
+    expect(json.user.id).toBe('u1');
+    expect(prisma.$transaction).toHaveBeenCalled();
+  });
+
+  it('returns 200 with null workspaceProfile when workspace is null', async () => {
+    auth.mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    const userWithNullWorkspace = {
+      id: 'u1',
+      name: 'Test',
+      email: 'test@example.com',
+      image: null,
+      plan: 'FREE',
+      leadsUsed: 0,
+      leadsLimit: 10,
+      companyName: 'UserCo',
+      productService: null,
+      targetAudience: null,
+      mainBenefit: null,
+      phone: null,
+      address: null,
+      linkedInUrl: null,
+      instagramUrl: null,
+      facebookUrl: null,
+      websiteUrl: null,
+      onboardingCompletedAt: new Date(),
+      notifyByEmail: false,
+      workspaces: [{ workspace: null }],
+    };
+    prisma.user.findUnique.mockResolvedValue(userWithNullWorkspace);
+    const res = await GET(new Request('http://localhost/api/user/me'));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.workspaceProfile).toBeNull();
+    expect(json.user.companyName).toBe('UserCo');
+  });
+
+  it('returns 500 when fetchUserWithWorkspace throws', async () => {
+    auth.mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    prisma.user.findUnique.mockRejectedValue(new Error('DB error'));
+    const res = await GET(new Request('http://localhost/api/user/me'));
+    expect(res.status).toBe(500);
+    const json = await res.json();
+    expect(json.error).toBe('Internal server error');
   });
 });

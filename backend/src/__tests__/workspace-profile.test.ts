@@ -56,6 +56,15 @@ describe('GET /api/workspace/current/profile', () => {
     expect(data.companyName).toBe('Acme');
   });
 
+  it('returns 404 when workspace not found after membership', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    (prisma.workspaceMember.findFirst as jest.Mock).mockResolvedValue({ workspaceId: 'w1' });
+    (prisma.workspace.findUnique as jest.Mock).mockResolvedValue(null);
+    const res = await GET(new NextRequest('http://localhost/api/workspace/current/profile'));
+    expect(res.status).toBe(404);
+    expect(await res.json()).toMatchObject({ error: 'Workspace not found' });
+  });
+
   it('returns 500 when findFirst throws', async () => {
     (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1' }, expires: '' });
     (prisma.workspaceMember.findFirst as jest.Mock).mockRejectedValue(new Error('db error'));
@@ -126,5 +135,20 @@ describe('PATCH /api/workspace/current/profile', () => {
         data: expect.objectContaining({ companyName: 'New Co', websiteUrl: 'https://x.com' }),
       }),
     );
+  });
+
+  it('returns 500 when update throws', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    (prisma.workspaceMember.findFirst as jest.Mock).mockResolvedValue({ workspaceId: 'w1' });
+    (prisma.workspace.update as jest.Mock).mockRejectedValue(new Error('DB error'));
+    const res = await PATCH(
+      new NextRequest('http://localhost/api/workspace/current/profile', {
+        method: 'PATCH',
+        body: JSON.stringify({ companyName: 'X' }),
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    expect(res.status).toBe(500);
+    expect(await res.json()).toMatchObject({ error: 'Internal server error' });
   });
 });
