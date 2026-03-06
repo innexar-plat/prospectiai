@@ -37,6 +37,19 @@ describe('PUT /api/team/credits', () => {
     expect(json).toMatchObject({ error: 'Invalid input' });
   });
 
+  it('returns 400 when body is invalid JSON', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    const invalidReq = new Request('http://localhost/api/team/credits', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: 'not json',
+    });
+    const res = await PUT(invalidReq);
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json).toMatchObject({ error: 'Invalid input' });
+  });
+
   it('returns 403 when caller is not OWNER or ADMIN', async () => {
     (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1' }, expires: '' });
     (prisma.workspaceMember.findFirst as jest.Mock).mockResolvedValue({

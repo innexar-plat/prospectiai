@@ -2,7 +2,17 @@
  * Tests for email lib. Resend and Prisma are mocked; we verify behaviour (sent/not sent, params).
  * Prisma is mocked so getEmailConfigFromDb() returns null and only env fallback is used in existing tests.
  */
-import { sendPasswordResetEmail, sendTeamInviteEmail, sendVerificationEmail, sendEmail } from '@/lib/email';
+import {
+  sendPasswordResetEmail,
+  sendTeamInviteEmail,
+  sendTeamInviteAccountCreatedEmail,
+  sendVerificationEmail,
+  sendEmail,
+  sendAffiliateApprovedEmail,
+  sendAffiliateConversionEmail,
+  sendAffiliateCommissionPaidEmail,
+  sendAffiliateCommissionAvailableEmail,
+} from '@/lib/email';
 
 const mockSend = jest.fn();
 jest.mock('resend', () => ({
@@ -179,6 +189,113 @@ describe('email lib', () => {
       expect(html).toContain('Alice');
       expect(html).toContain('Acme');
       expect(html).toContain(acceptUrl);
+    });
+  });
+
+  describe('sendTeamInviteAccountCreatedEmail', () => {
+    it('sends email with set-password subject and body', async () => {
+      process.env.RESEND_API_KEY = 're_xxx';
+      mockSend.mockResolvedValue({ data: {}, error: null });
+      const result = await sendTeamInviteAccountCreatedEmail(
+        'u@x.com',
+        'Admin',
+        'Workspace X',
+        'https://app.com/reset-password?token=tok',
+      );
+      expect(result.sent).toBe(true);
+      expect(mockSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: ['u@x.com'],
+          subject: 'Defina sua senha – Workspace X – ProspectorAI',
+        })
+      );
+      const html = mockSend.mock.calls[0][0].html;
+      expect(html).toContain('Admin');
+      expect(html).toContain('Workspace X');
+      expect(html).toContain('https://app.com/reset-password?token=tok');
+    });
+  });
+
+  describe('sendAffiliateApprovedEmail', () => {
+    it('sends email with affiliate code and login URL', async () => {
+      process.env.RESEND_API_KEY = 're_xxx';
+      mockSend.mockResolvedValue({ data: {}, error: null });
+      const result = await sendAffiliateApprovedEmail('a@b.com', 'AFF01', 'https://app.com/login');
+      expect(result.sent).toBe(true);
+      expect(mockSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: ['a@b.com'],
+          subject: 'Sua conta de afiliado foi aprovada – ProspectorAI',
+        })
+      );
+      const html = mockSend.mock.calls[0][0].html;
+      expect(html).toContain('AFF01');
+      expect(html).toContain('https://app.com/login');
+    });
+  });
+
+  describe('sendAffiliateConversionEmail', () => {
+    it('sends email with conversion summary and dashboard URL', async () => {
+      process.env.RESEND_API_KEY = 're_xxx';
+      mockSend.mockResolvedValue({ data: {}, error: null });
+      const result = await sendAffiliateConversionEmail('a@b.com', 'Cliente X assinou Pro.', 'https://app.com/affiliate');
+      expect(result.sent).toBe(true);
+      expect(mockSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: ['a@b.com'],
+          subject: 'Nova conversão no programa de afiliados – ProspectorAI',
+        })
+      );
+      const html = mockSend.mock.calls[0][0].html;
+      expect(html).toContain('Cliente X assinou Pro.');
+      expect(html).toContain('https://app.com/affiliate');
+    });
+  });
+
+  describe('sendAffiliateCommissionPaidEmail', () => {
+    it('sends email with amount and payout info', async () => {
+      process.env.RESEND_API_KEY = 're_xxx';
+      mockSend.mockResolvedValue({ data: {}, error: null });
+      const result = await sendAffiliateCommissionPaidEmail('a@b.com', 'R$ 100,00', 'PIX 123');
+      expect(result.sent).toBe(true);
+      expect(mockSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: ['a@b.com'],
+          subject: 'Comissão paga – ProspectorAI',
+        })
+      );
+      const html = mockSend.mock.calls[0][0].html;
+      expect(html).toContain('R$ 100,00');
+      expect(html).toContain('PIX 123');
+    });
+  });
+
+  describe('sendAffiliateCommissionAvailableEmail', () => {
+    it('sends email with dashboard URL', async () => {
+      process.env.RESEND_API_KEY = 're_xxx';
+      mockSend.mockResolvedValue({ data: {}, error: null });
+      const result = await sendAffiliateCommissionAvailableEmail('a@b.com', 'https://app.com/affiliate/dashboard');
+      expect(result.sent).toBe(true);
+      expect(mockSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: ['a@b.com'],
+          subject: 'Comissão disponível para saque – ProspectorAI',
+        })
+      );
+      const html = mockSend.mock.calls[0][0].html;
+      expect(html).toContain('https://app.com/affiliate/dashboard');
+    });
+  });
+
+  describe('getEmailConfigFromDb error fallback', () => {
+    it('falls back to env when findFirst throws', async () => {
+      prisma.emailConfig.findFirst.mockRejectedValue(new Error('DB unavailable'));
+      process.env.RESEND_API_KEY = 're_xxx';
+      mockSend.mockResolvedValue({ data: {}, error: null });
+      const mod = await import('@/lib/email');
+      const result = await mod.sendEmail('a@b.com', 'Hi', '<p>Hi</p>');
+      expect(result.sent).toBe(true);
+      expect(mockSend).toHaveBeenCalled();
     });
   });
 });

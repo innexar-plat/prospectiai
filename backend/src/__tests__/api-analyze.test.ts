@@ -203,4 +203,29 @@ describe('POST /api/analyze API Cost Shield', () => {
         const data = await res.json();
         expect(data.summary).toBe('New');
     });
+
+    it('should return 429 when rate limit exceeded', async () => {
+        const { rateLimit } = require('@/lib/ratelimit');
+        (rateLimit as jest.Mock).mockResolvedValueOnce({ success: false });
+        const req = new NextRequest('http://localhost/api/analyze', {
+            method: 'POST',
+            body: JSON.stringify({ placeId: 'p1', name: 'Business' }),
+        });
+        const res = await POST(req);
+        expect(res.status).toBe(429);
+        const json = await res.json();
+        expect(json.error).toBe('Too many requests. Try again later.');
+    });
+
+    it('should return 401 when unauthenticated', async () => {
+        jest.mocked(auth).mockResolvedValue(null);
+        const req = new NextRequest('http://localhost/api/analyze', {
+            method: 'POST',
+            body: JSON.stringify({ placeId: 'p1', name: 'Business' }),
+        });
+        const res = await POST(req);
+        expect(res.status).toBe(401);
+        const json = await res.json();
+        expect(json.error).toBe('Unauthorized');
+    });
 });
