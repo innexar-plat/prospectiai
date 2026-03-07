@@ -157,6 +157,33 @@ describe('api', () => {
       vi.unstubAllGlobals();
     });
 
+    it('signIn fetches CSRF and submits credentials form with callbackUrl', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ csrfToken: 'tok' }),
+      } as Response);
+      const submitFn = vi.fn();
+      const form = {
+        method: '',
+        action: '',
+        appendChild: vi.fn(),
+        submit: submitFn,
+      };
+      vi.stubGlobal('window', { ...window, location: { ...window.location, origin: 'https://example.com' } });
+      vi.stubGlobal('document', {
+        ...document,
+        createElement: vi.fn((tag: string) => (tag === 'form' ? form : { name: '', type: '', value: '', appendChild: vi.fn() })),
+        body: { appendChild: vi.fn() },
+      });
+      await authApi.signIn({ email: 'u@x.com', password: 'secret', callbackUrl: '/dashboard' });
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/auth/csrf'), expect.any(Object));
+      expect(form.action).toBe('/api/auth/callback/credentials');
+      expect(form.method).toBe('POST');
+      expect(submitFn).toHaveBeenCalled();
+      vi.unstubAllGlobals();
+    });
+
     it('register sends affiliateCode when provided', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,

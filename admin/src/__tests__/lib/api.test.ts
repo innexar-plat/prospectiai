@@ -294,6 +294,17 @@ describe('admin api', () => {
       expect(data.defaultCommissionRatePercent).toBe(20);
     });
 
+    it('affiliateSettings.update sends PATCH', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ id: 's1', defaultCommissionRatePercent: 25, cookieDurationDays: 30, commissionRule: 'FIRST_PAYMENT_ONLY', approvalHoldDays: 15, minPayoutCents: 10000, allowSelfSignup: true, updatedAt: '' }),
+      } as Response);
+      const data = await adminApi.affiliateSettings.update({ defaultCommissionRatePercent: 25 });
+      expect(data.defaultCommissionRatePercent).toBe(25);
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/admin/affiliate-settings'), expect.objectContaining({ method: 'PATCH' }));
+    });
+
     it('aiConfig.create sends POST', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -414,6 +425,18 @@ describe('admin api', () => {
       } as Response);
       const data = await supportApi.users();
       expect(data.items).toEqual([]);
+    });
+
+    it('users with params builds query string', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ items: [], total: 0, limit: 10, offset: 5 }),
+      } as Response);
+      await supportApi.users({ limit: 10, offset: 5, search: 'test' });
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/support/users?'), expect.any(Object));
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('limit=10'), expect.any(Object));
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('search=test'), expect.any(Object));
     });
 
     it('user returns detail by id', async () => {
