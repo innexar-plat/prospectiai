@@ -53,12 +53,12 @@ Manter o projeto com **0 issues** no SonarQube (bugs e code smells resolvidos), 
 | **S1854** | Atribuição inútil a variável | Usar o valor diretamente ou eliminar a variável. |
 | **S3696** | Lançar objeto em vez de Error | Lançar `new Error()` ou subclasse; não `throw { message: '...' }`. |
 
-## Cobertura mínima 80% (projeto todo)
+## Cobertura mínima 85% (projeto todo)
 
-- **Meta:** Backend + frontend + admin com cobertura agregada ≥ 80% no Sonar.
-- **Hoje:** O Sonar usa `sonar.coverage.exclusions=frontend/src/**/*,admin/src/**/*` para que o **percentual de cobertura exibido seja calculado só sobre o backend**. Assim a cobertura não cai de ~40% para ~28% ao incluir frontend/admin (muito código, poucos testes). Backend continua com ~85%+.
-- **Para subir:** Aumentar testes no frontend e no admin; quando a cobertura agregada for aceitável, **remover** `sonar.coverage.exclusions` em `sonar-project.properties` e configurar o Quality Gate para Coverage ≥ 80%.
-- **Quality Gate:** Configurar no Sonar a condição "Coverage" ≥ 80% (sobre o escopo atual; hoje = só backend).
+- **Meta:** Backend + frontend + admin com cobertura agregada ≥ 85% no Sonar (sem regressões, baixa complexidade cognitiva, sem duplicação nos testes).
+- **Hoje:** O Sonar usa `sonar.coverage.exclusions=frontend/src/**/*,admin/src/**/*` para que o **percentual de cobertura exibido seja calculado só sobre o backend**. Backend já atinge ≥85%. Frontend e admin têm thresholds nos Vitest configurados para o valor atual; a meta é subir até 85% com mais testes.
+- **CI:** O job `sonarqube` gera os três lcov (`backend/coverage/lcov.info`, `frontend/coverage/lcov.info`, `admin/coverage/lcov.info`) e o scanner usa `sonar.javascript.lcov.reportPaths` com os três. Quando frontend e admin atingirem ~85%, **remover** `sonar.coverage.exclusions` em `sonar-project.properties` e configurar o Quality Gate para Coverage ≥ 85%.
+- **Quality Gate:** No Sonar, configurar "Coverage" ≥ 85% (sobre o escopo atual; hoje = só backend).
 
 ## Configuração do projeto
 
