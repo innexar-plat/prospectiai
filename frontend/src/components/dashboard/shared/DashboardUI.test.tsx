@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import type { LucideIcon } from 'lucide-react';
 import { StatCard, LoadingState, EmptyState, PresenceBar } from './DashboardUI';
 
 describe('DashboardUI', () => {
@@ -36,7 +37,7 @@ describe('DashboardUI', () => {
     it('renders title and description', () => {
       render(
         <EmptyState
-          icon={MockIcon}
+          icon={MockIcon as LucideIcon}
           title="Nenhum resultado"
           description="Faça uma busca."
         />
@@ -49,7 +50,7 @@ describe('DashboardUI', () => {
       const onAction = vi.fn();
       render(
         <EmptyState
-          icon={MockIcon}
+          icon={MockIcon as LucideIcon}
           title="Vazio"
           description="Desc"
           actionLabel="Criar"

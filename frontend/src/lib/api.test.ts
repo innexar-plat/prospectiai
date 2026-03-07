@@ -226,10 +226,11 @@ describe('api', () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: () => Promise.resolve({ id: 'p1', name: 'Detail' }),
+        json: () => Promise.resolve({ id: 'p1', displayName: { text: 'Detail' } }),
       } as Response);
       const data = await searchApi.details('p1');
-      expect(data.name).toBe('Detail');
+      expect(data.id).toBe('p1');
+      expect(data.displayName?.text).toBe('Detail');
     });
 
     it('history calls with optional params', async () => {
