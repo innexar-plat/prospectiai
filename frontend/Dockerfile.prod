@@ -10,6 +10,17 @@ COPY backend/package.json backend/
 COPY backend/prisma backend/prisma/
 RUN npm install --legacy-peer-deps
 COPY frontend/ frontend/
+# Vite embeds VITE_* at build time (use same values as .env / compose build.args)
+ARG NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY
+ARG VITE_MAINTENANCE_MODE
+ARG VITE_API_URL
+ARG VITE_SUPPORT_EMAIL
+ARG VITE_SUPPORT_WHATSAPP
+ENV VITE_MERCADOPAGO_PUBLIC_KEY=$NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY
+ENV VITE_MAINTENANCE_MODE=$VITE_MAINTENANCE_MODE
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_SUPPORT_EMAIL=$VITE_SUPPORT_EMAIL
+ENV VITE_SUPPORT_WHATSAPP=$VITE_SUPPORT_WHATSAPP
 RUN npm run build --workspace=frontend
 
 # Stage 2: build admin SPA (base /admin/)
