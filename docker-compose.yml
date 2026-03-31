@@ -11,8 +11,9 @@ services:
         - VITE_SUPPORT_EMAIL=${VITE_SUPPORT_EMAIL:-}
         - VITE_SUPPORT_WHATSAPP=${VITE_SUPPORT_WHATSAPP:-}
     container_name: prospector-frontend
+    # Só localhost: tráfego público entra pelo Traefik (80/443)
     ports:
-      - "5173:80"
+      - "127.0.0.1:5173:80"
     depends_on:
       backend:
         condition: service_healthy
@@ -111,7 +112,7 @@ services:
       - ADMIN_EMAILS=${ADMIN_EMAILS}
       - SUPPORT_EMAILS=${SUPPORT_EMAILS:-}
     ports:
-      - "3010:4000"
+      - "127.0.0.1:3010:4000"
     depends_on:
       - redis
       - db
