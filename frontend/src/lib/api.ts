@@ -228,8 +228,8 @@ export const searchApi = {
         return request<{ cities: string[] }>(`/location/cities?${qs.toString()}`);
     },
 
-    marketReport: (params: { textQuery: string; includedType?: string; pageSize?: number }) =>
-        request<unknown>('/market-report', {
+    marketReport: (params: { textQuery: string; includedType?: string; pageSize?: number; city?: string; state?: string }) =>
+        request<MarketReport>('/market-report', {
             method: 'POST',
             body: JSON.stringify(params),
         }),

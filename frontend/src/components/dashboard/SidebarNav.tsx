@@ -1,5 +1,5 @@
 import { NavLink, useLocation, Link } from 'react-router-dom';
-import { Search, Clock, Target, BarChart3, LogOut, Swords, TrendingUp, Users, LayoutDashboard, HelpCircle, ChevronDown, X, Lock, Building2, PanelLeftClose, PanelLeft, Plug, Sparkles } from 'lucide-react';
+import { Search, Clock, Target, BarChart3, LogOut, Swords, TrendingUp, Users, LayoutDashboard, HelpCircle, ChevronDown, X, Lock, Building2, PanelLeftClose, PanelLeft, Plug, Sparkles, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { SessionUser } from '@/lib/api';
 import { getPlanDisplayName } from '@/lib/billing-config';
@@ -54,9 +54,10 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
     collapsible: true,
     items: [
       { to: '/dashboard/concorrencia', end: false, icon: Swords, label: 'Concorrência', badge: 'PRO' },
+      { to: '/dashboard/mercado', end: false, icon: TrendingUp, label: 'Intel. Mercado', badge: 'BIZ' },
       { to: '/dashboard/relatorios', end: false, icon: BarChart3, label: 'Relatórios', badge: 'BIZ' },
       { to: '/dashboard/minha-empresa', end: false, icon: Building2, label: 'Análise minha empresa', badge: 'BIZ' },
-      { to: '/dashboard/viabilidade', end: false, icon: TrendingUp, label: 'Viabilidade', badge: 'SCALE' },
+      { to: '/dashboard/viabilidade', end: false, icon: Layers, label: 'Viabilidade', badge: 'SCALE' },
     ],
   },
   {

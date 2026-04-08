@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Lock, Loader2, Search, Target, Globe, Star, MessageSquare, Phone, Shield, CheckCircle2, Zap, AlertTriangle } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { Lock, Loader2, Search, Target, Globe, Star, MessageSquare, Phone, Shield, CheckCircle2, Zap, AlertTriangle, Download } from 'lucide-react';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { Link, useOutletContext, useNavigate } from 'react-router-dom';
 import type { SessionUser, CompetitorAnalysisResult } from '@/lib/api';
@@ -29,6 +29,50 @@ export default function ConcorrenciaPage() {
     const [data, setData] = useState<CompetitorAnalysisResult | null>(null);
 
     const hasAccess = user.plan === 'PRO' || user.plan === 'BUSINESS' || user.plan === 'SCALE';
+
+    const exportCSV = useCallback(() => {
+        if (!data) return;
+        const rows: string[][] = [['Nome', 'Rating', 'Avaliações', 'Website', 'Telefone', 'Score Oportunidade']];
+        const seen = new Set<string>();
+
+        for (const opp of data.topOpportunities ?? []) {
+            seen.add(opp.id);
+            rows.push([
+                opp.name,
+                '', '', // rating/reviews not in topOpportunities
+                opp.scoreFactors.noWebsite ? 'Não' : 'Sim',
+                opp.phone || (opp.scoreFactors.noPhone ? 'Não' : 'Sim'),
+                String(opp.score),
+            ]);
+        }
+
+        for (const entry of data.rankingByRating) {
+            if (seen.has(entry.id)) continue;
+            seen.add(entry.id);
+            const review = data.rankingByReviews.find((r) => r.id === entry.id);
+            rows.push([
+                entry.name,
+                entry.rating != null ? entry.rating.toFixed(1) : '',
+                review?.reviewCount != null ? String(review.reviewCount) : '',
+                '', '', '',
+            ]);
+        }
+
+        for (const entry of data.rankingByReviews) {
+            if (seen.has(entry.id)) continue;
+            seen.add(entry.id);
+            rows.push([entry.name, '', String(entry.reviewCount ?? ''), '', '', '']);
+        }
+
+        const csv = rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `concorrencia-${query.replace(/\s+/g, '-')}-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }, [data, query]);
 
     const handleAnalyze = async (e: React.SyntheticEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -116,6 +160,13 @@ export default function ConcorrenciaPage() {
                             <StatCard value={data.digitalPresence.withWebsite} label="Com Website" color="emerald" />
                             <StatCard value={data.digitalPresence.withPhone} label="Com Telefone" color="blue" />
                             <StatCard value={data.topOpportunities?.length ?? 0} label="Top Oportunidades" color="amber" />
+                        </div>
+
+                        {/* Export */}
+                        <div className="flex justify-end">
+                            <button onClick={exportCSV} className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl bg-violet-600 hover:bg-violet-700 text-white transition-colors">
+                                <Download size={16} /> Exportar CSV
+                            </button>
                         </div>
 
                         {/* Entry Barrier + Market Summary */}
