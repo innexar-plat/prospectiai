@@ -14,7 +14,7 @@ export default defineConfig({
   },
   server: {
     port: 5174,
-    allowedHosts: ['prospectorai.innexar.com.br', 'localhost'],
+    allowedHosts: ['precisionia.com.br', 'localhost'],
     proxy: {
       '/api': {
         target: process.env.VITE_API_TARGET ?? 'http://localhost:4000',

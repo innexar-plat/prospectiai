@@ -53,7 +53,7 @@ export function SearchParamsLocationCard({ value, onChange, disabled }: SearchPa
       <div className="bg-card p-8 rounded-[2.4rem] h-full space-y-8 border border-border/50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-violet-600/10 flex items-center justify-center text-violet-400 shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-violet-600/10 flex items-center justify-center text-violet-600 dark:text-violet-400 shrink-0">
               <MapPin size={24} aria-hidden />
             </div>
             <div>
@@ -106,7 +106,7 @@ export function SearchParamsLocationCard({ value, onChange, disabled }: SearchPa
                       type="button"
                       className={cn(
                         'w-full px-5 py-3 flex items-center gap-3 text-left hover:bg-surface focus:bg-surface focus:outline-none min-h-[44px]',
-                        value.country === c.value && 'bg-violet-600/10 text-violet-400'
+                        value.country === c.value && 'bg-violet-600/10 text-violet-600 dark:text-violet-400'
                       )}
                       onClick={() => {
                         onChange({ country: c.value, state: 'Todos' });
@@ -153,7 +153,7 @@ export function SearchParamsLocationCard({ value, onChange, disabled }: SearchPa
                         type="button"
                         className={cn(
                           'w-full px-5 py-3 text-left hover:bg-surface focus:outline-none min-h-[44px]',
-                          value.state === s && 'bg-violet-600/10 text-violet-400 font-bold'
+                          value.state === s && 'bg-violet-600/10 text-violet-600 dark:text-violet-400 font-bold'
                         )}
                         onClick={() => {
                           onChange({ state: s });
@@ -186,7 +186,7 @@ export function SearchParamsLocationCard({ value, onChange, disabled }: SearchPa
           <div className="p-5 rounded-3xl bg-surface border border-border">
             <div className="flex justify-between items-center mb-4">
               <label id="radius-label" className="text-xs font-black text-muted uppercase tracking-widest">Raio de Busca (km)</label>
-              <span className="text-violet-400 font-black text-sm">{value.radiusKm} km</span>
+              <span className="text-violet-600 dark:text-violet-400 font-black text-sm">{value.radiusKm} km</span>
             </div>
             <input
               type="range"

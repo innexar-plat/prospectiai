@@ -125,72 +125,72 @@ export function PlansPage() {
     return (
         <div>
             <div className="flex items-center justify-between mb-6">
-                <h1 className="text-xl font-semibold text-white">Configuração de Planos</h1>
+                <h1 className="text-xl font-semibold text-gray-900">Configuração de Planos</h1>
                 <button
                     onClick={openCreate}
-                    className="px-4 py-2 rounded-lg bg-violet-600/80 text-white text-sm font-medium hover:bg-violet-600"
+                    className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-600"
                 >
                     + Novo Plano
                 </button>
             </div>
 
             {toast && (
-                <div className="mb-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-4 py-3 text-sm">
+                <div className="mb-4 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-600 px-4 py-3 text-sm">
                     {toast}
                 </div>
             )}
 
             {error && !showModal && (
-                <div className="mb-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 text-sm">
+                <div className="mb-4 rounded-lg bg-red-50 border border-red-300 text-red-600 px-4 py-3 text-sm">
                     {error}
                 </div>
             )}
 
             {loading && !plans.length ? (
-                <div className="h-48 rounded-xl bg-zinc-800/50 animate-pulse" />
+                <div className="h-48 rounded-xl bg-gray-200 animate-pulse" />
             ) : (
-                <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 overflow-hidden">
+                <div className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b border-zinc-800 text-left">
-                                    <th className="px-4 py-3 text-zinc-500 font-medium">#</th>
-                                    <th className="px-4 py-3 text-zinc-500 font-medium">Key</th>
-                                    <th className="px-4 py-3 text-zinc-500 font-medium">Nome</th>
-                                    <th className="px-4 py-3 text-zinc-500 font-medium text-right">Leads</th>
-                                    <th className="px-4 py-3 text-zinc-500 font-medium text-right">BRL/mês</th>
-                                    <th className="px-4 py-3 text-zinc-500 font-medium text-right">USD/mês</th>
-                                    <th className="px-4 py-3 text-zinc-500 font-medium">Módulos</th>
-                                    <th className="px-4 py-3 text-zinc-500 font-medium text-center">Ativo</th>
-                                    <th className="px-4 py-3 text-zinc-500 font-medium text-center">Ações</th>
+                                <tr className="border-b border-gray-200 text-left">
+                                    <th className="px-4 py-3 text-gray-500 font-medium">#</th>
+                                    <th className="px-4 py-3 text-gray-500 font-medium">Key</th>
+                                    <th className="px-4 py-3 text-gray-500 font-medium">Nome</th>
+                                    <th className="px-4 py-3 text-gray-500 font-medium text-right">Leads</th>
+                                    <th className="px-4 py-3 text-gray-500 font-medium text-right">BRL/mês</th>
+                                    <th className="px-4 py-3 text-gray-500 font-medium text-right">USD/mês</th>
+                                    <th className="px-4 py-3 text-gray-500 font-medium">Módulos</th>
+                                    <th className="px-4 py-3 text-gray-500 font-medium text-center">Ativo</th>
+                                    <th className="px-4 py-3 text-gray-500 font-medium text-center">Ações</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {plans.map((plan, i) => (
                                     <tr
                                         key={plan.id}
-                                        className={`border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors ${!plan.isActive ? 'opacity-40' : ''}`}
+                                        className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${!plan.isActive ? 'opacity-40' : ''}`}
                                     >
-                                        <td className="px-4 py-3 text-zinc-500 tabular-nums">{i + 1}</td>
+                                        <td className="px-4 py-3 text-gray-500 tabular-nums">{i + 1}</td>
                                         <td className="px-4 py-3">
-                                            <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 text-xs font-mono">
+                                            <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-xs font-mono">
                                                 {plan.key}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-white font-medium">{plan.name}</td>
-                                        <td className="px-4 py-3 text-right text-zinc-300 tabular-nums font-bold">
+                                        <td className="px-4 py-3 text-gray-900 font-medium">{plan.name}</td>
+                                        <td className="px-4 py-3 text-right text-gray-600 tabular-nums font-bold">
                                             {plan.leadsLimit.toLocaleString()}
                                         </td>
-                                        <td className="px-4 py-3 text-right text-zinc-300 tabular-nums">
+                                        <td className="px-4 py-3 text-right text-gray-600 tabular-nums">
                                             {plan.priceMonthlyBrl > 0 ? `R$ ${plan.priceMonthlyBrl}` : 'Grátis'}
                                         </td>
-                                        <td className="px-4 py-3 text-right text-zinc-300 tabular-nums">
+                                        <td className="px-4 py-3 text-right text-gray-600 tabular-nums">
                                             {plan.priceMonthlyUsd > 0 ? `$ ${plan.priceMonthlyUsd}` : '—'}
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex flex-wrap gap-1">
                                                 {(plan.modules as string[]).map((m) => (
-                                                    <span key={m} className="px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 text-[10px] font-medium">
+                                                    <span key={m} className="px-1.5 py-0.5 rounded bg-violet-50 text-violet-600 text-[10px] font-medium">
                                                         {m.replace(/_/g, ' ')}
                                                     </span>
                                                 ))}
@@ -199,7 +199,7 @@ export function PlansPage() {
                                         <td className="px-4 py-3 text-center">
                                             <button
                                                 onClick={() => handleToggleActive(plan)}
-                                                className={`w-10 h-5 rounded-full transition-colors relative ${plan.isActive ? 'bg-emerald-500' : 'bg-zinc-700'}`}
+                                                className={`w-10 h-5 rounded-full transition-colors relative ${plan.isActive ? 'bg-emerald-500' : 'bg-gray-200'}`}
                                             >
                                                 <span
                                                     className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${plan.isActive ? 'left-5' : 'left-0.5'}`}
@@ -210,13 +210,13 @@ export function PlansPage() {
                                             <div className="flex items-center justify-center gap-1">
                                                 <button
                                                     onClick={() => openEdit(plan)}
-                                                    className="px-2.5 py-1 rounded bg-zinc-800 text-zinc-300 text-xs hover:bg-zinc-700"
+                                                    className="px-2.5 py-1 rounded bg-gray-100 text-gray-600 text-xs hover:bg-gray-200"
                                                 >
                                                     Editar
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(plan)}
-                                                    className="px-2.5 py-1 rounded bg-red-500/10 text-red-400 text-xs hover:bg-red-500/20"
+                                                    className="px-2.5 py-1 rounded bg-red-50 text-red-600 text-xs hover:bg-red-100"
                                                 >
                                                     Excluir
                                                 </button>
@@ -232,14 +232,14 @@ export function PlansPage() {
 
             {/* Modal */}
             {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-                    <div className="rounded-xl border border-zinc-700 bg-zinc-900 p-6 max-w-lg w-full shadow-xl max-h-[90vh] overflow-y-auto">
-                        <h2 className="text-lg font-semibold text-white mb-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+                    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-xl max-w-lg w-full shadow-xl max-h-[90vh] overflow-y-auto">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4">
                             {editingId ? 'Editar Plano' : 'Novo Plano'}
                         </h2>
 
                         {error && (
-                            <div className="mb-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 px-3 py-2 text-sm">
+                            <div className="mb-4 rounded-lg bg-red-50 border border-red-300 text-red-600 px-3 py-2 text-sm">
                                 {error}
                             </div>
                         )}
@@ -247,89 +247,89 @@ export function PlansPage() {
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-zinc-500 text-xs mb-1">Key (e.g. SCALE)</label>
+                                    <label className="block text-gray-500 text-xs mb-1">Key (e.g. SCALE)</label>
                                     <input
                                         value={form.key}
                                         onChange={(e) => setForm({ ...form, key: e.target.value })}
                                         disabled={!!editingId}
                                         placeholder="ENTERPRISE"
-                                        className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200 disabled:opacity-50 font-mono uppercase"
+                                        className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-700 disabled:opacity-50 font-mono uppercase"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-zinc-500 text-xs mb-1">Nome</label>
+                                    <label className="block text-gray-500 text-xs mb-1">Nome</label>
                                     <input
                                         value={form.name}
                                         onChange={(e) => setForm({ ...form, name: e.target.value })}
                                         placeholder="Enterprise"
-                                        className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200"
+                                        className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-700"
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-zinc-500 text-xs mb-1">Limite de Leads</label>
+                                <label className="block text-gray-500 text-xs mb-1">Limite de Leads</label>
                                 <input
                                     type="number"
                                     min={0}
                                     value={form.leadsLimit ?? 0}
                                     onChange={(e) => setForm({ ...form, leadsLimit: parseInt(e.target.value) || 0 })}
-                                    className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200"
+                                    className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-700"
                                 />
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-zinc-500 text-xs mb-1">BRL/mês</label>
+                                    <label className="block text-gray-500 text-xs mb-1">BRL/mês</label>
                                     <input
                                         type="number"
                                         min={0}
                                         step={0.01}
                                         value={form.priceMonthlyBrl ?? 0}
                                         onChange={(e) => setForm({ ...form, priceMonthlyBrl: parseFloat(e.target.value) || 0 })}
-                                        className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200"
+                                        className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-700"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-zinc-500 text-xs mb-1">BRL/ano</label>
+                                    <label className="block text-gray-500 text-xs mb-1">BRL/ano</label>
                                     <input
                                         type="number"
                                         min={0}
                                         step={0.01}
                                         value={form.priceAnnualBrl ?? 0}
                                         onChange={(e) => setForm({ ...form, priceAnnualBrl: parseFloat(e.target.value) || 0 })}
-                                        className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200"
+                                        className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-700"
                                     />
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-zinc-500 text-xs mb-1">USD/mês</label>
+                                    <label className="block text-gray-500 text-xs mb-1">USD/mês</label>
                                     <input
                                         type="number"
                                         min={0}
                                         step={0.01}
                                         value={form.priceMonthlyUsd ?? 0}
                                         onChange={(e) => setForm({ ...form, priceMonthlyUsd: parseFloat(e.target.value) || 0 })}
-                                        className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200"
+                                        className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-700"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-zinc-500 text-xs mb-1">USD/ano</label>
+                                    <label className="block text-gray-500 text-xs mb-1">USD/ano</label>
                                     <input
                                         type="number"
                                         min={0}
                                         step={0.01}
                                         value={form.priceAnnualUsd ?? 0}
                                         onChange={(e) => setForm({ ...form, priceAnnualUsd: parseFloat(e.target.value) || 0 })}
-                                        className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200"
+                                        className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-700"
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-zinc-500 text-xs mb-2">Módulos</label>
+                                <label className="block text-gray-500 text-xs mb-2">Módulos</label>
                                 <div className="flex flex-wrap gap-2">
                                     {ALL_MODULES.map((mod) => {
                                         const active = (form.modules ?? []).includes(mod.key);
@@ -339,8 +339,8 @@ export function PlansPage() {
                                                 type="button"
                                                 onClick={() => toggleModule(mod.key)}
                                                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${active
-                                                        ? 'bg-violet-600/20 border-violet-500/40 text-violet-300'
-                                                        : 'bg-zinc-800 border-zinc-700 text-zinc-500 hover:text-zinc-300'
+                                                        ? 'bg-violet-50 border-violet-500/40 text-violet-700'
+                                                        : 'bg-gray-100 border-gray-300 text-gray-500 hover:text-gray-600'
                                                     }`}
                                             >
                                                 {active ? '✓ ' : ''}{mod.label}
@@ -351,13 +351,13 @@ export function PlansPage() {
                             </div>
 
                             <div>
-                                <label className="block text-zinc-500 text-xs mb-1">Ordem de exibição</label>
+                                <label className="block text-gray-500 text-xs mb-1">Ordem de exibição</label>
                                 <input
                                     type="number"
                                     min={0}
                                     value={form.sortOrder ?? 0}
                                     onChange={(e) => setForm({ ...form, sortOrder: parseInt(e.target.value) || 0 })}
-                                    className="w-24 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200"
+                                    className="w-24 rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-700"
                                 />
                             </div>
                         </div>
@@ -366,7 +366,7 @@ export function PlansPage() {
                             <button
                                 type="button"
                                 onClick={() => setShowModal(false)}
-                                className="px-4 py-2 rounded-lg bg-zinc-700 text-zinc-200 text-sm font-medium hover:bg-zinc-600"
+                                className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-200"
                             >
                                 Cancelar
                             </button>

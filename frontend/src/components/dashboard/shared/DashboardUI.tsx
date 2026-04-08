@@ -4,11 +4,11 @@ import { Button } from '@/components/ui/Button';
 
 export function StatCard({ value, label, color, suffix, icon: Icon }: { value: string | number; label: string; color: string; suffix?: string; icon?: LucideIcon }) {
     const colors: Record<string, string> = {
-        violet: 'text-violet-400',
-        emerald: 'text-emerald-400',
-        blue: 'text-blue-400',
-        amber: 'text-amber-400',
-        rose: 'text-rose-400'
+        violet: 'text-violet-600 dark:text-violet-400',
+        emerald: 'text-emerald-600 dark:text-emerald-400',
+        blue: 'text-blue-600 dark:text-blue-400',
+        amber: 'text-amber-600 dark:text-amber-400',
+        rose: 'text-rose-600 dark:text-rose-400'
     };
     return (
         <div className="rounded-2xl bg-card border border-border p-5 flex flex-col items-center justify-center text-center gap-1">

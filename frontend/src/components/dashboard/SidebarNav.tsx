@@ -1,11 +1,12 @@
 import { NavLink, useLocation, Link } from 'react-router-dom';
-import { Search, Clock, Target, BarChart3, User, Settings, LogOut, Swords, TrendingUp, Users, LayoutDashboard, CreditCard, HelpCircle, ChevronDown, X, Lock, Building2, PanelLeftClose, PanelLeft, Share2 } from 'lucide-react';
+import { Search, Clock, Target, BarChart3, LogOut, Swords, TrendingUp, Users, LayoutDashboard, HelpCircle, ChevronDown, X, Lock, Building2, PanelLeftClose, PanelLeft, Plug, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { SessionUser } from '@/lib/api';
 import { getPlanDisplayName } from '@/lib/billing-config';
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Logo } from '@/components/brand/Logo';
+import { APP_VERSION } from '@/lib/version';
 
 const SIDEBAR_COLLAPSED_KEY = 'prospector_sidebar_collapsed';
 const SIDEBAR_WIDTH_EXPANDED = 224;
@@ -66,15 +67,10 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
     ],
   },
   {
-    title: 'Conta',
-    collapsible: true,
+    title: 'Suporte',
     items: [
-      { to: '/dashboard/perfil', end: false, icon: User, label: 'Perfil' },
-      { to: '/dashboard/empresa', end: false, icon: Building2, label: 'Empresa' },
-      { to: '/dashboard/planos', end: false, icon: CreditCard, label: 'Planos' },
-      { to: '/dashboard/afiliado', end: false, icon: Share2, label: 'Afiliado' },
-      { to: '/dashboard/configuracoes', end: false, icon: Settings, label: 'Configurações' },
-      { to: '/dashboard/suporte', end: false, icon: HelpCircle, label: 'Suporte' },
+      { to: '/dashboard/integracoes', end: false, icon: Plug, label: 'Integrações' },
+      { to: '/dashboard/suporte', end: false, icon: HelpCircle, label: 'Ajuda e Suporte' },
     ],
   },
 ];
@@ -135,13 +131,8 @@ export function SidebarNav({
 
   function renderContent(isNarrow: boolean, showCollapseToggle: boolean) {
     const logoBlock = (
-      <div className={cn('flex items-center gap-2 shrink-0', isNarrow ? 'mb-4 justify-center px-2' : 'mb-5 justify-between')}>
-        <Logo
-          iconSize={isNarrow ? 28 : 24}
-          iconOnly={isNarrow}
-          className="shrink-0"
-          textClassName={isNarrow ? '' : 'font-bold text-sm tracking-tight truncate'}
-        />
+      <div className={cn('flex items-center gap-2 shrink-0 overflow-hidden', isNarrow ? 'mb-1 justify-center' : 'mb-2 justify-between')}>
+        <Logo height={isNarrow ? 90 : 120} className="shrink-0 max-w-full" />
         {onMobileClose && !isNarrow && (
           <button
             type="button"
@@ -164,7 +155,7 @@ export function SidebarNav({
       );
 
     const navContent = (
-      <nav className="flex-1 space-y-5 overflow-y-auto scrollbar-thin" aria-label="Navegação do dashboard">
+      <nav className="flex-1 space-y-5 overflow-y-auto scrollbar-thin" aria-label="Navegação do dashboard" data-tour="sidebar-nav">
         {SIDEBAR_SECTIONS.map((section) => {
           const isSecCollapsed = sectionCollapsed[section.title];
           return (
@@ -178,13 +169,13 @@ export function SidebarNav({
                     section.collapsible ? 'cursor-pointer hover:opacity-80' : 'cursor-default'
                   )}
                 >
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted/60 select-none">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted select-none">
                     {section.title}
                   </span>
                   {section.collapsible && (
                     <ChevronDown
                       size={12}
-                      className={cn('text-muted/40 transition-transform', isSecCollapsed && '-rotate-90')}
+                      className={cn('text-muted/70 transition-transform', isSecCollapsed && '-rotate-90')}
                     />
                   )}
                 </button>
@@ -202,11 +193,18 @@ export function SidebarNav({
                         {!isNarrow && <span className="font-medium truncate">{label}</span>}
                       </span>
                     );
+                    const tourId = to === '/dashboard/historico' ? 'sidebar-historico'
+                      : to === '/dashboard/leads' ? 'sidebar-leads'
+                      : to === '/dashboard/integracoes' ? 'sidebar-integracoes'
+                      : to === '/dashboard/concorrencia' ? 'sidebar-inteligencia'
+                      : to === '/dashboard/equipe' ? 'sidebar-equipe'
+                      : undefined;
                     if (locked) {
                       return (
                         <button
                           key={to}
                           type="button"
+                          data-tour={tourId}
                           onClick={() => setUpgradeModal({ planName, feature: label })}
                           title={isNarrow ? label : undefined}
                           className={cn(
@@ -224,6 +222,7 @@ export function SidebarNav({
                         key={to}
                         to={to}
                         end={end}
+                        data-tour={tourId}
                         title={isNarrow ? label : undefined}
                         className={({ isActive }) =>
                           cn(
@@ -282,8 +281,22 @@ export function SidebarNav({
             </>
           )}
         </div>
+        {user.plan !== 'SCALE' && (
+          <Link
+            to="/dashboard/planos"
+            data-tour="sidebar-upgrade"
+            title={isNarrow ? 'Fazer upgrade' : undefined}
+            className={cn(
+              'flex items-center rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold transition-all hover:opacity-90 shadow-md shadow-violet-600/20',
+              isNarrow ? 'justify-center p-2.5' : 'gap-2 px-3 py-2 text-xs'
+            )}
+          >
+            <Sparkles size={isNarrow ? 18 : 14} className="shrink-0" />
+            {!isNarrow && <span>Fazer upgrade</span>}
+          </Link>
+        )}
         <div className={cn('flex rounded-lg border border-transparent hover:bg-surface/50 transition-colors', isNarrow ? 'justify-center p-2 gap-0' : 'items-center gap-2.5 px-2 py-2')}>
-          <div className="w-8 h-8 rounded-full bg-violet-600/20 flex items-center justify-center font-semibold text-xs text-violet-400 shrink-0" title={isNarrow ? `${user.name || 'Usuário'} · ${getPlanDisplayName(user.plan)}` : undefined}>
+          <div className="w-8 h-8 rounded-full bg-violet-600/20 flex items-center justify-center font-semibold text-xs text-violet-600 dark:text-violet-400 shrink-0" title={isNarrow ? `${user.name || 'Usuário'} · ${getPlanDisplayName(user.plan)}` : undefined}>
             {user.name?.[0] || user.email?.[0] || 'U'}
           </div>
           {!isNarrow && (
@@ -324,6 +337,9 @@ export function SidebarNav({
             <span>Recolher menu</span>
           </button>
         ))}
+        {!isNarrow && (
+          <p className="text-[10px] text-muted/40 text-center pt-1 select-none">v{APP_VERSION}</p>
+        )}
       </div>
     );
 

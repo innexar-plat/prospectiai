@@ -1,0 +1,3 @@
+{
+  "/api/integrations/rdstation/send/route": "app/api/integrations/rdstation/send/route.js"
+}

@@ -1,19 +1,45 @@
-import { Outlet, useNavigate, Link } from "react-router-dom";
+import { Outlet, useNavigate, Link, useLocation } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
-import { Sun, Moon, Bell, BellOff, Target, X, AlertTriangle, Menu, User, Settings, CreditCard, LogOut, ChevronDown } from "lucide-react";
+import { Sun, Moon, Bell, BellOff, Target, X, AlertTriangle, Menu, User, Settings, CreditCard, LogOut, ChevronDown, Sparkles, Building2, Share2 } from "lucide-react";
 import { SidebarNav } from "@/components/dashboard/SidebarNav";
 import { InstallPrompt } from "@/components/dashboard/InstallPrompt";
+import { CommandPalette, CommandPaletteTrigger } from "@/components/dashboard/CommandPalette";
 import { TeamProgressCard } from "@/components/dashboard/TeamProgressCard";
 import { DashboardTourTrigger } from "@/components/dashboard/DashboardTourTrigger";
-import { authApi, notificationsApi, type SessionUser, type NotificationItem } from '@/lib/api';
+import { authApi, notificationsApi, pushApi, type SessionUser, type NotificationItem } from '@/lib/api';
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/contexts/ThemeContext";
 import { SearchResultsProvider } from "@/contexts/SearchResultsContext";
+import { APP_VERSION } from "@/lib/version";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+
+const BREADCRUMB_MAP: Record<string, string> = {
+  '/dashboard': 'Nova Busca',
+  '/dashboard/historico': 'Histórico',
+  '/dashboard/leads': 'Leads Salvos',
+  '/dashboard/resultados': 'Resultados',
+  '/dashboard/concorrencia': 'Concorrência',
+  '/dashboard/relatorios': 'Relatórios',
+  '/dashboard/minha-empresa': 'Minha Empresa',
+  '/dashboard/viabilidade': 'Viabilidade',
+  '/dashboard/equipe': 'Minha Equipe',
+  '/dashboard/equipe/dashboard': 'Dashboard da Equipe',
+  '/dashboard/perfil': 'Perfil',
+  '/dashboard/empresa': 'Empresa',
+  '/dashboard/planos': 'Planos',
+  '/dashboard/afiliado': 'Afiliado',
+  '/dashboard/configuracoes': 'Configurações',
+  '/dashboard/integracoes': 'Integrações',
+  '/dashboard/suporte': 'Suporte',
+};
 
 export function DashboardLayout({ user }: { user: SessionUser }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  useKeyboardShortcuts();
   const [checked, setChecked] = useState(false);
   const { theme, toggleTheme } = useTheme();
+  const refreshUser = useCallback(() => window.dispatchEvent(new Event('refresh-user')), []);
   const [notifPerm, setNotifPerm] = useState<NotificationPermission>(
     typeof Notification !== 'undefined' ? Notification.permission : 'default'
   );
@@ -24,6 +50,7 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
   const [notifItems, setNotifItems] = useState<NotificationItem[]>([]);
   const [notifUnreadCount, setNotifUnreadCount] = useState(0);
   const [notifLoading, setNotifLoading] = useState(false);
+  const [notifBannerDismissed, setNotifBannerDismissed] = useState(() => localStorage.getItem('notif-banner-dismissed') === '1');
   const notifDropdownRef = useRef<HTMLDivElement>(null);
   const avatarDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -79,11 +106,71 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
+  // Subscribe to Web Push after permission is granted
+  const subscribeToPush = useCallback(async () => {
+    try {
+      const reg = await navigator.serviceWorker?.ready;
+      if (!reg) return;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY
+          || (await pushApi.getVapidKey().catch(() => null))?.publicKey;
+        if (!vapidKey) return;
+        const urlBase64 = Uint8Array.from(atob(vapidKey.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+        sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64 });
+      }
+      const json = sub.toJSON();
+      if (json.endpoint && json.keys) {
+        await pushApi.subscribe(json).catch(() => {});
+      }
+    } catch {
+      // Push subscription failed — silent
+    }
+  }, []);
+
   const requestBrowserNotifications = async () => {
     if (typeof Notification === 'undefined') return;
     const perm = await Notification.requestPermission();
     setNotifPerm(perm);
+    if (perm === 'granted') subscribeToPush();
   };
+
+  // Auto-subscribe to push if permission already granted
+  useEffect(() => {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      subscribeToPush();
+    }
+  }, [subscribeToPush]);
+
+  // SEO: set noindex for dashboard pages and update title per route
+  useEffect(() => {
+    let meta = document.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'robots';
+      document.head.appendChild(meta);
+    }
+    meta.content = 'noindex, nofollow';
+
+    const label = BREADCRUMB_MAP[location.pathname] || 'Dashboard';
+    document.title = `${label} | PrecisionAI`;
+
+    return () => {
+      if (meta) meta.content = 'index, follow';
+    };
+  }, [location.pathname]);
+
+  // Poll unread count every 30s so badge updates without clicking
+  useEffect(() => {
+    const poll = () => {
+      notificationsApi.list({ limit: 1 }).then(res => {
+        setNotifUnreadCount(res.unreadCount);
+      }).catch(() => {});
+    };
+    poll(); // initial fetch
+    const id = setInterval(poll, 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     // Rely on the user prop passed from App.tsx/ProtectedRoute
@@ -102,7 +189,6 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
     } catch {
       // Ignore
     }
-    // Clear storage to prevent stale states
     localStorage.removeItem('prospector-session');
     sessionStorage.clear();
     window.location.replace("/auth/signin");
@@ -125,20 +211,50 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Header Bar */}
         <header className="h-12 shrink-0 border-b border-border bg-card/80 backdrop-blur-sm flex items-center justify-between px-3 sm:px-5 z-40 text-foreground">
-          <button
-            type="button"
-            onClick={() => setSidebarOpen(true)}
-            onTouchEnd={(e) => {
-              e.preventDefault();
-              setSidebarOpen(true);
-            }}
-            className="md:hidden p-2 -ml-1 rounded-lg text-muted hover:text-foreground hover:bg-surface transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center touch-manipulation"
-            aria-label="Abrir menu"
-          >
-            <Menu size={20} />
-          </button>
-          <div className="hidden md:block" />
-          <div className="flex items-center gap-2">
+          {/* Left side: hamburger + breadcrumb */}
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                setSidebarOpen(true);
+              }}
+              className="md:hidden p-2 -ml-1 rounded-lg text-muted hover:text-foreground hover:bg-surface transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center touch-manipulation"
+              aria-label="Abrir menu"
+            >
+              <Menu size={20} />
+            </button>
+            {/* Dynamic breadcrumb */}
+            <nav className="hidden md:flex items-center gap-1.5 text-xs text-muted min-w-0" aria-label="Breadcrumb">
+              <Link to="/dashboard" className="hover:text-foreground transition-colors shrink-0">Dashboard</Link>
+              {location.pathname !== '/dashboard' && (
+                <>
+                  <span className="text-muted/40">/</span>
+                  <span className="text-foreground font-medium truncate">
+                    {BREADCRUMB_MAP[location.pathname] ?? (location.pathname.startsWith('/dashboard/lead/') ? 'Detalhes do Lead' : 'Página')}
+                  </span>
+                </>
+              )}
+            </nav>
+          </div>
+
+          {/* Right side: command palette, credits, theme, notifications, avatar */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Command Palette trigger */}
+            <CommandPaletteTrigger />
+
+            {/* Credits badge */}
+            <Link
+              to="/dashboard/planos"
+              data-tour="header-credits"
+              className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-lg bg-violet-600/10 hover:bg-violet-600/20 text-violet-500 transition-colors text-xs font-semibold"
+              title={`${user.leadsUsed} de ${user.leadsLimit} créditos usados`}
+            >
+              <Sparkles size={13} />
+              <span className="tabular-nums">{user.leadsLimit - user.leadsUsed}</span>
+              <span className="text-violet-600 dark:text-violet-400/70 text-[10px] font-normal">créditos</span>
+            </Link>
             {/* Theme Toggle */}
             <button
               type="button"
@@ -154,7 +270,7 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
             <InstallPrompt />
 
             {/* Notifications Bell + Dropdown */}
-            <div className="relative" ref={notifDropdownRef}>
+            <div className="relative" ref={notifDropdownRef} data-tour="header-notifications">
               <button
                 type="button"
                 onClick={openNotifDropdown}
@@ -239,7 +355,7 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
             )}
 
             {/* User Avatar + Dropdown */}
-            <div className="relative ml-1" ref={avatarDropdownRef}>
+            <div className="relative ml-1" ref={avatarDropdownRef} data-tour="header-avatar">
               <button
                 type="button"
                 onClick={() => setAvatarDropdownOpen((v) => !v)}
@@ -252,10 +368,11 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
                   <img
                     src={user.image}
                     alt=""
+                    referrerPolicy="no-referrer"
                     className="w-7 h-7 rounded-full object-cover border border-border"
                   />
                 ) : (
-                  <div className="w-7 h-7 rounded-full bg-violet-600/20 flex items-center justify-center font-semibold text-[10px] text-violet-400">
+                  <div className="w-7 h-7 rounded-full bg-violet-600/20 flex items-center justify-center font-semibold text-[10px] text-violet-600 dark:text-violet-400">
                     {user.name?.[0] || user.email?.[0] || 'U'}
                   </div>
                 )}
@@ -298,6 +415,24 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
                     <CreditCard size={16} className="text-muted shrink-0" />
                     Planos
                   </Link>
+                  <Link
+                    to="/dashboard/empresa"
+                    role="menuitem"
+                    className="flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-surface transition-colors"
+                    onClick={() => setAvatarDropdownOpen(false)}
+                  >
+                    <Building2 size={16} className="text-muted shrink-0" />
+                    Empresa
+                  </Link>
+                  <Link
+                    to="/dashboard/afiliado"
+                    role="menuitem"
+                    className="flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-surface transition-colors"
+                    onClick={() => setAvatarDropdownOpen(false)}
+                  >
+                    <Share2 size={16} className="text-muted shrink-0" />
+                    Afiliado
+                  </Link>
                   <button
                     type="button"
                     role="menuitem"
@@ -310,11 +445,17 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
                     <LogOut size={16} className="text-muted shrink-0" />
                     Sair
                   </button>
+                  <div className="px-3 py-1.5 border-t border-border">
+                    <p className="text-[10px] text-muted/50 text-center">v{APP_VERSION}</p>
+                  </div>
                 </div>
               )}
             </div>
           </div>
         </header>
+
+        {/* Command Palette */}
+        <CommandPalette />
 
         {/* Grace period banner: past_due, 3-day warning */}
         {user.subscriptionStatus === 'past_due' && (
@@ -330,13 +471,36 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
           </div>
         )}
 
+        {/* Notification permission prompt banner */}
+        {notifPerm === 'default' && !notifBannerDismissed && (
+          <div className="shrink-0 flex items-center justify-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 bg-violet-600/90 text-white text-xs sm:text-sm font-medium">
+            <Bell size={16} className="shrink-0" aria-hidden />
+            <span className="truncate sm:whitespace-normal">Ative notificações para receber alertas de leads em tempo real.</span>
+            <button
+              type="button"
+              onClick={requestBrowserNotifications}
+              className="px-3 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-white text-xs font-semibold transition-colors shrink-0"
+            >
+              Ativar
+            </button>
+            <button
+              type="button"
+              onClick={() => { setNotifBannerDismissed(true); localStorage.setItem('notif-banner-dismissed', '1'); }}
+              className="p-1 rounded hover:bg-white/20 transition-colors shrink-0"
+              aria-label="Fechar"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
         {/* Main Content */}
         <main className={cn("flex-1 flex flex-col overflow-y-auto relative min-w-0 text-foreground")} role="main">
           <div className="absolute top-0 right-0 w-[600px] h-[300px] bg-violet-600/5 blur-[120px] rounded-full pointer-events-none" aria-hidden />
           <DashboardTourTrigger />
           <SearchResultsProvider>
             <div className="flex-1 min-h-0">
-              <Outlet context={{ user }} />
+              <Outlet context={{ user, refreshUser }} />
             </div>
           </SearchResultsProvider>
         </main>

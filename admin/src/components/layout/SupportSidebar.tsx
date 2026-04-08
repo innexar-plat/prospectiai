@@ -9,10 +9,17 @@ const nav = [
 
 export function SupportSidebar() {
   return (
-    <aside className="w-56 shrink-0 border-r border-zinc-800 bg-zinc-900/80 flex flex-col">
-      <div className="p-4 border-b border-zinc-800">
-        <h1 className="font-semibold text-white">Painel Suporte</h1>
-        <p className="text-xs text-zinc-500 mt-0.5">Prospector.AI</p>
+    <aside className="w-60 shrink-0 border-r border-gray-200 bg-white flex flex-col">
+      <div className="p-4 border-b border-gray-200">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center">
+            <span className="text-white text-xs font-bold">P</span>
+          </div>
+          <div>
+            <h1 className="font-semibold text-gray-900 text-sm leading-tight">Painel Suporte</h1>
+            <p className="text-xs text-gray-400 leading-tight">Precision IA</p>
+          </div>
+        </div>
       </div>
       <nav className="flex-1 p-2 space-y-0.5">
         {nav.map(({ to, end, label, icon: Icon }) => (
@@ -22,10 +29,10 @@ export function SupportSidebar() {
             end={end}
             className={({ isActive }) =>
               cn(
-                'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
+                'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                 isActive
-                  ? 'bg-violet-600/20 text-violet-300'
-                  : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+                  ? 'bg-violet-50 text-violet-700 border border-violet-200'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
               )
             }
           >

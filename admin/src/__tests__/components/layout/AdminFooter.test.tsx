@@ -6,7 +6,7 @@ describe('AdminFooter', () => {
   it('renders copyright with current year', () => {
     render(<AdminFooter />);
     const year = new Date().getFullYear();
-    expect(screen.getByText(new RegExp(`Prospector.AI Admin © ${year}`))).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`Precision IA Admin © ${year}`))).toBeInTheDocument();
   });
 
   it('renders link to app', () => {

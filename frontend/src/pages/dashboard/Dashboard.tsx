@@ -68,7 +68,7 @@ export default function Dashboard({ user }: { user: SessionUser }) {
             <aside className="w-72 min-w-[288px] bg-card border-r border-border flex flex-col relative overflow-hidden hidden md:flex">
                 <div className="p-8 z-10 relative">
                     <div className="mb-12">
-                        <Logo iconSize={40} iconOnly={false} className="gap-3" textClassName="font-black text-xl tracking-tighter" />
+                        <Logo height={180} />
                     </div>
                     <nav className="space-y-2">
                         {SIDEBAR_ITEMS.map((item) => (
@@ -80,7 +80,7 @@ export default function Dashboard({ user }: { user: SessionUser }) {
                                     else window.alert('Em breve: ' + item.label);
                                 }}
                                 className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all duration-300 group ${activeNav === item.id
-                                    ? 'bg-violet-600/10 text-violet-400 border border-violet-500/20 shadow-lg'
+                                    ? 'bg-violet-600/10 text-violet-600 dark:text-violet-400 border border-violet-500/20 shadow-lg'
                                     : 'text-muted hover:text-foreground hover:bg-surface'
                                     }`}
                             >
@@ -97,7 +97,7 @@ export default function Dashboard({ user }: { user: SessionUser }) {
                     <div className="p-6 rounded-[2rem] bg-surface border border-border space-y-4">
                         <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-[0.2em] text-muted">
                             <span>Créditos ({getPlanDisplayName(user.plan)})</span>
-                            <span className="text-violet-400">{user.leadsUsed}/{user.leadsLimit}</span>
+                            <span className="text-violet-600 dark:text-violet-400">{user.leadsUsed}/{user.leadsLimit}</span>
                         </div>
                         <div className="h-1.5 w-full bg-surface rounded-full overflow-hidden">
                             <div
@@ -113,7 +113,7 @@ export default function Dashboard({ user }: { user: SessionUser }) {
                                 <p className="text-sm font-bold truncate text-foreground">{user.name || 'Usuário'}</p>
                                 <p className="text-[10px] text-muted font-bold uppercase truncate tracking-widest">{getPlanDisplayName(user.plan)}</p>
                             </div>
-                            <button type="button" onClick={handleLogout} className="text-muted hover:text-red-400 transition-colors p-2 hover:bg-red-500/10 rounded-xl" aria-label="Sair">
+                            <button type="button" onClick={handleLogout} className="text-muted hover:text-red-600 dark:text-red-400 transition-colors p-2 hover:bg-red-500/10 rounded-xl" aria-label="Sair">
                                 <LogOut size={18} />
                             </button>
                         </div>
@@ -128,7 +128,7 @@ export default function Dashboard({ user }: { user: SessionUser }) {
                 <header className="px-8 top-0 sticky bg-background/80 backdrop-blur-3xl z-30 border-b border-border pt-10 pb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                     <div>
                         <div className="flex items-center gap-2 mb-2">
-                            <span className="px-3 py-1 bg-violet-600/10 border border-violet-500/20 text-violet-400 text-[10px] font-black tracking-widest uppercase rounded-full">Prospecção Ativa</span>
+                            <span className="px-3 py-1 bg-violet-600/10 border border-violet-500/20 text-violet-600 dark:text-violet-400 text-[10px] font-black tracking-widest uppercase rounded-full">Prospecção Ativa</span>
                             <span className="text-muted text-xs font-bold">/</span>
                             <span className="text-muted text-xs font-bold">Nova Busca</span>
                         </div>
@@ -161,7 +161,7 @@ export default function Dashboard({ user }: { user: SessionUser }) {
                             <div className="bg-card p-8 rounded-[2.4rem] h-full space-y-8">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-2xl bg-violet-600/10 flex items-center justify-center text-violet-400">
+                                        <div className="w-12 h-12 rounded-2xl bg-violet-600/10 flex items-center justify-center text-violet-600 dark:text-violet-400">
                                             <MapPin size={24} />
                                         </div>
                                         <div>
@@ -182,7 +182,7 @@ export default function Dashboard({ user }: { user: SessionUser }) {
                                                 <p className="font-bold">Brasil</p>
                                             </div>
                                         </div>
-                                        <ChevronRight size={18} className="text-muted group-hover/item:text-violet-400 transition-colors" />
+                                        <ChevronRight size={18} className="text-muted group-hover/item:text-violet-600 dark:text-violet-400 transition-colors" />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="p-5 rounded-3xl bg-surface border border-border hover:border-violet-500/30 transition-all cursor-pointer">
@@ -197,7 +197,7 @@ export default function Dashboard({ user }: { user: SessionUser }) {
                                     <div className="p-5 rounded-3xl bg-surface border border-border">
                                         <div className="flex justify-between items-center mb-4">
                                             <p className="text-xs font-black text-muted uppercase tracking-widest">Raio de Busca</p>
-                                            <span className="text-violet-400 font-black text-sm">{radiusKm} km</span>
+                                            <span className="text-violet-600 dark:text-violet-400 font-black text-sm">{radiusKm} km</span>
                                         </div>
                                         <input
                                             type="range"
@@ -218,7 +218,7 @@ export default function Dashboard({ user }: { user: SessionUser }) {
                             <div className="bg-card p-8 rounded-[2.4rem] h-full space-y-8">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-2xl bg-cyan-600/10 flex items-center justify-center text-cyan-400">
+                                        <div className="w-12 h-12 rounded-2xl bg-cyan-600/10 flex items-center justify-center text-cyan-600 dark:text-cyan-400">
                                             <Sparkles size={24} />
                                         </div>
                                         <div>
@@ -240,20 +240,20 @@ export default function Dashboard({ user }: { user: SessionUser }) {
                                                     type="button"
                                                     onClick={() => toggleNiche(tag)}
                                                     className={`px-4 py-2 rounded-xl text-sm font-bold transition-all border ${niches.includes(tag)
-                                                        ? 'bg-violet-600/10 border-violet-500/20 text-violet-400'
+                                                        ? 'bg-violet-600/10 border-violet-500/20 text-violet-600 dark:text-violet-400'
                                                         : 'bg-surface border-border text-muted hover:text-foreground hover:border-border'
                                                     }`}
                                                 >
                                                     {tag}
                                                 </button>
                                             ))}
-                                            <button type="button" className="px-4 py-2 bg-violet-600/10 border border-violet-500/20 rounded-xl text-xs font-black text-violet-400 hover:bg-violet-600/20">+ Adicionar</button>
+                                            <button type="button" className="px-4 py-2 bg-violet-600/10 border border-violet-500/20 rounded-xl text-xs font-black text-violet-600 dark:text-violet-400 hover:bg-violet-600/20">+ Adicionar</button>
                                         </div>
                                     </div>
                                     <div className="p-5 rounded-3xl bg-surface border border-border">
                                         <div className="flex justify-between items-center mb-4">
                                             <p className="text-xs font-black text-muted uppercase tracking-widest">Volume de Resultados</p>
-                                            <span className="text-cyan-400 font-black text-sm">Top {volume}</span>
+                                            <span className="text-cyan-600 dark:text-cyan-400 font-black text-sm">Top {volume}</span>
                                         </div>
                                         <div className="flex gap-2">
                                             {VOLUME_OPTIONS.map((v) => (

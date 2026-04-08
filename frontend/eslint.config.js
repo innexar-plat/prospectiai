@@ -19,5 +19,9 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // Disable overly strict rule that flags common fetch-in-useEffect patterns
+      'react-hooks/set-state-in-effect': 'off',
+    },
   },
 ])

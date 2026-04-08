@@ -7,9 +7,13 @@ import GitHub from "next-auth/providers/github"
 import Credentials from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
 
-console.log("[AUTH] Config - AUTH_URL:", process.env.AUTH_URL || process.env.NEXTAUTH_URL);
-console.log("[AUTH] Config - AUTH_SECRET set:", !!process.env.AUTH_SECRET);
-console.log("[AUTH] Config - AUTH_TRUST_HOST:", process.env.AUTH_TRUST_HOST);
+const isDevelopment = process.env.NODE_ENV === "development";
+
+if (isDevelopment) {
+    console.log("[AUTH] Config - AUTH_URL:", process.env.AUTH_URL || process.env.NEXTAUTH_URL);
+    console.log("[AUTH] Config - AUTH_SECRET set:", !!process.env.AUTH_SECRET);
+    console.log("[AUTH] Config - AUTH_TRUST_HOST:", process.env.AUTH_TRUST_HOST);
+}
 
 // Build providers list dynamically to avoid errors when env vars are missing
 const providers = []
@@ -40,11 +44,11 @@ providers.push(
             password: { label: "Password", type: "password" },
         },
         async authorize(credentials) {
-            console.log("[AUTH] Authorize called with email:", credentials?.email);
+            if (isDevelopment) console.log("[AUTH] Authorize called with email:", credentials?.email);
             const email = credentials?.email;
             const plainPassword = credentials?.password;
             if (typeof email !== 'string' || typeof plainPassword !== 'string') {
-                console.log("[AUTH] Invalid credentials type");
+                if (isDevelopment) console.log("[AUTH] Invalid credentials type");
                 return null;
             }
 
@@ -53,13 +57,13 @@ providers.push(
             });
 
             if (!user) {
-                console.log("[AUTH] User not found in DB:", email);
+                if (isDevelopment) console.log("[AUTH] User not found in DB:", email);
                 return null;
             }
 
             const isValid = await bcrypt.compare(plainPassword, user.password || "");
             if (!isValid) {
-                console.log("[AUTH] Invalid password for user:", email);
+                if (isDevelopment) console.log("[AUTH] Invalid password for user:", email);
                 return null;
             }
 
@@ -67,7 +71,7 @@ providers.push(
                 throw new CredentialsSignin("Conta desativada. Entre em contato com o suporte.");
             }
 
-            console.log("[AUTH] Login successful for user:", email);
+            if (isDevelopment) console.log("[AUTH] Login successful for user:", email);
             return user;
         },
     }),
@@ -78,7 +82,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     providers,
     basePath: "/api/auth",
     trustHost: true,
-    session: { strategy: "jwt" },
+    session: {
+        strategy: "jwt",
+        maxAge: 7 * 24 * 60 * 60,   // 7 days (was default 30)
+    },
     callbacks: {
         async session({ session, token }) {
             if (!session.user) return session;
@@ -169,10 +176,12 @@ where: { id: String(token.id) },
             },
         },
     },
-    debug: true,
+    debug: isDevelopment,
     logger: {
         error(code, ...message) { console.error("[AUTH] ERROR:", code, message) },
         warn(code, ...message) { console.warn("[AUTH] WARN:", code, message) },
-        debug(code, ...message) { console.log("[AUTH] DEBUG:", code, message) },
+        debug(code, ...message) {
+            if (isDevelopment) console.log("[AUTH] DEBUG:", code, message)
+        },
     }
 })

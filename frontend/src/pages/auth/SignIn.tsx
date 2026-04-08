@@ -57,18 +57,18 @@ export default function SignInPage() {
 
     return (
         <AuthLayout
-            sideTitle={<>Bem-vindo de volta ao <span className="accent-gradient">ProspectorAI</span>.</>}
+            sideTitle={<>Bem-vindo de volta ao <span className="accent-gradient">Precision IA</span>.</>}
             sideDescription="Continue encontrando os melhores leads B2B com nossa inteligência artificial avançada."
             sideElements={
                 <div className="space-y-4">
                     <div className="flex items-center gap-3 text-muted font-bold text-sm">
-                        <div className="w-6 h-6 rounded-full bg-violet-600/20 flex items-center justify-center text-violet-400 shrink-0">
+                        <div className="w-6 h-6 rounded-full bg-violet-600/20 flex items-center justify-center text-violet-600 dark:text-violet-400 shrink-0">
                             <ArrowRight size={14} />
                         </div>
                         <span>Acesse seus leads salvos</span>
                     </div>
                     <div className="flex items-center gap-3 text-muted font-bold text-sm">
-                        <div className="w-6 h-6 rounded-full bg-violet-600/20 flex items-center justify-center text-violet-400 shrink-0">
+                        <div className="w-6 h-6 rounded-full bg-violet-600/20 flex items-center justify-center text-violet-600 dark:text-violet-400 shrink-0">
                             <ArrowRight size={14} />
                         </div>
                         <span>Analise novas empresas com IA</span>
@@ -94,7 +94,7 @@ export default function SignInPage() {
                 <div className="space-y-1.5">
                     <div className="flex justify-between items-center">
                         <label className="text-xs font-bold text-muted uppercase tracking-widest ml-1">Senha</label>
-                        <Link to="/auth/forgot-password" className="text-xs font-bold text-violet-400 hover:text-violet-300 transition-colors">
+                        <Link to="/auth/forgot-password" className="text-xs font-bold text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors">
                             Esqueceu a senha?
                         </Link>
                     </div>
@@ -145,7 +145,7 @@ export default function SignInPage() {
                     onClick={() => { authApi.initiateOAuthSignIn('google', oauthCallbackPath).catch(() => { }); }}
                     variant="secondary"
                     className="h-11 text-xs font-semibold border border-border hover:border-violet-500/30"
-                    icon={<img src="https://authjs.dev/img/providers/google.svg" width={24} height={24} alt="" className="shrink-0" />}
+                    icon={<img src="/icons/google.svg" width={24} height={24} alt="Google" className="shrink-0" />}
                 >
                     Google
                 </Button>
@@ -154,7 +154,7 @@ export default function SignInPage() {
                     onClick={() => { authApi.initiateOAuthSignIn('github', oauthCallbackPath).catch(() => { }); }}
                     variant="secondary"
                     className="h-11 text-xs font-semibold border border-border hover:border-violet-500/30"
-                    icon={<img src="https://authjs.dev/img/providers/github.svg" width={24} height={24} alt="" className="shrink-0" />}
+                    icon={<img src="/icons/github.svg" width={24} height={24} alt="GitHub" className="shrink-0" />}
                 >
                     GitHub
                 </Button>
@@ -162,7 +162,7 @@ export default function SignInPage() {
 
             <p className="mt-6 text-center text-xs text-muted">
                 Não tem uma conta?{' '}
-                <Link to="/auth/signup" className="text-violet-400 hover:text-violet-300 font-bold transition-all hover:underline decoration-2 underline-offset-4">
+                <Link to="/auth/signup" className="text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 font-bold transition-all hover:underline decoration-2 underline-offset-4">
                     Criar conta grátis
                 </Link>
             </p>

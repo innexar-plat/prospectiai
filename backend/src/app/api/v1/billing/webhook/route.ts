@@ -4,8 +4,17 @@ import { stripe } from '@/lib/stripe';
 import { prisma } from '@/lib/prisma';
 import { PLANS, PlanType } from '@/lib/billing-config';
 import Stripe from 'stripe';
+import { logger } from '@/lib/logger';
 
+/**
+ * @deprecated Legacy v1 webhook — use /api/billing/webhook instead.
+ * This endpoint is kept for backwards compatibility with any existing
+ * Stripe webhook configurations. It updates User model (legacy) rather
+ * than Workspace model (current). New integrations should use v2.
+ */
 export async function POST(req: Request) {
+    logger.warn('v1 Stripe webhook called — this endpoint is deprecated, migrate to /api/billing/webhook');
+    
     const body = await req.text();
     const headersList = await headers();
     const signature = headersList.get('stripe-signature') as string;

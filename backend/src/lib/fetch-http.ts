@@ -3,7 +3,7 @@
  * Evita requisições travadas e trata rate limit/erros transitórios.
  */
 
-const DEFAULT_TIMEOUT_MS = 15000;
+const DEFAULT_TIMEOUT_MS = 30000;
 const DEFAULT_MAX_RETRIES = 3;
 const DEFAULT_INITIAL_BACKOFF_MS = 1000;
 

@@ -11,6 +11,7 @@ import { LeadsPage } from '@/pages/LeadsPage';
 import { SearchHistoryPage } from '@/pages/SearchHistoryPage';
 import { AuditPage } from '@/pages/AuditPage';
 import { AiConfigPage } from '@/pages/AiConfigPage';
+import { CrmIntegrationsPage } from '@/pages/CrmIntegrationsPage';
 import { EmailPage } from '@/pages/EmailPage';
 import { NotificationsPage } from '@/pages/NotificationsPage';
 import { PlansPage } from '@/pages/PlansPage';
@@ -40,6 +41,7 @@ function App() {
               <Route path="search-history" element={<SearchHistoryPage />} />
               <Route path="audit" element={<AuditPage />} />
               <Route path="ai-config" element={<AiConfigPage />} />
+              <Route path="crm-integrations" element={<CrmIntegrationsPage />} />
               <Route path="email" element={<EmailPage />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="plans" element={<PlansPage />} />

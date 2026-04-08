@@ -101,7 +101,7 @@ export function TeamProgressCard({ plan }: { plan: SessionUser['plan'] }) {
     <div className="rounded-3xl bg-card border border-border overflow-hidden">
       <div className="p-5 border-b border-border">
         <h3 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
-          <Target size={16} className="text-emerald-400" /> Suas metas
+          <Target size={16} className="text-emerald-600 dark:text-emerald-400" /> Suas metas
         </h3>
       </div>
       <div className="p-5 space-y-5">
@@ -109,7 +109,7 @@ export function TeamProgressCard({ plan }: { plan: SessionUser['plan'] }) {
         {hasLimits && usage && (
           <div className="space-y-2 pb-3 border-b border-border/50">
             <p className="text-xs font-medium text-muted uppercase tracking-wider flex items-center gap-2">
-              <CreditCard size={14} className="text-emerald-400" /> Minha cota
+              <CreditCard size={14} className="text-emerald-600 dark:text-emerald-400" /> Minha cota
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
               {limits.dailyLeadsLimit != null && (
@@ -177,13 +177,13 @@ export function TeamProgressCard({ plan }: { plan: SessionUser['plan'] }) {
         {/* Streak e ranking */}
         <div className="flex flex-wrap gap-4 pt-2 border-t border-border/50">
           <div className="flex items-center gap-2 text-sm">
-            <Flame size={18} className="text-amber-400" />
+            <Flame size={18} className="text-amber-600 dark:text-amber-400" />
             <span className="text-muted">Sequência:</span>
             <span className="font-semibold text-foreground tabular-nums">{streak} dia(s)</span>
           </div>
           {ranking.total > 0 && (
             <div className="flex items-center gap-2 text-sm">
-              <Trophy size={18} className="text-amber-400" />
+              <Trophy size={18} className="text-amber-600 dark:text-amber-400" />
               <span className="text-muted">Você está em</span>
               <span className="font-semibold text-foreground">
                 {ranking.position}º de {ranking.total}

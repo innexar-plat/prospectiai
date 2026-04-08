@@ -1,5 +1,5 @@
-import { useState, useEffect, type ReactNode } from 'react';
-import { CreditCard, Zap, Crown, Rocket, Check, Loader2, Clock, ArrowUpRight, ArrowDownRight, RefreshCw } from 'lucide-react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
+import { CreditCard, Zap, Crown, Rocket, Check, Loader2, Clock, ArrowUpRight, ArrowDownRight, RefreshCw, XCircle, MessageCircle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { useOutletContext } from 'react-router-dom';
@@ -7,16 +7,17 @@ import type { SessionUser } from '@/lib/api';
 import { billingApi, plansApi, type PlanFromApi } from '@/lib/api';
 import { getPlanDisplayName } from '@/lib/billing-config';
 import { getAffiliateRef } from '@/lib/affiliate-ref';
+import { SUPPORT_WHATSAPP_URL } from '@/lib/support';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/contexts/ToastContext';
 
 /** UI-only mapping: icon, colors, and feature labels per plan key (from DB we get name, leadsLimit, price). */
 const PLAN_UI: Record<string, { icon: LucideIcon; color: string; borderColor: string; popular?: boolean; features: string[] }> = {
-    FREE: { icon: Zap, color: 'text-zinc-400', borderColor: 'border-zinc-500/20', features: ['Busca por nicho e região', 'Score IA por lead', 'Histórico de buscas', 'Smart Tags'] },
-    BASIC: { icon: CreditCard, color: 'text-blue-400', borderColor: 'border-blue-500/20', features: ['Tudo do Free', 'Exportação CSV/JSON', 'Activity Tracking'] },
-    PRO: { icon: Crown, color: 'text-violet-400', borderColor: 'border-violet-500/30', popular: true, features: ['Tudo do Starter', 'Análise de concorrência', 'Ação comercial (scripts, WhatsApp)'] },
-    BUSINESS: { icon: Rocket, color: 'text-amber-400', borderColor: 'border-amber-500/20', features: ['Tudo do Growth', 'Inteligência de mercado', 'Viabilidade de negócio com IA', 'Gestão de equipe'] },
-    SCALE: { icon: Rocket, color: 'text-amber-400', borderColor: 'border-amber-500/20', features: ['Tudo do Growth', 'Inteligência de mercado', 'Viabilidade de negócio com IA', 'Gestão de equipe'] },
+    FREE: { icon: Zap, color: 'text-zinc-600 dark:text-zinc-400', borderColor: 'border-zinc-500/20', features: ['Busca por nicho e região', 'Score IA por lead', 'Histórico de buscas', 'Smart Tags'] },
+    BASIC: { icon: CreditCard, color: 'text-blue-600 dark:text-blue-400', borderColor: 'border-blue-500/20', features: ['Tudo do Free', 'Exportação CSV/JSON', 'Activity Tracking'] },
+    PRO: { icon: Crown, color: 'text-violet-600 dark:text-violet-400', borderColor: 'border-violet-500/30', popular: true, features: ['Tudo do Starter', 'Análise de concorrência', 'Ação comercial (scripts, WhatsApp)'] },
+    BUSINESS: { icon: Rocket, color: 'text-amber-600 dark:text-amber-400', borderColor: 'border-amber-500/20', features: ['Tudo do Growth', 'Inteligência de mercado', 'Viabilidade de negócio com IA', 'Gestão de equipe'] },
+    SCALE: { icon: Rocket, color: 'text-amber-600 dark:text-amber-400', borderColor: 'border-amber-500/20', features: ['Tudo do Growth', 'Inteligência de mercado', 'Viabilidade de negócio com IA', 'Gestão de equipe'] },
 };
 
 /** Plan tier order (lower index = lower tier). Used for upgrade vs downgrade label and comparison. */
@@ -39,39 +40,77 @@ const FEATURE_MATRIX: Array<{ feature: string } & Record<string, boolean | strin
 ];
 
 function renderFeatureCellValue(val: boolean | string | undefined) {
-    if (val === true) return <Check size={14} className="text-emerald-400 mx-auto" />;
+    if (val === true) return <Check size={14} className="text-emerald-600 dark:text-emerald-400 mx-auto" />;
     if (val === false) return <span className="text-muted/30">—</span>;
-    return <span className="text-xs font-bold text-violet-400 tabular-nums">{String(val ?? '—')}</span>;
+    return <span className="text-xs font-bold text-violet-600 dark:text-violet-400 tabular-nums">{String(val ?? '—')}</span>;
 }
+
+type BillingCycle = 'monthly' | 'annual';
 
 function PlanosCurrentPlanCard({
     user,
     plans,
     usagePercent,
-}: { user: SessionUser; plans: PlanFromApi[]; usagePercent: number }) {
-    const pendingPlanName = user.pendingPlanId ? plans.find((p) => p.key === user.pendingPlanId)?.name ?? user.pendingPlanId : null;
+    onCancelPendingDowngrade,
+    cancelLoading,
+}: {
+    user: SessionUser;
+    plans: PlanFromApi[];
+    usagePercent: number;
+    onCancelPendingDowngrade: () => void;
+    cancelLoading: boolean;
+}) {
+    const pendingPlanName = user.pendingPlanId ? plans.find((p) => p.key === user.pendingPlanId)?.name ?? getPlanDisplayName(user.pendingPlanId) : null;
+    const cycleLabel = user.billingCycle === 'annual' ? 'anual' : 'mensal';
     return (
         <div className="rounded-3xl bg-card border border-border p-6 sm:p-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h2 className="text-xl font-bold text-foreground">Seu Plano</h2>
                     <p className="text-sm text-muted mt-1">
-                        Plano atual: <span className="text-violet-400 font-bold">{getPlanDisplayName(user.plan)}</span>
+                        Plano atual: <span className="text-violet-600 dark:text-violet-400 font-bold">{getPlanDisplayName(user.plan)}</span>
+                        {user.plan !== 'FREE' && user.billingCycle && (
+                            <span className="text-xs text-muted ml-2">({cycleLabel})</span>
+                        )}
                     </p>
                     {user.plan !== 'FREE' && user.currentPeriodEnd && (
                         <p className="text-xs text-muted mt-1">Próxima renovação: {new Date(user.currentPeriodEnd).toLocaleDateString('pt-BR')}</p>
                     )}
-                    {user.plan !== 'FREE' && (
-                        <p className="text-xs text-muted mt-2">O cartão cadastrado será utilizado para cobranças mensais de renovação. Você pode alterar ou cancelar na próxima renovação.</p>
-                    )}
                     {user.pendingPlanId && user.pendingPlanEffectiveAt && pendingPlanName && (
-                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 font-medium">
-                            Downgrade agendado: seu plano será alterado para {pendingPlanName} em {new Date(user.pendingPlanEffectiveAt).toLocaleDateString('pt-BR')}.
+                        <div className="mt-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                            <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                                {user.pendingPlanId === 'FREE' ? 'Cancelamento agendado' : 'Downgrade agendado'}:{' '}
+                                seu plano será alterado para {pendingPlanName} em {new Date(user.pendingPlanEffectiveAt).toLocaleDateString('pt-BR')}.
+                            </p>
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                className="mt-2 text-xs"
+                                disabled={cancelLoading}
+                                onClick={onCancelPendingDowngrade}
+                                icon={cancelLoading ? <Loader2 size={12} className="animate-spin" /> : <XCircle size={12} />}
+                            >
+                                Manter plano atual
+                            </Button>
+                        </div>
+                    )}
+                    {user.plan !== 'FREE' && !user.pendingPlanId && (
+                        <p className="text-xs text-muted mt-3">
+                            Para cancelar sua assinatura,{' '}
+                            <a
+                                href={SUPPORT_WHATSAPP_URL}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 underline underline-offset-2 inline-flex items-center gap-1"
+                            >
+                                <MessageCircle size={12} />
+                                fale com o suporte
+                            </a>.
                         </p>
                     )}
                 </div>
                 <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-surface border border-border">
-                    <Zap size={20} className="text-violet-400" />
+                    <Zap size={20} className="text-violet-600 dark:text-violet-400" />
                     <div>
                         <div className="text-lg font-bold text-foreground tabular-nums">{user.leadsUsed} / {user.leadsLimit}</div>
                         <div className="text-[10px] text-muted uppercase tracking-wider">Créditos Usados</div>
@@ -112,12 +151,35 @@ function renderPlanCardFooter(
     onUpgrade: (key: string) => void,
 ): ReactNode {
     if (isCurrent) {
-        return <div className="text-center text-xs font-bold text-violet-400 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20">Plano Atual</div>;
+        return <div className="text-center text-xs font-bold text-violet-600 dark:text-violet-400 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20">Plano Atual</div>;
     }
     if (planKey === 'FREE') {
         return <div className="text-center text-xs text-muted py-2">Plano gratuito</div>;
     }
     return <PlanCardActionButton planKey={planKey} loadingPlan={loadingPlan} isDowngrade={isDowngrade} onUpgrade={onUpgrade} />;
+}
+
+function BillingCycleToggle({ cycle, onChange }: { cycle: BillingCycle; onChange: (c: BillingCycle) => void }) {
+    const isAnnual = cycle === 'annual';
+    return (
+        <div className="flex items-center justify-center gap-3 mb-6">
+            <span className={`text-sm font-medium ${!isAnnual ? 'text-foreground' : 'text-muted'}`}>Mensal</span>
+            <button
+                type="button"
+                onClick={() => onChange(isAnnual ? 'monthly' : 'annual')}
+                className="relative inline-flex h-7 w-14 items-center rounded-full transition-colors bg-surface border border-border hover:border-violet-500/40"
+                aria-label="Alternar ciclo de cobrança"
+            >
+                <span
+                    className={`inline-block h-5 w-5 transform rounded-full bg-violet-500 transition-transform ${isAnnual ? 'translate-x-8' : 'translate-x-1'}`}
+                />
+            </button>
+            <span className={`text-sm font-medium ${isAnnual ? 'text-foreground' : 'text-muted'}`}>
+                Anual
+                <span className="ml-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">-15%</span>
+            </span>
+        </div>
+    );
 }
 
 function PlanosGridContent({
@@ -130,6 +192,8 @@ function PlanosGridContent({
     onUpgrade,
     onRetry,
     formatPrice,
+    cycle,
+    onCycleChange,
 }: {
     plansLoading: boolean;
     plansError: string | null;
@@ -140,11 +204,13 @@ function PlanosGridContent({
     onUpgrade: (key: string) => void;
     onRetry: () => void;
     formatPrice: (n: number) => string;
+    cycle: BillingCycle;
+    onCycleChange: (c: BillingCycle) => void;
 }) {
     if (plansLoading) {
         return (
             <div className="flex justify-center py-12">
-                <Loader2 size={32} className="text-violet-400 animate-spin" />
+                <Loader2 size={32} className="text-violet-600 dark:text-violet-400 animate-spin" />
             </div>
         );
     }
@@ -166,6 +232,8 @@ function PlanosGridContent({
         );
     }
     return (
+        <>
+        <BillingCycleToggle cycle={cycle} onChange={onCycleChange} />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {plans.map((plan) => {
                 const isCurrent = plan.key === user.plan;
@@ -175,6 +243,8 @@ function PlanosGridContent({
                 const features = [...ui.features, creditsLabel];
                 const cardBgClass = ui.popular ? 'bg-gradient-to-b from-violet-900/30 to-card border-violet-500/40 shadow-lg shadow-violet-500/10' : `bg-card ${ui.borderColor}`;
                 const ringClass = isCurrent ? 'ring-2 ring-violet-500' : '';
+                const price = cycle === 'annual' ? plan.priceAnnualBrl : plan.priceMonthlyBrl;
+                const monthlyEquivalent = cycle === 'annual' && plan.priceAnnualBrl > 0 ? plan.priceAnnualBrl / 12 : null;
                 return (
                     <div key={plan.key} className={`rounded-3xl border p-6 flex flex-col gap-4 transition-all relative ${cardBgClass} ${ringClass}`}>
                         {ui.popular && (
@@ -189,14 +259,30 @@ function PlanosGridContent({
                                 <div className="text-xs text-muted">{creditsLabel}</div>
                             </div>
                         </div>
-                        <div className="flex items-baseline gap-1">
-                            <span className="text-2xl font-black text-foreground">{formatPrice(plan.priceMonthlyBrl)}</span>
-                            <span className="text-xs text-muted">/mês</span>
+                        <div>
+                            <div className="flex items-baseline gap-1">
+                                {cycle === 'annual' ? (
+                                    <>
+                                        <span className="text-2xl font-black text-foreground">{formatPrice(price)}</span>
+                                        <span className="text-xs text-muted">/ano</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="text-2xl font-black text-foreground">{formatPrice(price)}</span>
+                                        <span className="text-xs text-muted">/mês</span>
+                                    </>
+                                )}
+                            </div>
+                            {monthlyEquivalent != null && monthlyEquivalent > 0 && (
+                                <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                    equivale a {formatPrice(Math.round(monthlyEquivalent))}/mês
+                                </p>
+                            )}
                         </div>
                         <ul className="text-xs text-muted space-y-2 flex-1">
                             {features.map((f) => (
                                 <li key={`${plan.key}-feat-${f}`} className="flex items-start gap-2">
-                                    <Check size={14} className="text-emerald-400 shrink-0 mt-0.5" />
+                                    <Check size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                                     <span>{f}</span>
                                 </li>
                             ))}
@@ -206,6 +292,7 @@ function PlanosGridContent({
                 );
             })}
         </div>
+        </>
     );
 }
 
@@ -235,12 +322,14 @@ function PlanCardActionButton({ planKey, loadingPlan, isDowngrade, onUpgrade }: 
 }
 
 export default function PlanosPage() {
-    const { user } = useOutletContext<{ user: SessionUser }>();
+    const { user, refreshUser } = useOutletContext<{ user: SessionUser; refreshUser?: () => void }>();
     const { addToast } = useToast();
     const [plans, setPlans] = useState<PlanFromApi[]>([]);
     const [plansLoading, setPlansLoading] = useState(true);
     const [plansError, setPlansError] = useState<string | null>(null);
     const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+    const [cancelLoading, setCancelLoading] = useState(false);
+    const [billingCycle, setBillingCycle] = useState<BillingCycle>(user.billingCycle ?? 'monthly');
 
     useEffect(() => {
         let cancelled = false;
@@ -271,12 +360,14 @@ export default function PlanosPage() {
             const affiliateCode = getAffiliateRef();
             const res = await billingApi.checkout({
                 planId,
+                interval: billingCycle,
                 locale: 'pt',
                 scheduleAtPeriodEnd: isDowngrade(planId),
                 ...(affiliateCode && { affiliateCode }),
             });
             if (res.scheduled && res.url === null) {
                 addToast('success', res.message);
+                refreshUser?.();
                 return;
             }
             if (res.url) {
@@ -288,6 +379,19 @@ export default function PlanosPage() {
             setLoadingPlan(null);
         }
     };
+
+    const handleCancelPendingDowngrade = useCallback(async () => {
+        setCancelLoading(true);
+        try {
+            const res = await billingApi.cancelPendingDowngrade();
+            addToast('success', res.message);
+            refreshUser?.();
+        } catch (err: unknown) {
+            addToast('error', err instanceof Error ? err.message : 'Erro ao cancelar downgrade.');
+        } finally {
+            setCancelLoading(false);
+        }
+    }, [addToast, refreshUser]);
 
     const formatPrice = (value: number) => (value === 0 ? 'R$ 0' : `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`);
 
@@ -302,7 +406,13 @@ export default function PlanosPage() {
             <HeaderDashboard title="Planos & Pagamentos" subtitle="Gerencie seu plano e histórico de cobrança." breadcrumb="Conta / Planos" />
             <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full space-y-8">
 
-                <PlanosCurrentPlanCard user={user} plans={plans} usagePercent={usagePercent} />
+                <PlanosCurrentPlanCard
+                    user={user}
+                    plans={plans}
+                    usagePercent={usagePercent}
+                    onCancelPendingDowngrade={handleCancelPendingDowngrade}
+                    cancelLoading={cancelLoading}
+                />
 
                 {/* Plans Grid (from API / PlanConfig) */}
                 <div>
@@ -321,6 +431,8 @@ export default function PlanosPage() {
                             plansApi.list().then(setPlans).catch((err: unknown) => setPlansError(err instanceof Error ? err.message : 'Falha ao carregar planos.')).finally(() => setPlansLoading(false));
                         }}
                         formatPrice={formatPrice}
+                        cycle={billingCycle}
+                        onCycleChange={setBillingCycle}
                     />
                 </div>
 
@@ -363,7 +475,7 @@ export default function PlanosPage() {
                                         <td className="py-2.5 px-5 text-xs text-foreground">Créditos mensais</td>
                                         {plans.map((plan) => (
                                             <td key={plan.key} className="py-2.5 px-4 text-center">
-                                                <span className="text-xs font-bold text-violet-400 tabular-nums">
+                                                <span className="text-xs font-bold text-violet-600 dark:text-violet-400 tabular-nums">
                                                     {plan.leadsLimit.toLocaleString('pt-BR')}
                                                 </span>
                                             </td>

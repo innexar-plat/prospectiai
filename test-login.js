@@ -2,11 +2,11 @@ const https = require('https');
 
 async function test() {
     const options = {
-        hostname: 'prospectorai.innexar.com.br',
+        hostname: 'precisionia.com.br',
         port: 443,
         headers: {
             'X-Forwarded-Proto': 'https',
-            'X-Forwarded-Host': 'prospectorai.innexar.com.br'
+            'X-Forwarded-Host': 'precisionia.com.br'
         }
     };
 

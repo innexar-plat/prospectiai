@@ -50,6 +50,9 @@ export async function GET(req: NextRequest) {
                     pageSize: true,
                     filters: true,
                     resultsCount: true,
+                    city: true,
+                    state: true,
+                    country: true,
                     createdAt: true,
                     user: { select: { name: true, email: true } }
                 }

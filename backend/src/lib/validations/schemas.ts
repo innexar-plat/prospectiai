@@ -65,6 +65,10 @@ export const analyzeSchema = z.object({
     authorAttribution: z.object({ displayName: z.string() }).optional(),
     relativePublishTimeDescription: z.string().optional(),
   })).optional(),
+  currentOpeningHours: z.object({
+    openNow: z.boolean().optional(),
+    weekdayDescriptions: z.array(z.string()).optional(),
+  }).optional(),
 });
 
 /** POST /api/user/profile (personal profile only) */
@@ -213,6 +217,21 @@ export const searchHistoryQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional(),
   offset: z.coerce.number().int().min(0).optional(),
 });
+
+/** POST /api/leads — save a lead (without AI analysis) */
+export const saveLeadSchema = z.object({
+  placeId: z.string().min(1, 'placeId is required'),
+  name: z.string().min(1, 'name is required'),
+  address: z.string().optional(),
+  phone: z.string().optional(),
+  website: z.string().optional(),
+  rating: z.number().optional(),
+  reviewCount: z.number().int().optional(),
+  types: z.array(z.string()).optional(),
+  businessStatus: z.string().optional(),
+});
+
+export type SaveLeadInput = z.infer<typeof saveLeadSchema>;
 
 /** PATCH /api/leads/[id] — body (at least one of status or isFavorite) */
 export const leadStatusSchema = z

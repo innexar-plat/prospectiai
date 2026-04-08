@@ -64,26 +64,61 @@ type CloudflareResponse = {
     usage?: { prompt_tokens?: number; completion_tokens?: number };
 };
 
+const CLOUDFLARE_TIMEOUT_MS = 60000;
+const CLOUDFLARE_MAX_RETRIES = 2;
+
+function cfSleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function runCloudflareCompletion(
     url: string,
     apiKey: string,
     body: Record<string, unknown>,
 ): Promise<{ text: string; usage?: { inputTokens: number; outputTokens: number } }> {
-    const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`Cloudflare AI error ${res.status}: ${errText}`);
+    let lastErr: Error | null = null;
+
+    for (let attempt = 0; attempt <= CLOUDFLARE_MAX_RETRIES; attempt++) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), CLOUDFLARE_TIMEOUT_MS);
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+                body: JSON.stringify(body),
+                signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+
+            // Retry on 520 (Cloudflare transient) or 5xx
+            if (!res.ok && attempt < CLOUDFLARE_MAX_RETRIES && (res.status === 520 || res.status >= 500)) {
+                const backoff = 2000 * Math.pow(2, attempt);
+                await cfSleep(backoff);
+                continue;
+            }
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(`Cloudflare AI error ${res.status}: ${errText}`);
+            }
+            const data = (await res.json()) as CloudflareResponse;
+            const text = parseCloudflareContent(data);
+            const usage = data.usage
+                ? { inputTokens: data.usage.prompt_tokens ?? 0, outputTokens: data.usage.completion_tokens ?? 0 }
+                : undefined;
+            return { text, usage };
+        } catch (err) {
+            clearTimeout(timeoutId);
+            lastErr = err instanceof Error ? err : new Error(String(err));
+            if (attempt < CLOUDFLARE_MAX_RETRIES) {
+                const backoff = 2000 * Math.pow(2, attempt);
+                await cfSleep(backoff);
+                continue;
+            }
+            throw lastErr;
+        }
     }
-    const data = (await res.json()) as CloudflareResponse;
-    const text = parseCloudflareContent(data);
-    const usage = data.usage
-        ? { inputTokens: data.usage.prompt_tokens ?? 0, outputTokens: data.usage.completion_tokens ?? 0 }
-        : undefined;
-    return { text, usage };
+
+    throw lastErr ?? new Error('Cloudflare AI request failed');
 }
 
 export interface CloudflareAdapterOptions {

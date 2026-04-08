@@ -20,7 +20,7 @@ import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 
 const SITE_URL = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-const ENV_FROM = process.env.EMAIL_FROM ?? 'Prospector <onboarding@resend.dev>';
+const ENV_FROM = process.env.EMAIL_FROM ?? 'Precision IA <onboarding@resend.dev>';
 
 async function getEmailConfigFromDb(): Promise<{
   provider: string;
@@ -126,7 +126,7 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
 export async function sendPasswordResetEmail(to: string, token: string): Promise<SendResult> {
   const resetLink = `${SITE_URL.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(token)}`;
   const html = passwordResetTemplate(resetLink);
-  return sendEmail(to, 'Redefinir sua senha – ProspectorAI', html);
+  return sendEmail(to, 'Redefinir sua senha – Precision IA', html);
 }
 
 /**
@@ -135,7 +135,7 @@ export async function sendPasswordResetEmail(to: string, token: string): Promise
 export async function sendVerificationEmail(to: string, token: string): Promise<SendResult> {
   const verifyLink = `${SITE_URL.replace(/\/$/, '')}/verify-email?token=${encodeURIComponent(token)}`;
   const html = verificationTemplate(verifyLink);
-  return sendEmail(to, 'Confirme seu e-mail – ProspectorAI', html);
+  return sendEmail(to, 'Confirme seu e-mail – Precision IA', html);
 }
 
 /**
@@ -148,7 +148,7 @@ export async function sendTeamInviteEmail(
   acceptInviteUrl: string
 ): Promise<SendResult> {
   const html = teamInviteTemplate(inviterName, workspaceName, acceptInviteUrl);
-  return sendEmail(to, `Convite para o workspace "${workspaceName}" – ProspectorAI`, html);
+  return sendEmail(to, `Convite para o workspace "${workspaceName}" – Precision IA`, html);
 }
 
 /**
@@ -161,22 +161,22 @@ export async function sendTeamInviteAccountCreatedEmail(
   setPasswordUrl: string,
 ): Promise<SendResult> {
   const html = teamInviteAccountCreatedTemplate(inviterName, workspaceName, setPasswordUrl);
-  return sendEmail(to, `Defina sua senha – ${workspaceName} – ProspectorAI`, html);
+  return sendEmail(to, `Defina sua senha – ${workspaceName} – Precision IA`, html);
 }
 
 export async function sendAffiliateApprovedEmail(to: string, code: string, loginUrl: string): Promise<SendResult> {
   const html = affiliateApprovedTemplate(code, loginUrl);
-  return sendEmail(to, 'Sua conta de afiliado foi aprovada – ProspectorAI', html);
+  return sendEmail(to, 'Sua conta de afiliado foi aprovada – Precision IA', html);
 }
 
 export async function sendAffiliateConversionEmail(to: string, summary: string, dashboardUrl: string): Promise<SendResult> {
   const html = affiliateConversionTemplate(summary, dashboardUrl);
-  return sendEmail(to, 'Nova conversão no programa de afiliados – ProspectorAI', html);
+  return sendEmail(to, 'Nova conversão no programa de afiliados – Precision IA', html);
 }
 
 export async function sendAffiliateCommissionPaidEmail(to: string, amountFormatted: string, payoutInfo: string): Promise<SendResult> {
   const html = affiliateCommissionPaidTemplate(amountFormatted, payoutInfo);
-  return sendEmail(to, 'Comissão paga – ProspectorAI', html);
+  return sendEmail(to, 'Comissão paga – Precision IA', html);
 }
 
 /**
@@ -184,5 +184,5 @@ export async function sendAffiliateCommissionPaidEmail(to: string, amountFormatt
  */
 export async function sendAffiliateCommissionAvailableEmail(to: string, dashboardUrl: string): Promise<SendResult> {
   const html = affiliateCommissionAvailableTemplate(dashboardUrl);
-  return sendEmail(to, 'Comissão disponível para saque – ProspectorAI', html);
+  return sendEmail(to, 'Comissão disponível para saque – Precision IA', html);
 }

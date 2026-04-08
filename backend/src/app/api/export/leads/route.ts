@@ -36,6 +36,7 @@ export async function GET(req: NextRequest) {
             where: filter,
             include: { lead: true },
             orderBy: { createdAt: 'desc' },
+            take: 5000,
         });
 
         if (format === 'csv') {

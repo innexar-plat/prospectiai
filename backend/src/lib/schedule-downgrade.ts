@@ -9,8 +9,6 @@ import { PLANS, PlanType, isDowngrade, getPlanPrices, type BillingCycle, type Pl
 import { logger } from '@/lib/logger';
 import type { Workspace } from '@prisma/client';
 
-const CYCLE: BillingCycle = 'monthly';
-
 /** Default period length in ms when workspace has no currentPeriodEnd (e.g. plan assigned manually). */
 const DEFAULT_PERIOD_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -69,32 +67,49 @@ function validateAndGetEffectiveAt(
 }
 
 async function applyStripeSchedule(
-    workspace: Pick<Workspace, 'id' | 'plan' | 'subscriptionId' | 'currentPeriodEnd'>,
+    workspace: Pick<Workspace, 'id' | 'plan' | 'subscriptionId' | 'currentPeriodEnd' | 'billingCycle'>,
     targetPlanId: string,
     targetPlan: PlanWithPrices,
 ): Promise<void> {
     const subscriptionId = workspace.subscriptionId;
     if (subscriptionId == null || !isStripeSubscription(subscriptionId)) return;
 
+    const cycle: BillingCycle = workspace.billingCycle === 'annual' ? 'annual' : 'monthly';
+
     const raw = await stripe.subscriptions.retrieve(subscriptionId, { expand: ['items.data.price'] });
-    const subscription = raw as unknown as { current_period_end: number; current_period_start: number; items: { data: Array<{ price: { id: string } }> } };
+    const subscription = raw as unknown as { current_period_end: number; current_period_start: number; items: { data: Array<{ price: { id: string } }> }; schedule?: string | null };
     const currentPeriodEndUnix = subscription.current_period_end;
     const item = subscription.items.data[0];
     if (!item?.price) {
         throw new ScheduleDowngradeError(400, 'Subscription has no price item');
     }
+
+    // Release existing schedule if any (prevents orphaned schedules)
+    if (subscription.schedule) {
+        try {
+            await stripe.subscriptionSchedules.release(subscription.schedule);
+            logger.info('Released existing Stripe schedule before creating new one', { scheduleId: subscription.schedule });
+        } catch (err) {
+            logger.warn('Could not release existing schedule (may already be released)', {
+                scheduleId: subscription.schedule,
+                error: err instanceof Error ? err.message : 'Unknown',
+            });
+        }
+    }
+
     const scheduleCreate = await stripe.subscriptionSchedules.create({ from_subscription: subscriptionId });
-    const newPriceCents = Math.round(getPlanPrices(targetPlan, CYCLE).price_usd * 100);
+    const stripeInterval = cycle === 'annual' ? 'year' : 'month';
+    const newPriceCents = Math.round(getPlanPrices(targetPlan, cycle).price_usd * 100);
     const phase2Items = [
         {
             price_data: {
                 currency: 'usd',
                 product_data: {
-                    name: `ProspectorAI ${targetPlan.name} Plan (monthly)`,
+                    name: `Precision IA ${targetPlan.name} Plan (${cycle})`,
                     description: `Subscription for ${targetPlan.leadsLimit} leads searches per month.`,
                 },
                 unit_amount: newPriceCents,
-                recurring: { interval: 'month' },
+                recurring: { interval: stripeInterval },
             },
             quantity: 1,
         },
@@ -122,13 +137,14 @@ async function applyStripeSchedule(
  * Updates workspace with pendingPlanId and pendingPlanEffectiveAt; for Stripe, creates/updates subscription schedule.
  */
 export async function performScheduleDowngrade(
-    workspace: Pick<Workspace, 'id' | 'plan' | 'subscriptionId' | 'currentPeriodEnd'>,
+    workspace: Pick<Workspace, 'id' | 'plan' | 'subscriptionId' | 'currentPeriodEnd' | 'billingCycle'>,
     targetPlanId: string
 ): Promise<ScheduleDowngradeResult> {
     const { targetPlan, effectiveAt } = validateAndGetEffectiveAt(workspace, targetPlanId);
     const now = new Date();
     const rawPeriodEnd = workspace.currentPeriodEnd;
     const subscriptionId = workspace.subscriptionId;
+    const cycle: BillingCycle = workspace.billingCycle === 'annual' ? 'annual' : 'monthly';
 
     if (subscriptionId != null && isStripeSubscription(subscriptionId)) {
         try {
@@ -153,8 +169,9 @@ export async function performScheduleDowngrade(
     });
 
     const planName = targetPlan.name;
-    const priceBrl = getPlanPrices(targetPlan, CYCLE).price_brl;
-    const message = `Seu plano será alterado para ${planName} em ${effectiveAt.toLocaleDateString('pt-BR')}. A próxima cobrança será no valor de R$ ${priceBrl.toLocaleString('pt-BR')} no dia ${effectiveAt.toLocaleDateString('pt-BR')}.`;
+    const priceBrl = getPlanPrices(targetPlan, cycle).price_brl;
+    const cycleLabel = cycle === 'annual' ? 'anual' : 'mensal';
+    const message = `Seu plano será alterado para ${planName} em ${effectiveAt.toLocaleDateString('pt-BR')}. A próxima cobrança ${cycleLabel} será de R$ ${priceBrl.toLocaleString('pt-BR')}.`;
 
     return {
         message,

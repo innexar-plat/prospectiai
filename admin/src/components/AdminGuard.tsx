@@ -48,7 +48,7 @@ export function AdminGuard() {
 
   if (state.status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-zinc-300">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-600">
         Carregando…
       </div>
     );
@@ -60,10 +60,10 @@ export function AdminGuard() {
 
   if (state.status === 'forbidden') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-zinc-300 p-6">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-600 p-6">
         <div className="text-center max-w-md">
-          <h1 className="text-xl font-semibold text-white mb-2">Acesso negado</h1>
-          <p className="text-zinc-400">
+          <h1 className="text-xl font-semibold text-gray-900 mb-2">Acesso negado</h1>
+          <p className="text-gray-500">
             Apenas administradores e suporte podem acessar este painel.
           </p>
         </div>

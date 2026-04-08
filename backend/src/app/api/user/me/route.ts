@@ -85,6 +85,7 @@ type WorkspaceAfterExpiry = {
     leadsLimit?: number | null;
     subscriptionStatus?: string | null;
     currentPeriodEnd?: Date | null;
+    billingCycle?: string | null;
     gracePeriodEnd?: Date | null;
     pendingPlanId?: string | null;
     pendingPlanEffectiveAt?: Date | null;
@@ -115,6 +116,7 @@ function buildUiUser(
         leadsLimit: w?.leadsLimit ?? user.leadsLimit ?? 10,
         subscriptionStatus: w?.subscriptionStatus ?? null,
         currentPeriodEnd: w?.currentPeriodEnd?.toISOString() ?? null,
+        billingCycle: w?.billingCycle ?? null,
         gracePeriodEnd: w?.gracePeriodEnd?.toISOString() ?? null,
         pendingPlanId: w?.pendingPlanId ?? null,
         pendingPlanEffectiveAt: w?.pendingPlanEffectiveAt?.toISOString() ?? null,

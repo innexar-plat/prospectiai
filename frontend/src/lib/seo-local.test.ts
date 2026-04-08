@@ -129,7 +129,7 @@ describe('seo-local', () => {
     it('returns default intro when type has no city/neighborhood', () => {
       const intro = getSeoIntro({ slug: 'x', type: 'cidade' });
       expect(intro.length).toBe(1);
-      expect(intro[0]).toContain('ProspectorAI');
+      expect(intro[0]).toContain('Precision IA');
     });
   });
 

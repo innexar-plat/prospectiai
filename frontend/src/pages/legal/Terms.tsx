@@ -21,12 +21,12 @@ export default function Terms() {
         <article className="prose prose-invert max-w-none space-y-8 text-muted">
           <section>
             <h2 className="text-xl font-bold text-foreground">1. Aceitação</h2>
-            <p>Ao acessar ou usar o ProspectorAI, você concorda com estes Termos de Uso e com nossa Política de Privacidade.</p>
+            <p>Ao acessar ou usar o Precision IA, você concorda com estes Termos de Uso e com nossa Política de Privacidade.</p>
           </section>
 
           <section>
             <h2 className="text-xl font-bold text-foreground">2. Serviço</h2>
-            <p>O ProspectorAI é uma plataforma B2B que oferece busca inteligente de empresas, análise com IA, gestão de leads, exportação de dados, trabalho em equipe (workspaces) e planos pagos. O uso está sujeito aos limites do seu plano e às políticas de uso justo.</p>
+            <p>O Precision IA é uma plataforma B2B que oferece busca inteligente de empresas, análise com IA, gestão de leads, exportação de dados, trabalho em equipe (workspaces) e planos pagos. O uso está sujeito aos limites do seu plano e às políticas de uso justo.</p>
           </section>
 
           <section>

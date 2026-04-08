@@ -20,7 +20,7 @@ jest.mock('@/lib/ratelimit', () => ({ rateLimit: jest.fn(() => Promise.resolve({
 jest.mock('@/lib/google-places');
 jest.mock('@/lib/redis', () => ({
     getCached: jest.fn().mockResolvedValue(null),
-    setCached: jest.fn()
+    setCached: jest.fn().mockResolvedValue(undefined)
 }));
 jest.mock('@/lib/db-sync', () => ({
     syncLeads: jest.fn().mockResolvedValue(true)

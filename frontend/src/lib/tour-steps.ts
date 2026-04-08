@@ -4,35 +4,92 @@
  */
 
 export type TourStep = {
+  /** CSS selector or data-tour id. null = centered modal (no highlight). */
   target: string | null;
   title: string;
   body: string;
+  /** Preferred tooltip placement relative to the target element. Default: 'bottom'. */
+  placement?: 'top' | 'bottom' | 'left' | 'right';
+  /** Emoji or icon hint shown before the title. */
+  icon?: string;
 };
 
-/** Tour unificado — única exibição na primeira vez no dashboard */
+/** Tour unificado — 8 passos cobrindo toda a interface */
 export const WELCOME_TOUR_STEPS: TourStep[] = [
-  { target: null, title: 'Bem-vindo ao Prospector', body: 'Este rápido tour mostra o essencial para começar. Você pode pular a qualquer momento.' },
-  { target: 'nova-busca', title: 'Nova Busca', body: 'Aqui você define cidade, nicho e opcionalmente bairros. Clique em "Buscar" para encontrar leads na região.' },
-  { target: null, title: 'Menu lateral', body: 'Use o menu à esquerda para Histórico, Leads Salvos, Inteligência, Equipe e Conta. O ícone no rodapé recolhe o menu para ver só os ícones.' },
-  { target: null, title: 'Tudo pronto', body: 'Explore as buscas, salve leads e use as análises por plano. Em Suporte você pode refazer este tour se quiser.' },
+  {
+    target: null,
+    title: 'Bem-vindo ao Precision IA!',
+    body: 'Vamos fazer um tour rápido pela plataforma. Você vai descobrir como encontrar leads qualificados com inteligência artificial em poucos cliques.',
+    icon: '👋',
+  },
+  {
+    target: 'sidebar-nav',
+    title: 'Menu de navegação',
+    body: 'Aqui fica o menu principal. Suas seções: Prospecção, Inteligência, Equipe e Suporte. Clique no botão no rodapé para recolher e ganhar mais espaço.',
+    placement: 'right',
+    icon: '📋',
+  },
+  {
+    target: 'nova-busca',
+    title: 'Busca inteligente',
+    body: 'O coração da plataforma. Escolha país, estado, cidade e raio de busca. Logo abaixo defina o nicho (ex: "Restaurantes") e a IA encontrará leads qualificados na região.',
+    placement: 'bottom',
+    icon: '🔍',
+  },
+  {
+    target: 'quick-templates',
+    title: 'Templates rápidos',
+    body: 'Sem tempo? Clique em um template pronto — Restaurantes, Salões, Academias, Clínicas e mais. A busca é preenchida automaticamente.',
+    placement: 'top',
+    icon: '⚡',
+  },
+  {
+    target: 'header-credits',
+    title: 'Seus créditos',
+    body: 'Aqui você vê quantos créditos restam no seu plano. Cada análise de lead consome 1 crédito. Os créditos renovam todo mês.',
+    placement: 'bottom',
+    icon: '✨',
+  },
+  {
+    target: 'header-notifications',
+    title: 'Notificações',
+    body: 'Fique por dentro! Aqui aparecem alertas de análises concluídas, novos recursos e atualizações do sistema.',
+    placement: 'bottom',
+    icon: '🔔',
+  },
+  {
+    target: 'sidebar-integracoes',
+    title: 'Integrações CRM',
+    body: 'Conecte seu RD Station ou Agendor para enviar leads diretamente ao CRM com dados enriquecidos, negociações e tarefas — tudo automático.',
+    placement: 'right',
+    icon: '🔗',
+  },
+  {
+    target: null,
+    title: 'Tudo pronto para começar!',
+    body: 'Faça sua primeira busca agora. A IA vai analisar cada empresa encontrada e dar um score de oportunidade. Você pode refazer este tour a qualquer momento em Ajuda e Suporte.',
+    icon: '🚀',
+  },
 ];
 
 /** Steps por seção (usado em Suporte "Ver tour do sistema" — refaz por seção) */
 const PROSPECAO_STEPS: TourStep[] = [
-  { target: 'nova-busca', title: 'Nova Busca', body: 'Aqui você define cidade, nicho e opcionalmente bairros. Clique em "Buscar" para encontrar leads na região.' },
-  { target: null, title: 'Histórico e Leads', body: 'No menu à esquerda: Histórico mostra todas as buscas; Leads Salvos reúne os negócios que você salvou para contato.' },
+  { target: 'nova-busca', title: 'Busca inteligente', body: 'Defina localização, nicho e filtros. Clique em "Buscar" para encontrar leads na região com score de oportunidade.', placement: 'bottom', icon: '🔍' },
+  { target: 'quick-templates', title: 'Templates rápidos', body: 'Nichos pré-configurados para buscar com um clique. Restaurantes, Clínicas, Academias e mais.', placement: 'top', icon: '⚡' },
+  { target: 'sidebar-historico', title: 'Histórico de buscas', body: 'Todas as suas buscas ficam salvas aqui. Clique para ver os resultados novamente ou refazer a busca.', placement: 'right', icon: '📜' },
+  { target: 'sidebar-leads', title: 'Leads salvos', body: 'Leads que você salvou para contato. Veja score de IA, telefone, e-mail e status (novo, contactado, convertido).', placement: 'right', icon: '🎯' },
 ];
 
 const INTELIGENCIA_STEPS: TourStep[] = [
-  { target: null, title: 'Inteligência', body: 'Concorrência, Relatórios, Análise minha empresa e Viabilidade: análises por plano para entender o mercado e se diferenciar.' },
+  { target: 'sidebar-inteligencia', title: 'Módulo de inteligência', body: 'Análises avançadas por plano: Concorrência, Relatórios, Análise da sua empresa e Viabilidade de mercado.', placement: 'right', icon: '🧠' },
 ];
 
 const EQUIPE_STEPS: TourStep[] = [
-  { target: null, title: 'Equipe', body: 'No plano Enterprise você pode convidar membros em Minha Equipe e acompanhar uso no Dashboard da equipe.' },
+  { target: 'sidebar-equipe', title: 'Gestão de equipe', body: 'No plano Enterprise, convide vendedores, distribua territórios e acompanhe performance no Dashboard da equipe.', placement: 'right', icon: '👥' },
 ];
 
 const CONTA_STEPS: TourStep[] = [
-  { target: null, title: 'Conta', body: 'Perfil e Empresa para seus dados; Planos para upgrade; Configurações para preferências; Suporte para dúvidas e contato.' },
+  { target: 'header-avatar', title: 'Sua conta', body: 'Acesse Perfil, Empresa, Planos e Configurações pelo menu do avatar. Em Suporte você encontra FAQ e pode refazer este tour.', placement: 'bottom', icon: '👤' },
 ];
 
 export const TOUR_STEPS_BY_SECTION: Record<string, TourStep[]> = {

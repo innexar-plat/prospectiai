@@ -5,6 +5,8 @@ import { prisma } from '@/lib/prisma';
 import { PLANS, PlanType, getPlanPrices } from '@/lib/billing-config';
 import Stripe from 'stripe';
 import { createCommissionForFirstPayment, cancelCommissionsByOrderOrSubscription, createCommissionForRecurring } from '@/lib/affiliate';
+import { isWebhookDuplicate } from '@/lib/webhook-dedup';
+import { rateLimit } from '@/lib/ratelimit';
 
 type SubscriptionWithPeriod = Stripe.Subscription & { current_period_end: number };
 
@@ -94,6 +96,15 @@ async function handleSubscriptionUpdated(subscription: SubscriptionWithPeriod): 
     if (isPastDue) gracePeriodEndValue = new Date(Date.now() + GRACE_DAYS_MS);
     else if (isActive) gracePeriodEndValue = null;
     else gracePeriodEndValue = undefined;
+
+    // Only clear pendingPlan fields if the plan actually changed (schedule applied).
+    // Otherwise a card update or other subscription change would lose the scheduled downgrade.
+    const workspace = await prisma.workspace.findFirst({
+        where: { subscriptionId: subscription.id },
+        select: { plan: true },
+    });
+    const planActuallyChanged = workspace != null && workspace.plan !== planId;
+
     await prisma.workspace.updateMany({
         where: { subscriptionId: subscription.id },
         data: {
@@ -104,13 +115,20 @@ async function handleSubscriptionUpdated(subscription: SubscriptionWithPeriod): 
             currentPeriodEnd: periodEnd(subscription),
             billingCycle,
             gracePeriodEnd: gracePeriodEndValue,
-            pendingPlanId: null,
-            pendingPlanEffectiveAt: null,
+            ...(planActuallyChanged
+                ? { pendingPlanId: null, pendingPlanEffectiveAt: null }
+                : {}),
         },
     });
 }
 
 export async function POST(req: Request) {
+    // Rate limit: 120 requests per minute per endpoint
+    const rl = await rateLimit('webhook:stripe', 120, 60);
+    if (!rl.success) {
+        return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+    }
+
     const body = await req.text();
     const headersList = await headers();
     const signature = headersList.get('stripe-signature') as string;
@@ -126,6 +144,11 @@ export async function POST(req: Request) {
         const { logger } = await import('@/lib/logger');
         logger.error('Stripe webhook error', { error: err instanceof Error ? err.message : 'Unknown' });
         return NextResponse.json({ error: 'Webhook Error' }, { status: 400 });
+    }
+
+    // Idempotency: skip duplicate webhook deliveries
+    if (await isWebhookDuplicate('stripe', event.id)) {
+        return NextResponse.json({ received: true });
     }
 
     const session = event.data.object as Stripe.Checkout.Session;
@@ -178,7 +201,10 @@ export async function POST(req: Request) {
                         where: { subscriptionId: subId },
                         select: { id: true, plan: true },
                     });
-                    if (workspace) {
+                    if (!workspace) {
+                        const { logger } = await import('@/lib/logger');
+                        logger.warn('invoice.paid: no workspace found for subscription', { subscriptionId: subId, invoiceId: invoice.id });
+                    } else {
                         const planId = (workspace.plan || 'BASIC') as PlanType;
                         const valueCents = invoice.amount_paid ?? 0;
                         const currency = (invoice.currency ?? 'usd').toUpperCase();

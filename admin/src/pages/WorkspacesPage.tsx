@@ -30,8 +30,8 @@ export function WorkspacesPage() {
   if (loading && !data) {
     return (
       <div>
-        <h1 className="text-xl font-semibold text-white mb-6">Workspaces</h1>
-        <div className="h-64 rounded-xl bg-zinc-800/50 animate-pulse" />
+        <h1 className="text-xl font-semibold text-gray-900 mb-6">Workspaces</h1>
+        <div className="h-64 rounded-xl bg-gray-200 animate-pulse" />
       </div>
     );
   }
@@ -39,8 +39,8 @@ export function WorkspacesPage() {
   if (error && !data) {
     return (
       <div>
-        <h1 className="text-xl font-semibold text-white mb-6">Workspaces</h1>
-        <div className="rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3">
+        <h1 className="text-xl font-semibold text-gray-900 mb-6">Workspaces</h1>
+        <div className="rounded-lg bg-red-50 border border-red-300 text-red-600 px-4 py-3">
           {error}
         </div>
       </div>
@@ -54,12 +54,12 @@ export function WorkspacesPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold text-white mb-6">Workspaces</h1>
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 overflow-hidden">
+      <h1 className="text-xl font-semibold text-gray-900 mb-6">Workspaces</h1>
+      <div className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-zinc-800 text-left text-zinc-500">
+              <tr className="border-b border-gray-200 text-left text-gray-500">
                 <th className="px-4 py-3 font-medium">Nome</th>
                 <th className="px-4 py-3 font-medium">Plano</th>
                 <th className="px-4 py-3 font-medium">Leads</th>
@@ -71,26 +71,26 @@ export function WorkspacesPage() {
             <tbody>
               {items.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-zinc-500">
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
                     Nenhum workspace encontrado.
                   </td>
                 </tr>
               ) : (
                 items.map((w) => (
-                  <tr key={w.id} className="border-b border-zinc-800/80 hover:bg-zinc-800/50">
-                    <td className="px-4 py-3 text-white">{w.name ?? w.id}</td>
-                    <td className="px-4 py-3 text-zinc-400">{w.plan}</td>
-                    <td className="px-4 py-3 text-zinc-400">
+                  <tr key={w.id} className="border-b border-gray-200 hover:bg-gray-200">
+                    <td className="px-4 py-3 text-gray-900">{w.name ?? w.id}</td>
+                    <td className="px-4 py-3 text-gray-500">{w.plan}</td>
+                    <td className="px-4 py-3 text-gray-500">
                       {w.leadsUsed} / {w.leadsLimit}
                     </td>
-                    <td className="px-4 py-3 text-zinc-400">{w._count.members}</td>
-                    <td className="px-4 py-3 text-zinc-500">
+                    <td className="px-4 py-3 text-gray-500">{w._count.members}</td>
+                    <td className="px-4 py-3 text-gray-500">
                       {new Date(w.createdAt).toLocaleDateString('pt-BR')}
                     </td>
                     <td className="px-4 py-3">
                       <Link
                         to={`/workspaces/${w.id}`}
-                        className="text-violet-400 hover:text-violet-300 text-xs font-medium"
+                        className="text-violet-600 hover:text-violet-700 text-xs font-medium"
                       >
                         Ver
                       </Link>
@@ -102,8 +102,8 @@ export function WorkspacesPage() {
           </table>
         </div>
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-800">
-            <p className="text-sm text-zinc-500">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
+            <p className="text-sm text-gray-500">
               {total} resultado(s) · página {currentPage} de {totalPages}
             </p>
             <div className="flex gap-2">
@@ -111,7 +111,7 @@ export function WorkspacesPage() {
                 type="button"
                 disabled={offset === 0}
                 onClick={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}
-                className="px-3 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-zinc-700"
+                className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200"
               >
                 Anterior
               </button>
@@ -119,7 +119,7 @@ export function WorkspacesPage() {
                 type="button"
                 disabled={offset + PAGE_SIZE >= total}
                 onClick={() => setOffset((o) => o + PAGE_SIZE)}
-                className="px-3 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-zinc-700"
+                className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200"
               >
                 Próxima
               </button>

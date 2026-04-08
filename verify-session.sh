@@ -1,5 +1,5 @@
 #!/bin/bash
-DOMAIN="https://prospectorai.innexar.com.br"
+DOMAIN="https://precisionia.com.br"
 EMAIL="teste@teste.com"
 PASSWORD="senha_errada_de_proposito"
 

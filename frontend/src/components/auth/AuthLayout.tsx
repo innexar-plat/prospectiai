@@ -24,7 +24,7 @@ export function AuthLayout({
             <div className="hidden lg:flex flex-col justify-center p-8 lg:p-10 xl:p-12 relative overflow-hidden border-r border-border bg-[radial-gradient(circle_at_0%_0%,rgba(139,92,246,0.1)_0%,transparent_50%)]">
                 <div className="relative z-10 max-w-md">
                     <div className="mb-6">
-                        <Logo iconSize={40} textClassName="text-foreground text-lg" />
+                        <Logo height={192} />
                     </div>
                     <h2 className="text-3xl xl:text-4xl font-black text-foreground leading-tight mb-5">
                         {sideTitle}
@@ -41,7 +41,7 @@ export function AuthLayout({
             <div className="flex flex-col justify-center items-center py-8 px-6 md:px-10">
                 <div className="w-full max-w-[380px] animate-fade">
                     <div className="lg:hidden flex justify-center mb-6">
-                        <Logo iconSize={36} iconOnly={false} textClassName="text-foreground text-sm" />
+                        <Logo height={168} />
                     </div>
 
                     <div className="mb-6 text-center lg:text-left">

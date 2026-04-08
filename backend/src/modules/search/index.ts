@@ -10,4 +10,4 @@ export {
     SearchHttpError,
 } from './application/search.service';
 export type { SearchAllPagesResult } from './application/search.service';
-export type { SearchResult, PlaceLike } from './domain/types';
+export type { SearchResult, PlaceLike, PlaceResult } from './domain/types';

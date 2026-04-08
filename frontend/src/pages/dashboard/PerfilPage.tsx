@@ -89,17 +89,18 @@ export default function PerfilPage() {
               <img
                 src={form.image}
                 alt=""
+                referrerPolicy="no-referrer"
                 className="w-14 h-14 rounded-2xl object-cover border border-violet-500/20"
               />
             ) : (
               <div className="w-14 h-14 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
-                <User size={24} className="text-violet-400" />
+                <User size={24} className="text-violet-600 dark:text-violet-400" />
               </div>
             )}
             <div>
               <h2 className="text-lg font-bold text-foreground">{user.name || 'Usuário'}</h2>
               <p className="text-xs text-muted">
-                Plano: <span className="text-violet-400 font-bold">{getPlanDisplayName(user.plan)}</span>
+                Plano: <span className="text-violet-600 dark:text-violet-400 font-bold">{getPlanDisplayName(user.plan)}</span>
               </p>
             </div>
           </div>

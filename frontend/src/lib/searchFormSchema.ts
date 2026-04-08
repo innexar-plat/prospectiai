@@ -16,6 +16,8 @@ export const searchFormSchema = z.object({
     .refine((v) => !v || v.trim().length === 0 || v.trim().length >= MIN_ADVANCED_TERM, {
       message: `Termo avançado deve ter no mínimo ${MIN_ADVANCED_TERM} caracteres`,
     }),
+  hasWebsite: z.enum(['any', 'yes', 'no']).default('any'),
+  hasPhone: z.enum(['any', 'yes', 'no']).default('any'),
 });
 
 export type SearchFormValues = z.infer<typeof searchFormSchema>;
@@ -28,4 +30,6 @@ export const DEFAULT_SEARCH_VALUES: SearchFormValues = {
   includedType: undefined,
   niches: [],
   advancedTerm: '',
+  hasWebsite: 'any',
+  hasPhone: 'any',
 };

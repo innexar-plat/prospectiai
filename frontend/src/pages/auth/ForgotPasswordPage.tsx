@@ -28,7 +28,7 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
       <div className="w-full max-w-sm space-y-6">
-        <Link to="/auth/signin"><Logo iconSize={32} textClassName="text-foreground text-base" /></Link>
+        <Link to="/auth/signin"><Logo height={144} /></Link>
         <h1 className="text-xl font-bold text-foreground">Recuperar senha</h1>
         {sent ? <p className="text-muted text-sm">Se esse email estiver cadastrado, voce recebera um link.</p> : (
           <form onSubmit={handleSubmit} className="space-y-4">

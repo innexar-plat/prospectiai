@@ -153,7 +153,7 @@ export async function runMarketReport(
 
   const result = await runSearchAllPages(searchInput, userId, maxPlaces);
   const rawPlaces = result.places ?? [];
-  const places = rawPlaces as Array<Record<string, unknown>>;
+  const places = rawPlaces as unknown as Array<Record<string, unknown>>;
   const total = places.length;
 
   const { byType, withWebsite, withPhone } = aggregatePlacesByTypeAndContact(places);

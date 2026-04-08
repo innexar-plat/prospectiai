@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
     const { to } = parsed.data;
     const html = testEmailTemplate();
-    const result = await sendEmail(to, 'E-mail de teste – ProspectorAI', html);
+    const result = await sendEmail(to, 'E-mail de teste – Precision IA', html);
 
     if (!result.sent) {
       return jsonWithRequestId(

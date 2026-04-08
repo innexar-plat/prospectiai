@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Clock, Search, CalendarDays, ChevronRight, ArrowLeft, Star, Phone, Globe, MapPin, FileText, User, BarChart3, Loader2 } from 'lucide-react';
+import { Clock, Search, CalendarDays, ChevronRight, ArrowLeft, Star, Phone, Globe, MapPin, FileText, User, BarChart3, Loader2, RotateCw } from 'lucide-react';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import {
   searchApi,
@@ -83,7 +83,7 @@ function HistoricoSearchDetail({
                     <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted">
                       {rating != null && (
                         <span className="inline-flex items-center gap-1">
-                          <Star size={12} className="text-amber-400" /> {rating}/5
+                          <Star size={12} className="text-amber-600 dark:text-amber-400" /> {rating}/5
                           {reviews > 0 && <span className="text-muted">({reviews})</span>}
                         </span>
                       )}
@@ -91,7 +91,7 @@ function HistoricoSearchDetail({
                         <span className="inline-flex items-center gap-1"><Phone size={12} /> {phone}</span>
                       )}
                       {website && (
-                        <a href={website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-violet-400 hover:text-violet-300">
+                        <a href={website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300">
                           <Globe size={12} /> Website
                         </a>
                       )}
@@ -137,7 +137,7 @@ function HistoricoIntelDetail({
           <button
             type="button"
             onClick={onFavorite}
-            className="p-2 rounded-lg border border-border hover:bg-violet-500/10 text-amber-400"
+            className="p-2 rounded-lg border border-border hover:bg-violet-500/10 text-amber-600 dark:text-amber-400"
             title={item.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
             aria-label={item.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
           >
@@ -388,7 +388,7 @@ export default function HistoricoPage() {
               type="button"
               onClick={() => setTab(id)}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${activeTab === id
-                ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30'
+                ? 'bg-violet-500/20 text-violet-700 dark:text-violet-300 border border-violet-500/30'
                 : 'bg-card border border-border text-muted hover:text-foreground hover:border-violet-500/30'
                 }`}
             >
@@ -401,7 +401,7 @@ export default function HistoricoPage() {
         {loadingDetail && (
           <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
             <div className="bg-card border border-border rounded-2xl p-6 flex items-center gap-3 shadow-xl">
-              <Loader2 size={24} className="animate-spin text-violet-400" />
+              <Loader2 size={24} className="animate-spin text-violet-600 dark:text-violet-400" />
               <span className="text-foreground font-medium">Carregando...</span>
             </div>
           </div>
@@ -423,21 +423,23 @@ export default function HistoricoPage() {
               return (
                 <div className="space-y-3">
                   {searchItems.map((item, idx) => (
-                    <button
+                    <div
                       key={item.id}
-                      type="button"
-                      onClick={() => handleSearchItemClick(item)}
-                      className="w-full text-left flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card border border-border rounded-2xl p-4 sm:px-6 hover:border-violet-500/30 hover:bg-violet-500/5 transition-colors cursor-pointer group"
+                      className="w-full text-left flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card border border-border rounded-2xl p-4 sm:px-6 hover:border-violet-500/30 hover:bg-violet-500/5 transition-colors group"
                     >
-                      <div className="flex items-start gap-3">
+                      <button
+                        type="button"
+                        onClick={() => handleSearchItemClick(item)}
+                        className="flex items-start gap-3 flex-1 min-w-0 text-left"
+                      >
                         <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
-                          <Search size={18} className="text-violet-400" />
+                          <Search size={18} className="text-violet-600 dark:text-violet-400" />
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-bold text-foreground">{item.textQuery}</p>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-bold text-foreground truncate">{item.textQuery}</p>
                             {idx === 0 && (
-                              <span className="text-[10px] font-semibold uppercase tracking-wider bg-violet-500/20 text-violet-300 px-2 py-0.5 rounded-full">
+                              <span className="text-[10px] font-semibold uppercase tracking-wider bg-violet-500/20 text-violet-700 dark:text-violet-300 px-2 py-0.5 rounded-full">
                                 Mais recente
                               </span>
                             )}
@@ -445,11 +447,39 @@ export default function HistoricoPage() {
                           <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted">
                             <span className="inline-flex items-center gap-1"><CalendarDays size={12} /> {formatDate(item.createdAt)}</span>
                             <span>{item.resultsCount} resultados</span>
+                            {(item.city || item.country) && (
+                              <span className="inline-flex items-center gap-1">
+                                <MapPin size={12} />
+                                {[item.city, item.state, item.country].filter(Boolean).join(', ')}
+                              </span>
+                            )}
                           </div>
                         </div>
+                      </button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="h-8 px-3 text-xs font-semibold"
+                          icon={<RotateCw size={14} />}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Navigate to search page with pre-filled params from this history item
+                            const params = new URLSearchParams();
+                            params.set('q', item.textQuery);
+                            if (item.city) params.set('city', item.city);
+                            if (item.state) params.set('state', item.state);
+                            if (item.country) params.set('country', item.country);
+                            const filters = item.filters as Record<string, string> | undefined;
+                            if (filters?.includedType) params.set('type', filters.includedType);
+                            navigate(`/dashboard?${params.toString()}`);
+                          }}
+                        >
+                          Rebuscar
+                        </Button>
+                        <ChevronRight size={20} className="text-muted group-hover:text-violet-600 dark:text-violet-400 transition-colors hidden sm:block" />
                       </div>
-                      <ChevronRight size={20} className="text-muted group-hover:text-violet-400 transition-colors shrink-0 hidden sm:block" />
-                    </button>
+                    </div>
                   ))}
                 </div>
               );
@@ -497,7 +527,7 @@ export default function HistoricoPage() {
                       >
                         <div className="flex items-start gap-3 flex-1 min-w-0">
                           <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
-                            <User size={18} className="text-violet-400" />
+                            <User size={18} className="text-violet-600 dark:text-violet-400" />
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-bold text-foreground truncate">{leadData?.name ?? '—'}</p>
@@ -511,7 +541,7 @@ export default function HistoricoPage() {
                           <button
                             type="button"
                             onClick={(e) => handleLeadFavorite(item, e)}
-                            className="p-2 rounded-lg border border-border hover:bg-violet-500/10 text-amber-400"
+                            className="p-2 rounded-lg border border-border hover:bg-violet-500/10 text-amber-600 dark:text-amber-400"
                             title={item.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
                             aria-label={item.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
                           >
@@ -520,7 +550,7 @@ export default function HistoricoPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-violet-400 hover:text-violet-300"
+                            className="text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300"
                             onClick={() => placeId && navigate(`/dashboard/lead/${placeId}`)}
                           >
                             Abrir relatório
@@ -583,7 +613,7 @@ export default function HistoricoPage() {
                     >
                       <div className="flex items-start gap-3 flex-1 min-w-0">
                         <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
-                          <FileText size={18} className="text-violet-400" />
+                          <FileText size={18} className="text-violet-600 dark:text-violet-400" />
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-bold text-foreground truncate">
@@ -599,7 +629,7 @@ export default function HistoricoPage() {
                         <button
                           type="button"
                           onClick={(e) => handleIntelFavorite(item, e)}
-                          className="p-2 rounded-lg border border-border hover:bg-violet-500/10 text-amber-400"
+                          className="p-2 rounded-lg border border-border hover:bg-violet-500/10 text-amber-600 dark:text-amber-400"
                           title={item.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
                           aria-label={item.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
                         >
@@ -608,7 +638,7 @@ export default function HistoricoPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-violet-400 hover:text-violet-300"
+                          className="text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300"
                           onClick={() => handleIntelItemClick(item)}
                         >
                           Abrir

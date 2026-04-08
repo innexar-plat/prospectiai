@@ -3,7 +3,7 @@
  */
 import speakeasy from 'speakeasy';
 
-const ISSUER = process.env.TWOFA_ISSUER ?? 'Prospector';
+const ISSUER = process.env.TWOFA_ISSUER ?? 'Precision IA';
 
 export function generateTotpSecret(email: string): { secret: string; otpauthUrl: string } {
   const secret = speakeasy.generateSecret({

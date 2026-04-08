@@ -1,43 +1,58 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
-import Landing from './pages/public/Landing';
-import SignIn from './pages/auth/SignIn';
-import SignUp from './pages/auth/SignUp';
-import AffiliateSignIn from './pages/auth/AffiliateSignIn';
-import AffiliateSignUp from './pages/auth/AffiliateSignUp';
-import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
-import ResetPasswordPage from './pages/auth/ResetPasswordPage';
-import VerifyEmailPage from './pages/auth/VerifyEmailPage';
-import { DashboardLayout } from './pages/dashboard/DashboardLayout';
-import DashboardIndex from './pages/dashboard/DashboardIndex';
-import HistoricoPage from './pages/dashboard/HistoricoPage';
-import LeadsPage from './pages/dashboard/LeadsPage';
-import ListasPage from './pages/dashboard/ListasPage';
-import RelatoriosPage from './pages/dashboard/RelatoriosPage';
-import ResultadosPage from './pages/dashboard/ResultadosPage';
-import LeadDetailPage from './pages/dashboard/LeadDetailPage';
-import PerfilPage from './pages/dashboard/PerfilPage';
-import EmpresaPerfilPage from './pages/dashboard/EmpresaPerfilPage';
-import ConfiguracoesPage from './pages/dashboard/ConfiguracoesPage';
-import ConcorrenciaPage from './pages/dashboard/ConcorrenciaPage';
-import ViabilidadePage from './pages/dashboard/ViabilidadePage';
-import MinhaEmpresaPage from './pages/dashboard/MinhaEmpresaPage';
-import EquipePage from './pages/dashboard/EquipePage';
-import EquipeDashboardPage from './pages/dashboard/EquipeDashboardPage';
-import PlanosPage from './pages/dashboard/PlanosPage';
-import SuportePage from './pages/dashboard/SuportePage';
-import AfiliadoPage from './pages/dashboard/AfiliadoPage';
-import AfiliadoConversoesPage from './pages/dashboard/AfiliadoConversoesPage';
-import AfiliadoComissoesPage from './pages/dashboard/AfiliadoComissoesPage';
-import AfiliadoMateriaisPage from './pages/dashboard/AfiliadoMateriaisPage';
-import AfiliadoPagamentoPage from './pages/dashboard/AfiliadoPagamentoPage';
-import { AcceptInvitePage } from './pages/AcceptInvitePage';
-import Privacy from './pages/legal/Privacy';
-import Terms from './pages/legal/Terms';
-import SeoLandingPage from './pages/seo/SeoLandingPage';
-import OnboardingPage from './pages/onboarding/OnboardingPage';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { getWave1Slugs } from './lib/seo-local';
 import { authApi, userApi, type SessionUser } from './lib/api';
+
+// ── Lazy-loaded pages ──────────────────────────────────────────────────────────
+const Landing = lazy(() => import('./pages/public/Landing'));
+const SignIn = lazy(() => import('./pages/auth/SignIn'));
+const SignUp = lazy(() => import('./pages/auth/SignUp'));
+const AffiliateSignIn = lazy(() => import('./pages/auth/AffiliateSignIn'));
+const AffiliateSignUp = lazy(() => import('./pages/auth/AffiliateSignUp'));
+const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
+const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage'));
+const DashboardLayout = lazy(() => import('./pages/dashboard/DashboardLayout').then(m => ({ default: m.DashboardLayout })));
+const DashboardIndex = lazy(() => import('./pages/dashboard/DashboardIndex'));
+const HistoricoPage = lazy(() => import('./pages/dashboard/HistoricoPage'));
+const LeadsPage = lazy(() => import('./pages/dashboard/LeadsPage'));
+const ListasPage = lazy(() => import('./pages/dashboard/ListasPage'));
+const RelatoriosPage = lazy(() => import('./pages/dashboard/RelatoriosPage'));
+const ResultadosPage = lazy(() => import('./pages/dashboard/ResultadosPage'));
+const LeadDetailPage = lazy(() => import('./pages/dashboard/LeadDetailPage'));
+const CompareLeadsPage = lazy(() => import('./pages/dashboard/CompareLeadsPage'));
+const PerfilPage = lazy(() => import('./pages/dashboard/PerfilPage'));
+const EmpresaPerfilPage = lazy(() => import('./pages/dashboard/EmpresaPerfilPage'));
+const ConfiguracoesPage = lazy(() => import('./pages/dashboard/ConfiguracoesPage'));
+const IntegracoesPage = lazy(() => import('./pages/dashboard/IntegracoesPage'));
+const ConcorrenciaPage = lazy(() => import('./pages/dashboard/ConcorrenciaPage'));
+const ViabilidadePage = lazy(() => import('./pages/dashboard/ViabilidadePage'));
+const MinhaEmpresaPage = lazy(() => import('./pages/dashboard/MinhaEmpresaPage'));
+const EquipePage = lazy(() => import('./pages/dashboard/EquipePage'));
+const EquipeDashboardPage = lazy(() => import('./pages/dashboard/EquipeDashboardPage'));
+const PlanosPage = lazy(() => import('./pages/dashboard/PlanosPage'));
+const SuportePage = lazy(() => import('./pages/dashboard/SuportePage'));
+const AfiliadoPage = lazy(() => import('./pages/dashboard/AfiliadoPage'));
+const AfiliadoConversoesPage = lazy(() => import('./pages/dashboard/AfiliadoConversoesPage'));
+const AfiliadoComissoesPage = lazy(() => import('./pages/dashboard/AfiliadoComissoesPage'));
+const AfiliadoMateriaisPage = lazy(() => import('./pages/dashboard/AfiliadoMateriaisPage'));
+const AfiliadoPagamentoPage = lazy(() => import('./pages/dashboard/AfiliadoPagamentoPage'));
+const AcceptInvitePage = lazy(() => import('./pages/AcceptInvitePage').then(m => ({ default: m.AcceptInvitePage })));
+const Privacy = lazy(() => import('./pages/legal/Privacy'));
+const Terms = lazy(() => import('./pages/legal/Terms'));
+const SeoLandingPage = lazy(() => import('./pages/seo/SeoLandingPage'));
+const RdStationIntegration = lazy(() => import('./pages/public/RdStationIntegration'));
+const AgendorIntegration = lazy(() => import('./pages/public/AgendorIntegration'));
+const OnboardingPage = lazy(() => import('./pages/onboarding/OnboardingPage'));
+const BlogIndex = lazy(() => import('./pages/blog/BlogIndex'));
+const BlogPost = lazy(() => import('./pages/blog/BlogPost'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+
+const LazyFallback = (
+  <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
+    <div className="text-2xl text-muted">Carregando...</div>
+  </div>
+);
 
 function ProtectedRoute({ children, user }: { children: React.ReactNode; user: SessionUser | null | undefined }) {
   if (user === undefined) {
@@ -92,6 +107,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <Suspense fallback={LazyFallback}>
       <Routes>
         <Route path="/" element={landingOrRedirect} />
         <Route path="/billing/success" element={billingSuccessElement} />
@@ -99,6 +115,10 @@ function App() {
         <Route path="/en/billing/success" element={billingSuccessElement} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
+        <Route path="/integracoes/rdstation" element={<RdStationIntegration />} />
+        <Route path="/integracoes/agendor" element={<AgendorIntegration />} />
+        <Route path="/blog" element={<BlogIndex />} />
+        <Route path="/blog/:slug" element={<BlogPost />} />
         <Route path="/accept-invite" element={<AcceptInvitePage user={user} />} />
         <Route path="/auth/signin" element={user ? <Navigate to="/onboarding" replace /> : <SignIn />} />
         <Route path="/auth/signup" element={user ? <Navigate to="/onboarding" replace /> : <SignUp />} />
@@ -122,10 +142,12 @@ function App() {
           <Route path="listas" element={<ListasPage />} />
           <Route path="relatorios" element={<RelatoriosPage />} />
           <Route path="resultados" element={<ResultadosPage />} />
+          <Route path="comparar" element={<CompareLeadsPage />} />
           <Route path="lead/:placeId" element={<LeadDetailPage />} />
           <Route path="perfil" element={<PerfilPage />} />
           <Route path="empresa" element={<EmpresaPerfilPage />} />
           <Route path="configuracoes" element={<ConfiguracoesPage />} />
+          <Route path="integracoes" element={<IntegracoesPage />} />
           <Route path="concorrencia" element={<ConcorrenciaPage />} />
           <Route path="viabilidade" element={<ViabilidadePage />} />
           <Route path="minha-empresa" element={<MinhaEmpresaPage />} />
@@ -142,8 +164,9 @@ function App() {
         {getWave1Slugs().map((e) => (
           <Route key={e.slug} path={`/${e.slug}`} element={<SeoLandingPage />} />
         ))}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

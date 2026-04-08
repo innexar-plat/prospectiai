@@ -28,6 +28,7 @@ function HeaderNavLinks({ locale, onPlansClick, onCloseMenu, variant }: HeaderNa
             <button type="button" onClick={() => { onPlansClick(); onCloseMenu?.(); }} className={variant === 'desktop' ? linkClass : 'text-left ' + linkClass}>
                 {locale === 'pt' ? 'Planos' : 'Plans'}
             </button>
+            <Link to="/blog" onClick={onCloseMenu} className={linkClass}>Blog</Link>
             <Link to="/auth/afiliado/cadastro" onClick={onCloseMenu} className={linkClass}>
                 {locale === 'pt' ? 'Seja um afiliado' : 'Become an affiliate'}
             </Link>
@@ -200,9 +201,9 @@ export default function Header({
                     type="button"
                     onClick={() => navigate('/')}
                     className="flex items-center shrink-0 min-w-0 focus:outline-none focus:ring-2 focus:ring-violet-500 rounded-lg"
-                    aria-label="ProspectorAI - Ir para início"
+                    aria-label="Precision IA - Ir para início"
                 >
-                    <Logo iconSize={56} iconSizeMobile={48} iconOnly={false} className="md:gap-2" textClassName="hidden sm:inline text-foreground text-sm md:text-base" />
+                    <Logo height={168} className="h-36 sm:h-48" priority />
                 </button>
 
                 <div className="flex items-center gap-1 lg:gap-2 ml-5 flex-1 min-w-0">

@@ -1,0 +1,3 @@
+{
+  "/api/integrations/rdstation/oauth/connect/route": "app/api/integrations/rdstation/oauth/connect/route.js"
+}

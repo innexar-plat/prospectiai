@@ -1,48 +1,36 @@
 import { useTheme } from '@/contexts/ThemeContext';
 
 type Props = {
-  /** Size of the logo icon in px (desktop) */
-  iconSize?: number;
-  /** Size on mobile */
-  iconSizeMobile?: number;
-  /** Show only the icon (e.g., for mobile) */
-  iconOnly?: boolean;
+  /** Height of the logo in px */
+  height?: number;
   /** Container class */
   className?: string;
-  /** Text class */
-  textClassName?: string;
+  /** Mark as high priority for LCP */
+  priority?: boolean;
 };
 
-const LOGO_HEIGHT_DEFAULT = 40;
+const LOGO_HEIGHT_DEFAULT = 168;
 
-export function Logo({ iconSize = LOGO_HEIGHT_DEFAULT, iconSizeMobile, iconOnly = false, className = '', textClassName = '' }: Props) {
+export function Logo({ height = LOGO_HEIGHT_DEFAULT, className = '', priority = false }: Props) {
   const { theme } = useTheme();
-  const baseSize = iconSizeMobile ?? iconSize;
-  const useResponsive = iconSizeMobile != null && iconSizeMobile !== iconSize;
-  const imgClass = useResponsive
-    ? 'shrink-0 object-contain w-12 h-12 md:w-14 md:h-14'
-    : 'shrink-0 object-contain';
-  const imgStyle = useResponsive ? undefined : { width: baseSize, height: baseSize };
-
-  const logoSrc = theme === 'light' ? '/lopclaro.png' : '/logop.png';
+  const webpSrc = theme === 'light' ? '/precisionai-logo-light.webp' : '/precisionai-logo-dark.webp';
+  const pngSrc = theme === 'light' ? '/precisionai-logo-light.png' : '/precisionai-logo-dark.png';
+  const w = Math.round(height * 1.5);
 
   return (
-    <div className={`inline-flex items-center gap-2.5 shrink-0 ${className}`}>
-      <img
-        src={logoSrc}
-        alt=""
-        className={imgClass}
-        style={imgStyle}
-        aria-hidden
-      />
-      {!iconOnly && (
-        <span
-          className={`font-black tracking-tight leading-none ${theme === 'dark' ? 'text-white' : 'text-slate-900'} ${textClassName}`}
-          style={{ fontSize: `${baseSize * 0.52}px` }}
-        >
-          Prospector<span className="text-violet-500">AI</span>
-        </span>
-      )}
+    <div className={`inline-flex items-center shrink-0 ${className}`}>
+      <picture>
+        <source srcSet={webpSrc} type="image/webp" />
+        <img
+          src={pngSrc}
+          alt="PrecisionAI"
+          className="shrink-0 object-contain max-w-full"
+          style={{ height }}
+          width={w}
+          height={height}
+          {...(priority ? { fetchPriority: 'high' } : {})}
+        />
+      </picture>
     </div>
   );
 }

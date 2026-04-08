@@ -61,77 +61,77 @@ export function AffiliateSettingsPage() {
   if (loading && !config) {
     return (
       <div>
-        <h1 className="text-xl font-semibold text-white mb-6">Configurações de Afiliados</h1>
-        <div className="h-64 rounded-xl bg-zinc-800/50 animate-pulse" />
+        <h1 className="text-xl font-semibold text-gray-900 mb-6">Configurações de Afiliados</h1>
+        <div className="h-64 rounded-xl bg-gray-200 animate-pulse" />
       </div>
     );
   }
 
   return (
     <div>
-      <h1 className="text-xl font-semibold text-white mb-6">Configurações de Afiliados</h1>
+      <h1 className="text-xl font-semibold text-gray-900 mb-6">Configurações de Afiliados</h1>
       {toast && (
         <div
-          className={`mb-4 px-4 py-2 rounded-lg ${toast.type === 'success' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'}`}
+          className={`mb-4 px-4 py-2 rounded-lg ${toast.type === 'success' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}
         >
           {toast.message}
         </div>
       )}
-      <form onSubmit={handleSave} className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-6 max-w-xl space-y-4">
+      <form onSubmit={handleSave} className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm max-w-xl space-y-4">
         <div>
-          <label className="block text-sm font-medium text-zinc-400 mb-1">Taxa de comissão padrão (%)</label>
+          <label className="block text-sm font-medium text-gray-500 mb-1">Taxa de comissão padrão (%)</label>
           <input
             type="number"
             min={0}
             max={100}
             value={form.defaultCommissionRatePercent ?? 20}
             onChange={(e) => setForm((f) => ({ ...f, defaultCommissionRatePercent: parseInt(e.target.value, 10) || 0 }))}
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-zinc-200"
+            className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-gray-700"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-zinc-400 mb-1">Duração do cookie (dias)</label>
+          <label className="block text-sm font-medium text-gray-500 mb-1">Duração do cookie (dias)</label>
           <input
             type="number"
             min={1}
             max={365}
             value={form.cookieDurationDays ?? 30}
             onChange={(e) => setForm((f) => ({ ...f, cookieDurationDays: parseInt(e.target.value, 10) || 1 }))}
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-zinc-200"
+            className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-gray-700"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-zinc-400 mb-1">Regra de comissão</label>
+          <label className="block text-sm font-medium text-gray-500 mb-1">Regra de comissão</label>
           <select
             value={form.commissionRule ?? 'FIRST_PAYMENT_ONLY'}
             onChange={(e) => setForm((f) => ({ ...f, commissionRule: e.target.value as 'FIRST_PAYMENT_ONLY' | 'RECURRING' }))}
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-zinc-200"
+            className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-gray-700"
           >
             <option value="FIRST_PAYMENT_ONLY">Apenas primeira compra</option>
             <option value="RECURRING">Primeira compra + recorrente</option>
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-zinc-400 mb-1">Dias de hold para aprovação</label>
+          <label className="block text-sm font-medium text-gray-500 mb-1">Dias de hold para aprovação</label>
           <input
             type="number"
             min={0}
             max={365}
             value={form.approvalHoldDays ?? 15}
             onChange={(e) => setForm((f) => ({ ...f, approvalHoldDays: parseInt(e.target.value, 10) || 0 }))}
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-zinc-200"
+            className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-gray-700"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-zinc-400 mb-1">Mínimo para saque (centavos)</label>
+          <label className="block text-sm font-medium text-gray-500 mb-1">Mínimo para saque (centavos)</label>
           <input
             type="number"
             min={0}
             value={form.minPayoutCents ?? 10000}
             onChange={(e) => setForm((f) => ({ ...f, minPayoutCents: parseInt(e.target.value, 10) || 0 }))}
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-zinc-200"
+            className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-gray-700"
           />
-          <p className="text-xs text-zinc-500 mt-1">Ex.: 10000 = R$ 100,00</p>
+          <p className="text-xs text-gray-500 mt-1">Ex.: 10000 = R$ 100,00</p>
         </div>
         <div className="flex items-center gap-2">
           <input
@@ -139,9 +139,9 @@ export function AffiliateSettingsPage() {
             id="allowSelfSignup"
             checked={form.allowSelfSignup ?? true}
             onChange={(e) => setForm((f) => ({ ...f, allowSelfSignup: e.target.checked }))}
-            className="rounded border-zinc-600 bg-zinc-800"
+            className="rounded border-gray-300 bg-gray-100"
           />
-          <label htmlFor="allowSelfSignup" className="text-sm text-zinc-300">
+          <label htmlFor="allowSelfSignup" className="text-sm text-gray-600">
             Permitir auto-cadastro como afiliado
           </label>
         </div>

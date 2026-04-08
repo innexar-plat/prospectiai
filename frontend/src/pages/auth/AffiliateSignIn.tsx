@@ -56,19 +56,19 @@ export default function AffiliateSignInPage() {
       sideElements={
         <div className="space-y-4">
           <div className="flex items-center gap-3 text-muted font-bold text-sm">
-            <div className="w-6 h-6 rounded-full bg-emerald-600/20 flex items-center justify-center text-emerald-400 shrink-0">
+            <div className="w-6 h-6 rounded-full bg-emerald-600/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
               <Share2 size={14} />
             </div>
             <span>Seu link único e comissões por conversão</span>
           </div>
           <div className="flex items-center gap-3 text-muted font-bold text-sm">
-            <div className="w-6 h-6 rounded-full bg-emerald-600/20 flex items-center justify-center text-emerald-400 shrink-0">
+            <div className="w-6 h-6 rounded-full bg-emerald-600/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
               <Percent size={14} />
             </div>
             <span>Comissão por assinatura e acompanhamento em tempo real</span>
           </div>
           <div className="flex items-center gap-3 text-muted font-bold text-sm">
-            <div className="w-6 h-6 rounded-full bg-emerald-600/20 flex items-center justify-center text-emerald-400 shrink-0">
+            <div className="w-6 h-6 rounded-full bg-emerald-600/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
               <Wallet size={14} />
             </div>
             <span>Saque via PIX ou transferência bancária</span>
@@ -100,7 +100,7 @@ export default function AffiliateSignInPage() {
             </label>
             <Link
               to="/auth/forgot-password"
-              className="text-xs font-bold text-violet-400 hover:text-violet-300 transition-colors"
+              className="text-xs font-bold text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
             >
               Esqueceu a senha?
             </Link>
@@ -160,10 +160,10 @@ export default function AffiliateSignInPage() {
           className="h-11 text-xs font-semibold border border-border hover:border-violet-500/30"
           icon={
             <img
-              src="https://authjs.dev/img/providers/google.svg"
+              src="/icons/google.svg"
               width={24}
               height={24}
-              alt=""
+              alt="Google"
               className="shrink-0"
             />
           }
@@ -181,10 +181,10 @@ export default function AffiliateSignInPage() {
           className="h-11 text-xs font-semibold border border-border hover:border-violet-500/30"
           icon={
             <img
-              src="https://authjs.dev/img/providers/github.svg"
+              src="/icons/github.svg"
               width={24}
               height={24}
-              alt=""
+              alt="GitHub"
               className="shrink-0"
             />
           }
@@ -197,7 +197,7 @@ export default function AffiliateSignInPage() {
         Ainda não é afiliado?{" "}
         <Link
           to="/auth/afiliado/cadastro"
-          className="text-violet-400 hover:text-violet-300 font-bold transition-all hover:underline decoration-2 underline-offset-4"
+          className="text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 font-bold transition-all hover:underline decoration-2 underline-offset-4"
         >
           Cadastre-se como afiliado
         </Link>

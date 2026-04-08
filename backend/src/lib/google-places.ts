@@ -1,10 +1,11 @@
 import { fetchWithRetry } from '@/lib/fetch-http';
+import { getCached, setCached } from '@/lib/redis';
 
 const PLACES_API_BASE = 'https://places.googleapis.com/v1/places';
 
 /** Places API searchText max pageSize (doc: values above 20 are set to 20). */
 export const PLACES_PAGE_SIZE_MAX = 20;
-const PLACES_REQUEST_TIMEOUT_MS = 15000;
+const PLACES_REQUEST_TIMEOUT_MS = 25000;
 /** Delay before using nextPageToken (API may reject or repeat if immediate). */
 const NEXT_PAGE_TOKEN_DELAY_MS = 400;
 
@@ -31,6 +32,17 @@ export interface PlaceResult {
         authorAttribution: { displayName: string };
         relativePublishTimeDescription: string;
     }>;
+    photos?: Array<{
+        name: string;
+        widthPx?: number;
+        heightPx?: number;
+        authorAttributions?: Array<{ displayName: string }>;
+    }>;
+    cnpj?: string;
+    companyLegalName?: string;
+    companyTradeName?: string;
+    cnpjStatus?: string;
+    opportunityScore?: number;
     primaryType?: string;
     primaryTypeDisplayName?: { text: string };
 }
@@ -70,6 +82,9 @@ const SEARCH_FIELD_MASK = [
     'places.userRatingCount',
     'places.types',
     'places.businessStatus',
+    'places.currentOpeningHours',
+    'places.reviews',
+    'places.photos',
     'places.primaryType',
     'places.primaryTypeDisplayName',
     'nextPageToken',
@@ -94,19 +109,20 @@ const DETAILS_FIELD_MASK = [
 ].join(',');
 
 /**
- * In-memory cache of original request bodies keyed by nextPageToken.
+ * Page token body cache — stored in Redis for multi-instance compatibility.
  * Google Places API requires pagination requests to use identical params.
  * We store the original body (without pageToken) so we can replay it exactly.
- * TTL: entries auto-expire after 10 minutes via a simple cleanup.
+ * TTL: 10 minutes in Redis.
  */
-const pageTokenBodyCache = new Map<string, { body: Record<string, unknown>; ts: number }>();
-const PAGE_TOKEN_CACHE_TTL_MS = 10 * 60 * 1000;
+const PAGE_TOKEN_CACHE_TTL_S = 600; // 10 minutes
+const PAGE_TOKEN_CACHE_PREFIX = 'places:pt:';
 
-function cleanupPageTokenCache() {
-    const now = Date.now();
-    for (const [key, val] of pageTokenBodyCache) {
-        if (now - val.ts > PAGE_TOKEN_CACHE_TTL_MS) pageTokenBodyCache.delete(key);
-    }
+async function getPageTokenBody(pageToken: string): Promise<Record<string, unknown> | null> {
+    return getCached<Record<string, unknown>>(`${PAGE_TOKEN_CACHE_PREFIX}${pageToken}`);
+}
+
+async function setPageTokenBody(pageToken: string, body: Record<string, unknown>): Promise<void> {
+    await setCached(`${PAGE_TOKEN_CACHE_PREFIX}${pageToken}`, body, PAGE_TOKEN_CACHE_TTL_S);
 }
 
 function buildSearchBodyNoToken(
@@ -135,13 +151,13 @@ function buildSearchBodyNoToken(
     return body;
 }
 
-function buildSearchBody(
+async function buildSearchBody(
     params: TextSearchParams,
     pageSizeClamped: number,
-): Record<string, unknown> {
+): Promise<Record<string, unknown>> {
     if (params.pageToken) {
-        const cached = pageTokenBodyCache.get(params.pageToken);
-        if (cached) return { ...cached.body, pageToken: params.pageToken };
+        const cached = await getPageTokenBody(params.pageToken);
+        if (cached) return { ...cached, pageToken: params.pageToken };
         return {
             textQuery: params.textQuery,
             pageSize: pageSizeClamped,
@@ -161,7 +177,7 @@ export async function textSearch(params: TextSearchParams): Promise<TextSearchRe
         PLACES_PAGE_SIZE_MAX,
         Math.max(1, params.pageSize ?? PLACES_PAGE_SIZE_MAX)
     );
-    const body = buildSearchBody(params, pageSizeClamped);
+    const body = await buildSearchBody(params, pageSizeClamped);
 
     const res = await fetchWithRetry(
         `${PLACES_API_BASE}:searchText`,
@@ -184,13 +200,11 @@ export async function textSearch(params: TextSearchParams): Promise<TextSearchRe
 
     const data = await res.json();
 
-    // Cache the original body (without pageToken) for future pagination
+    // Cache the original body (without pageToken) in Redis for future pagination
     if (data.nextPageToken) {
         const bodyWithoutToken = { ...body };
         delete bodyWithoutToken.pageToken;
-        pageTokenBodyCache.set(data.nextPageToken, { body: bodyWithoutToken, ts: Date.now() });
-        // Periodic cleanup
-        if (pageTokenBodyCache.size > 50) cleanupPageTokenCache();
+        setPageTokenBody(data.nextPageToken, bodyWithoutToken).catch(() => { /* cache is optional */ });
     }
 
     return {
@@ -240,7 +254,7 @@ export async function getPlaceDetails(placeId: string): Promise<PlaceResult> {
                 'X-Goog-FieldMask': DETAILS_FIELD_MASK,
             },
         },
-        { timeoutMs: PLACES_REQUEST_TIMEOUT_MS, maxRetries: 2 }
+        { timeoutMs: PLACES_REQUEST_TIMEOUT_MS, maxRetries: 4 }
     );
 
     if (!res.ok) {

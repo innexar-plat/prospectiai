@@ -25,7 +25,7 @@ function UserActionButtons({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <button type="button" disabled={actionLoading} onClick={onResetPassword} className="px-4 py-2 rounded-lg bg-zinc-700 text-white text-sm font-medium hover:bg-zinc-600 disabled:opacity-50">
+      <button type="button" disabled={actionLoading} onClick={onResetPassword} className="px-4 py-2 rounded-lg bg-gray-200 text-gray-900 text-sm font-medium hover:bg-gray-200 disabled:opacity-50">
         Resetar senha
       </button>
       {disabledAt ? (
@@ -62,25 +62,25 @@ function ResetPasswordModal({
 }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="rounded-xl border border-zinc-700 bg-zinc-900 p-6 max-w-md w-full shadow-xl">
-        <h2 className="text-lg font-semibold text-white mb-2">Resetar senha</h2>
-        <p className="text-zinc-400 text-sm mb-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-xl max-w-md w-full shadow-xl">
+        <h2 className="text-lg font-semibold text-gray-900 mb-2">Resetar senha</h2>
+        <p className="text-gray-500 text-sm mb-4">
           Enviar email com link de redefinição ou definir uma senha temporária (mín. 8 caracteres).
         </p>
         <div className="flex gap-2 mb-4">
-          <button type="button" onClick={() => onModeChange('email')} className={`px-3 py-2 rounded-lg text-sm font-medium ${mode === 'email' ? 'bg-violet-600 text-white' : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'}`}>
+          <button type="button" onClick={() => onModeChange('email')} className={`px-3 py-2 rounded-lg text-sm font-medium ${mode === 'email' ? 'bg-violet-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-200'}`}>
             Enviar email com link
           </button>
-          <button type="button" onClick={() => onModeChange('temp')} className={`px-3 py-2 rounded-lg text-sm font-medium ${mode === 'temp' ? 'bg-violet-600 text-white' : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'}`}>
+          <button type="button" onClick={() => onModeChange('temp')} className={`px-3 py-2 rounded-lg text-sm font-medium ${mode === 'temp' ? 'bg-violet-600 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-200'}`}>
             Definir senha temporária
           </button>
         </div>
         {mode === 'temp' && (
-          <input type="text" value={tempPassword} onChange={(e) => onTempPasswordChange(e.target.value)} placeholder="Senha temporária (mín. 8 caracteres)" className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200 placeholder-zinc-500 mb-4" />
+          <input type="text" value={tempPassword} onChange={(e) => onTempPasswordChange(e.target.value)} placeholder="Senha temporária (mín. 8 caracteres)" className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-700 placeholder-gray-400 mb-4" />
         )}
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg bg-zinc-700 text-zinc-200 text-sm font-medium hover:bg-zinc-600">Cancelar</button>
+          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-200">Cancelar</button>
           <button type="button" onClick={onConfirm} disabled={actionLoading || (mode === 'temp' && tempPassword.length < 8)} className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-500 disabled:opacity-50">Confirmar</button>
         </div>
       </div>
@@ -105,13 +105,13 @@ function DeactivateModal({
 }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="rounded-xl border border-zinc-700 bg-zinc-900 p-6 max-w-md w-full shadow-xl">
-        <h2 className="text-lg font-semibold text-white mb-2">Desativar conta</h2>
-        <p className="text-zinc-400 text-sm mb-4">O usuário não poderá fazer login até a conta ser reativada. Opcionalmente informe o motivo.</p>
-        <textarea value={reason} onChange={(e) => onReasonChange(e.target.value)} placeholder="Motivo (opcional)" rows={3} className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200 placeholder-zinc-500 mb-4" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-xl max-w-md w-full shadow-xl">
+        <h2 className="text-lg font-semibold text-gray-900 mb-2">Desativar conta</h2>
+        <p className="text-gray-500 text-sm mb-4">O usuário não poderá fazer login até a conta ser reativada. Opcionalmente informe o motivo.</p>
+        <textarea value={reason} onChange={(e) => onReasonChange(e.target.value)} placeholder="Motivo (opcional)" rows={3} className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-700 placeholder-gray-400 mb-4" />
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg bg-zinc-700 text-zinc-200 text-sm font-medium hover:bg-zinc-600">Cancelar</button>
+          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-200">Cancelar</button>
           <button type="button" onClick={onConfirm} disabled={actionLoading} className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-500 disabled:opacity-50">Desativar</button>
         </div>
       </div>
@@ -147,17 +147,17 @@ export function UserDetailPage() {
 
   if (!id) {
     return (
-      <div className="text-zinc-400">ID não informado.</div>
+      <div className="text-gray-500">ID não informado.</div>
     );
   }
 
   if (loading && !user) {
     return (
       <div>
-        <Link to=".." className="text-sm text-violet-400 hover:text-violet-300 mb-4 inline-block">
+        <Link to=".." className="text-sm text-violet-600 hover:text-violet-700 mb-4 inline-block">
           ← Usuários
         </Link>
-        <div className="h-64 rounded-xl bg-zinc-800/50 animate-pulse" />
+        <div className="h-64 rounded-xl bg-gray-200 animate-pulse" />
       </div>
     );
   }
@@ -165,10 +165,10 @@ export function UserDetailPage() {
   if (error && !user) {
     return (
       <div>
-        <Link to=".." className="text-sm text-violet-400 hover:text-violet-300 mb-4 inline-block">
+        <Link to=".." className="text-sm text-violet-600 hover:text-violet-700 mb-4 inline-block">
           ← Usuários
         </Link>
-        <div className="rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3">
+        <div className="rounded-lg bg-red-50 border border-red-300 text-red-600 px-4 py-3">
           {error}
         </div>
       </div>
@@ -236,11 +236,11 @@ export function UserDetailPage() {
 
   return (
     <div>
-      <Link to=".." className="text-sm text-violet-400 hover:text-violet-300 mb-4 inline-block">
+      <Link to=".." className="text-sm text-violet-600 hover:text-violet-700 mb-4 inline-block">
         ← Usuários
       </Link>
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <h1 className="text-xl font-semibold text-white">
+        <h1 className="text-xl font-semibold text-gray-900">
           {user.name ?? user.email ?? user.id}
         </h1>
         <UserActionButtons
@@ -252,89 +252,89 @@ export function UserDetailPage() {
         />
       </div>
       {toast && (
-        <div className={`mb-4 rounded-lg px-4 py-3 text-sm font-medium ${toast.type === 'success' ? 'bg-emerald-200 dark:bg-emerald-500/10 border border-emerald-600 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-400' : 'bg-red-200 dark:bg-red-500/10 border border-red-600 dark:border-red-500/30 text-red-900 dark:text-red-400'}`}>
+        <div className={`mb-4 rounded-lg px-4 py-3 text-sm font-medium ${toast.type === 'success' ? 'bg-emerald-50 border border-emerald-300 text-emerald-700' : 'bg-red-50 border border-red-300 text-red-700'}`}>
           {toast.message}
         </div>
       )}
       {actionError && (
-        <div className="mb-4 rounded-lg bg-red-200 dark:bg-red-500/10 border border-red-600 dark:border-red-500/30 text-red-900 dark:text-red-400 px-4 py-3 text-sm font-medium">
+        <div className="mb-4 rounded-lg bg-red-50 border border-red-300 text-red-700 px-4 py-3 text-sm font-medium">
           {actionError}
         </div>
       )}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-6 space-y-4">
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           <div>
-            <p className="text-zinc-500">Email</p>
-            <p className="text-white">{user.email ?? '—'}</p>
+            <p className="text-gray-500">Email</p>
+            <p className="text-gray-900">{user.email ?? '—'}</p>
           </div>
           <div>
-            <p className="text-zinc-500">Plano</p>
-            <p className="text-white">{user.plan}</p>
+            <p className="text-gray-500">Plano</p>
+            <p className="text-gray-900">{user.plan}</p>
           </div>
           {!isSupport && isAdminDetail(user) && (
             <>
               <div>
-                <p className="text-zinc-500">Leads usados / limite</p>
-                <p className="text-white">{user.leadsUsed} / {user.leadsLimit}</p>
+                <p className="text-gray-500">Leads usados / limite</p>
+                <p className="text-gray-900">{user.leadsUsed} / {user.leadsLimit}</p>
               </div>
               <div>
-                <p className="text-zinc-500">Onboarding</p>
-                <p className="text-white">{user.onboardingCompletedAt ? 'Concluído' : 'Pendente'}</p>
+                <p className="text-gray-500">Onboarding</p>
+                <p className="text-gray-900">{user.onboardingCompletedAt ? 'Concluído' : 'Pendente'}</p>
               </div>
               <div>
-                <p className="text-zinc-500">Empresa</p>
-                <p className="text-white">{user.companyName ?? '—'}</p>
+                <p className="text-gray-500">Empresa</p>
+                <p className="text-gray-900">{user.companyName ?? '—'}</p>
               </div>
             </>
           )}
           <div>
-            <p className="text-zinc-500">Status da conta</p>
-            <p className="text-white">{disabledAt ? 'Desativada' : 'Ativa'}</p>
+            <p className="text-gray-500">Status da conta</p>
+            <p className="text-gray-900">{disabledAt ? 'Desativada' : 'Ativa'}</p>
           </div>
           <div>
-            <p className="text-zinc-500">Criado em</p>
-            <p className="text-white">{new Date(user.createdAt).toLocaleString('pt-BR')}</p>
+            <p className="text-gray-500">Criado em</p>
+            <p className="text-gray-900">{new Date(user.createdAt).toLocaleString('pt-BR')}</p>
           </div>
         </div>
         {isSupport && (
           <div>
-            <p className="text-zinc-500 text-sm mb-2">Perfil (negócio)</p>
+            <p className="text-gray-500 text-sm mb-2">Perfil (negócio)</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
               <div>
-                <p className="text-zinc-500">Onboarding</p>
-                <p className="text-white">{(user as SupportUserDetail).onboardingCompletedAt ? 'Concluído' : 'Pendente'}</p>
+                <p className="text-gray-500">Onboarding</p>
+                <p className="text-gray-900">{(user as SupportUserDetail).onboardingCompletedAt ? 'Concluído' : 'Pendente'}</p>
               </div>
               <div>
-                <p className="text-zinc-500">Empresa</p>
-                <p className="text-white">{(user as SupportUserDetail).companyName ?? '—'}</p>
+                <p className="text-gray-500">Empresa</p>
+                <p className="text-gray-900">{(user as SupportUserDetail).companyName ?? '—'}</p>
               </div>
               <div>
-                <p className="text-zinc-500">Produto/serviço</p>
-                <p className="text-white">{(user as SupportUserDetail).productService ?? '—'}</p>
+                <p className="text-gray-500">Produto/serviço</p>
+                <p className="text-gray-900">{(user as SupportUserDetail).productService ?? '—'}</p>
               </div>
               <div>
-                <p className="text-zinc-500">Público-alvo</p>
-                <p className="text-white">{(user as SupportUserDetail).targetAudience ?? '—'}</p>
+                <p className="text-gray-500">Público-alvo</p>
+                <p className="text-gray-900">{(user as SupportUserDetail).targetAudience ?? '—'}</p>
               </div>
               <div>
-                <p className="text-zinc-500">Principal benefício</p>
-                <p className="text-white">{(user as SupportUserDetail).mainBenefit ?? '—'}</p>
+                <p className="text-gray-500">Principal benefício</p>
+                <p className="text-gray-900">{(user as SupportUserDetail).mainBenefit ?? '—'}</p>
               </div>
             </div>
           </div>
         )}
         {workspacesList.length > 0 && (
           <div>
-            <p className="text-zinc-500 text-sm mb-2">Workspaces</p>
+            <p className="text-gray-500 text-sm mb-2">Workspaces</p>
             <ul className="space-y-1">
               {workspacesList.map((w) => (
                 <li key={w.id}>
                   {isSupport ? (
-                    <span className="text-zinc-300 text-sm">{w.name ?? w.id}</span>
+                    <span className="text-gray-600 text-sm">{w.name ?? w.id}</span>
                   ) : (
                     <Link
                       to={`../workspaces/${w.id}`}
-                      className="text-violet-400 hover:text-violet-300 text-sm"
+                      className="text-violet-600 hover:text-violet-700 text-sm"
                     >
                       {w.name ?? w.id}
                     </Link>

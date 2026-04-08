@@ -8,8 +8,10 @@ import { prisma } from '@/lib/prisma';
 import { checkMemberLimits, MemberLimitExceededError } from '@/lib/team-credits';
 import { textSearch, textSearchAllPages, PLACES_PAGE_SIZE_MAX, type PlaceResult } from '@/lib/google-places';
 import { geocodeAddress } from '@/lib/geocode';
-import { getCached } from '@/lib/redis';
+import { resolveCountryLocale } from '@/lib/country-locale';
+import { getCached, setCached } from '@/lib/redis';
 import { syncLeads } from '@/lib/db-sync';
+import { computeOpportunityScore } from '@/lib/db-sync';
 import { logger } from '@/lib/logger';
 import { recordUsageEvent } from '@/lib/usage';
 import type { SearchInput } from '@/lib/validations/schemas';
@@ -18,7 +20,7 @@ import type { SearchResult, PlaceLike } from '../domain/types';
 /** UI sempre em km; conversão para metros só na chamada à API (locationBias.radius). */
 const RADIUS_KM_TO_M = 1000;
 
-type SaveHistoryFn = (resultsCount: number, places?: unknown[]) => Promise<void>;
+type SaveHistoryFn = (resultsCount: number, places?: PlaceResult[]) => Promise<void>;
 
 /** Page token from request (optional or null). */
 type PageTokenParam = string | undefined | null;
@@ -29,6 +31,7 @@ type TryCacheOrDbSearchParams = {
     effectivePageSize: number;
     hasWebsite?: string | null;
     hasPhone?: string | null;
+    city?: string | null;
 };
 
 type ExecuteSearchInput = {
@@ -48,6 +51,23 @@ const DEFAULT_LOCATION_RADIUS_KM = 15;
 const MAX_LOCATION_RADIUS_M = 50000;
 /** Delay antes de usar nextPageToken (API pode rejeitar ou repetir se imediato). */
 const NEXT_PAGE_TOKEN_DELAY_MS = 400;
+/** Cache TTL for search results (5 minutes). */
+const SEARCH_CACHE_TTL_SECONDS = 300;
+/** Max age in days for DB lead fallback to be considered fresh. */
+const DB_LEAD_FRESHNESS_DAYS = 14;
+
+function enrichWithOpportunityScore(places: PlaceResult[]): PlaceResult[] {
+    return places
+        .map((place) => {
+            const { score } = computeOpportunityScore(place);
+            return { ...place, opportunityScore: score } as PlaceResult;
+        })
+        .sort((a, b) => {
+            const aScore = Number((a as PlaceResult & { opportunityScore?: number }).opportunityScore ?? 0);
+            const bScore = Number((b as PlaceResult & { opportunityScore?: number }).opportunityScore ?? 0);
+            return bScore - aScore;
+        });
+}
 
 export class SearchHttpError extends Error {
     constructor(
@@ -132,9 +152,9 @@ async function tryCacheOrDbSearch(
     saveHistory: SaveHistoryFn,
 ): Promise<SearchResult | null> {
     if (pageToken) return null;
-    const { textQuery, includedType, effectivePageSize, hasWebsite, hasPhone } = params;
-    const cacheKey = `search:${textQuery}:${includedType || ''}:${effectivePageSize}:${hasWebsite || 'any'}:${hasPhone || 'any'}`;
-    const cached = await getCached<{ places: unknown[]; nextPageToken?: string }>(cacheKey);
+    const { textQuery, includedType, effectivePageSize, hasWebsite, hasPhone, city } = params;
+    const cacheKey = buildCacheKey(textQuery, includedType, effectivePageSize, hasWebsite, hasPhone, city);
+    const cached = await getCached<{ places: PlaceResult[]; nextPageToken?: string }>(cacheKey);
     const cachedCount = cached?.places?.length ?? 0;
     const minAcceptableFromCache = Math.min(5, effectivePageSize);
     if (cached?.places && cachedCount >= minAcceptableFromCache) {
@@ -143,50 +163,91 @@ async function tryCacheOrDbSearch(
         return { ...cached, fromCache: true };
     }
     if (cachedCount > 0) logger.info('Search: cache skipped (below minimum)', { cachedCount, minAcceptableFromCache });
+
+    // Build smarter DB query: filter by city in address if available, freshness check
+    const freshnessDate = new Date();
+    freshnessDate.setDate(freshnessDate.getDate() - DB_LEAD_FRESHNESS_DAYS);
+
+    const dbWhereConditions: Record<string, unknown>[] = [
+        { name: { contains: textQuery, mode: 'insensitive' } },
+        { address: { contains: textQuery, mode: 'insensitive' } },
+    ];
+
+    // Build the where clause with optional city filter and freshness
+    const dbWhere: Record<string, unknown> = {
+        OR: dbWhereConditions,
+        lastSearchedAt: { gte: freshnessDate },
+    };
+
+    // If city is provided, also require city in address for relevance
+    if (city?.trim()) {
+        dbWhere.address = { contains: city.trim(), mode: 'insensitive' };
+    }
+
+    // Filter by includedType in the DB query to avoid category mismatch
+    if (includedType?.trim()) {
+        dbWhere.types = { array_contains: [includedType.trim()] };
+    }
+
+    // Push hasWebsite/hasPhone filters to the DB query instead of filtering in-memory
+    if (hasWebsite === 'yes') dbWhere.website = { not: null };
+    if (hasWebsite === 'no') dbWhere.website = null;
+    if (hasPhone === 'yes') dbWhere.phone = { not: null };
+    if (hasPhone === 'no') dbWhere.phone = null;
+
     const dbLeads = await prisma.lead.findMany({
-        where: {
-            OR: [
-                { name: { contains: textQuery, mode: 'insensitive' } },
-                { address: { contains: textQuery, mode: 'insensitive' } },
-            ],
-        },
-        take: 100,
+        where: dbWhere,
+        take: effectivePageSize + 5, // slight overfetch to check if enough
         orderBy: { lastSearchedAt: 'desc' },
     });
-    if (dbLeads.length < 10) {
+    if (dbLeads.length < 5) {
         logger.info('Search: local DB skip', { dbLeadsCount: dbLeads.length });
         return null;
     }
-    const mapped = dbLeads.map((l) => ({
+    const mapped: PlaceResult[] = dbLeads.map((l) => ({
         id: l.placeId,
-        displayName: { text: l.name },
-        formattedAddress: l.address,
-        nationalPhoneNumber: l.phone,
-        websiteUri: l.website,
-        rating: l.rating,
-        userRatingCount: l.reviewCount,
-        types: l.types,
-        businessStatus: l.businessStatus,
+        displayName: { text: l.name, languageCode: 'pt-BR' },
+        formattedAddress: l.address ?? undefined,
+        nationalPhoneNumber: l.phone ?? undefined,
+        websiteUri: l.website ?? undefined,
+        cnpj: l.cnpj ?? undefined,
+        companyLegalName: l.companyLegalName ?? undefined,
+        companyTradeName: l.companyTradeName ?? undefined,
+        cnpjStatus: l.cnpjStatus ?? undefined,
+        rating: l.rating ?? undefined,
+        userRatingCount: l.reviewCount ?? undefined,
+        types: (l.types as string[] | null) ?? undefined,
+        businessStatus: l.businessStatus ?? undefined,
+        opportunityScore: l.opportunityScore ?? undefined,
     }));
-    const filtered = filterPlaces(mapped, hasWebsite, hasPhone);
-    const slice = filtered.slice(0, effectivePageSize);
-    if (slice.length < 5) {
-        logger.info('Search: local DB skip', { dbLeadsCount: dbLeads.length });
-        return null;
-    }
-    logger.info('Search: local DB used', { dbTotal: dbLeads.length, afterFilter: filtered.length, returned: slice.length });
+    const slice = enrichWithOpportunityScore(mapped).slice(0, effectivePageSize);
+    logger.info('Search: local DB used', { dbTotal: dbLeads.length, returned: slice.length });
     await saveHistory(slice.length, slice);
     return { places: slice, fromLocalDb: true };
+}
+
+/** Build a deterministic cache key for search results (includes city for location correctness). */
+function buildCacheKey(
+    textQuery: string,
+    includedType?: string | null,
+    pageSize?: number,
+    hasWebsite?: string | null,
+    hasPhone?: string | null,
+    city?: string | null,
+): string {
+    const c = (city ?? '').toLowerCase().trim();
+    return `search:${textQuery.toLowerCase().trim()}:${includedType || ''}:${pageSize || 20}:${hasWebsite || 'any'}:${hasPhone || 'any'}:${c}`;
 }
 
 async function persistUnifiedSearchResult(
     activeWorkspace: { id: string },
     userId: string,
-    places: unknown[],
+    places: PlaceResult[],
     textQuery: string,
     pageSize: number,
     filters: FiltersPayload,
     resultsCount: number,
+    location?: { city?: string | null; state?: string | null; country?: string | null },
 ): Promise<void> {
     recordUsageEvent({
         workspaceId: activeWorkspace.id,
@@ -194,9 +255,14 @@ async function persistUnifiedSearchResult(
         type: 'GOOGLE_PLACES_SEARCH',
         quantity: 1,
     });
-    syncLeads(places as PlaceResult[]).catch((err) =>
+    syncLeads(places).catch((err) =>
         logger.error('Background sync error', { error: err instanceof Error ? err.message : 'Unknown' })
     );
+
+    // Write-through cache: store results for subsequent identical queries
+    const cacheKey = buildCacheKey(textQuery, filters.includedType, pageSize, filters.hasWebsite, filters.hasPhone, location?.city);
+    setCached(cacheKey, { places }, SEARCH_CACHE_TTL_SECONDS).catch(() => { /* cache is optional */ });
+
     await prisma.$transaction([
         prisma.workspace.update({
             where: { id: activeWorkspace.id },
@@ -211,6 +277,9 @@ async function persistUnifiedSearchResult(
                 filters,
                 resultsCount,
                 resultsData: JSON.parse(JSON.stringify(places)),
+                city: location?.city?.trim() || null,
+                state: location?.state?.trim() || null,
+                country: location?.country?.trim() || null,
             },
         }),
     ]);
@@ -244,8 +313,9 @@ function createSaveHistoryForSearch(
     textQuery: string,
     effectivePageSize: number,
     filtersPayload: FiltersPayload,
+    location?: { city?: string | null; state?: string | null; country?: string | null },
 ): SaveHistoryFn {
-    return async (resultsCount: number, places?: unknown[]): Promise<void> => {
+    return async (resultsCount: number, places?: PlaceResult[]): Promise<void> => {
         await prisma.searchHistory
             .create({
                 data: {
@@ -256,6 +326,9 @@ function createSaveHistoryForSearch(
                     filters: filtersPayload,
                     resultsCount,
                     resultsData: places ? JSON.parse(JSON.stringify(places)) : undefined,
+                    city: location?.city?.trim() || null,
+                    state: location?.state?.trim() || null,
+                    country: location?.country?.trim() || null,
                 },
             })
             .catch((err) =>
@@ -272,15 +345,20 @@ async function executeGoogleSearchAndPersist(
     activeWorkspace: { id: string },
     userId: string,
     filtersPayload: FiltersPayload,
+    country?: string | null,
+    location?: { city?: string | null; state?: string | null; country?: string | null },
 ): Promise<SearchResult> {
     if (input.pageToken) {
         await new Promise((r) => setTimeout(r, NEXT_PAGE_TOKEN_DELAY_MS));
     }
+    const locale = resolveCountryLocale(country);
     logger.info('Search: calling Google Places API', {
         textQuery: input.textQuery,
         includedType: input.includedType,
         hasLocationBias: !!locationBias,
         hasPageToken: !!input.pageToken,
+        regionCode: locale.regionCode,
+        languageCode: locale.languageCode,
     });
     const result = await textSearch({
         textQuery: input.textQuery,
@@ -288,10 +366,14 @@ async function executeGoogleSearchAndPersist(
         pageSize: input.effectivePageSize,
         pageToken: input.pageToken || undefined,
         locationBias,
+        languageCode: locale.languageCode,
+        regionCode: locale.regionCode,
     });
     const rawCount = result.places?.length ?? 0;
     if (result.places) {
-        result.places = filterPlaces(result.places, input.hasWebsite, input.hasPhone).slice(0, input.effectivePageSize);
+        result.places = enrichWithOpportunityScore(
+            filterPlaces(result.places, input.hasWebsite, input.hasPhone).slice(0, input.effectivePageSize)
+        );
     }
     const finalCount = result.places?.length ?? 0;
     logger.info('Search: Google Places response', {
@@ -301,7 +383,7 @@ async function executeGoogleSearchAndPersist(
         hasPhone: input.hasPhone,
     });
     if (result.places && result.places.length > 0) {
-        await persistUnifiedSearchResult(activeWorkspace, userId, result.places, input.textQuery, input.effectivePageSize, filtersPayload, result.places.length);
+        await persistUnifiedSearchResult(activeWorkspace, userId, result.places, input.textQuery, input.effectivePageSize, filtersPayload, result.places.length, location);
     }
     logger.info('Search: result', { resultCount: finalCount });
     return result;
@@ -324,11 +406,12 @@ export async function runSearch(input: SearchInput, userId: string): Promise<Sea
     });
 
     const { activeWorkspace } = await getSearchUserAndWorkspaceOrThrow(userId);
-    const saveHistory = createSaveHistoryForSearch(activeWorkspace, userId, textQuery, effectivePageSize, filtersPayload);
+    const locationInfo = { city: city ?? null, state: state ?? null, country: country ?? null };
+    const saveHistory = createSaveHistoryForSearch(activeWorkspace, userId, textQuery, effectivePageSize, filtersPayload, locationInfo);
 
     const earlyResult = await tryCacheOrDbSearch(
         pageToken,
-        { textQuery, includedType, effectivePageSize, hasWebsite, hasPhone },
+        { textQuery, includedType, effectivePageSize, hasWebsite, hasPhone, city },
         saveHistory,
     );
     if (earlyResult) return earlyResult;
@@ -347,6 +430,8 @@ export async function runSearch(input: SearchInput, userId: string): Promise<Sea
         activeWorkspace,
         userId,
         filtersPayload,
+        country,
+        locationInfo,
     );
 }
 
@@ -354,7 +439,7 @@ export async function runSearch(input: SearchInput, userId: string): Promise<Sea
 export const SEARCH_ALL_PAGES_MAX_PLACES = 60;
 
 export interface SearchAllPagesResult {
-    places: unknown[];
+    places: PlaceResult[];
     totalFetched: number;
 }
 
@@ -392,12 +477,16 @@ export async function runSearchAllPages(
         }
     }
 
-    logger.info('SearchAllPages: fetching up to N places', { textQuery, effectiveMax });
+    const locale = resolveCountryLocale(country);
+
+    logger.info('SearchAllPages: fetching up to N places', { textQuery, effectiveMax, regionCode: locale.regionCode });
     const { places: rawPlaces } = await textSearchAllPages({
         textQuery,
         includedType: includedType || undefined,
         locationBias,
         maxPlaces: effectiveMax,
+        languageCode: locale.languageCode,
+        regionCode: locale.regionCode,
     });
 
     const places = filterPlaces(rawPlaces, hasWebsite, hasPhone).slice(0, effectiveMax);

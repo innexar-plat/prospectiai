@@ -11,6 +11,9 @@ down:
 build:
 	./docker/scripts/build.sh
 
+build-clean:
+	docker compose build --no-cache
+
 # Rebuild: build images then bring stack up.
 rebuild: build up
 
@@ -40,3 +43,11 @@ sonar:
 	@test -n "$$SONAR_TOKEN" || (echo "Defina SONAR_TOKEN no ambiente."; exit 1)
 	docker run --rm -e SONAR_HOST_URL=$${SONAR_HOST_URL:-https://sonar.innexar.com.br} -e SONAR_TOKEN=$$SONAR_TOKEN \
 		-v "$$(pwd):/usr/src" -w /usr/src sonarsource/sonar-scanner-cli
+
+# Database backup (daily via cron: 0 3 * * * cd /opt/prospector-ai && make backup)
+backup:
+	./scripts/backup-db.sh
+
+# One-click deploy: git pull → build → restart → health check → Telegram alert
+deploy:
+	./scripts/deploy.sh

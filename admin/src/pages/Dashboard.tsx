@@ -20,7 +20,7 @@ export function Dashboard() {
         {[1, 2, 3, 4].map((i) => (
           <div
             key={i}
-            className="h-24 rounded-xl bg-zinc-800/50 animate-pulse"
+            className="h-24 rounded-xl bg-gray-200 animate-pulse"
             data-testid="dashboard-skeleton"
           />
         ))}
@@ -30,7 +30,7 @@ export function Dashboard() {
 
   if (error) {
     return (
-      <div className="rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3">
+      <div className="rounded-lg bg-red-50 border border-red-300 text-red-600 px-4 py-3">
         {error}
       </div>
     );
@@ -39,10 +39,10 @@ export function Dashboard() {
   if (!stats) return null;
 
   const mainCards = [
-    { label: 'Usuários', value: stats.users },
-    { label: 'Workspaces', value: stats.workspaces },
-    { label: 'Histórico de buscas', value: stats.searchHistory },
-    { label: 'Análises de leads', value: stats.leadAnalyses },
+    { label: 'Usuários', value: stats.users, color: 'text-violet-600' },
+    { label: 'Workspaces', value: stats.workspaces, color: 'text-blue-600' },
+    { label: 'Histórico de buscas', value: stats.searchHistory, color: 'text-emerald-600' },
+    { label: 'Análises de leads', value: stats.leadAnalyses, color: 'text-amber-600' },
   ] as const;
 
   const usageCards = [
@@ -55,27 +55,27 @@ export function Dashboard() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold text-white mb-6">Dashboard</h1>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {mainCards.map(({ label, value }) => (
+      <h1 className="text-xl font-bold text-gray-900 mb-6">Dashboard</h1>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {mainCards.map(({ label, value, color }) => (
           <div
             key={label}
-            className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4"
+            className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow"
           >
-            <p className="text-sm text-zinc-500">{label}</p>
-            <p className="text-2xl font-semibold text-white mt-1">{value.toLocaleString()}</p>
+            <p className="text-sm font-medium text-gray-500">{label}</p>
+            <p className={`text-3xl font-bold mt-1 ${color}`}>{value.toLocaleString()}</p>
           </div>
         ))}
       </div>
-      <h2 className="text-lg font-medium text-zinc-300 mb-3">Uso (totais)</h2>
+      <h2 className="text-lg font-semibold text-gray-700 mb-3">Uso (totais)</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {usageCards.map(({ label, value }) => (
           <div
             key={label}
-            className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4"
+            className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
           >
-            <p className="text-sm text-zinc-500">{label}</p>
-            <p className="text-2xl font-semibold text-white mt-1">{value.toLocaleString()}</p>
+            <p className="text-xs font-medium text-gray-500">{label}</p>
+            <p className="text-xl font-bold text-gray-900 mt-1">{value.toLocaleString()}</p>
           </div>
         ))}
       </div>

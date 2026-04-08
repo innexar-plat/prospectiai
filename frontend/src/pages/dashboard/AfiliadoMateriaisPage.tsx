@@ -43,8 +43,8 @@ export default function AfiliadoMateriaisPage() {
     });
   };
 
-  const whatsappText = `Conheça o ProspectorAI – busca B2B e prospecção com IA. Cadastre-se por aqui: ${utmLink}`;
-  const emailText = `Olá!\n\nRecomendo o ProspectorAI para busca e prospecção B2B com inteligência artificial.\n\nCadastre-se pelo link: ${utmLink}`;
+  const whatsappText = `Conheça o Precision IA – busca B2B e prospecção com IA. Cadastre-se por aqui: ${utmLink}`;
+  const emailText = `Olá!\n\nRecomendo o Precision IA para busca e prospecção B2B com inteligência artificial.\n\nCadastre-se pelo link: ${utmLink}`;
 
   if (loading) {
     return (

@@ -1,11 +1,38 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Target, Loader2, ArrowRight, ExternalLink, Download, Star } from 'lucide-react';
+import { Target, Loader2, ArrowRight, ExternalLink, Download, Star, Copy, Check, MessageCircle } from 'lucide-react';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { leadsApi, type LeadAnalysisListItem, type SessionUser } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { useToast } from '@/contexts/ToastContext';
 import { exportToCSV } from '@/lib/exportService';
+
+const STATUS_OPTIONS: { value: 'NEW' | 'CONTACTED' | 'CONVERTED' | 'LOST'; label: string; color: string }[] = [
+  { value: 'NEW', label: 'A contatar', color: 'text-muted' },
+  { value: 'CONTACTED', label: 'Contatado', color: 'text-blue-600 dark:text-blue-400' },
+  { value: 'CONVERTED', label: 'Convertido', color: 'text-emerald-600 dark:text-emerald-400' },
+  { value: 'LOST', label: 'Perdido', color: 'text-rose-600 dark:text-rose-400' },
+];
+
+function CopyBtn({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(text).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        });
+      }}
+      title="Copiar mensagem WhatsApp"
+      className="p-2 rounded-lg border border-border hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 transition-colors"
+    >
+      {copied ? <Check size={15} /> : <Copy size={15} />}
+    </button>
+  );
+}
 
 function LeadsPageToolbar({
   user,
@@ -60,6 +87,7 @@ function LeadsListContent({
   onGoSearch,
   onToggleFavorite,
   onGoDetail,
+  onStatusChange,
 }: {
   loading: boolean;
   filteredLeads: LeadAnalysisListItem[];
@@ -68,24 +96,21 @@ function LeadsListContent({
   onGoSearch: () => void;
   onToggleFavorite: (item: LeadAnalysisListItem, e: React.MouseEvent) => void;
   onGoDetail: (placeId: string) => void;
+  onStatusChange: (item: LeadAnalysisListItem, status: 'NEW' | 'CONTACTED' | 'CONVERTED' | 'LOST') => void;
 }) {
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-12 text-muted gap-3">
-        <Loader2 size={24} className="animate-spin" />
-        <span>Carregando leads salvas...</span>
+      <div className="flex items-center justify-center py-20">
+        <Loader2 size={32} className="animate-spin text-violet-600 dark:text-violet-400" />
       </div>
     );
   }
   if (filteredLeads.length === 0) {
     return (
-      <div className="rounded-[2.4rem] bg-card border border-border p-12 flex flex-col items-center justify-center gap-4 min-h-[320px]">
-        <Target size={48} className="text-muted" aria-hidden />
-        <h2 className="text-xl font-bold text-foreground">
-          {favoriteOnly ? 'Nenhum lead favorito' : 'Nenhum lead encontrado'}
-        </h2>
-        <p className="text-sm text-muted text-center max-w-md">
-          {favoriteOnly ? 'Marque leads como favoritos para filtrar aqui.' : 'Os leads que você analisar aparecerão aqui para acompanhamento.'}
+      <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
+        <Target size={48} className="text-muted/40" />
+        <p className="text-muted">
+          {favoriteOnly ? 'Nenhum lead favorito encontrado.' : 'Você ainda não salvou nenhum lead.'}
         </p>
         {favoriteOnly ? (
           <Button variant="secondary" onClick={onShowAll}>Ver todos</Button>
@@ -103,6 +128,7 @@ function LeadsListContent({
         const leadData = record.lead;
         return (
           <div key={record.id} className="bg-card w-full p-6 border border-border rounded-3xl shadow-sm hover:border-violet-500/50 transition-colors flex flex-col items-start text-left">
+            {/* Header row */}
             <div className="flex justify-between items-start w-full mb-4">
               <div className="flex flex-col flex-1 min-w-0">
                 <h3 className="text-lg font-bold text-foreground line-clamp-1" title={leadData?.name}>
@@ -116,7 +142,7 @@ function LeadsListContent({
                 <button
                   type="button"
                   onClick={(e) => onToggleFavorite(record, e)}
-                  className="p-2 rounded-lg border border-border hover:bg-violet-500/10 text-amber-400"
+                  className="p-2 rounded-lg border border-border hover:bg-violet-500/10 text-amber-600 dark:text-amber-400"
                   title={record.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
                   aria-label={record.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
                 >
@@ -124,35 +150,82 @@ function LeadsListContent({
                 </button>
                 {record.score != null && (
                   <div className="flex flex-col items-center justify-center w-12 h-12 rounded-full border border-violet-500 bg-violet-500/10">
-                    <span className="text-sm font-bold text-violet-400">{record.score}</span>
+                    <span className="text-sm font-bold text-violet-600 dark:text-violet-400">{record.score}</span>
                   </div>
                 )}
               </div>
             </div>
-            <div className="flex flex-wrap gap-2 mb-6">
+
+            {/* Badges */}
+            <div className="flex flex-wrap gap-2 mb-4">
               {leadData?.rating != null && (
                 <span className="px-3 py-1 bg-surface border border-border rounded-lg text-xs font-medium text-muted">
-                  Estrelas: {leadData.rating}
+                  ⭐ {leadData.rating}
+                </span>
+              )}
+              {record.score != null && (
+                <span className="px-3 py-1 bg-violet-500/10 border border-violet-500/20 rounded-lg text-xs font-bold text-violet-600 dark:text-violet-400">
+                  Score {record.score}
                 </span>
               )}
             </div>
-            <div className="mt-auto w-full pt-4 border-t border-border flex items-center justify-between">
-              {leadData?.website ? (
-                <a href={leadData.website} target="_blank" rel="noreferrer" className="text-muted hover:text-foreground inline-flex items-center gap-1.5 text-xs transition-colors" onClick={(e) => e.stopPropagation()}>
-                  Site <ExternalLink size={12} />
-                </a>
-              ) : (
-                <span className="text-xs text-muted/50">Sem site</span>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-violet-400 hover:text-violet-300 hover:bg-violet-500/10 -mr-2"
-                icon={<ArrowRight size={16} />}
-                onClick={() => leadData?.placeId && onGoDetail(leadData.placeId)}
+
+            {/* Status dropdown */}
+            <div className="w-full mb-4">
+              <select
+                value={record.status ?? 'NEW'}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  onStatusChange(record, e.target.value as 'NEW' | 'CONTACTED' | 'CONVERTED' | 'LOST');
+                }}
+                className={`w-full h-8 px-3 rounded-lg border border-border bg-surface text-xs font-medium focus:outline-none focus:ring-2 focus:ring-violet-500/50 ${
+                  STATUS_OPTIONS.find((s) => s.value === (record.status ?? 'NEW'))?.color ?? 'text-muted'
+                }`}
               >
-                Detalhes
-              </Button>
+                {STATUS_OPTIONS.map((s) => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Footer actions */}
+            <div className="mt-auto w-full pt-4 border-t border-border flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                {leadData?.website ? (
+                  <a href={leadData.website} target="_blank" rel="noreferrer" className="text-muted hover:text-foreground inline-flex items-center gap-1.5 text-xs transition-colors" onClick={(e) => e.stopPropagation()}>
+                    Site <ExternalLink size={12} />
+                  </a>
+                ) : (
+                  <span className="text-xs text-muted/50">Sem site</span>
+                )}
+              </div>
+              <div className="flex items-center gap-1">
+                {record.suggestedWhatsAppMessage && (
+                  <CopyBtn text={record.suggestedWhatsAppMessage} />
+                )}
+                {!record.suggestedWhatsAppMessage && leadData?.phone && (
+                  <a
+                    href={`https://wa.me/${leadData.phone.replace(/\D/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    title="Abrir WhatsApp"
+                    className="p-2 rounded-lg border border-border hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 transition-colors"
+                  >
+                    <MessageCircle size={15} />
+                  </a>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 hover:bg-violet-500/10 -mr-2"
+                  icon={<ArrowRight size={16} />}
+                  onClick={() => leadData?.placeId && onGoDetail(leadData.placeId)}
+                >
+                  Detalhes
+                </Button>
+              </div>
             </div>
           </div>
         );
@@ -201,6 +274,15 @@ export default function LeadsPage() {
     }
   };
 
+  const handleStatusChange = async (item: LeadAnalysisListItem, status: 'NEW' | 'CONTACTED' | 'CONVERTED' | 'LOST') => {
+    try {
+      await leadsApi.updateStatus(item.id, status);
+      setLeads((prev) => prev.map((r) => (r.id === item.id ? { ...r, status } : r)));
+    } catch {
+      addToast('error', 'Falha ao atualizar status.');
+    }
+  };
+
   const { user } = useOutletContext<{ user: SessionUser }>();
 
   return (
@@ -225,6 +307,7 @@ export default function LeadsPage() {
           onGoSearch={() => navigate('/dashboard')}
           onToggleFavorite={handleToggleFavorite}
           onGoDetail={(placeId) => navigate(`/dashboard/lead/${placeId}`)}
+          onStatusChange={handleStatusChange}
         />
       </div>
     </>

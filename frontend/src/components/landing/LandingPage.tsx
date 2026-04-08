@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Search, Brain, Rocket, Zap, ArrowRight, Shield, Globe, Download, Users, FileOutput, Lock, MapPin, BarChart3, Target, MessageSquare, TrendingUp, Tag, Swords, ChevronDown, Quote } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
@@ -39,7 +39,6 @@ const LANDING_FAQ = [
 ] as const;
 
 export default function LandingPage({ onViewPlans, t }: { locale: string, onViewPlans: () => void, t: (key: string, options?: Record<string, unknown>) => string }) {
-    const navigate = useNavigate();
     const [faqOpenIndex, setFaqOpenIndex] = useState<number | null>(null);
 
     return (
@@ -70,16 +69,14 @@ export default function LandingPage({ onViewPlans, t }: { locale: string, onView
                     </p>
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide animation-delay-300 animation-fill-both">
-                        <Button
-                            onClick={() => navigate('/auth/signup')}
-                            variant="primary"
-                            size="lg"
-                            className="w-full sm:w-auto h-16 px-10 text-lg group"
-                            icon={<Rocket size={20} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" aria-hidden />}
+                        <Link
+                            to="/auth/signup"
+                            className="inline-flex items-center justify-center font-bold rounded-2xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-violet-500/50 active:scale-95 bg-[#7c3aed] text-white shadow-[0_4px_14px_0_rgba(124,58,237,0.3)] hover:bg-[#6d28d9] hover:shadow-[0_6px_20px_rgba(109,40,217,0.4)] hover:-translate-y-0.5 w-full sm:w-auto h-16 px-10 text-lg group"
                             aria-label={t('landing.ctaStart')}
                         >
+                            <span className="mr-2"><Rocket size={20} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" aria-hidden /></span>
                             {t('landing.ctaStart')}
-                        </Button>
+                        </Link>
                         <Button
                             onClick={onViewPlans}
                             variant="secondary"
@@ -91,13 +88,12 @@ export default function LandingPage({ onViewPlans, t }: { locale: string, onView
                         </Button>
                     </div>
                     <p className="mt-5 text-center animate-fade animation-delay-300 animation-fill-both">
-                        <button
-                            type="button"
-                            onClick={() => navigate('/auth/afiliado/cadastro')}
+                        <Link
+                            to="/auth/afiliado/cadastro"
                             className="text-sm font-semibold text-muted hover:text-foreground transition-colors underline decoration-2 underline-offset-4 decoration-violet-500/50 hover:decoration-violet-500"
                         >
                             Seja um afiliado
-                        </button>
+                        </Link>
                     </p>
                 </div>
 
@@ -116,9 +112,12 @@ export default function LandingPage({ onViewPlans, t }: { locale: string, onView
                                     <iframe
                                         className="w-full h-full min-h-0 rounded-lg"
                                         src={HERO_YOUTUBE_EMBED_URL}
-                                        title="YouTube video player - ProspectorAI"
+                                        title="YouTube video player - Precision IA"
                                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                                         referrerPolicy="strict-origin-when-cross-origin"
+                                        loading="lazy"
+                                        width="560"
+                                        height="315"
                                         allowFullScreen
                                     />
                                 </div>
@@ -135,7 +134,7 @@ export default function LandingPage({ onViewPlans, t }: { locale: string, onView
             <section className="py-24 md:py-40 px-4 relative overflow-hidden" aria-labelledby="features-heading">
                 <div className="max-w-7xl mx-auto">
                     <div className="text-center mb-20">
-                        <h2 id="features-heading" className="text-3xl md:text-5xl font-black mb-6 text-foreground">Porque escolher o <span className="text-violet-500">ProspectorAI</span>?</h2>
+                        <h2 id="features-heading" className="text-3xl md:text-5xl font-black mb-6 text-foreground">Porque escolher o <span className="text-violet-500">Precision IA</span>?</h2>
                         <p className="text-muted max-w-xl mx-auto">Tecnologia de ponta para automatizar sua prospecção e multiplicar suas vendas.</p>
                     </div>
 
@@ -165,7 +164,7 @@ export default function LandingPage({ onViewPlans, t }: { locale: string, onView
                 </div>
             </section>
 
-            {/* BENEFITS - Como o Prospector AI resolve seu problema */}
+            {/* BENEFITS - Como o Precision IA resolve seu problema */}
             <section className="py-24 md:py-32 px-4 bg-surface/30" aria-labelledby="benefits-heading">
                 <div className="max-w-6xl mx-auto">
                     <div className="text-center mb-16">
@@ -226,7 +225,7 @@ export default function LandingPage({ onViewPlans, t }: { locale: string, onView
             <section className="py-24 md:py-32 px-4 bg-surface/30" aria-labelledby="new-features-heading">
                 <div className="max-w-7xl mx-auto">
                     <div className="text-center mb-16">
-                        <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold mb-6">
+                        <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-400 text-xs font-bold mb-6">
                             <Zap size={14} className="fill-current" /> NOVIDADES
                         </span>
                         <h2 id="new-features-heading" className="text-3xl md:text-5xl font-black text-foreground">Funcionalidades Exclusivas</h2>
@@ -346,7 +345,7 @@ export default function LandingPage({ onViewPlans, t }: { locale: string, onView
             <section className="py-24 md:py-32 px-4" aria-labelledby="social-proof-heading">
                 <div className="max-w-6xl mx-auto">
                     <h2 id="social-proof-heading" className="text-3xl md:text-5xl font-black mb-12 text-center text-foreground">{t('landing.socialProofTitle')}</h2>
-                    <div className="flex flex-wrap justify-center items-center gap-10 md:gap-16 mb-20 opacity-70 text-muted">
+                    <div className="flex flex-wrap justify-center items-center gap-10 md:gap-16 mb-20 text-muted">
                         <span className="text-lg font-semibold">B2B</span>
                         <span className="text-lg font-semibold">Vendas</span>
                         <span className="text-lg font-semibold">Prospecção</span>
@@ -436,16 +435,14 @@ export default function LandingPage({ onViewPlans, t }: { locale: string, onView
                     <h2 id="cta-mid-heading" className="text-3xl md:text-4xl font-black mb-4 text-foreground">{t('landing.ctaMidTitle')}</h2>
                     <p className="text-muted mb-8">{t('landing.ctaMidSub')}</p>
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <Button
-                            onClick={() => navigate('/auth/signup')}
-                            variant="primary"
-                            size="lg"
-                            className="w-full sm:w-auto"
-                            icon={<Rocket size={18} aria-hidden />}
+                        <Link
+                            to="/auth/signup"
+                            className="inline-flex items-center justify-center font-bold rounded-2xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-violet-500/50 active:scale-95 bg-[#7c3aed] text-white shadow-[0_4px_14px_0_rgba(124,58,237,0.3)] hover:bg-[#6d28d9] hover:shadow-[0_6px_20px_rgba(109,40,217,0.4)] hover:-translate-y-0.5 h-14 px-10 text-base w-full sm:w-auto"
                             aria-label={t('landing.ctaStart')}
                         >
+                            <span className="mr-2"><Rocket size={18} aria-hidden /></span>
                             {t('landing.ctaStart')}
-                        </Button>
+                        </Link>
                         <Button onClick={onViewPlans} variant="secondary" size="lg" className="w-full sm:w-auto" aria-label={t('landing.ctaPlans')}>
                             {t('landing.ctaPlans')}
                         </Button>
@@ -479,15 +476,13 @@ export default function LandingPage({ onViewPlans, t }: { locale: string, onView
                             <p className="text-xl text-white/90 max-w-2xl mx-auto mb-12">
                                 {t('landing.finalCtaSub')}
                             </p>
-                            <Button
-                                variant="secondary"
-                                size="lg"
-                                onClick={() => navigate('/auth/signup')}
-                                className="bg-white text-violet-600 h-16 px-12 text-xl hover:bg-white/90 hover:scale-105"
-                                icon={<ArrowRight size={20} />}
+                            <Link
+                                to="/auth/signup"
+                                className="inline-flex items-center justify-center font-bold rounded-2xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-violet-500/50 active:scale-95 bg-white text-violet-600 h-16 px-12 text-xl hover:bg-white/90 hover:scale-105"
                             >
+                                <span className="mr-2"><ArrowRight size={20} /></span>
                                 {t('landing.finalCtaBtn')}
-                            </Button>
+                            </Link>
                         </div>
                     </div>
                 </div>

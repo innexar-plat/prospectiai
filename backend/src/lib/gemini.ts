@@ -15,6 +15,8 @@ export interface LeadAnalysis {
     firstContactMessage: string;
     suggestedWhatsAppMessage: string;
     reviewAnalysis?: string;
+    reviewTrend?: string;
+    suggestedContactTime?: string;
     socialMedia?: {
         instagram?: string;
         facebook?: string;
@@ -51,6 +53,10 @@ export interface BusinessData {
     businessStatus?: string;
     primaryType?: string;
     hasOpeningHours?: boolean;
+    currentOpeningHours?: {
+        openNow?: boolean;
+        weekdayDescriptions?: string[];
+    };
     reviews?: Array<{
         rating: number;
         text: { text: string };
@@ -135,8 +141,8 @@ OBRIGATÓRIO: O relatório INTEIRO (resumo, pontos fortes, fraquezas, lacunas, d
 function getPoint6Requirement(isBusinessPlan: boolean, isEn: boolean): string {
     if (!isBusinessPlan) return '';
     return isEn
-        ? '6. DEEP REPUTATION ANALYSIS: Using the REAL data from Reclame Aqui and JusBrasil provided in the web context above, analyze: (a) consumer reputation — complaints, response rate, resolution rate; (b) legal risks — lawsuits, labor disputes, consumer protection cases; (c) CNPJ data — company size, founding date, business activities. Include ALL findings in the full report with source citations.'
-        : '6. ANÁLISE PROFUNDA DE REPUTAÇÃO: Usando os dados REAIS do Reclame Aqui e JusBrasil fornecidos no contexto da web acima, analise: (a) reputação do consumidor — reclamações, taxa de resposta, taxa de resolução; (b) riscos legais — processos, disputas trabalhistas, casos de defesa do consumidor; (c) dados de CNPJ — porte da empresa, data de fundação, atividades empresariais. Inclua TODOS os achados no relatório completo com citações de fonte.';
+    ? '8. DEEP REPUTATION ANALYSIS: Using the REAL data from Reclame Aqui and JusBrasil provided in the web context above, analyze: (a) consumer reputation — complaints, response rate, resolution rate; (b) legal risks — lawsuits, labor disputes, consumer protection cases; (c) CNPJ data — company size, founding date, business activities. Include ALL findings in the full report with source citations.'
+    : '8. ANÁLISE PROFUNDA DE REPUTAÇÃO: Usando os dados REAIS do Reclame Aqui e JusBrasil fornecidos no contexto da web acima, analise: (a) reputação do consumidor — reclamações, taxa de resposta, taxa de resolução; (b) riscos legais — processos, disputas trabalhistas, casos de defesa do consumidor; (c) dados de CNPJ — porte da empresa, data de fundação, atividades empresariais. Inclua TODOS os achados no relatório completo com citações de fonte.';
 }
 
 function getExtendedJsonSchemaBlock(isBusinessPlan: boolean, isEn: boolean): string {
@@ -186,6 +192,8 @@ interface BuildLeadPromptInput {
     website: string;
     reviewCount: number;
     reviewsText: string;
+    reviewSignalsText: string;
+    openingHoursText: string;
     webContext: string;
     isBusinessPlan: boolean;
 }
@@ -202,6 +210,8 @@ const LEAD_DATA_LABELS = {
         reviews: 'Total Reviews',
         status: 'Business Status',
         reviewsSection: 'RECENT CUSTOMER REVIEWS:',
+        reviewSignals: 'NEGATIVE REVIEW SIGNALS:',
+        openingHours: 'OPENING HOURS (for contact timing):',
         notSpecified: 'Not specified',
         notAvailable: 'Not available',
         noPhone: 'No phone listed',
@@ -219,6 +229,8 @@ const LEAD_DATA_LABELS = {
         reviews: 'Total de Avaliações',
         status: 'Status do Negócio',
         reviewsSection: 'AVALIAÇÕES RECENTES DE CLIENTES:',
+        reviewSignals: 'SINAIS DE REVIEWS NEGATIVAS:',
+        openingHours: 'HORÁRIOS DE FUNCIONAMENTO (para timing de contato):',
         notSpecified: 'Não especificado',
         notAvailable: 'Não disponível',
         noPhone: 'Sem telefone cadastrado',
@@ -235,6 +247,7 @@ const LEAD_REQUIREMENTS_LABELS = {
         socialMedia: 'SOCIAL MEDIA STRATEGY: Proactively analyze scenarios for Instagram, LinkedIn, and Facebook based on their niche. Suggest what kind of content they SHOULD be posting to get more clients. Be highly sincere about what they can improve.',
         firstContact: 'FIRST CONTACT MESSAGE: Write a professional, personalized opening message for the FIRST contact (WhatsApp/email). It should reference something specific about this business (their rating, a review pattern, missing digital element). Max 3 short paragraphs. No generic templates.',
         recency: 'REVIEW RECENCY: Analyze the time of reviews. If reviews are mostly from years ago, flag this as a "stagnant reputation". If recent, analyze the trend.',
+        timing: 'BEST CONTACT TIME: Recommend the best contact window based on opening hours and likely availability from review patterns.',
         whatsapp: 'WHATSAPP MESSAGE: A shorter, more casual version for WhatsApp (max 2 short paragraphs, conversational tone, gets to the point fast).'
     },
     pt: {
@@ -244,6 +257,7 @@ const LEAD_REQUIREMENTS_LABELS = {
         socialMedia: 'ESTRATÉGIA DE REDES SOCIAIS: Analise proativamente cenários para Instagram, LinkedIn e Facebook com base no nicho deles. Sugira que tipo de conteúdo eles DEVERIAM postar para atrair mais clientes. Seja altamente sincero sobre o que eles podem melhorar.',
         firstContact: 'MENSAGEM DE PRIMEIRO CONTATO: Escreva uma mensagem de abertura profissional e personalizada para o PRIMEIRO contato (WhatsApp/email). Deve referenciar algo específico deste negócio (avaliação, padrão nas reviews, elemento digital faltando). Máximo 3 parágrafos curtos. Sem templates genéricos.',
         recency: 'RECÊNCIA DE REVIEWS: Analise o tempo das avaliações. Se forem majoritariamente de anos atrás, aponte isso como "reputação estagnada". Se recentes, analise a tendência.',
+        timing: 'MELHOR HORÁRIO DE CONTATO: Recomende a melhor janela de abordagem com base nos horários de funcionamento e provável disponibilidade pelo padrão de reviews.',
         whatsapp: 'MENSAGEM WHATSAPP: Uma versão mais curta e casual para WhatsApp (máximo 2 parágrafos curtos, tom conversacional, vai direto ao ponto).'
     }
 } as const;
@@ -272,6 +286,8 @@ const JSON_SCHEMA_LABELS = {
         firstContact: 'Professional personalized opening message for first contact (email/WhatsApp), max 3 short paragraphs, specific to this business',
         whatsapp: 'Shorter casual WhatsApp version, 2 paragraphs max, conversational, direct',
         reviewAnalysis: 'Detailed analysis of the rating trend and recency',
+        reviewTrend: 'Trend summary such as Growing|Stable|Declining with evidence from review recency',
+        contactTime: 'Best contact time window with rationale from opening hours and customer flow',
         instagram: 'CRITICAL: ONLY return real URLs. NEVER invent or hallucinate. If unsure, return Not found',
         facebook: 'CRITICAL: NEVER hallucinate URLs. If unsure, return Not found',
         linkedin: 'CRITICAL: NEVER hallucinate URLs. If unsure, return Not found',
@@ -301,6 +317,8 @@ const JSON_SCHEMA_LABELS = {
         firstContact: 'Mensagem de abertura profissional e personalizada para primeiro contato (email/WhatsApp), máximo 3 parágrafos curtos, específica para este negócio',
         whatsapp: 'Versão mais curta e casual para WhatsApp, 2 parágrafos no máximo, conversacional, direta',
         reviewAnalysis: 'Análise detalhada da tendência e recência das avaliações',
+        reviewTrend: 'Resumo da tendência: Crescente|Estável|Decrescente com evidências da recência das avaliações',
+        contactTime: 'Melhor janela de contato com justificativa usando horários de funcionamento e fluxo provável',
         instagram: 'CRÍTICO: Retorne APENAS URLs reais. NUNCA invente ou alucine. Se não tiver certeza absoluta, retorne exatamente Não encontrado',
         facebook: 'CRÍTICO: NUNCA alucine URLs. Se não tiver certeza, retorne exatamente Não encontrado',
         linkedin: 'CRÍTICO: NUNCA alucine URLs. Se não tiver certeza, retorne exatamente Não encontrado',
@@ -334,6 +352,12 @@ ${getWebsiteNote(opts.website, isEn)}
 
 ${D.reviewsSection}
 ${opts.reviewsText}
+
+${D.reviewSignals}
+${opts.reviewSignalsText}
+
+${D.openingHours}
+${opts.openingHoursText}
 ${webBlock}
 
 ${L.header}
@@ -342,6 +366,7 @@ ${L.header}
 3. ${L.socialMedia}
 4. ${L.firstContact}
 5. ${L.recency}
+6. ${L.timing}
 ${getPoint6Requirement(isBusinessPlan, isEn)}
 7. ${L.whatsapp}
 
@@ -359,10 +384,45 @@ ${J.intro}
   "firstContactMessage": "<${J.firstContact}>",
   "suggestedWhatsAppMessage": "<${J.whatsapp}>",
   "reviewAnalysis": "<${J.reviewAnalysis}>",
+  "reviewTrend": "<${J.reviewTrend}>",
+  "suggestedContactTime": "<${J.contactTime}>",
   "socialMedia": { "instagram": "<${J.instagram}>", "facebook": "<${J.facebook}>", "linkedin": "<${J.linkedin}>" },
   "fullReport": "<${J.fullReport}>"
 ${getExtendedJsonSchemaBlock(isBusinessPlan, isEn)}
 }`;
+}
+
+function buildReviewSignalsText(
+    reviews: BusinessData['reviews'],
+    isEn: boolean,
+): string {
+    if (!reviews?.length) {
+        return isEn ? 'No negative review signals detected (no review data).' : 'Sem sinais de reviews negativas (sem dados de avaliações).';
+    }
+    const negatives = reviews
+        .filter((r) => r.rating <= 3)
+        .slice(0, 5)
+        .map((r) => {
+            const author = r.authorAttribution?.displayName || (isEn ? 'Customer' : 'Cliente');
+            const text = r.text?.text?.slice(0, 180) || (isEn ? 'No text' : 'Sem texto');
+            const when = r.relativePublishTimeDescription || (isEn ? 'unknown time' : 'tempo desconhecido');
+            return `- [${r.rating}/5 | ${when}] ${author}: "${text}"`;
+        });
+    if (!negatives.length) {
+        return isEn ? 'No strong negative reviews in the sampled data.' : 'Sem reviews fortemente negativas na amostra.';
+    }
+    return negatives.join('\n');
+}
+
+function buildOpeningHoursText(hours: BusinessData['currentOpeningHours'], isEn: boolean): string {
+    const weekday = hours?.weekdayDescriptions?.slice(0, 7) ?? [];
+    if (!weekday.length) {
+        return isEn ? 'Opening hours not available.' : 'Horários de funcionamento indisponíveis.';
+    }
+    const openNow = typeof hours?.openNow === 'boolean'
+        ? (isEn ? (hours.openNow ? 'Open now' : 'Closed now') : (hours.openNow ? 'Aberto agora' : 'Fechado agora'))
+        : (isEn ? 'Open state unknown' : 'Status de abertura desconhecido');
+    return `${openNow}\n${weekday.map((d) => `- ${d}`).join('\n')}`;
 }
 
 async function prepareLeadAnalysisPrompt(
@@ -391,6 +451,8 @@ async function prepareLeadAnalysisPrompt(
     const reviewsText = business.reviews && business.reviews.length > 0
         ? business.reviews.slice(0, 5).map(r => `[${r.rating}/5 - ${r.authorAttribution?.displayName || 'Client'}]: "${r.text?.text?.slice(0, 200)}"`).join('\n')
         : noReviewsLabel;
+    const reviewSignalsText = buildReviewSignalsText(business.reviews, isEn);
+    const openingHoursText = buildOpeningHoursText(business.currentOpeningHours, isEn);
     const companyContext = buildCompanyContext(finalProfile, isEn);
     const taskDescription = buildTaskDescription(isEn);
     const prompt = buildLeadAnalysisPrompt({
@@ -403,6 +465,8 @@ async function prepareLeadAnalysisPrompt(
         website,
         reviewCount,
         reviewsText,
+        reviewSignalsText,
+        openingHoursText,
         webContext,
         isBusinessPlan,
     });

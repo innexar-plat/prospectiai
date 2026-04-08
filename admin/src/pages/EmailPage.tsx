@@ -102,8 +102,8 @@ export function EmailPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-white">Email</h1>
-        <p className="text-sm text-zinc-500 mt-1">
+        <h1 className="text-xl font-semibold text-gray-900">Email</h1>
+        <p className="text-sm text-gray-500 mt-1">
           Configuração Resend ou SMTP no painel e envio de email de teste. Fallback: variável RESEND_API_KEY.
         </p>
         {toast && (
@@ -111,7 +111,7 @@ export function EmailPage() {
             className={
               toast.type === 'success'
                 ? 'text-sm text-emerald-600 mt-2'
-                : 'text-sm text-red-400 mt-2'
+                : 'text-sm text-red-600 mt-2'
             }
           >
             {toast.message}
@@ -120,21 +120,21 @@ export function EmailPage() {
       </div>
 
       {/* Config form */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4 mb-6">
-        <h2 className="text-white font-medium mb-1">Configuração</h2>
-        <p className="text-sm text-zinc-500 mb-4">
+      <div className="rounded-xl border border-gray-200 bg-white p-5 mb-6 shadow-sm">
+        <h2 className="text-gray-900 font-medium mb-1">Configuração</h2>
+        <p className="text-sm text-gray-500 mb-4">
           Defina o provedor e as credenciais. Chaves e senhas são armazenadas criptografadas.
         </p>
         {loading ? (
-          <p className="text-sm text-zinc-500">Carregando...</p>
+          <p className="text-sm text-gray-500">Carregando...</p>
         ) : (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Provedor</label>
+              <label className="block text-sm font-medium text-gray-600 mb-1">Provedor</label>
               <select
                 value={provider}
                 onChange={(e) => setProvider(e.target.value as 'resend' | 'smtp')}
-                className="rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-sm text-zinc-200 w-full max-w-xs"
+                className="rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700 w-full max-w-xs"
               >
                 <option value="resend">Resend (API key)</option>
                 <option value="smtp">SMTP (servidor próprio)</option>
@@ -144,13 +144,13 @@ export function EmailPage() {
             {provider === 'resend' && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-zinc-300 mb-1">API Key Resend</label>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">API Key Resend</label>
                   <Input
                     type="password"
                     placeholder={config?.hasResendApiKey ? '•••••••• (deixe em branco para manter)' : 're_...'}
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
-                    className="rounded-lg border-zinc-700 bg-zinc-800/80 text-zinc-200 placeholder-zinc-500"
+                    className="rounded-lg border-gray-300 bg-gray-50 text-gray-700 placeholder-gray-400"
                   />
                 </div>
               </>
@@ -159,56 +159,56 @@ export function EmailPage() {
             {provider === 'smtp' && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-zinc-300 mb-1">Host SMTP</label>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Host SMTP</label>
                   <Input
                     placeholder="smtp.exemplo.com"
                     value={smtpHost}
                     onChange={(e) => setSmtpHost(e.target.value)}
-                    className="rounded-lg border-zinc-700 bg-zinc-800/80 text-zinc-200 placeholder-zinc-500"
+                    className="rounded-lg border-gray-300 bg-gray-50 text-gray-700 placeholder-gray-400"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4 max-w-md">
                   <div>
-                    <label className="block text-sm font-medium text-zinc-300 mb-1">Porta</label>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Porta</label>
                     <Input
                       type="number"
                       placeholder="587"
                       value={smtpPort}
                       onChange={(e) => setSmtpPort(e.target.value)}
-                      className="rounded-lg border-zinc-700 bg-zinc-800/80 text-zinc-200 placeholder-zinc-500"
+                      className="rounded-lg border-gray-300 bg-gray-50 text-gray-700 placeholder-gray-400"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-zinc-300 mb-1">Usuário</label>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Usuário</label>
                     <Input
                       placeholder="user@exemplo.com"
                       value={smtpUser}
                       onChange={(e) => setSmtpUser(e.target.value)}
-                      className="rounded-lg border-zinc-700 bg-zinc-800/80 text-zinc-200 placeholder-zinc-500"
+                      className="rounded-lg border-gray-300 bg-gray-50 text-gray-700 placeholder-gray-400"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-zinc-300 mb-1">Senha SMTP</label>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Senha SMTP</label>
                   <Input
                     type="password"
                     placeholder={config?.smtpHost ? '•••••••• (deixe em branco para manter)' : '••••••••'}
                     value={smtpPassword}
                     onChange={(e) => setSmtpPassword(e.target.value)}
-                    className="rounded-lg border-zinc-700 bg-zinc-800/80 text-zinc-200 placeholder-zinc-500"
+                    className="rounded-lg border-gray-300 bg-gray-50 text-gray-700 placeholder-gray-400"
                   />
                 </div>
               </>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">Remetente (From)</label>
+              <label className="block text-sm font-medium text-gray-600 mb-1">Remetente (From)</label>
               <Input
                 type="text"
-                placeholder="Prospector &lt;noreply@seudominio.com&gt;"
+                placeholder="Precision IA &lt;noreply@seudominio.com&gt;"
                 value={fromEmail}
                 onChange={(e) => setFromEmail(e.target.value)}
-                className="rounded-lg border-zinc-700 bg-zinc-800/80 text-zinc-200 placeholder-zinc-500"
+                className="rounded-lg border-gray-300 bg-gray-50 text-gray-700 placeholder-gray-400"
               />
             </div>
 
@@ -226,17 +226,17 @@ export function EmailPage() {
       </div>
 
       {/* Status + test */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-4">
-        <h2 className="text-white font-medium flex items-center gap-2 mb-1">
+      <div className="rounded-xl border border-gray-200 bg-white p-4">
+        <h2 className="text-gray-900 font-medium flex items-center gap-2 mb-1">
           <Mail className="w-5 h-5" />
           Status
         </h2>
-        <p className="text-sm text-zinc-500 mb-4">
+        <p className="text-sm text-gray-500 mb-4">
           Envio usa a configuração do painel ou a variável RESEND_API_KEY. Chaves não são exibidas.
         </p>
         <div className="space-y-4">
           {(() => {
-            if (loading) return <p className="text-sm text-zinc-500">Carregando...</p>;
+            if (loading) return <p className="text-sm text-gray-500">Carregando...</p>;
             if (configured) {
               return (
                 <div className="flex items-center gap-2 text-emerald-600">
@@ -253,8 +253,8 @@ export function EmailPage() {
             );
           })()}
 
-          <div className="pt-2 border-t border-zinc-800">
-            <label className="block text-sm font-medium text-zinc-300 mb-2">Enviar teste para</label>
+          <div className="pt-2 border-t border-gray-200">
+            <label className="block text-sm font-medium text-gray-600 mb-2">Enviar teste para</label>
             <div className="flex gap-2 max-w-md">
               <Input
                 type="email"
@@ -262,7 +262,7 @@ export function EmailPage() {
                 value={testEmail}
                 onChange={(e) => setTestEmail(e.target.value)}
                 disabled={!configured}
-                className="rounded-lg border-zinc-700 bg-zinc-800/80 text-zinc-200 placeholder-zinc-500"
+                className="rounded-lg border-gray-300 bg-gray-50 text-gray-700 placeholder-gray-400"
               />
               <Button
                 onClick={handleSendTest}

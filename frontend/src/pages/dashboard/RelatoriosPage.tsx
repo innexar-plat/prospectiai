@@ -10,16 +10,16 @@ import { useToast } from '@/contexts/ToastContext';
 const UF_OPTIONS = ['', 'AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MG', 'MS', 'MT', 'PA', 'PB', 'PE', 'PI', 'PR', 'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP', 'TO'];
 
 const SATURATION_LABELS: Record<number, { text: string; color: string }> = {
-  0: { text: 'Mercado Inexplorado', color: 'text-emerald-400' },
-  1: { text: 'Baixíssima Saturação', color: 'text-emerald-400' },
-  2: { text: 'Baixa Saturação', color: 'text-emerald-400' },
-  3: { text: 'Saturação Moderada-Baixa', color: 'text-blue-400' },
-  4: { text: 'Saturação Moderada', color: 'text-blue-400' },
-  5: { text: 'Saturação Mediana', color: 'text-amber-400' },
-  6: { text: 'Saturação Acima da Média', color: 'text-amber-400' },
+  0: { text: 'Mercado Inexplorado', color: 'text-emerald-600 dark:text-emerald-400' },
+  1: { text: 'Baixíssima Saturação', color: 'text-emerald-600 dark:text-emerald-400' },
+  2: { text: 'Baixa Saturação', color: 'text-emerald-600 dark:text-emerald-400' },
+  3: { text: 'Saturação Moderada-Baixa', color: 'text-blue-600 dark:text-blue-400' },
+  4: { text: 'Saturação Moderada', color: 'text-blue-600 dark:text-blue-400' },
+  5: { text: 'Saturação Mediana', color: 'text-amber-600 dark:text-amber-400' },
+  6: { text: 'Saturação Acima da Média', color: 'text-amber-600 dark:text-amber-400' },
   7: { text: 'Saturação Alta', color: 'text-orange-400' },
-  8: { text: 'Saturação Muito Alta', color: 'text-rose-400' },
-  9: { text: 'Mercado Super Saturado', color: 'text-rose-400' },
+  8: { text: 'Saturação Muito Alta', color: 'text-rose-600 dark:text-rose-400' },
+  9: { text: 'Mercado Super Saturado', color: 'text-rose-600 dark:text-rose-400' },
   10: { text: 'Mercado Saturado ao Extremo', color: 'text-rose-500' },
 };
 
@@ -29,8 +29,8 @@ function getSaturationInfo(index: number) {
 }
 
 function getScoreBadgeBarClasses(score: number): { badge: string; bar: string } {
-  if (score >= 60) return { badge: 'bg-emerald-500/20 text-emerald-400', bar: 'bg-emerald-500' };
-  if (score >= 35) return { badge: 'bg-amber-500/20 text-amber-400', bar: 'bg-amber-500' };
+  if (score >= 60) return { badge: 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400', bar: 'bg-emerald-500' };
+  if (score >= 35) return { badge: 'bg-amber-500/20 text-amber-600 dark:text-amber-400', bar: 'bg-amber-500' };
   return { badge: 'bg-surface text-muted', bar: 'bg-surface' };
 }
 
@@ -74,7 +74,7 @@ export default function RelatoriosPage() {
           <div className="rounded-[2.4rem] bg-gradient-to-br from-violet-900/40 to-background border border-violet-500/20 p-12 flex flex-col items-center justify-center gap-6 min-h-[400px] text-center shadow-2xl relative overflow-hidden">
             <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-violet-500/10 blur-[100px] -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none" />
             <div className="w-20 h-20 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center relative z-10">
-              <Lock size={32} className="text-violet-400" />
+              <Lock size={32} className="text-violet-600 dark:text-violet-400" />
             </div>
             <div className="space-y-2 relative z-10 max-w-xl">
               <h2 className="text-2xl font-black text-foreground">Inteligência de Mercado</h2>
@@ -116,7 +116,7 @@ export default function RelatoriosPage() {
 
         {loading && (
           <div className="flex flex-col items-center justify-center p-16 gap-4">
-            <Loader2 size={40} className="animate-spin text-violet-400" />
+            <Loader2 size={40} className="animate-spin text-violet-600 dark:text-violet-400" />
             <p className="text-sm text-muted">Coletando dados, analisando segmentos e gerando insights com IA...</p>
             <p className="text-xs text-muted/60">Isso pode levar até 30 segundos</p>
           </div>
@@ -127,15 +127,15 @@ export default function RelatoriosPage() {
             {/* KPI Row */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="rounded-2xl bg-card border border-border p-5 flex flex-col items-center text-center gap-1">
-                <div className="text-3xl font-black text-violet-400 tabular-nums">{report.totalBusinesses}</div>
+                <div className="text-3xl font-black text-violet-600 dark:text-violet-400 tabular-nums">{report.totalBusinesses}</div>
                 <div className="text-[10px] font-bold text-muted uppercase tracking-wider">Negócios</div>
               </div>
               <div className="rounded-2xl bg-card border border-border p-5 flex flex-col items-center text-center gap-1">
-                <div className="text-3xl font-black text-blue-400 tabular-nums">{report.segments.length}</div>
+                <div className="text-3xl font-black text-blue-600 dark:text-blue-400 tabular-nums">{report.segments.length}</div>
                 <div className="text-[10px] font-bold text-muted uppercase tracking-wider">Segmentos</div>
               </div>
               <div className="rounded-2xl bg-card border border-border p-5 flex flex-col items-center text-center gap-1">
-                <div className="text-3xl font-black text-amber-400 tabular-nums">{report.avgRating?.toFixed(1) ?? '—'}<span className="text-lg">★</span></div>
+                <div className="text-3xl font-black text-amber-600 dark:text-amber-400 tabular-nums">{report.avgRating?.toFixed(1) ?? '—'}<span className="text-lg">★</span></div>
                 <div className="text-[10px] font-bold text-muted uppercase tracking-wider">Rating Médio</div>
               </div>
               <div className="rounded-2xl bg-card border border-border p-5 flex flex-col items-center text-center gap-2 relative overflow-hidden">
@@ -149,37 +149,37 @@ export default function RelatoriosPage() {
             {report.aiInsights && (
               <div className="rounded-3xl bg-gradient-to-br from-card to-surface border border-border p-6">
                 <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <Brain size={16} className="text-violet-400" /> Análise Executiva com IA
+                  <Brain size={16} className="text-violet-600 dark:text-violet-400" /> Análise Executiva com IA
                 </h3>
                 <p className="text-sm text-muted leading-relaxed mb-5">{report.aiInsights.executiveSummary}</p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="p-4 bg-surface rounded-xl border border-border/50">
-                    <h4 className="text-xs font-bold text-violet-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                    <h4 className="text-xs font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
                       <TrendingUp size={12} /> Tendências
                     </h4>
                     <ul className="space-y-2">
                       {report.aiInsights.marketTrends.map((t) => (
-                        <li key={`trend-${String(t).slice(0, 80)}`} className="text-xs text-muted flex items-start gap-2"><span className="text-violet-400 shrink-0 mt-0.5">→</span>{t}</li>
+                        <li key={`trend-${String(t).slice(0, 80)}`} className="text-xs text-muted flex items-start gap-2"><span className="text-violet-600 dark:text-violet-400 shrink-0 mt-0.5">→</span>{t}</li>
                       ))}
                     </ul>
                   </div>
                   <div className="p-4 bg-surface rounded-xl border border-border/50">
-                    <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                    <h4 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
                       <Target size={12} /> Oportunidades
                     </h4>
                     <ul className="space-y-2">
                       {report.aiInsights.opportunities.map((o) => (
-                        <li key={`opp-${String(o).slice(0, 80)}`} className="text-xs text-muted flex items-start gap-2"><span className="text-emerald-400 shrink-0 mt-0.5">→</span>{o}</li>
+                        <li key={`opp-${String(o).slice(0, 80)}`} className="text-xs text-muted flex items-start gap-2"><span className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5">→</span>{o}</li>
                       ))}
                     </ul>
                   </div>
                   <div className="p-4 bg-surface rounded-xl border border-border/50">
-                    <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                    <h4 className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
                       <Lightbulb size={12} /> Recomendações
                     </h4>
                     <ul className="space-y-2">
                       {report.aiInsights.recommendations.map((r) => (
-                        <li key={`rec-${String(r).slice(0, 80)}`} className="text-xs text-muted flex items-start gap-2"><span className="text-amber-400 shrink-0 mt-0.5">→</span>{r}</li>
+                        <li key={`rec-${String(r).slice(0, 80)}`} className="text-xs text-muted flex items-start gap-2"><span className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">→</span>{r}</li>
                       ))}
                     </ul>
                   </div>
@@ -190,11 +190,11 @@ export default function RelatoriosPage() {
             {/* Digital Maturity */}
             <div className="rounded-3xl bg-card border border-border p-6">
               <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-5 flex items-center gap-2">
-                <TrendingUp size={16} className="text-emerald-400" /> Maturidade Digital da Região
+                <TrendingUp size={16} className="text-emerald-600 dark:text-emerald-400" /> Maturidade Digital da Região
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <AnimatedBar icon={<Globe size={16} className="text-emerald-400" />} label="Possuem Website" count={report.digitalMaturity.withWebsite} total={report.digitalMaturity.total} pct={report.digitalMaturity.withWebsitePercent} color="bg-emerald-500" />
-                <AnimatedBar icon={<Phone size={16} className="text-blue-400" />} label="Possuem Telefone" count={report.digitalMaturity.withPhone} total={report.digitalMaturity.total} pct={report.digitalMaturity.withPhonePercent} color="bg-blue-500" />
+                <AnimatedBar icon={<Globe size={16} className="text-emerald-600 dark:text-emerald-400" />} label="Possuem Website" count={report.digitalMaturity.withWebsite} total={report.digitalMaturity.total} pct={report.digitalMaturity.withWebsitePercent} color="bg-emerald-500" />
+                <AnimatedBar icon={<Phone size={16} className="text-blue-600 dark:text-blue-400" />} label="Possuem Telefone" count={report.digitalMaturity.withPhone} total={report.digitalMaturity.total} pct={report.digitalMaturity.withPhonePercent} color="bg-blue-500" />
               </div>
             </div>
 
@@ -202,7 +202,7 @@ export default function RelatoriosPage() {
             {report.topOpportunities && report.topOpportunities.length > 0 && (
               <div className="rounded-3xl bg-card border border-border p-6">
                 <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-2 flex items-center gap-2">
-                  <Target size={16} className="text-amber-400" /> Top Oportunidades com Score
+                  <Target size={16} className="text-amber-600 dark:text-amber-400" /> Top Oportunidades com Score
                 </h3>
                 <p className="text-xs text-muted mb-4">Leads com maior potencial de oportunidade comercial neste mercado.</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[360px] overflow-y-auto pr-2">
@@ -217,7 +217,7 @@ export default function RelatoriosPage() {
                       <div className="w-full h-1.5 bg-card rounded-full overflow-hidden">
                         <div className={`h-full rounded-full transition-all duration-500 ${getScoreBadgeBarClasses(opp.score).bar}`} style={{ width: `${opp.score}%` }} />
                       </div>
-                      {opp.rating != null && <p className="text-[10px] text-muted flex items-center gap-1"><Star size={10} className="text-amber-400" />{opp.rating?.toFixed(1)}★ · {opp.reviewCount ?? 0} reviews</p>}
+                      {opp.rating != null && <p className="text-[10px] text-muted flex items-center gap-1"><Star size={10} className="text-amber-600 dark:text-amber-400" />{opp.rating?.toFixed(1)}★ · {opp.reviewCount ?? 0} reviews</p>}
                     </div>
                   ))}
                 </div>
@@ -227,7 +227,7 @@ export default function RelatoriosPage() {
             {/* Segments Table */}
             <div className="rounded-3xl bg-card border border-border p-6">
               <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-                <Layers size={16} className="text-violet-400" /> Segmentos Encontrados
+                <Layers size={16} className="text-violet-600 dark:text-violet-400" /> Segmentos Encontrados
               </h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -248,7 +248,7 @@ export default function RelatoriosPage() {
                           <td className="py-3 px-4 text-muted tabular-nums">{i + 1}</td>
                           <td className="py-3 px-4 font-medium text-foreground capitalize">{seg.type.replace(/_/g, ' ')}</td>
                           <td className="py-3 px-4 text-right tabular-nums text-foreground font-bold">{seg.count}</td>
-                          <td className="py-3 px-4 text-right tabular-nums text-amber-400 font-bold">{seg.avgRating?.toFixed(1) ?? '—'}</td>
+                          <td className="py-3 px-4 text-right tabular-nums text-amber-600 dark:text-amber-400 font-bold">{seg.avgRating?.toFixed(1) ?? '—'}</td>
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-2">
                               <div className="flex-1 h-2 bg-surface rounded-full overflow-hidden border border-border/50">

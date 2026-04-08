@@ -16,7 +16,7 @@ export default function Privacy() {
         <article className="space-y-8 text-muted">
           <section>
             <h2 className="text-xl font-bold text-foreground">1. Responsável</h2>
-            <p>Os dados são tratados pela Innexar Estúdio Digital (ProspectorAI).</p>
+            <p>Os dados são tratados pela Innexar Estúdio Digital (Precision IA).</p>
           </section>
           <section>
             <h2 className="text-xl font-bold text-foreground">2. Dados coletados</h2>

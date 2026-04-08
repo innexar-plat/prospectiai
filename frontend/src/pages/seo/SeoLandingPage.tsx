@@ -13,7 +13,7 @@ import {
   type SeoLandingSlug,
 } from '@/lib/seo-local';
 
-const BASE_URL = 'https://prospectorai.innexar.com.br';
+const BASE_URL = 'https://precisionia.com.br';
 
 function getSeoH1Title(entry: SeoLandingSlug): string {
   if (entry.type === 'cidade' && entry.city) return `Ferramenta de Inteligência Comercial para Empresas em ${entry.city}`;
@@ -82,11 +82,11 @@ export default function SeoLandingPage() {
       setMeta('description', savedDesc);
       if (canonical) canonical.setAttribute('href', BASE_URL + '/');
       setMeta('og:url', BASE_URL + '/', true);
-      setMeta('og:title', 'ProspectorAI — Busca B2B e prospecção com IA', true);
+      setMeta('og:title', 'Precision IA — Busca B2B e prospecção com IA', true);
       setMeta('og:description', 'Encontre e analise empresas por nicho e região com IA. Gestão de leads, exportação e trabalho em equipe.', true);
       setMeta('og:image', `${BASE_URL}/og-image.png`, true);
       setMeta('twitter:url', BASE_URL + '/');
-      setMeta('twitter:title', 'ProspectorAI — Busca B2B e prospecção com IA');
+      setMeta('twitter:title', 'Precision IA — Busca B2B e prospecção com IA');
       setMeta('twitter:description', 'Plataforma B2B para encontrar, analisar e converter empresas com inteligência artificial.');
       setMeta('twitter:image', `${BASE_URL}/og-image.png`);
     };
@@ -106,7 +106,7 @@ export default function SeoLandingPage() {
   const schemaApp = {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication' as const,
-    name: 'ProspectorAI',
+    name: 'Precision IA',
     url: pageUrl,
     applicationCategory: 'BusinessApplication',
     description: description.slice(0, 200),

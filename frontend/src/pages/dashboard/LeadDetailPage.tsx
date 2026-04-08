@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Loader2, ExternalLink, Phone, MapPin, Globe, Tag, Plus, X, MessageCircle, Copy, Check, Star } from 'lucide-react';
+import { ArrowLeft, Sparkles, Loader2, ExternalLink, Phone, MapPin, Globe, Tag, Plus, X, MessageCircle, Copy, Check, Star, ChevronDown, ChevronUp, Target, AlertTriangle, TrendingUp, Share2, Mail, Zap } from 'lucide-react';
 import type { Place, PlaceDetail, Analysis, LeadTagItem, LeadAnalysisListItem } from '@/lib/api';
 import { searchApi, activityApi, tagsApi, leadsApi } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { useToast } from '@/contexts/ToastContext';
+import { CrmSidePanel } from '@/components/dashboard/CrmSidePanel';
 
 /** Rótulo amigável do provedor de IA (não expõe Cloudflare ao usuário). */
 function getAnalysisProviderLabel(provider: string | undefined): string | undefined {
@@ -30,17 +31,34 @@ function buildAnalyzePayload(place: PlaceDetail | Place) {
     primaryType: place.primaryType ?? undefined,
     businessStatus: place.businessStatus ?? undefined,
     reviews: place.reviews ?? undefined,
+    currentOpeningHours: place.currentOpeningHours ?? undefined,
   };
 }
 
 const TAG_COLORS: Record<string, string> = {
-  green: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-  amber: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-  blue: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-  red: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
-  violet: 'bg-violet-500/15 text-violet-400 border-violet-500/30',
+  green: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+  amber: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
+  blue: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30',
+  red: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30',
+  violet: 'bg-violet-500/15 text-violet-600 dark:text-violet-400 border-violet-500/30',
   gray: 'bg-surface text-muted border-border',
 };
+
+function CopyButton({ text, label }: { text: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+  return (
+    <button type="button" onClick={handleCopy} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-surface border border-border text-muted hover:text-foreground hover:bg-violet-500/10 transition-colors">
+      {copied ? <Check size={12} className="text-emerald-600 dark:text-emerald-400" /> : <Copy size={12} />}
+      {copied ? 'Copiado!' : label}
+    </button>
+  );
+}
 
 function LeadDetailAnalysisView({
   analysis,
@@ -53,6 +71,7 @@ function LeadDetailAnalysisView({
   analyzing: boolean;
   getProviderLabel: (p: string | undefined) => string | undefined;
 }) {
+  const [showFullReport, setShowFullReport] = useState(false);
   const scoreLabel = String(analysis.scoreLabel ?? 'Analítico');
   const summary = String(analysis.summary ?? '');
   const strengths = Array.isArray(analysis.strengths) ? (analysis.strengths as string[]) : [];
@@ -65,97 +84,176 @@ function LeadDetailAnalysisView({
   const suggestedWhatsAppMessage = analysis.suggestedWhatsAppMessage != null ? String(analysis.suggestedWhatsAppMessage) : '';
   const firstContactMessage = analysis.firstContactMessage != null ? String(analysis.firstContactMessage) : '';
   const fullReport = analysis.fullReport != null ? String(analysis.fullReport) : '';
+  const reviewTrend = analysis.reviewTrend != null ? String(analysis.reviewTrend) : '';
+  const suggestedContactTime = analysis.suggestedContactTime != null ? String(analysis.suggestedContactTime) : '';
+  const reviewAnalysis = analysis.reviewAnalysis != null ? String(analysis.reviewAnalysis) : '';
+  const socialEntries = Object.entries(socialMedia).filter(
+    ([, link]) => link && String(link).toLowerCase() !== 'não encontrado' && String(link).toLowerCase() !== 'not found'
+  );
+
   return (
-    <div className="space-y-8 pt-2">
-      <div className="flex items-center gap-4 p-4 rounded-xl bg-violet-500/10 border border-violet-500/20">
+    <div className="space-y-6 pt-2">
+      {/* Score + Summary — compact top row */}
+      <div className="flex items-start gap-4 p-5 rounded-xl bg-violet-500/10 border border-violet-500/20">
         <div className="w-16 h-16 rounded-full border-4 border-violet-500 flex items-center justify-center shrink-0">
           <span className="text-2xl font-black text-violet-500">{analysis.score ?? 0}</span>
         </div>
-        <div className="min-w-0">
-          <h3 className="text-lg font-bold text-foreground">Chance de Fechamento: <span className="text-violet-400">{scoreLabel}</span></h3>
-          {analysis.aiProvider && <p className="text-[10px] text-muted uppercase tracking-wider mt-0.5">IA: {getProviderLabel(analysis.aiProvider)}</p>}
-          <p className="text-xs text-muted mt-1 leading-relaxed">{summary}</p>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h3 className="text-lg font-bold text-foreground">Chance de Fechamento: <span className="text-violet-600 dark:text-violet-400">{scoreLabel}</span></h3>
+            {analysis.aiProvider && <span className="text-[10px] text-muted uppercase tracking-wider bg-surface/50 px-2 py-0.5 rounded-full border border-border/50">IA: {getProviderLabel(analysis.aiProvider)}</span>}
+          </div>
+          <p className="text-sm text-muted mt-1.5 leading-relaxed">{summary}</p>
+          {(reviewTrend || suggestedContactTime) && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {reviewTrend && (
+                <span className="text-[11px] font-medium px-2 py-1 rounded-full border border-amber-500/40 bg-amber-500/15 text-foreground">
+                  Tendência: {reviewTrend}
+                </span>
+              )}
+              {suggestedContactTime && (
+                <span className="text-[11px] font-medium px-2 py-1 rounded-full border border-cyan-500/40 bg-cyan-500/15 text-foreground">
+                  Melhor horário: {suggestedContactTime}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+      {reviewAnalysis && (
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-2">
+          <h3 className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest">Tendência das Avaliações</h3>
+          <p className="text-sm text-foreground leading-relaxed">{reviewAnalysis}</p>
+        </div>
+      )}
+
+      {/* Diagnostic cards — 3 columns */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {strengths.length > 0 && (
-          <div className="space-y-2">
-            <h3 className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> O que eles fazem bem</h3>
-            <ul className="space-y-1.5">
-              {strengths.map((s) => <li key={`strength-${s.slice(0, 80)}`} className="text-sm text-foreground bg-surface p-2.5 rounded-lg border border-border/50 shadow-sm leading-relaxed">{s}</li>)}
+          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 space-y-3">
+            <h3 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
+              <TrendingUp size={14} /> Pontos Fortes
+            </h3>
+            <ul className="space-y-2">
+              {strengths.map((s) => (
+                <li key={`strength-${s.slice(0, 80)}`} className="text-sm text-foreground bg-surface/60 p-2.5 rounded-lg border border-border/30 leading-relaxed">{s}</li>
+              ))}
             </ul>
           </div>
         )}
         {gaps.length > 0 && (
-          <div className="space-y-2">
-            <h3 className="text-[10px] font-bold text-rose-400 uppercase tracking-widest flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-rose-500" /> Lacunas & Fragilidades</h3>
-            <ul className="space-y-1.5">
-              {gaps.map((w) => <li key={`gap-${w.slice(0, 80)}`} className="text-sm text-foreground bg-surface p-2.5 rounded-lg border border-border/50 shadow-sm leading-relaxed">{w}</li>)}
+          <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4 space-y-3">
+            <h3 className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-widest flex items-center gap-1.5">
+              <Target size={14} /> Lacunas & Fragilidades
+            </h3>
+            <ul className="space-y-2">
+              {gaps.map((w) => (
+                <li key={`gap-${w.slice(0, 80)}`} className="text-sm text-foreground bg-surface/60 p-2.5 rounded-lg border border-border/30 leading-relaxed">{w}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {painPoints.length > 0 && (
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-3">
+            <h3 className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
+              <AlertTriangle size={14} /> Dores dos Clientes
+            </h3>
+            <ul className="space-y-2">
+              {painPoints.map((p) => (
+                <li key={`pain-${p.slice(0, 80)}`} className="text-sm text-foreground bg-surface/60 p-2.5 rounded-lg border border-border/30 leading-relaxed">{p}</li>
+              ))}
             </ul>
           </div>
         )}
       </div>
-      {painPoints.length > 0 && (
-        <div className="space-y-2 pb-2">
-          <h3 className="text-[10px] font-bold text-amber-400 uppercase tracking-widest flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Dores Frequentes de Clientes</h3>
-          <div className="flex flex-wrap gap-2 text-sm text-foreground border border-border/50 bg-surface rounded-lg p-4">
-            <ul className="list-disc pl-5 space-y-1.5">{painPoints.map((p) => <li key={`pain-${p.slice(0, 80)}`} className="leading-relaxed">{p}</li>)}</ul>
-          </div>
-        </div>
-      )}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-border pt-6">
-        {approach && (
-          <div className="space-y-2">
-            <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest">Estratégia de Abordagem</h3>
-            <div className="text-sm text-foreground p-4 bg-surface rounded-xl border border-border leading-relaxed border-l-4 border-l-cyan-500">{approach}</div>
-          </div>
-        )}
-        {Object.keys(socialMedia).length > 0 && (
-          <div className="space-y-2">
-            <h3 className="text-[10px] font-bold text-muted uppercase tracking-widest">Redes Sociais Sugeridas/Encontradas</h3>
-            <div className="flex flex-col gap-2">
-              {Object.entries(socialMedia).map(([platform, link]) => {
-                if (!link || String(link).toLowerCase() === 'não encontrado' || String(link).toLowerCase() === 'not found') return null;
-                return (
-                  <a key={platform} href={String(link)} target="_blank" rel="noreferrer" className="text-sm font-medium hover:underline text-cyan-400 p-2.5 rounded-lg bg-surface border border-border inline-flex items-center justify-between group">
+
+      {/* Approach + Social Media — 2 columns */}
+      {(approach || socialEntries.length > 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {approach && (
+            <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4 space-y-3">
+              <h3 className="text-xs font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-widest flex items-center gap-1.5">
+                <Zap size={14} /> Estratégia de Abordagem
+              </h3>
+              <div className="text-sm text-foreground leading-relaxed">{approach}</div>
+            </div>
+          )}
+          {socialEntries.length > 0 && (
+            <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4 space-y-3">
+              <h3 className="text-xs font-bold text-indigo-400 uppercase tracking-widest flex items-center gap-1.5">
+                <Share2 size={14} /> Redes Sociais
+              </h3>
+              <div className="flex flex-col gap-2">
+                {socialEntries.map(([platform, link]) => (
+                  <a key={platform} href={String(link)} target="_blank" rel="noreferrer" className="text-sm font-medium hover:underline text-indigo-400 p-2.5 rounded-lg bg-surface/60 border border-border/30 inline-flex items-center justify-between group">
                     <span className="capitalize">{platform}</span>
                     <ExternalLink size={14} className="opacity-50 group-hover:opacity-100" />
                   </a>
-                );
-              })}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
+
+      {/* Scripts — 2 columns with copy buttons */}
       {(firstContactMessage || suggestedWhatsAppMessage) && (
-        <div className="space-y-4 border-t border-border pt-6">
-          <h3 className="text-xs font-bold text-foreground">Scripts Sugeridos</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {suggestedWhatsAppMessage && (
-            <div className="space-y-2">
-              <p className="text-[10px] font-bold text-green-400 uppercase tracking-widest">WhatsApp Direct (Conversacional)</p>
-              <div className="bg-surface/50 p-4 rounded-xl border border-border/50">
-                <textarea readOnly className="w-full bg-transparent text-sm text-foreground resize-none border-0 focus:ring-0 p-0" rows={4} defaultValue={suggestedWhatsAppMessage} />
+            <div className="rounded-xl border border-green-500/20 bg-green-500/5 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold text-green-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <MessageCircle size={14} /> WhatsApp
+                </h3>
+                <CopyButton text={suggestedWhatsAppMessage} label="Copiar" />
+              </div>
+              <div className="bg-surface/60 p-3 rounded-lg border border-border/30">
+                <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{suggestedWhatsAppMessage}</p>
               </div>
             </div>
           )}
           {firstContactMessage && (
-            <div className="space-y-2">
-              <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Email / LinkedIn Cold First Contact</p>
-              <div className="bg-surface/50 p-4 rounded-xl border border-border/50">
-                <textarea readOnly className="w-full bg-transparent text-sm text-foreground resize-none border-0 focus:ring-0 p-0" rows={6} defaultValue={firstContactMessage} />
+            <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <Mail size={14} /> Email / LinkedIn
+                </h3>
+                <CopyButton text={firstContactMessage} label="Copiar" />
+              </div>
+              <div className="bg-surface/60 p-3 rounded-lg border border-border/30">
+                <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{firstContactMessage}</p>
               </div>
             </div>
           )}
         </div>
       )}
+
+      {/* Full Report — collapsible */}
       {fullReport && (
-        <div className="space-y-4 border-t border-border pt-6">
-          <h3 className="text-xs font-bold text-foreground">Relatório Completo (IA)</h3>
-          <div className="prose prose-sm prose-invert max-w-none text-muted p-6 bg-surface rounded-xl border border-border shadow-inner font-mono text-xs overflow-x-auto whitespace-pre-wrap">{fullReport}</div>
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setShowFullReport((v) => !v)}
+            className="w-full flex items-center justify-between p-4 text-sm font-bold text-foreground hover:bg-surface/50 transition-colors"
+          >
+            <span className="flex items-center gap-2">
+              <Sparkles size={14} className="text-violet-500" />
+              Relatório Completo (IA)
+            </span>
+            {showFullReport ? <ChevronUp size={16} className="text-muted" /> : <ChevronDown size={16} className="text-muted" />}
+          </button>
+          {showFullReport && (
+            <div className="px-4 pb-4">
+              <div className="prose prose-sm prose-invert max-w-none text-muted p-4 bg-surface rounded-xl border border-border shadow-inner font-mono text-xs overflow-x-auto whitespace-pre-wrap">{fullReport}</div>
+            </div>
+          )}
         </div>
       )}
-      <div className="flex justify-end pt-4">
-        <Button variant="secondary" size="sm" onClick={onReanalyze} disabled={analyzing} icon={<Sparkles size={14} />}>Reanalisar</Button>
+
+      {/* Action bar */}
+      <div className="flex justify-end pt-2">
+        <Button variant="secondary" size="sm" onClick={onReanalyze} disabled={analyzing} icon={analyzing ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}>Reanalisar</Button>
       </div>
     </div>
   );
@@ -183,7 +281,7 @@ function LeadContactActions({
   return (
     <section className="rounded-xl border border-border bg-card p-5 space-y-3">
       <h2 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
-        <Phone size={14} className="text-violet-400" /> Ações de Contato
+        <Phone size={14} className="text-violet-600 dark:text-violet-400" /> Ações de Contato
       </h2>
       <div className="flex flex-wrap gap-2">
         {hasPhone && (
@@ -195,7 +293,7 @@ function LeadContactActions({
               <Phone size={16} /> Ligar
             </a>
             <button type="button" onClick={onCopyPhone} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-surface border border-border text-foreground hover:bg-violet-500/10 transition-colors">
-              {copiedPhone ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
+              {copiedPhone ? <Check size={16} className="text-emerald-600 dark:text-emerald-400" /> : <Copy size={16} />}
               {copiedPhone ? 'Copiado!' : 'Copiar Nº'}
             </button>
           </>
@@ -247,8 +345,10 @@ interface LeadDetailContentProps {
   newTag: string;
   analyzing: boolean;
   copiedPhone: boolean;
+  savingLead: boolean;
   onBack: () => void;
   onToggleFavorite: () => void;
+  onSaveLead: () => void;
   onCopyPhone: () => void;
   onAddTag: (label: string, color: string) => Promise<void>;
   onRemoveTag: (tagId: string) => Promise<void>;
@@ -256,6 +356,9 @@ interface LeadDetailContentProps {
   setShowTagInput: (v: boolean) => void;
   onAnalyze: () => void;
   trackAction: (action: string) => void;
+  onCrmSuccess: (msg: string) => void;
+  onCrmError: (msg: string) => void;
+  onCrmWarning: (msg: string) => void;
 }
 
 function LeadDetailToolbar({
@@ -263,30 +366,41 @@ function LeadDetailToolbar({
   leadAnalysisItem,
   togglingFavorite,
   onToggleFavorite,
+  onSaveLead,
+  saving,
 }: {
   onBack: () => void;
   leadAnalysisItem: LeadAnalysisListItem | null;
   togglingFavorite: boolean;
   onToggleFavorite: () => void;
+  onSaveLead: () => void;
+  saving: boolean;
 }) {
+  const isFavorite = leadAnalysisItem?.isFavorite ?? false;
+  const isSaved = !!leadAnalysisItem;
   return (
     <div className="flex items-center justify-between gap-2 flex-wrap">
       <Button variant="ghost" size="sm" className="text-muted hover:text-foreground -ml-2" icon={<ArrowLeft size={16} />} onClick={onBack}>
         Voltar aos resultados
       </Button>
-      {leadAnalysisItem && (
+      <div className="flex items-center gap-2 flex-wrap justify-end">
+        {/* Save / Favorite button — always visible */}
         <button
           type="button"
-          onClick={onToggleFavorite}
-          disabled={togglingFavorite}
+          onClick={isSaved ? onToggleFavorite : onSaveLead}
+          disabled={togglingFavorite || saving}
           className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium bg-surface border border-border text-foreground hover:bg-violet-500/10 hover:border-violet-500/30 transition-colors disabled:opacity-50"
-          title={leadAnalysisItem.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
-          aria-label={leadAnalysisItem.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
+          title={isSaved ? (isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito') : 'Salvar lead'}
+          aria-label={isSaved ? (isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito') : 'Salvar lead'}
         >
-          {togglingFavorite ? <Loader2 size={18} className="animate-spin shrink-0" /> : <Star size={18} className={leadAnalysisItem.isFavorite ? 'fill-amber-400 text-amber-400' : 'shrink-0'} />}
-          {leadAnalysisItem.isFavorite ? 'Favorito' : 'Favoritar'}
+          {(togglingFavorite || saving)
+            ? <Loader2 size={18} className="animate-spin shrink-0" />
+            : isSaved
+              ? <Star size={18} className={isFavorite ? 'fill-amber-400 text-amber-600 dark:text-amber-400' : 'shrink-0'} />
+              : <Star size={18} className="shrink-0" />}
+          {saving ? 'Salvando...' : isSaved ? (isFavorite ? 'Favorito' : 'Favoritar') : 'Salvar Lead'}
         </button>
-      )}
+      </div>
     </div>
   );
 }
@@ -349,7 +463,7 @@ function LeadDetailTagsSection({
   return (
     <section className="rounded-xl border border-border bg-card p-5 space-y-3">
       <h2 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
-        <Tag size={14} className="text-violet-400" /> Tags
+        <Tag size={14} className="text-violet-600 dark:text-violet-400" /> Tags
       </h2>
       <div className="flex flex-wrap gap-2">
         {tags.map((t) => (
@@ -358,17 +472,17 @@ function LeadDetailTagsSection({
             <button type="button" onClick={() => onRemoveTag(t.id)} className="hover:opacity-70"><X size={12} /></button>
           </span>
         ))}
-        {!tags.find((t) => t.label === 'Quente') && <button type="button" onClick={() => onAddTag('Quente', 'green')} className="px-3 py-1 rounded-full text-xs font-bold border border-dashed border-emerald-500/30 text-emerald-400/60 hover:bg-emerald-500/10 transition-colors">+ Quente</button>}
-        {!tags.find((t) => t.label === 'Morno') && <button type="button" onClick={() => onAddTag('Morno', 'amber')} className="px-3 py-1 rounded-full text-xs font-bold border border-dashed border-amber-500/30 text-amber-400/60 hover:bg-amber-500/10 transition-colors">+ Morno</button>}
-        {!tags.find((t) => t.label === 'Frio') && <button type="button" onClick={() => onAddTag('Frio', 'blue')} className="px-3 py-1 rounded-full text-xs font-bold border border-dashed border-blue-500/30 text-blue-400/60 hover:bg-blue-500/10 transition-colors">+ Frio</button>}
+        {!tags.find((t) => t.label === 'Quente') && <button type="button" onClick={() => onAddTag('Quente', 'green')} className="px-3 py-1 rounded-full text-xs font-bold border border-dashed border-emerald-500/30 text-emerald-600 dark:text-emerald-400/60 hover:bg-emerald-500/10 transition-colors">+ Quente</button>}
+        {!tags.find((t) => t.label === 'Morno') && <button type="button" onClick={() => onAddTag('Morno', 'amber')} className="px-3 py-1 rounded-full text-xs font-bold border border-dashed border-amber-500/30 text-amber-600 dark:text-amber-400/60 hover:bg-amber-500/10 transition-colors">+ Morno</button>}
+        {!tags.find((t) => t.label === 'Frio') && <button type="button" onClick={() => onAddTag('Frio', 'blue')} className="px-3 py-1 rounded-full text-xs font-bold border border-dashed border-blue-500/30 text-blue-600 dark:text-blue-400/60 hover:bg-blue-500/10 transition-colors">+ Frio</button>}
         {showTagInput ? (
           <form onSubmit={(e) => { e.preventDefault(); onAddTag(newTag, 'violet'); }} className="flex items-center gap-1">
             <input value={newTag} onChange={(e) => setNewTag(e.target.value)} placeholder="Nova tag..." className="h-7 w-28 px-2 bg-surface border border-border rounded-lg text-xs text-foreground placeholder:text-muted focus:outline-none" autoFocus />
-            <button type="submit" className="text-violet-400 hover:text-violet-300 text-xs font-bold">OK</button>
+            <button type="submit" className="text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 text-xs font-bold">OK</button>
             <button type="button" onClick={() => setShowTagInput(false)} className="text-muted hover:text-foreground"><X size={14} /></button>
           </form>
         ) : (
-          <button type="button" onClick={() => setShowTagInput(true)} className="px-3 py-1 rounded-full text-xs font-bold border border-dashed border-violet-500/30 text-violet-400/60 hover:bg-violet-500/10 transition-colors inline-flex items-center gap-1">
+          <button type="button" onClick={() => setShowTagInput(true)} className="px-3 py-1 rounded-full text-xs font-bold border border-dashed border-violet-500/30 text-violet-600 dark:text-violet-400/60 hover:bg-violet-500/10 transition-colors inline-flex items-center gap-1">
             <Plus size={12} /> Custom
           </button>
         )}
@@ -416,18 +530,19 @@ function LeadDetailAnalysisSection({
 }
 
 function LeadDetailContent(props: LeadDetailContentProps) {
-  const { place, analysis, tags, leadAnalysisItem, togglingFavorite, showTagInput, newTag, analyzing, copiedPhone, onBack, onToggleFavorite, onCopyPhone, onAddTag, onRemoveTag, setNewTag, setShowTagInput, onAnalyze, trackAction } = props;
+  const { place, analysis, tags, leadAnalysisItem, togglingFavorite, showTagInput, newTag, analyzing, copiedPhone, savingLead, onBack, onToggleFavorite, onSaveLead, onCopyPhone, onAddTag, onRemoveTag, setNewTag, setShowTagInput, onAnalyze, trackAction, onCrmSuccess, onCrmError, onCrmWarning } = props;
   const name = place.displayName?.text ?? place.id;
   return (
     <>
       <HeaderDashboard title={name} subtitle="Detalhes e análise com IA" breadcrumb="Prospecção Ativa / Resultados / Lead" />
       <div className="p-6 sm:p-8 max-w-4xl mx-auto space-y-6">
-        <LeadDetailToolbar onBack={onBack} leadAnalysisItem={leadAnalysisItem} togglingFavorite={togglingFavorite} onToggleFavorite={onToggleFavorite} />
+        <LeadDetailToolbar onBack={onBack} leadAnalysisItem={leadAnalysisItem} togglingFavorite={togglingFavorite} onToggleFavorite={onToggleFavorite} onSaveLead={onSaveLead} saving={savingLead} />
         <LeadDetailInfoSection place={place} trackAction={trackAction} />
         <LeadContactActions place={place} copiedPhone={copiedPhone} onCopyPhone={onCopyPhone} trackAction={trackAction} />
         <LeadDetailTagsSection tags={tags} showTagInput={showTagInput} newTag={newTag} onAddTag={onAddTag} onRemoveTag={onRemoveTag} setNewTag={setNewTag} setShowTagInput={setShowTagInput} />
         <LeadDetailAnalysisSection analysis={analysis} analyzing={analyzing} onAnalyze={onAnalyze} />
       </div>
+      <CrmSidePanel place={place} analysis={analysis} analyzing={analyzing} onSuccess={onCrmSuccess} onError={onCrmError} onWarning={onCrmWarning} />
     </>
   );
 }
@@ -449,6 +564,7 @@ export default function LeadDetailPage() {
   const [copiedPhone, setCopiedPhone] = useState(false);
   const [leadAnalysisItem, setLeadAnalysisItem] = useState<LeadAnalysisListItem | null>(null);
   const [togglingFavorite, setTogglingFavorite] = useState(false);
+  const [savingLead, setSavingLead] = useState(false);
 
   // Load saved lead (analysis) for this place to show favorite state
   useEffect(() => {
@@ -492,6 +608,30 @@ export default function LeadDetailPage() {
       addToast('error', 'Falha ao atualizar favorito.');
     } finally {
       setTogglingFavorite(false);
+    }
+  };
+
+  const handleSaveLead = async () => {
+    if (!place || savingLead) return;
+    setSavingLead(true);
+    try {
+      const saved = await leadsApi.save({
+        placeId: place.id,
+        name: place.displayName?.text ?? place.id,
+        address: place.formattedAddress,
+        phone: place.nationalPhoneNumber ?? place.internationalPhoneNumber,
+        website: place.websiteUri ?? (place as PlaceDetail).website,
+        rating: place.rating,
+        reviewCount: place.userRatingCount,
+        types: place.types,
+        businessStatus: place.businessStatus,
+      });
+      setLeadAnalysisItem(saved);
+      addToast('success', 'Lead salvo com sucesso.');
+    } catch {
+      addToast('error', 'Não foi possível salvar o lead.');
+    } finally {
+      setSavingLead(false);
     }
   };
 
@@ -597,8 +737,10 @@ export default function LeadDetailPage() {
       newTag={newTag}
       analyzing={analyzing}
       copiedPhone={copiedPhone}
+      savingLead={savingLead}
       onBack={() => navigate(-1)}
       onToggleFavorite={handleToggleFavorite}
+      onSaveLead={handleSaveLead}
       onCopyPhone={handleCopyPhone}
       onAddTag={handleAddTag}
       onRemoveTag={handleRemoveTag}
@@ -606,6 +748,9 @@ export default function LeadDetailPage() {
       setShowTagInput={setShowTagInput}
       onAnalyze={handleAnalyze}
       trackAction={trackAction}
+      onCrmSuccess={(msg) => addToast('success', msg)}
+      onCrmError={(msg) => addToast('error', msg)}
+      onCrmWarning={(msg) => addToast('warning', msg)}
     />
   );
 }

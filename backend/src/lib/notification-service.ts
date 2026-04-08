@@ -6,6 +6,7 @@
 import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email';
 import { notificationTemplate } from '@/lib/email-templates';
+import { sendPushToUser } from '@/lib/web-push';
 import type { NotificationType } from '@prisma/client';
 
 /** Known notification channels (key + display name). Config stored in NotificationChannelConfig. */
@@ -108,6 +109,11 @@ export async function createNotification(input: CreateNotificationInput): Promis
     }
   }
 
+  // Web Push (fire-and-forget)
+  if (appEnabled) {
+    sendPushToUser(userId, { title, body: message, link }).catch(() => {});
+  }
+
   return { id: notificationId };
 }
 
@@ -156,6 +162,14 @@ export async function createNotificationForAllUsers(input: {
       if (u.email && u.notifyByEmail) {
         sendEmail(u.email, subject, html).catch(() => {});
       }
+    }
+  }
+
+  // Web Push broadcast (fire-and-forget for each user)
+  if (appEnabled) {
+    const pushPayload = { title: input.title, body: input.message, link: input.link };
+    for (const u of users) {
+      sendPushToUser(u.id, pushPayload).catch(() => {});
     }
   }
 

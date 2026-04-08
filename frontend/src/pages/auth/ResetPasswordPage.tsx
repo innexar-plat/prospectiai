@@ -44,7 +44,7 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
       <div className="w-full max-w-sm space-y-6">
         <Link to="/auth/signin" className="inline-block">
-          <Logo iconSize={32} textClassName="text-foreground text-base" />
+          <Logo height={144} />
         </Link>
         <h1 className="text-xl font-bold text-foreground">Nova senha</h1>
         {done ? (

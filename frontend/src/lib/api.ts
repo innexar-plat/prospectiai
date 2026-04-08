@@ -1,9 +1,43 @@
 /**
- * Centralized API service for the ProspectorAI frontend.
+ * Centralized API service for the Precision IA frontend.
  * All requests use relative /api paths — Nginx proxies them to the Next.js backend.
  */
 
 const BASE = '/api';
+
+/** Simple exponential-backoff retry for fetch requests. Retries on 5xx and network errors. */
+async function requestWithRetry<T>(path: string, options: RequestInit = {}, maxRetries = 2): Promise<T> {
+    let lastErr: Error | null = null;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            const res = await fetch(`${BASE}${path}`, {
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options.headers,
+                },
+                ...options,
+            });
+            // Retry on 503/502/520 (transient)
+            if (!res.ok && attempt < maxRetries && (res.status === 503 || res.status === 502 || res.status === 520)) {
+                await new Promise((r) => setTimeout(r, 800 * Math.pow(2, attempt)));
+                continue;
+            }
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ error: res.statusText }));
+                throw new Error(err.error || `HTTP ${res.status}`);
+            }
+            return res.json();
+        } catch (err) {
+            lastErr = err instanceof Error ? err : new Error(String(err));
+            if (attempt < maxRetries) {
+                await new Promise((r) => setTimeout(r, 800 * Math.pow(2, attempt)));
+                continue;
+            }
+        }
+    }
+    throw lastErr ?? new Error('Request failed');
+}
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const res = await fetch(`${BASE}${path}`, {
@@ -84,20 +118,15 @@ export const authApi = {
 
     /**
      * Initiate OAuth sign-in (Google or GitHub).
-     * Auth.js requires POST with CSRF token; GET with provider throws "Unsupported action".
-     * Redirect after OAuth uses current origin (window.location.origin) so production must be
-     * served from the canonical domain (e.g. https://prospectorai.innexar.com.br).
+     * Navigates via GET to /api/oauth/:provider which triggers Auth.js server-side
+     * signIn(), avoiding a form POST that Chrome Enhanced Protection may flag.
      */
     initiateOAuthSignIn: async (provider: 'google' | 'github', callbackPath = '/dashboard') => {
-        const csrfToken = await getCsrfToken();
         const origin = typeof window !== 'undefined' ? window.location.origin : '';
         const baseOrigin = origin.replace(/\/$/, '');
         const pathSegment = callbackPath.startsWith('/') ? callbackPath : `/${callbackPath}`;
         const callbackUrl = origin === '' ? '' : `${baseOrigin}${pathSegment}`;
-        createAndSubmitForm(`${BASE}/auth/signin/${provider}`, {
-            csrfToken,
-            callbackUrl,
-        });
+        window.location.href = `${BASE}/oauth/${provider}?callbackUrl=${encodeURIComponent(callbackUrl)}`;
     },
 
     /** Request password reset email. POST /api/auth/forgot-password { email } */
@@ -149,7 +178,7 @@ export const searchApi = {
         }),
 
     details: (placeId: string) =>
-        request<PlaceDetail>(`/details?placeId=${placeId}`),
+        requestWithRetry<PlaceDetail>(`/details?placeId=${placeId}`, {}, 3),
 
     history: (params?: { limit?: number; offset?: number }) => {
         const qs = new URLSearchParams();
@@ -163,10 +192,41 @@ export const searchApi = {
         request<SearchHistoryItem & { resultsData?: Place[] }>(`/search/history/${id}`),
 
     analyze: (body: Partial<PlaceDetail> & { placeId: string; name: string; locale?: string; websiteUri?: string; website?: string; formattedAddress?: string; nationalPhoneNumber?: string; internationalPhoneNumber?: string; rating?: number; userRatingCount?: number; types?: string[]; primaryType?: string; businessStatus?: string; reviews?: Array<{ rating: number; text?: { text: string }; authorAttribution?: { displayName: string }; relativePublishTimeDescription?: string }> }) =>
-        request<Analysis>('/analyze', {
+        requestWithRetry<Analysis>('/analyze', {
             method: 'POST',
             body: JSON.stringify(body),
+        }, 2),
+
+    analyzeBatch: (items: Array<Partial<PlaceDetail> & {
+        placeId: string;
+        name: string;
+        locale?: string;
+    }>) =>
+        request<{ jobId: string; status: string; total: number; processed: number; succeeded: number; failed: number; startedAt: string }>('/analyze/batch', {
+            method: 'POST',
+            body: JSON.stringify({ items }),
         }),
+
+    analyzeBatchStatus: (jobId: string) =>
+        request<{
+            id: string;
+            status: 'queued' | 'running' | 'completed' | 'failed';
+            total: number;
+            processed: number;
+            succeeded: number;
+            failed: number;
+            startedAt: string;
+            finishedAt?: string;
+            errors: Array<{ placeId: string; message: string }>;
+        }>(`/analyze/batch/${encodeURIComponent(jobId)}`),
+
+    citySuggestions: (params: { state: string; country?: string; q?: string }) => {
+        const qs = new URLSearchParams();
+        qs.set('state', params.state);
+        if (params.country) qs.set('country', params.country);
+        if (params.q) qs.set('q', params.q);
+        return request<{ cities: string[] }>(`/location/cities?${qs.toString()}`);
+    },
 
     marketReport: (params: { textQuery: string; includedType?: string; pageSize?: number }) =>
         request<unknown>('/market-report', {
@@ -208,6 +268,14 @@ export const billingApi = {
         request<CheckoutResponse>('/billing/checkout', {
             method: 'POST',
             body: JSON.stringify(data),
+        }),
+    cancelSubscription: () =>
+        request<{ ok: boolean; message: string; pendingPlanId?: string | null; pendingPlanEffectiveAt?: string | null }>('/billing/cancel-subscription', {
+            method: 'POST',
+        }),
+    cancelPendingDowngrade: () =>
+        request<{ ok: boolean; message: string }>('/billing/cancel-pending-downgrade', {
+            method: 'POST',
         }),
 };
 
@@ -392,6 +460,22 @@ export const notificationsApi = {
         }),
 };
 
+// ─── Push Subscription ──────────────────────────────────────────────────────
+
+export const pushApi = {
+    getVapidKey: () => request<{ publicKey: string }>('/push-subscription/vapid-key'),
+    subscribe: (subscription: PushSubscriptionJSON) =>
+        request<{ id: string }>('/push-subscription', {
+            method: 'POST',
+            body: JSON.stringify(subscription),
+        }),
+    unsubscribe: (endpoint: string) =>
+        request<{ ok: boolean }>('/push-subscription', {
+            method: 'DELETE',
+            body: JSON.stringify({ endpoint }),
+        }),
+};
+
 // ─── Tags ────────────────────────────────────────────────────────────────────
 
 export interface LeadTagItem {
@@ -422,21 +506,40 @@ export const tagsApi = {
 /** Lead analysis list item: backend returns LeadAnalysis with included lead. */
 export interface LeadAnalysisListItem {
     id: string;
-    status?: string;
+    status?: 'NEW' | 'CONTACTED' | 'CONVERTED' | 'LOST';
     score?: number;
     summary?: string;
     isFavorite?: boolean;
+    suggestedWhatsAppMessage?: string;
     createdAt: string;
     lead: Lead;
+}
+
+export interface LeadStats {
+    total: number;
+    highScore: number;
+    favorites: number;
+    searchesThisMonth: number;
 }
 
 export const leadsApi = {
     list: () => request<LeadAnalysisListItem[]>('/leads'),
     get: (id: string) => request<LeadAnalysisListItem>(`/leads/${id}`),
+    stats: () => request<LeadStats>('/leads/stats'),
+    save: (place: { placeId: string; name: string; address?: string; phone?: string; website?: string; rating?: number; reviewCount?: number; types?: string[]; businessStatus?: string }) =>
+        request<LeadAnalysisListItem>('/leads', {
+            method: 'POST',
+            body: JSON.stringify(place),
+        }),
     toggleFavorite: (analysisId: string, isFavorite: boolean) =>
         request<LeadAnalysisListItem>(`/leads/${analysisId}`, {
             method: 'PATCH',
             body: JSON.stringify({ isFavorite }),
+        }),
+    updateStatus: (analysisId: string, status: 'NEW' | 'CONTACTED' | 'CONVERTED' | 'LOST') =>
+        request<LeadAnalysisListItem>(`/leads/${analysisId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status }),
         }),
 };
 
@@ -506,6 +609,7 @@ export interface SessionUser {
     twoFactorEnabled?: boolean;
     subscriptionStatus?: string | null;
     currentPeriodEnd?: string | null;
+    billingCycle?: 'monthly' | 'annual' | null;
     /** End of 3-day grace period when payment failed (past_due). */
     gracePeriodEnd?: string | null;
     /** Downgrade scheduled for period end (plan to apply at pendingPlanEffectiveAt). */
@@ -547,6 +651,11 @@ export interface Place {
     types?: string[];
     primaryType?: string;
     businessStatus?: string;
+    opportunityScore?: number;
+    currentOpeningHours?: {
+        openNow?: boolean;
+        weekdayDescriptions?: string[];
+    };
     reviews?: Array<{
         rating: number;
         text?: { text: string };
@@ -576,6 +685,17 @@ export interface Analysis {
     strengths?: string[];
     weaknesses?: string[];
     opportunities?: string[];
+    reviewAnalysis?: string;
+    reviewTrend?: string;
+    suggestedContactTime?: string;
+    contactStrategy?: string;
+    fullReport?: string;
+    socialMedia?: { instagram?: string; facebook?: string; linkedin?: string };
+    firstContactMessage?: string;
+    suggestedWhatsAppMessage?: string;
+    scoreLabel?: string;
+    painPoints?: string[];
+    gaps?: string[];
     /** Provider used for this analysis (e.g. GEMINI, OPENAI, CLOUDFLARE). */
     aiProvider?: string;
     [key: string]: unknown;
@@ -605,6 +725,9 @@ export interface SearchHistoryItem {
     filters?: Record<string, unknown>;
     resultsCount: number;
     resultsData?: Place[];
+    city?: string | null;
+    state?: string | null;
+    country?: string | null;
     createdAt: string;
     user?: { name: string | null; email: string | null };
 }
@@ -715,3 +838,179 @@ export interface IntelligenceReportItem {
     isFavorite: boolean;
     createdAt: string;
 }
+
+// ─── Integrations ────────────────────────────────────────────────────────────
+
+export const integrationsApi = {
+    /** Save/update RD Station API token for the current user. */
+    rdStationSaveToken: (token: string) =>
+        request<{ ok: boolean }>('/integrations/rdstation', {
+            method: 'POST',
+            body: JSON.stringify({ token }),
+        }),
+    /** Test RD Station connection. */
+    rdStationTest: () =>
+        request<{ ok: boolean; connected?: boolean; mode?: 'manual' | 'oauth' | null }>('/integrations/rdstation'),
+    /** Get OAuth authorization URL for RD Station connection flow. */
+    rdStationOauthConnectUrl: () =>
+        request<{ ok: boolean; url: string }>('/integrations/rdstation/oauth/connect'),
+    /** Disconnect RD Station integration and clear stored credentials. */
+    rdStationDisconnect: () =>
+        request<{ ok: boolean }>('/integrations/rdstation/disconnect', { method: 'POST' }),
+    /** Test Agendor connection (user token or env fallback). */
+    agendorTest: () =>
+        request<{ ok: boolean; connected?: boolean; source?: 'env' | 'user' | null; user?: { id?: number; name?: string } }>('/integrations/agendor'),
+    /** Save Agendor API token for current user. */
+    agendorSaveToken: (token: string) =>
+        request<{ ok: boolean }>('/integrations/agendor', {
+            method: 'POST',
+            body: JSON.stringify({ token }),
+        }),
+    /** Remove Agendor API token for current user. */
+    agendorDisconnect: () =>
+        request<{ ok: boolean }>('/integrations/agendor', { method: 'DELETE' }),
+    /** List Agendor funnels. */
+    agendorFunnels: () =>
+        request<{ data: Array<{ id: number; name: string; sequence?: number }> }>('/integrations/agendor/funnels'),
+    /** List Agendor deal stages (optionally filtered by funnel). */
+    agendorDealStages: (funnelId?: number) =>
+        request<{ data: Array<{ id: number; name: string; sequence?: number; funnel?: { id: number; name: string } }> }>(
+            funnelId ? `/integrations/agendor/deal-stages?funnel_id=${funnelId}` : '/integrations/agendor/deal-stages'
+        ),
+    /** List Agendor users. */
+    agendorUsers: () =>
+        request<{ data: Array<{ id: number; name: string; email?: string }> }>('/integrations/agendor/users'),
+    /** List RD Station CRM sources. */
+    rdStationSources: () =>
+        request<{ data: Array<{ id: string; name: string; description?: string }> }>('/integrations/rdstation/sources'),
+    /** List RD Station CRM campaigns. */
+    rdStationCampaigns: () =>
+        request<{ data: Array<{ id: string; name: string }> }>('/integrations/rdstation/campaigns'),
+    /** Send lead data to RD Station (contact only or contact + deal). */
+    rdStationSend: (lead: {
+        mode?: 'contact' | 'contact_and_deal';
+        name: string;
+        phone?: string;
+        email?: string;
+        website?: string;
+        address?: string;
+        rating?: number;
+        reviewCount?: number;
+        businessStatus?: string;
+        primaryType?: string;
+        score?: number;
+        scoreLabel?: string;
+        summary?: string;
+        strengths?: string[];
+        weaknesses?: string[];
+        opportunities?: string[];
+        painPoints?: string[];
+        gaps?: string[];
+        reviewAnalysis?: string;
+        reviewTrend?: string;
+        suggestedContactTime?: string;
+        contactStrategy?: string;
+        firstContactMessage?: string;
+        suggestedWhatsAppMessage?: string;
+        fullReport?: string;
+        socialMedia?: { instagram?: string; facebook?: string; linkedin?: string };
+        stageId?: string;
+        pipelineId?: string;
+        sourceId?: string;
+        campaignId?: string;
+        dealName?: string;
+        expectedCloseDate?: string;
+        placeId: string;
+    }) =>
+        request<{ ok: boolean; product?: 'crm' | 'marketing'; contactId?: string; dealId?: string; organizationId?: string; noteId?: string; taskId?: string; warning?: string }>('/integrations/rdstation/send', {
+            method: 'POST',
+            body: JSON.stringify(lead),
+        }),
+    /** Send lead data to Agendor (contact only or contact + deal). */
+    agendorSend: (lead: {
+        mode?: 'contact' | 'contact_and_deal';
+        name: string;
+        phone?: string;
+        email?: string;
+        website?: string;
+        address?: string;
+        rating?: number;
+        reviewCount?: number;
+        primaryType?: string;
+        businessStatus?: string;
+        score?: number;
+        scoreLabel?: string;
+        summary?: string;
+        strengths?: string[];
+        gaps?: string[];
+        painPoints?: string[];
+        firstContactMessage?: string;
+        suggestedWhatsAppMessage?: string;
+        fullReport?: string;
+        socialMedia?: { instagram?: string; facebook?: string; linkedin?: string };
+        dealName?: string;
+        dealValue?: number;
+        funnel?: number;
+        dealStage?: number;
+        ownerUser?: number | string;
+        placeId: string;
+    }) =>
+        request<{ ok: boolean; personId?: number | null; organizationId?: number; dealId?: number; taskId?: number; warning?: string }>('/integrations/agendor/send', {
+            method: 'POST',
+            body: JSON.stringify(lead),
+        }),
+    /** Test HubSpot connection. */
+    hubspotTest: () =>
+        request<{ ok: boolean; connected?: boolean; mode?: 'oauth' | null }>('/integrations/hubspot'),
+    /** Get OAuth authorization URL for HubSpot connection flow. */
+    hubspotOauthConnectUrl: () =>
+        request<{ ok: boolean; url: string }>('/integrations/hubspot/oauth/connect'),
+    /** Disconnect HubSpot integration and clear stored credentials. */
+    hubspotDisconnect: () =>
+        request<{ ok: boolean }>('/integrations/hubspot/disconnect', { method: 'POST' }),
+    /** List HubSpot deal pipelines with stages. */
+    hubspotPipelines: () =>
+        request<{ data: Array<{ id: string; label: string; stages: Array<{ id: string; label: string }> }> }>('/integrations/hubspot/pipelines'),
+    /** List HubSpot owners. */
+    hubspotOwners: () =>
+        request<{ data: Array<{ id: string; label: string }> }>('/integrations/hubspot/owners'),
+    /** Send lead data to HubSpot (contact only or contact + deal). */
+    hubspotSend: (lead: {
+        mode?: 'contact' | 'contact_and_deal';
+        name: string;
+        phone?: string;
+        email?: string;
+        website?: string;
+        address?: string;
+        rating?: number;
+        reviewCount?: number;
+        businessStatus?: string;
+        primaryType?: string;
+        score?: number;
+        scoreLabel?: string;
+        summary?: string;
+        strengths?: string[];
+        weaknesses?: string[];
+        opportunities?: string[];
+        painPoints?: string[];
+        gaps?: string[];
+        reviewAnalysis?: string;
+        reviewTrend?: string;
+        suggestedContactTime?: string;
+        contactStrategy?: string;
+        firstContactMessage?: string;
+        suggestedWhatsAppMessage?: string;
+        fullReport?: string;
+        socialMedia?: { instagram?: string; facebook?: string; linkedin?: string };
+        pipelineId?: string;
+        stageId?: string;
+        ownerId?: string;
+        dealName?: string;
+        dealValue?: number;
+        placeId: string;
+    }) =>
+        request<{ ok: boolean; contactId?: string; dealId?: string; warning?: string }>('/integrations/hubspot/send', {
+            method: 'POST',
+            body: JSON.stringify(lead),
+        }),
+};

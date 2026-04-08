@@ -9,7 +9,7 @@ RUN npm install --legacy-peer-deps
 
 # Copy source and build
 COPY frontend/ .
-RUN npm run build
+RUN npm run build && node scripts/generate-seo-html.mjs
 
 # Stage 2: Serve with Nginx
 FROM nginx:alpine AS runner

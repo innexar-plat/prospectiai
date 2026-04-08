@@ -11,9 +11,9 @@ import { StatCard, PresenceBar, EmptyState } from '@/components/dashboard/shared
 const UF_OPTIONS = ['', 'AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MG', 'MS', 'MT', 'PA', 'PB', 'PE', 'PI', 'PR', 'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP', 'TO'];
 
 const BARRIER_CONFIG = {
-    alto: { label: 'Barreira Alta', color: 'text-rose-400', bg: 'bg-rose-500/10 border-rose-500/20', icon: '🛑' },
-    medio: { label: 'Barreira Média', color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20', icon: '⚡' },
-    baixo: { label: 'Barreira Baixa', color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20', icon: '✅' },
+    alto: { label: 'Barreira Alta', color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-500/10 border-rose-500/20', icon: '🛑' },
+    medio: { label: 'Barreira Média', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20', icon: '⚡' },
+    baixo: { label: 'Barreira Baixa', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20', icon: '✅' },
 };
 
 export default function ConcorrenciaPage() {
@@ -81,7 +81,7 @@ export default function ConcorrenciaPage() {
                 <div className="rounded-3xl bg-card border border-border p-6 sm:p-8">
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
                         <h3 className="text-lg font-bold text-foreground">Analisar Concorrência</h3>
-                        <Link to="/dashboard/historico?tab=intelligence&module=COMPETITORS" className="text-sm text-violet-400 hover:text-violet-300 font-medium">
+                        <Link to="/dashboard/historico?tab=intelligence&module=COMPETITORS" className="text-sm text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 font-medium">
                             Ver histórico
                         </Link>
                     </div>
@@ -101,7 +101,7 @@ export default function ConcorrenciaPage() {
 
                 {loading && (
                     <div className="flex flex-col items-center justify-center p-16 gap-4">
-                        <Loader2 size={40} className="animate-spin text-violet-400" />
+                        <Loader2 size={40} className="animate-spin text-violet-600 dark:text-violet-400" />
                         <p className="text-sm text-muted">Analisando concorrentes, scoring e gerando playbook com IA...</p>
                         <p className="text-xs text-muted/60">Isso pode levar até 30 segundos</p>
                     </div>
@@ -137,7 +137,7 @@ export default function ConcorrenciaPage() {
                         {/* Digital Presence */}
                         <div className="rounded-3xl bg-card border border-border p-6">
                             <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-5 flex items-center gap-2">
-                                <Globe size={16} className="text-violet-400" /> Presença Digital na Região
+                                <Globe size={16} className="text-violet-600 dark:text-violet-400" /> Presença Digital na Região
                             </h3>
                             <div className="space-y-4">
                                 <PresenceBar label="Possuem Website" count={data.digitalPresence.withWebsite} total={data.totalCount} color="bg-emerald-500" />
@@ -151,14 +151,14 @@ export default function ConcorrenciaPage() {
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <div className="rounded-3xl bg-card border border-border p-6">
                                 <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-                                    <Star size={16} className="text-amber-400" /> Top 10 por Avaliação
+                                    <Star size={16} className="text-amber-600 dark:text-amber-400" /> Top 10 por Avaliação
                                 </h3>
                                 <div className="space-y-2">
                                     {data.rankingByRating.map((entry) => (
                                         <div key={entry.id} className="flex items-center gap-3 p-3 bg-surface rounded-xl border border-border/50">
-                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 ${entry.position <= 3 ? 'bg-amber-500/20 text-amber-400' : 'bg-surface text-muted'}`}>{entry.position}</div>
+                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 ${entry.position <= 3 ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'bg-surface text-muted'}`}>{entry.position}</div>
                                             <div className="flex-1 min-w-0"><p className="text-sm font-medium text-foreground truncate">{entry.name}</p></div>
-                                            <div className="flex items-center gap-1 text-sm font-bold text-amber-400"><Star size={14} fill="currentColor" />{entry.rating?.toFixed(1)}</div>
+                                            <div className="flex items-center gap-1 text-sm font-bold text-amber-600 dark:text-amber-400"><Star size={14} fill="currentColor" />{entry.rating?.toFixed(1)}</div>
                                         </div>
                                     ))}
                                     {data.rankingByRating.length === 0 && <p className="text-sm text-muted text-center py-4">Sem dados suficientes</p>}
@@ -166,14 +166,14 @@ export default function ConcorrenciaPage() {
                             </div>
                             <div className="rounded-3xl bg-card border border-border p-6">
                                 <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-                                    <MessageSquare size={16} className="text-blue-400" /> Top 10 por Volume de Avaliações
+                                    <MessageSquare size={16} className="text-blue-600 dark:text-blue-400" /> Top 10 por Volume de Avaliações
                                 </h3>
                                 <div className="space-y-2">
                                     {data.rankingByReviews.map((entry) => (
                                         <div key={entry.id} className="flex items-center gap-3 p-3 bg-surface rounded-xl border border-border/50">
-                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 ${entry.position <= 3 ? 'bg-blue-500/20 text-blue-400' : 'bg-surface text-muted'}`}>{entry.position}</div>
+                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 ${entry.position <= 3 ? 'bg-blue-500/20 text-blue-600 dark:text-blue-400' : 'bg-surface text-muted'}`}>{entry.position}</div>
                                             <div className="flex-1 min-w-0"><p className="text-sm font-medium text-foreground truncate">{entry.name}</p></div>
-                                            <span className="text-sm font-bold text-blue-400 tabular-nums">{entry.reviewCount?.toLocaleString('pt-BR')}</span>
+                                            <span className="text-sm font-bold text-blue-600 dark:text-blue-400 tabular-nums">{entry.reviewCount?.toLocaleString('pt-BR')}</span>
                                         </div>
                                     ))}
                                     {data.rankingByReviews.length === 0 && <p className="text-sm text-muted text-center py-4">Sem dados suficientes</p>}
@@ -185,7 +185,7 @@ export default function ConcorrenciaPage() {
                         {data.topOpportunities && data.topOpportunities.length > 0 && (
                             <div className="rounded-3xl bg-card border border-border p-6">
                                 <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-2 flex items-center gap-2">
-                                    <Target size={16} className="text-amber-400" /> Top Oportunidades (Score de Oportunidade)
+                                    <Target size={16} className="text-amber-600 dark:text-amber-400" /> Top Oportunidades (Score de Oportunidade)
                                 </h3>
                                 <p className="text-xs text-muted mb-4">Empresas com maior potencial de conversão. Score maior = mais fácil de fechar.</p>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[480px] overflow-y-auto pr-2">
@@ -194,8 +194,8 @@ export default function ConcorrenciaPage() {
                                             <div className="flex items-start justify-between gap-2">
                                                 <p className="text-sm font-bold text-foreground truncate flex-1">{opp.name}</p>
                                                 <span className={`shrink-0 text-xs font-black px-2 py-0.5 rounded-full ${(() => {
-                                                    if (opp.score >= 60) return 'bg-emerald-500/20 text-emerald-400';
-                                                    if (opp.score >= 35) return 'bg-amber-500/20 text-amber-400';
+                                                    if (opp.score >= 60) return 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400';
+                                                    if (opp.score >= 35) return 'bg-amber-500/20 text-amber-600 dark:text-amber-400';
                                                     return 'bg-surface text-muted';
                                                 })()}`}>
                                                     {opp.score}
@@ -209,10 +209,10 @@ export default function ConcorrenciaPage() {
                                                 })()}`} style={{ width: `${opp.score}%` }} />
                                             </div>
                                             <div className="flex flex-wrap gap-1.5">
-                                                {opp.scoreFactors.noWebsite && <span className="inline-flex items-center gap-1 text-[9px] font-bold text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded-full"><Globe size={9} />Sem site</span>}
+                                                {opp.scoreFactors.noWebsite && <span className="inline-flex items-center gap-1 text-[9px] font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded-full"><Globe size={9} />Sem site</span>}
                                                 {opp.scoreFactors.noPhone && <span className="inline-flex items-center gap-1 text-[9px] font-bold text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded-full"><Phone size={9} />Sem tel</span>}
-                                                {opp.scoreFactors.fewReviews && <span className="inline-flex items-center gap-1 text-[9px] font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-full"><MessageSquare size={9} />Poucas reviews</span>}
-                                                {opp.scoreFactors.lowRating && <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-full"><Star size={9} />Rating baixo</span>}
+                                                {opp.scoreFactors.fewReviews && <span className="inline-flex items-center gap-1 text-[9px] font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-full"><MessageSquare size={9} />Poucas reviews</span>}
+                                                {opp.scoreFactors.lowRating && <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-full"><Star size={9} />Rating baixo</span>}
                                             </div>
                                             {opp.phone && <p className="text-[10px] text-muted flex items-center gap-1"><Phone size={10} />{opp.phone}</p>}
                                         </div>
@@ -226,36 +226,36 @@ export default function ConcorrenciaPage() {
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                                 <div className="rounded-3xl bg-card border border-border p-6">
                                     <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-                                        <Shield size={16} className="text-violet-400" /> SEO Local — Checklist
+                                        <Shield size={16} className="text-violet-600 dark:text-violet-400" /> SEO Local — Checklist
                                     </h3>
                                     <ul className="space-y-2.5">
                                         {data.aiPlaybook.seoChecklist.map((item) => (
                                             <li key={`seo-${String(item).slice(0, 80)}`} className="flex items-start gap-2 text-sm text-muted">
-                                                <CheckCircle2 size={14} className="text-violet-400 shrink-0 mt-0.5" />{item}
+                                                <CheckCircle2 size={14} className="text-violet-600 dark:text-violet-400 shrink-0 mt-0.5" />{item}
                                             </li>
                                         ))}
                                     </ul>
                                 </div>
                                 <div className="rounded-3xl bg-card border border-border p-6">
                                     <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-                                        <Star size={16} className="text-amber-400" /> Estratégia de Reviews
+                                        <Star size={16} className="text-amber-600 dark:text-amber-400" /> Estratégia de Reviews
                                     </h3>
                                     <ul className="space-y-2.5">
                                         {data.aiPlaybook.reviewStrategy.map((item) => (
                                             <li key={`review-${String(item).slice(0, 80)}`} className="flex items-start gap-2 text-sm text-muted">
-                                                <CheckCircle2 size={14} className="text-amber-400 shrink-0 mt-0.5" />{item}
+                                                <CheckCircle2 size={14} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />{item}
                                             </li>
                                         ))}
                                     </ul>
                                 </div>
                                 <div className="rounded-3xl bg-card border border-border p-6">
                                     <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-                                        <Zap size={16} className="text-emerald-400" /> Quick Wins (24-72h)
+                                        <Zap size={16} className="text-emerald-600 dark:text-emerald-400" /> Quick Wins (24-72h)
                                     </h3>
                                     <ul className="space-y-2.5">
                                         {data.aiPlaybook.quickWins.map((item) => (
                                             <li key={`quick-${String(item).slice(0, 80)}`} className="flex items-start gap-2 text-sm text-muted">
-                                                <Zap size={14} className="text-emerald-400 shrink-0 mt-0.5" />{item}
+                                                <Zap size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />{item}
                                             </li>
                                         ))}
                                     </ul>
@@ -267,7 +267,7 @@ export default function ConcorrenciaPage() {
                         {data.opportunities.length > 0 && (
                             <div className="rounded-3xl bg-card border border-border p-6">
                                 <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-2 flex items-center gap-2">
-                                    <AlertTriangle size={16} className="text-amber-400" /> Todas as Oportunidades de Venda
+                                    <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400" /> Todas as Oportunidades de Venda
                                 </h3>
                                 <p className="text-xs text-muted mb-4">Empresas sem website ou telefone — potenciais clientes para serviços digitais.</p>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[300px] overflow-y-auto pr-2">
@@ -275,7 +275,7 @@ export default function ConcorrenciaPage() {
                                         <div key={opp.id} className="p-3 bg-surface rounded-xl border border-border/50 flex flex-col gap-1.5">
                                             <p className="text-sm font-medium text-foreground truncate">{opp.name}</p>
                                             <div className="flex gap-2">
-                                                {opp.missingWebsite && (<span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-full"><Globe size={10} /> Sem site</span>)}
+                                                {opp.missingWebsite && (<span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-full"><Globe size={10} /> Sem site</span>)}
                                                 {opp.missingPhone && (<span className="inline-flex items-center gap-1 text-[10px] font-bold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full"><Phone size={10} /> Sem telefone</span>)}
                                             </div>
                                         </div>

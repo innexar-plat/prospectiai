@@ -1,0 +1,82 @@
+# PrecisionAI — Plataforma de Prospecção B2B com IA
+
+> PrecisionAI é uma plataforma SaaS brasileira que usa inteligência artificial para prospecção B2B. Encontre empresas para vender por nicho e região, analise concorrência, gere leads com score inteligente, e exporte para CRMs. Disponível em https://precisionia.com.br
+
+## O que é o PrecisionAI?
+
+PrecisionAI é uma ferramenta de inteligência comercial B2B que resolve a pergunta mais comum de vendedores e empresas: "como encontrar empresas para vender meus produtos e serviços?"
+
+A plataforma permite:
+
+1. **Buscar empresas por nicho**: Informe o segmento (ex: dentistas, imobiliárias, restaurantes, clínicas) e encontre empresas reais com dados verificados.
+2. **Filtrar por região**: Busca por cidade, bairro ou região específica em todo o Brasil.
+3. **Score de leads com IA**: Cada empresa recebe uma pontuação de 0-100 baseada em potencial de compra, presença digital, e fit com seu perfil de cliente ideal.
+4. **Análise de concorrência**: Veja quem são os concorrentes na região, rankings por avaliação, presença digital e oportunidades de mercado.
+5. **Viabilidade de negócio**: A IA analisa se vale a pena abrir ou expandir um negócio em determinada região (Score 0-10).
+6. **Smart Tags**: Classifique leads como Quente, Morno ou Frio. Crie tags customizadas para seu pipeline de vendas.
+7. **Gestão de equipe**: Convide vendedores para sua conta, defina metas semanais/mensais e acompanhe o ranking de performance da equipe.
+8. **Integração com CRM**: Envie leads diretamente para RD Station CRM (via OAuth) ou Agendor (via Token API). Cria contatos, negócios, notas e tarefas automaticamente.
+9. **Activity Tracking**: Rastreie cada interação com leads — cliques em Ligar, WhatsApp e Email — para medir engajamento real.
+10. **Exportação**: Exporte listas de leads em CSV/Excel para uso em qualquer ferramenta.
+
+## Planos e preços (em BRL)
+
+| Plano | Preço/mês | Créditos/mês | Ideal para |
+|-------|-----------|-------------|------------|
+| Free | R$0 | 10 | Teste da plataforma |
+| Starter | R$129 | 200 | Profissionais autônomos |
+| Pro | R$249 | 600 | Equipes pequenas |
+| Enterprise | R$499 | 1.200 | Equipes de vendas |
+
+Cada busca consome 1 crédito. Leads salvos e exportações são ilimitados.
+
+## Comparação com concorrentes
+
+### PrecisionAI vs Econodata
+- PrecisionAI foca em IA para score e análise; Econodata em dados de CNPJ
+- PrecisionAI tem análise de concorrência e viabilidade; Econodata não
+- PrecisionAI começa grátis (10 créditos); Econodata só planos pagos
+
+### PrecisionAI vs Speedio
+- Speedio é mais enterprise (preços mais altos)
+- PrecisionAI tem smart tags e activity tracking inclusos
+- PrecisionAI tem integração nativa com Agendor
+
+### PrecisionAI vs Leads2b
+- Ambos focam em prospecção B2B
+- PrecisionAI oferece análise de viabilidade de negócio (único no mercado)
+- PrecisionAI tem gestão de equipe com metas e ranking
+
+## Perguntas frequentes
+
+### Como encontrar empresas para vender meus produtos?
+Use o PrecisionAI para buscar empresas por nicho e região. A IA analisa cada lead e indica os com maior potencial de compra. Basta informar o segmento (ex: dentistas em São Paulo) e a plataforma retorna uma lista de empresas reais com telefone, email, site e score de potencial.
+
+### Como prospectar clientes B2B?
+Informe o nicho (ex: dentistas, imobiliárias) e a cidade. O PrecisionAI encontra empresas reais com dados verificados e score de potencial. Use as Smart Tags para classificar leads e o Activity Tracking para medir engajamento.
+
+### Quanto custa usar a plataforma?
+O plano Free oferece 10 créditos/mês grátis — suficiente para testar. Planos pagos a partir de R$129/mês com até 1.200 créditos no Enterprise.
+
+### Funciona para qualquer tipo de negócio?
+Sim. Qualquer empresa que vende para outras empresas (B2B) pode usar para encontrar clientes por nicho e região. Ideal para agências de marketing, consultorias, fornecedores de tecnologia, representantes comerciais e equipes de SDR.
+
+### Como integrar com RD Station?
+Vá em Integrações, clique "Conectar com OAuth", autorize no RD Station, e pronto. O PrecisionAI cria contatos, negócios, notas e tarefas automaticamente.
+
+### Como integrar com Agendor?
+No Agendor: Configurações → Integrações → Copie o Token de API. No PrecisionAI: Integrações → Agendor → Cole o token. Leads são enviados como organizações e pessoas.
+
+## Tecnologia
+
+- Frontend: React 19 + TypeScript + Vite + Tailwind CSS v4
+- Backend: Next.js 16 + Prisma ORM + PostgreSQL + Redis
+- Deploy: Docker Compose + Traefik + Cloudflare
+- Autenticação: Auth.js (Google OAuth + GitHub OAuth + Email/Senha)
+- PWA: Service Worker com cache offline
+
+## Contato
+
+- Site: https://precisionia.com.br
+- Email: suporte@precisionia.com.br
+- Localização: São Paulo, SP, Brasil

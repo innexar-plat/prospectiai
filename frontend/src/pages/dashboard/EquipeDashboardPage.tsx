@@ -150,7 +150,7 @@ export default function EquipeDashboardPage() {
               </div>
               <div>
                 <p className="text-xs text-muted uppercase tracking-wider">Análises hoje</p>
-                <p className="text-2xl font-bold text-violet-400 tabular-nums">{dashboardData.totals.todayAnalyses}</p>
+                <p className="text-2xl font-bold text-violet-600 dark:text-violet-400 tabular-nums">{dashboardData.totals.todayAnalyses}</p>
               </div>
               <div>
                 <p className="text-xs text-muted uppercase tracking-wider">Leads no mês</p>
@@ -160,11 +160,11 @@ export default function EquipeDashboardPage() {
                 <p className="text-xs text-muted uppercase tracking-wider">Abaixo da meta</p>
                 <p className="text-2xl font-bold tabular-nums">
                   {dashboardData.totals.belowGoalCount > 0 ? (
-                    <span className="text-amber-400 flex items-center gap-1">
+                    <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
                       <AlertCircle size={20} /> {dashboardData.totals.belowGoalCount}
                     </span>
                   ) : (
-                    <span className="text-emerald-400">0</span>
+                    <span className="text-emerald-600 dark:text-emerald-400">0</span>
                   )}
                 </p>
               </div>
@@ -244,7 +244,7 @@ export default function EquipeDashboardPage() {
                           </td>
                           <td className="py-3 px-5">
                             {m.belowGoal ? (
-                              <span className="text-amber-400 flex items-center gap-1">
+                              <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
                                 <AlertCircle size={14} /> Abaixo
                               </span>
                             ) : (

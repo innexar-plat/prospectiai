@@ -57,6 +57,16 @@ model User {
   twoFactorSecret   String?
   twoFactorEnabled  Boolean    @default(false)
 
+
+  // Third-party integrations (tokens stored encrypted)
+  rdStationToken          String?   @db.Text
+  rdStationRefreshToken   String?   @db.Text
+  rdStationTokenExpiresAt DateTime?
+  agendorApiTokenEncrypted String?  @db.Text
+  hubspotToken            String?   @db.Text
+  hubspotRefreshToken     String?   @db.Text
+  hubspotTokenExpiresAt   DateTime?
+
   subscriptionId String?   @unique
   customerId     String?
   subscriptionStatus String?
@@ -106,6 +116,7 @@ model User {
   searchHistory        SearchHistory[]
   tags                 LeadTag[]
   notifications        Notification[]
+  pushSubscriptions    PushSubscription[]
   affiliate            Affiliate?
   referrals            Referral[]
 }
@@ -235,6 +246,15 @@ model Lead {
   address          String?
   phone            String?
   website          String?
+  cnpj             String?  @db.VarChar(14)
+  companyLegalName String?
+  companyTradeName String?
+  companySize      String?
+  companyLegalNature String?
+  companyMainCnae  String?
+  cnpjStatus       String?
+  cnpjOpenedAt     String?
+  cnpjLastFetchedAt DateTime?
   rating           Float?
   reviewCount      Int?
   types            Json?
@@ -249,6 +269,8 @@ model Lead {
 
   analyses         LeadAnalysis[]
   tags             LeadTag[]
+
+  @@index([lastSearchedAt(sort: Desc)])
 }
 
 model LeadAnalysis {
@@ -299,6 +321,9 @@ model SearchHistory {
   filters      Json?    // hasWebsite, hasPhone, includedType, etc.
   resultsCount Int?
   resultsData  Json?    // Array of places returned from search, for history detail view
+  city         String?
+  state        String?
+  country      String?
   createdAt    DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -431,6 +456,21 @@ model NotificationChannelConfig {
   emailEnabled Boolean @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// Web Push subscriptions (browser + mobile PWA)
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @db.Text
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, endpoint])
+  @@index([userId])
 }
 
 // Planos configuráveis via admin
@@ -606,4 +646,13 @@ model EmailConfig {
   smtpUser               String?
   smtpPasswordEncrypted  String?  // cifrado; só quando provider = smtp
   updatedAt              DateTime @updatedAt
+}
+
+// Configuração de apps OAuth de CRM no painel admin
+model CrmIntegrationConfig {
+  id                    String   @id @default(cuid())
+  provider              String   @unique // rdstation, hubspot, agendor
+  clientId              String
+  clientSecretEncrypted String
+  updatedAt             DateTime @updatedAt
 }

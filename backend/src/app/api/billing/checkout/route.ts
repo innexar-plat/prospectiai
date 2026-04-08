@@ -11,7 +11,7 @@ import { prisma } from '@/lib/prisma';
 import { performScheduleDowngrade, ScheduleDowngradeError } from '@/lib/schedule-downgrade';
 import type { Workspace } from '@prisma/client';
 
-type WorkspaceForCheckout = Pick<Workspace, 'id' | 'plan' | 'subscriptionId' | 'currentPeriodEnd'>;
+type WorkspaceForCheckout = Pick<Workspace, 'id' | 'plan' | 'subscriptionId' | 'currentPeriodEnd' | 'billingCycle'>;
 type SessionUser = { id: string; email?: string | null; name?: string | null };
 
 type CheckoutContext = {
@@ -129,7 +129,7 @@ function executeStripeCheckout(
                     price_data: {
                         currency: 'usd',
                         product_data: {
-                            name: `ProspectorAI ${plan.name} Plan (${cycle})`,
+                            name: `Precision IA ${plan.name} Plan (${cycle})`,
                             description: `Subscription for ${plan.leadsLimit} leads searches per month.`,
                         },
                         unit_amount: priceUsd * 100,
@@ -157,6 +157,7 @@ async function tryScheduleDowngrade(
                 plan: workspace.plan,
                 subscriptionId: workspace.subscriptionId,
                 currentPeriodEnd: workspace.currentPeriodEnd,
+                billingCycle: workspace.billingCycle,
             },
             planId
         );
@@ -240,15 +241,15 @@ async function handlePtLocaleCheckout(params: {
         const preApproval = await createPreApproval({
             payerEmail: sessionUser.email ?? '',
             cardTokenId,
-            reason: `ProspectorAI Plano ${plan.name} (${cycle})`,
+            reason: `Precision IA Plano ${plan.name} (${cycle})`,
             externalReference: extRef,
             transactionAmount: priceBrl,
             cycle,
-            backUrl: `${appUrl}/${localePath}/billing/success`,
+            backUrl: `${appUrl}/dashboard/planos?billing=success`,
             notificationUrl: `${appUrl}/api/billing/webhook/mercadopago`,
         });
         logger.info('MP PreApproval Created', { preApprovalId: preApproval.id, status: preApproval.status });
-        const url = preApproval.init_point || `${appUrl}/${localePath}/billing/success`;
+        const url = preApproval.init_point || `${appUrl}/dashboard/planos?billing=success`;
         return NextResponse.json({ url });
     }
     const mpUrl = await createMPCheckoutUrl(planId, cycle, plan, priceBrl, sessionUser, appUrl, localePath, affiliateCode);
@@ -262,10 +263,10 @@ async function createMPCheckoutUrl(
     priceBrl: number,
     user: SessionUser,
     appUrl: string,
-    localePath: string,
+    _localePath: string,
     affiliateCode?: string,
 ): Promise<string> {
-    const fullName = user.name || 'Cliente ProspectorAI';
+    const fullName = user.name || 'Cliente Precision IA';
     const spaceIdx = fullName.trim().indexOf(' ');
     const name = spaceIdx > 0 ? fullName.trim().slice(0, spaceIdx) : fullName.trim();
     const surname = spaceIdx > 0 ? fullName.trim().slice(spaceIdx + 1) : '.';
@@ -274,7 +275,7 @@ async function createMPCheckoutUrl(
             items: [
                 {
                     id: `${planId}_${cycle}`,
-                    title: `ProspectorAI Plano ${plan.name} (${cycle})`,
+                    title: `Precision IA Plano ${plan.name} (${cycle})`,
                     description: `Assinatura ${cycle} para ${plan.leadsLimit} buscas por mês.`,
                     quantity: 1,
                     unit_price: priceBrl,
@@ -282,9 +283,9 @@ async function createMPCheckoutUrl(
                 }
             ],
             back_urls: {
-                success: `${appUrl}/${localePath}/dashboard`,
-                failure: `${appUrl}/${localePath}/dashboard`,
-                pending: `${appUrl}/${localePath}/dashboard`
+                success: `${appUrl}/dashboard/planos?billing=success`,
+                failure: `${appUrl}/dashboard/planos?billing=failure`,
+                pending: `${appUrl}/dashboard/planos?billing=pending`
             },
             auto_return: 'approved',
             notification_url: `${appUrl}/api/billing/webhook/mercadopago`,

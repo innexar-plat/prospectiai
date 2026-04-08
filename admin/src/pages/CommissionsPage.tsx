@@ -63,8 +63,8 @@ export function CommissionsPage() {
     }
   };
 
-  if (loading && !data) return <div><h1 className="text-xl font-semibold text-white mb-6">Comissões</h1><div className="h-64 rounded-xl bg-zinc-800/50 animate-pulse" /></div>;
-  if (error && !data) return <div><h1 className="text-xl font-semibold text-white mb-6">Comissões</h1><div className="rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3">{error}</div></div>;
+  if (loading && !data) return <div><h1 className="text-xl font-semibold text-gray-900 mb-6">Comissões</h1><div className="h-64 rounded-xl bg-gray-200 animate-pulse" /></div>;
+  if (error && !data) return <div><h1 className="text-xl font-semibold text-gray-900 mb-6">Comissões</h1><div className="rounded-lg bg-red-50 border border-red-300 text-red-600 px-4 py-3">{error}</div></div>;
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
@@ -100,44 +100,44 @@ export function CommissionsPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold text-white mb-6">Comissões</h1>
+      <h1 className="text-xl font-semibold text-gray-900 mb-6">Comissões</h1>
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setOffset(0); }} className="rounded border border-zinc-700 bg-zinc-800 text-zinc-200 px-3 py-2 text-sm">
+        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setOffset(0); }} className="rounded border border-gray-300 bg-gray-100 text-gray-700 px-3 py-2 text-sm">
           <option value="">Todos status</option>
           <option value="PENDING">PENDING</option>
           <option value="APPROVED">APPROVED</option>
           <option value="PAID">PAID</option>
           <option value="CANCELLED">CANCELLED</option>
         </select>
-        <button type="button" onClick={() => exportCommissionsCsv(items)} className="text-sm px-3 py-2 rounded border border-zinc-600 text-zinc-300 hover:bg-zinc-800">
+        <button type="button" onClick={() => exportCommissionsCsv(items)} className="text-sm px-3 py-2 rounded border border-gray-300 text-gray-600 hover:bg-gray-100">
           Exportar CSV (página)
         </button>
         {selectedApproved.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 ml-2">
-            <span className="text-sm text-zinc-400">{selectedApproved.length} selecionada(s)</span>
+            <span className="text-sm text-gray-500">{selectedApproved.length} selecionada(s)</span>
             <input
               type="url"
               placeholder="URL comprovante (opcional)"
               value={bulkProofUrl}
               onChange={(e) => setBulkProofUrl(e.target.value)}
-              className="rounded border border-zinc-600 bg-zinc-800 px-2 py-1 text-sm text-zinc-200 w-48"
+              className="rounded border border-gray-300 bg-gray-100 px-2 py-1 text-sm text-gray-700 w-48"
             />
             <button type="button" onClick={handleBulkPay} disabled={bulkSubmitting} className="text-sm px-3 py-2 rounded bg-emerald-600 text-white disabled:opacity-50">
               {bulkSubmitting ? '…' : 'Marcar seleção como paga'}
             </button>
-            <button type="button" onClick={() => setSelectedIds(new Set())} className="text-sm px-3 py-2 rounded border border-zinc-600 text-zinc-400 hover:bg-zinc-800">
+            <button type="button" onClick={() => setSelectedIds(new Set())} className="text-sm px-3 py-2 rounded border border-gray-300 text-gray-500 hover:bg-gray-100">
               Limpar
             </button>
           </div>
         )}
       </div>
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 overflow-hidden">
+      <div className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-zinc-800 text-left text-zinc-500">
+            <tr className="border-b border-gray-200 text-left text-gray-500">
               <th className="px-4 py-3 font-medium w-10">
                 {approvedItems.length > 0 && (
-                  <input type="checkbox" checked={selectedApproved.length === approvedItems.length} onChange={toggleAllApproved} className="rounded border-zinc-600" />
+                  <input type="checkbox" checked={selectedApproved.length === approvedItems.length} onChange={toggleAllApproved} className="rounded border-gray-300" />
                 )}
               </th>
               <th className="px-4 py-3 font-medium">Afiliado</th>
@@ -150,17 +150,17 @@ export function CommissionsPage() {
           </thead>
           <tbody>
             {items.map((c) => (
-              <tr key={c.id} className="border-b border-zinc-800/50">
+              <tr key={c.id} className="border-b border-gray-200">
                 <td className="px-4 py-3">
                   {c.status === 'APPROVED' && (
-                    <input type="checkbox" checked={selectedIds.has(c.id)} onChange={() => toggleSelection(c.id)} className="rounded border-zinc-600" />
+                    <input type="checkbox" checked={selectedIds.has(c.id)} onChange={() => toggleSelection(c.id)} className="rounded border-gray-300" />
                   )}
                 </td>
-                <td className="px-4 py-3"><Link to={`/affiliates/${c.affiliateId}`} className="text-violet-400 font-mono">{c.affiliateCode}</Link></td>
+                <td className="px-4 py-3"><Link to={`/affiliates/${c.affiliateId}`} className="text-violet-600 font-mono">{c.affiliateCode}</Link></td>
                 <td className="px-4 py-3">{c.currency === 'BRL' ? 'R$' : '$'} {(c.amountCents / 100).toFixed(2)}</td>
                 <td className="px-4 py-3">{c.status}</td>
-                <td className="px-4 py-3 text-zinc-400">{new Date(c.availableAt).toLocaleDateString('pt-BR')}</td>
-                <td className="px-4 py-3 text-zinc-400">{c.paidAt ? new Date(c.paidAt).toLocaleDateString('pt-BR') : '—'}</td>
+                <td className="px-4 py-3 text-gray-500">{new Date(c.availableAt).toLocaleDateString('pt-BR')}</td>
+                <td className="px-4 py-3 text-gray-500">{c.paidAt ? new Date(c.paidAt).toLocaleDateString('pt-BR') : '—'}</td>
                 <td className="px-4 py-3">
                   {c.status === 'APPROVED' ? (
                     <button
@@ -179,10 +179,10 @@ export function CommissionsPage() {
         </table>
       </div>
       {totalPages > 1 && (
-        <div className="mt-4 flex gap-2 text-sm text-zinc-400">
-          <button type="button" disabled={offset === 0} onClick={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))} className="px-3 py-1 rounded border border-zinc-700 disabled:opacity-50">Anterior</button>
+        <div className="mt-4 flex gap-2 text-sm text-gray-500">
+          <button type="button" disabled={offset === 0} onClick={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))} className="px-3 py-1 rounded border border-gray-300 disabled:opacity-50">Anterior</button>
           <span>Página {currentPage} de {totalPages}</span>
-          <button type="button" disabled={offset + PAGE_SIZE >= total} onClick={() => setOffset((o) => o + PAGE_SIZE)} className="px-3 py-1 rounded border border-zinc-700 disabled:opacity-50">Próxima</button>
+          <button type="button" disabled={offset + PAGE_SIZE >= total} onClick={() => setOffset((o) => o + PAGE_SIZE)} className="px-3 py-1 rounded border border-gray-300 disabled:opacity-50">Próxima</button>
         </div>
       )}
     </div>

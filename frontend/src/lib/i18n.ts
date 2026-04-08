@@ -6,7 +6,7 @@ const MESSAGES: Record<string, Record<string, string>> = {
         'landing.heroTitle': 'Encontre clientes qualificados',
         'landing.heroTitleHighlight': 'em minutos',
         'landing.heroAccent': 'com IA focada em B2B',
-        'landing.subtitle': 'Pare de gastar horas caçando leads frios. O ProspectorAI encontra empresas com perfil do seu cliente ideal, prioriza quem tem mais chance de comprar e entrega a abordagem pronta.',
+        'landing.subtitle': 'Pare de gastar horas caçando leads frios. O Precision IA encontra empresas com perfil do seu cliente ideal, prioriza quem tem mais chance de comprar e entrega a abordagem pronta.',
         'landing.ctaStart': 'Começar prospecção gratuita',
         'landing.ctaPlans': 'Ver planos',
         'landing.feature1Title': 'Busca Inteligente',
@@ -15,7 +15,7 @@ const MESSAGES: Record<string, Record<string, string>> = {
         'landing.feature2Desc': 'Nossa inteligência artificial analisa o perfil da empresa e sugere a melhor abordagem de vendas.',
         'landing.feature3Title': 'Gestão de Leads',
         'landing.feature3Desc': 'Salve seus leads favoritos e exporte os dados para seu CRM em segundos.',
-        'landing.trustTitle': 'Por que confiar no ProspectorAI?',
+        'landing.trustTitle': 'Por que confiar no Precision IA?',
         'landing.trustItem1': 'Dados atualizados em tempo real',
         'landing.trustItem2': 'Filtros avançados e precisos',
         'landing.trustItem3': 'Interface intuitiva e dark mode',
@@ -66,7 +66,7 @@ const MESSAGES: Record<string, Record<string, string>> = {
         'billing.free.name': 'Free',
         'billing.free.price': 'R$ 0',
         'billing.free.desc': 'Para testar a plataforma.',
-        'billing.free.leads': '5 créditos/mês',
+        'billing.free.leads': '10 créditos/mês',
         'billing.free.features.1': 'Busca por nicho e região',
         'billing.free.features.2': 'Inteligência de leads (score)',
         'billing.free.features.3': 'Histórico de buscas',
@@ -98,7 +98,7 @@ const MESSAGES: Record<string, Record<string, string>> = {
         'billing.business.features.2': 'Inteligência de mercado',
         'billing.business.features.3': '1.200 créditos/mês',
         'billing.business.features.4': 'Relatórios e tendências',
-        'landing.servicesTitle': 'Como o ProspectorAI resolve sua prospecção',
+        'landing.servicesTitle': 'Como o Precision IA resolve sua prospecção',
         'landing.servicesSubtitle': 'Do mapeamento ao contato final, conectamos IA ao seu funil de vendas para gerar resultado real.',
         'landing.service1Name': 'Mapeamento',
         'landing.service1Desc': 'Buscar empresas por nicho e região, com filtros por site e telefone.',
@@ -113,7 +113,7 @@ const MESSAGES: Record<string, Record<string, string>> = {
         'landing.plansTitle': 'Planos',
         'landing.plansSubtitle': 'Do teste grátis ao scale. Cadastre-se para ver preços e assinar.',
         'landing.viewAllPlans': 'Cadastre-se para ver planos',
-        'landing.planFree': 'Free — 5 créditos/mês',
+        'landing.planFree': 'Free — 10 créditos/mês',
         'landing.planStarter': 'Starter — 100',
         'landing.planGrowth': 'Growth — 400',
         'landing.planScale': 'Business — 1.200',
@@ -138,11 +138,11 @@ const MESSAGES: Record<string, Record<string, string>> = {
         'landing.testimonial3Role': 'Gerente de Vendas',
         'landing.caseStudyTitle': 'Resultado em prática',
         'landing.caseStudyProblem': 'Equipe perdia horas em Google e planilhas para achar leads.',
-        'landing.caseStudySolution': 'Passou a usar ProspectorAI: busca por nicho, Score IA e scripts prontos.',
+        'landing.caseStudySolution': 'Passou a usar Precision IA: busca por nicho, Score IA e scripts prontos.',
         'landing.caseStudyResult': 'Redução de 80% do tempo em prospecção e mais reuniões agendadas.',
         'landing.comparisonTitle': 'Antes e depois',
-        'landing.comparisonWithoutTitle': 'Sem ProspectorAI',
-        'landing.comparisonWithTitle': 'Com ProspectorAI',
+        'landing.comparisonWithoutTitle': 'Sem Precision IA',
+        'landing.comparisonWithTitle': 'Com Precision IA',
         'landing.comparisonWithout1': 'Planilha manual e Google Maps',
         'landing.comparisonWithout2': 'Leads frios, sem priorização',
         'landing.comparisonWithout3': 'Horas perdidas em pesquisa',
@@ -166,7 +166,7 @@ const MESSAGES: Record<string, Record<string, string>> = {
         'landing.heroTitle': 'Find qualified customers',
         'landing.heroTitleHighlight': 'in minutes',
         'landing.heroAccent': 'with AI built for B2B',
-        'landing.subtitle': 'Stop wasting hours hunting cold leads. ProspectorAI finds companies that match your ideal customer profile, ranks who is most likely to buy and gives you the outreach script ready.',
+        'landing.subtitle': 'Stop wasting hours hunting cold leads. Precision IA finds companies that match your ideal customer profile, ranks who is most likely to buy and gives you the outreach script ready.',
         'landing.ctaStart': 'Start free prospecting',
         'landing.ctaPlans': 'View plans',
         'landing.feature1Title': 'Smart Search',
@@ -175,7 +175,7 @@ const MESSAGES: Record<string, Record<string, string>> = {
         'landing.feature2Desc': 'Our artificial intelligence analyzes the company profile and suggests the best sales approach.',
         'landing.feature3Title': 'Lead Management',
         'landing.feature3Desc': 'Save your favorite leads and export data to your CRM in seconds.',
-        'landing.trustTitle': 'Why trust ProspectorAI?',
+        'landing.trustTitle': 'Why trust Precision IA?',
         'landing.trustItem1': 'Real-time updated data',
         'landing.trustItem2': 'Advanced and precise filters',
         'landing.trustItem3': 'Intuitive dark mode interface',
@@ -226,7 +226,7 @@ const MESSAGES: Record<string, Record<string, string>> = {
         'billing.free.name': 'Free',
         'billing.free.price': '$0',
         'billing.free.desc': 'To try the platform.',
-        'billing.free.leads': '5 credits/month',
+        'billing.free.leads': '10 credits/month',
         'billing.free.features.1': 'Search by niche and region',
         'billing.free.features.2': 'Lead intelligence (score)',
         'billing.free.features.3': 'Search history',
@@ -258,7 +258,7 @@ const MESSAGES: Record<string, Record<string, string>> = {
         'billing.business.features.2': 'Market intelligence',
         'billing.business.features.3': '1,200 credits/month',
         'billing.business.features.4': 'Reports and trends',
-        'landing.servicesTitle': 'How ProspectorAI fixes your prospecting',
+        'landing.servicesTitle': 'How Precision IA fixes your prospecting',
         'landing.servicesSubtitle': 'From mapping to final outreach, we connect AI to your sales funnel to generate real results.',
         'landing.service1Name': 'Mapping',
         'landing.service1Desc': 'Search companies by niche and region, with filters for website and phone.',
@@ -273,7 +273,7 @@ const MESSAGES: Record<string, Record<string, string>> = {
         'landing.plansTitle': 'Plans',
         'landing.plansSubtitle': 'From free trial to scale. Sign up to see pricing and subscribe.',
         'landing.viewAllPlans': 'Sign up to see plans',
-        'landing.planFree': 'Free — 5 credits/month',
+        'landing.planFree': 'Free — 10 credits/month',
         'landing.planStarter': 'Starter — 100',
         'landing.planGrowth': 'Growth — 400',
         'landing.planScale': 'Business — 1,200',
@@ -298,11 +298,11 @@ const MESSAGES: Record<string, Record<string, string>> = {
         'landing.testimonial3Role': 'Sales Manager',
         'landing.caseStudyTitle': 'Result in practice',
         'landing.caseStudyProblem': 'Team wasted hours on Google and spreadsheets to find leads.',
-        'landing.caseStudySolution': 'Started using ProspectorAI: search by niche, AI Score and ready scripts.',
+        'landing.caseStudySolution': 'Started using Precision IA: search by niche, AI Score and ready scripts.',
         'landing.caseStudyResult': '80% less time on prospecting and more meetings booked.',
         'landing.comparisonTitle': 'Before and after',
-        'landing.comparisonWithoutTitle': 'Without ProspectorAI',
-        'landing.comparisonWithTitle': 'With ProspectorAI',
+        'landing.comparisonWithoutTitle': 'Without Precision IA',
+        'landing.comparisonWithTitle': 'With Precision IA',
         'landing.comparisonWithout1': 'Manual spreadsheets and Google Maps',
         'landing.comparisonWithout2': 'Cold leads, no prioritization',
         'landing.comparisonWithout3': 'Hours lost on research',
@@ -324,9 +324,23 @@ const MESSAGES: Record<string, Record<string, string>> = {
 };
 
 const FEATURE_KEYS_COUNT = 4;
+const LOCALE_STORAGE_KEY = 'prospector-locale';
+
+function getPersistedLocale(fallback: string): string {
+    try {
+        const stored = localStorage.getItem(LOCALE_STORAGE_KEY);
+        if (stored === 'pt' || stored === 'en') return stored;
+    } catch { /* SSR / private browsing */ }
+    return fallback;
+}
 
 export function useI18n(initialLocale: string = 'pt') {
-    const [locale, setLocale] = useState(initialLocale);
+    const [locale, setLocaleState] = useState(() => getPersistedLocale(initialLocale));
+
+    const setLocale = useCallback((lang: string) => {
+        setLocaleState(lang);
+        try { localStorage.setItem(LOCALE_STORAGE_KEY, lang); } catch { /* ignore */ }
+    }, []);
 
     const t = useCallback((key: string, options?: Record<string, unknown>) => {
         let message = MESSAGES[locale]?.[key] || key;

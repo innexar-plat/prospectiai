@@ -1,5 +1,5 @@
-// ProspectorAI Service Worker — Offline Cache
-const CACHE_NAME = 'prospector-v1';
+// Precision IA Service Worker — Offline Cache + Push Notifications
+const CACHE_NAME = 'prospector-v5';
 const STATIC_ASSETS = [
     '/',
     '/dashboard',
@@ -28,6 +28,31 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET' || event.request.url.includes('/api/')) return;
 
+    // Skip cross-origin requests (Google fonts, profile photos, analytics, etc.)
+    const url = new URL(event.request.url);
+    if (url.origin !== self.location.origin) return;
+
+    // Only provide offline fallback for full page navigations.
+    if (event.request.mode === 'navigate') {
+        event.respondWith(
+            fetch(event.request)
+                .then((response) => {
+                    if (response.status === 200) {
+                        const clone = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+                    }
+                    return response;
+                })
+                .catch(() =>
+                    caches.match(event.request).then((cached) => {
+                        if (cached) return cached;
+                        return caches.match('/') || Response.error();
+                    })
+                )
+        );
+        return;
+    }
+
     event.respondWith(
         fetch(event.request)
             .then((response) => {
@@ -37,35 +62,45 @@ self.addEventListener('fetch', (event) => {
                 }
                 return response;
             })
-            .catch(() =>
-                caches.match(event.request).then((cached) => {
-                    if (cached) return cached;
-                    if (event.request.mode === 'navigate') {
-                        return caches.match('/') || new Response('', { status: 503, statusText: 'Offline' });
-                    }
-                    return new Response('', { status: 503, statusText: 'Service Unavailable' });
-                })
-            )
+            .catch(() => caches.match(event.request).then((cached) => cached || Response.error()))
     );
 });
 
 // Push Notification handler
 self.addEventListener('push', (event) => {
-    const data = event.data?.json() ?? { title: 'ProspectorAI', body: 'Nova notificação' };
+    const data = event.data?.json() ?? { title: 'Precision IA', body: 'Nova notificação' };
     event.waitUntil(
         self.registration.showNotification(data.title, {
             body: data.body,
-            icon: '/icon-192.png',
-            badge: '/icon-192.png',
+            icon: '/precisionai-icon-192.png',
+            badge: '/precisionai-favicon-32.png',
             vibrate: [100, 50, 100],
+            tag: data.tag || 'default',
+            renotify: !!data.tag,
+            data: { url: data.url || '/dashboard' },
         })
     );
 });
 
-// Notification click — open dashboard
+// Notification click — open target URL or dashboard
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
+    const url = event.notification.data?.url || '/dashboard';
     event.waitUntil(
-        self.clients.openWindow('/dashboard')
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+            for (const client of clients) {
+                if (client.url.includes(self.location.origin) && 'focus' in client) {
+                    client.focus();
+                    client.navigate(url);
+                    return;
+                }
+            }
+            return self.clients.openWindow(url);
+        })
     );
+});
+
+// Message handler — supports skipWaiting from the app
+self.addEventListener('message', (event) => {
+    if (event.data === 'skipWaiting') self.skipWaiting();
 });

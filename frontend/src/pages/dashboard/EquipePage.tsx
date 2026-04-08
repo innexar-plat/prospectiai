@@ -83,7 +83,7 @@ function TeamDashboardView({ loading, data }: { loading: boolean; data: { member
                 </div>
                 <div>
                     <p className="text-xs text-muted uppercase tracking-wider">Análises hoje</p>
-                    <p className="text-2xl font-bold text-violet-400 tabular-nums">{totals.todayAnalyses}</p>
+                    <p className="text-2xl font-bold text-violet-600 dark:text-violet-400 tabular-nums">{totals.todayAnalyses}</p>
                 </div>
                 <div>
                     <p className="text-xs text-muted uppercase tracking-wider">Leads no mês</p>
@@ -92,7 +92,7 @@ function TeamDashboardView({ loading, data }: { loading: boolean; data: { member
                 <div>
                     <p className="text-xs text-muted uppercase tracking-wider">Abaixo da meta</p>
                     <p className="text-2xl font-bold tabular-nums">
-                        {totals.belowGoalCount > 0 ? <span className="text-amber-400 flex items-center gap-1"><AlertCircle size={20} /> {totals.belowGoalCount}</span> : <span className="text-emerald-400">0</span>}
+                        {totals.belowGoalCount > 0 ? <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1"><AlertCircle size={20} /> {totals.belowGoalCount}</span> : <span className="text-emerald-600 dark:text-emerald-400">0</span>}
                     </p>
                 </div>
             </div>
@@ -162,7 +162,7 @@ function TeamDashboardView({ loading, data }: { loading: boolean; data: { member
                                         )}
                                     </td>
                                     <td className="py-3 px-5">
-                                        {m.belowGoal ? <span className="text-amber-400 flex items-center gap-1"><AlertCircle size={14} /> Abaixo</span> : <span className="text-muted">—</span>}
+                                        {m.belowGoal ? <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1"><AlertCircle size={14} /> Abaixo</span> : <span className="text-muted">—</span>}
                                     </td>
                                 </tr>
                             ))}
@@ -562,7 +562,7 @@ export default function EquipePage() {
                     <div className="rounded-3xl bg-card border border-border p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div>
                             <h2 className="text-lg font-bold text-foreground">{workspace.name || 'Meu Workspace'}</h2>
-                            <p className="text-xs text-muted mt-1">Plano: <span className="text-emerald-400 font-bold">{workspace.plan}</span> · Créditos: <span className="tabular-nums">{workspace.leadsUsed}/{workspace.leadsLimit}</span></p>
+                            <p className="text-xs text-muted mt-1">Plano: <span className="text-emerald-600 dark:text-emerald-400 font-bold">{workspace.plan}</span> · Créditos: <span className="tabular-nums">{workspace.leadsUsed}/{workspace.leadsLimit}</span></p>
                         </div>
                         <Button
                             variant="primary"
@@ -626,7 +626,7 @@ export default function EquipePage() {
                                 <div className="rounded-3xl bg-card border border-border overflow-hidden">
                                     <div className="p-5 border-b border-border">
                                         <h3 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
-                                            <Trophy size={16} className="text-amber-400" /> Ranking da Equipe
+                                            <Trophy size={16} className="text-amber-600 dark:text-amber-400" /> Ranking da Equipe
                                         </h3>
                                     </div>
                                     <div className="overflow-x-auto">
@@ -652,13 +652,13 @@ export default function EquipePage() {
                                                     .map((m, i) => (
                                                         <tr key={m.id} className="border-b border-border/30 hover:bg-surface/50 transition-colors">
                                                             <td className="py-3 px-5">
-                                                                <span className={`w-7 h-7 inline-flex items-center justify-center rounded-lg font-bold text-xs ${i < 3 ? 'bg-amber-500/20 text-amber-400' : 'bg-surface text-muted'}`}>
+                                                                <span className={`w-7 h-7 inline-flex items-center justify-center rounded-lg font-bold text-xs ${i < 3 ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'bg-surface text-muted'}`}>
                                                                     {i + 1}
                                                                 </span>
                                                             </td>
                                                             <td className="py-3 px-5">
                                                                 <div className="flex items-center gap-3">
-                                                                    <div className="w-8 h-8 rounded-full bg-violet-600/20 flex items-center justify-center font-semibold text-xs text-violet-400 shrink-0">
+                                                                    <div className="w-8 h-8 rounded-full bg-violet-600/20 flex items-center justify-center font-semibold text-xs text-violet-600 dark:text-violet-400 shrink-0">
                                                                         {m.name?.[0] || m.email?.[0] || '?'}
                                                                     </div>
                                                                     <div>
@@ -668,14 +668,14 @@ export default function EquipePage() {
                                                                 </div>
                                                             </td>
                                                             <td className="py-3 px-5">
-                                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${m.role === 'OWNER' ? 'bg-violet-500/15 text-violet-400' : 'bg-surface text-muted'
+                                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${m.role === 'OWNER' ? 'bg-violet-500/15 text-violet-600 dark:text-violet-400' : 'bg-surface text-muted'
                                                                     }`}>
                                                                     {m.role}
                                                                 </span>
                                                             </td>
                                                             <td className="py-3 px-5 text-right tabular-nums font-bold text-foreground">{m.leadsUsed}</td>
-                                                            <td className="py-3 px-5 text-right tabular-nums font-bold text-violet-400">{m.leadsAnalyzed}</td>
-                                                            <td className="py-3 px-5 text-right tabular-nums font-bold text-emerald-400">{m.actionsLast30d}</td>
+                                                            <td className="py-3 px-5 text-right tabular-nums font-bold text-violet-600 dark:text-violet-400">{m.leadsAnalyzed}</td>
+                                                            <td className="py-3 px-5 text-right tabular-nums font-bold text-emerald-600 dark:text-emerald-400">{m.actionsLast30d}</td>
                                                             <td className="py-3 px-5 text-right tabular-nums text-muted">{m.dailyLeadsGoal ?? '-'}</td>
                                                             <td className="py-3 px-5 text-right tabular-nums text-muted">{m.dailyAnalysesGoal ?? '-'}</td>
                                                             <td className="py-3 px-5 text-right tabular-nums text-muted">{m.monthlyConversionsGoal ?? '-'}</td>
@@ -925,7 +925,7 @@ export default function EquipePage() {
                                         className="w-full px-4 py-2.5 text-left text-sm text-foreground hover:bg-surface flex items-center gap-2"
                                         onClick={() => { setEditModalMember(m); setEditRole(m.role === 'ADMIN' ? 'ADMIN' : 'MEMBER'); closeActionsMenu(); }}
                                     >
-                                        <Pencil size={14} className="text-violet-400 shrink-0" /> Editar função
+                                        <Pencil size={14} className="text-violet-600 dark:text-violet-400 shrink-0" /> Editar função
                                     </button>
                                     <button
                                         type="button"

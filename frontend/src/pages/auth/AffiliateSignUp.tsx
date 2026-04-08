@@ -227,10 +227,10 @@ export default function AffiliateSignUpPage() {
           className="h-10 text-xs font-semibold border border-border hover:border-violet-500/30"
           icon={
             <img
-              src="https://authjs.dev/img/providers/google.svg"
+              src="/icons/google.svg"
               width={20}
               height={20}
-              alt=""
+              alt="Google"
               className="shrink-0"
             />
           }
@@ -248,10 +248,10 @@ export default function AffiliateSignUpPage() {
           className="h-10 text-xs font-semibold border border-border hover:border-violet-500/30"
           icon={
             <img
-              src="https://authjs.dev/img/providers/github.svg"
+              src="/icons/github.svg"
               width={20}
               height={20}
-              alt=""
+              alt="GitHub"
               className="shrink-0"
             />
           }
@@ -264,7 +264,7 @@ export default function AffiliateSignUpPage() {
         Já tem conta de afiliado?{" "}
         <Link
           to="/auth/afiliado/entrar"
-          className="text-violet-500 hover:text-violet-400 font-bold hover:underline"
+          className="text-violet-500 hover:text-violet-600 dark:text-violet-400 font-bold hover:underline"
         >
           Entrar
         </Link>

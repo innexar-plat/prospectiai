@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Map Tailwind dark: variant to data-theme="dark" attribute */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /* Theme: light (default) – tom levemente quente e sombras suaves */
 :root,
 [data-theme="light"] {
@@ -7,7 +10,7 @@
   --theme-card: #ffffff;
   --theme-surface: #e6e4ef;
   --theme-text: #1e1b2e;
-  --theme-muted: #5c5a6e;
+  --theme-muted: #4a4860;
   --theme-border: #d4d0e0;
   --theme-scroll-track: #e6e4ef;
   --theme-scroll-thumb: #9b97b0;
@@ -16,6 +19,14 @@
   --theme-shadow-card-hover: 0 12px 40px rgba(139, 92, 246, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06);
   --theme-shadow-glow: 0 0 40px rgba(139, 92, 246, 0.08);
   --text-secondary: var(--theme-muted);
+  /* Theme-aware accent colors (light: darker for contrast, dark: lighter) */
+  --accent-violet: #7c3aed;
+  --accent-emerald: #059669;
+  --accent-blue: #2563eb;
+  --accent-amber: #d97706;
+  --accent-cyan: #0891b2;
+  --accent-red: #dc2626;
+  --accent-rose: #e11d48;
 }
 
 /* Theme: dark (mais suave) */
@@ -33,12 +44,27 @@
   --theme-shadow-card-hover: 0 12px 40px rgba(139, 92, 246, 0.15), 0 0 0 1px rgba(139, 92, 246, 0.1);
   --theme-shadow-glow: 0 0 60px rgba(139, 92, 246, 0.12);
   --text-secondary: var(--theme-muted);
+  /* Theme-aware accent colors (dark: lighter for contrast on dark bg) */
+  --accent-violet: #a78bfa;
+  --accent-emerald: #34d399;
+  --accent-blue: #60a5fa;
+  --accent-amber: #fbbf24;
+  --accent-cyan: #22d3ee;
+  --accent-red: #f87171;
+  --accent-rose: #fb7185;
 }
 
 /* stylelint-disable-next-line at-rule-no-unknown -- Tailwind v4 @theme */
 @theme {
   --color-accent-primary: #8b5cf6;
   --color-accent-secondary: #06b6d4;
+  --color-accent-violet: var(--accent-violet);
+  --color-accent-emerald: var(--accent-emerald);
+  --color-accent-blue: var(--accent-blue);
+  --color-accent-amber: var(--accent-amber);
+  --color-accent-cyan: var(--accent-cyan);
+  --color-accent-red: var(--accent-red);
+  --color-accent-rose: var(--accent-rose);
   --color-background: var(--theme-bg);
   --color-card: var(--theme-card);
   --color-surface: var(--theme-surface);
@@ -98,12 +124,17 @@
   }
 
   @keyframes header-shimmer {
-    0%, 100% { background-position: 200% 0; }
-    50% { background-position: -200% 0; }
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(-4px); }
   }
 
   .card-shadow {
     box-shadow: var(--theme-shadow-card);
+  }
+
+  .card-shadow-hover {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    will-change: transform;
   }
 
   .card-shadow-hover:hover {

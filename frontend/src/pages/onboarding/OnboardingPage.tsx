@@ -57,7 +57,7 @@ export default function OnboardingPage({ user }: { user: SessionUser | null }) {
         <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background">
             <div className="w-full max-w-md">
                 <div className="flex justify-center mb-8">
-                    <Logo iconSize={40} textClassName="text-foreground text-lg" />
+                    <Logo height={192} />
                 </div>
 
                 <div className="text-center mb-8">

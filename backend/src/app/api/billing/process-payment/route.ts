@@ -20,9 +20,11 @@ async function applyApprovedPayment(userId: string, planId: string, interval: st
         data: {
             plan: planId as Plan,
             leadsLimit: plan.leadsLimit,
+            leadsUsed: 0,
             subscriptionStatus: 'active',
             currentPeriodEnd: new Date(Date.now() + (interval === 'annual' ? 365 : 30) * 24 * 60 * 60 * 1000),
             billingCycle: interval === 'annual' ? 'annual' : 'monthly',
+            gracePeriodEnd: null,
         }
     });
 }
@@ -48,7 +50,7 @@ export async function POST(req: Request) {
             body: {
                 transaction_amount,
                 token,
-                description: `ProspectorAI ${planId} (${interval})`,
+                description: `Precision IA ${planId} (${interval})`,
                 installments,
                 payment_method_id,
                 ...(issuer_id != null && issuer_id !== '' ? { issuer_id: Number(issuer_id) } : {}),

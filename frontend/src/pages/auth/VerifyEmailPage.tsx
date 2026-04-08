@@ -39,7 +39,7 @@ export default function VerifyEmailPage() {
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
       <div className="w-full max-w-sm space-y-6 text-center">
         <Link to="/auth/signin" className="inline-block">
-          <Logo iconSize={32} textClassName="text-foreground text-base" />
+          <Logo height={144} />
         </Link>
         <h1 className="text-xl font-bold text-foreground">Verificação de email</h1>
         {status === 'loading' && <p className="text-muted text-sm">Verificando...</p>}

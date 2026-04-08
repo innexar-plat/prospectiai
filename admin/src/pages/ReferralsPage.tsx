@@ -25,8 +25,8 @@ export function ReferralsPage() {
   if (loading && !data) {
     return (
       <div>
-        <h1 className="text-xl font-semibold text-white mb-6">Referrals</h1>
-        <div className="h-64 rounded-xl bg-zinc-800/50 animate-pulse" />
+        <h1 className="text-xl font-semibold text-gray-900 mb-6">Referrals</h1>
+        <div className="h-64 rounded-xl bg-gray-200 animate-pulse" />
       </div>
     );
   }
@@ -34,8 +34,8 @@ export function ReferralsPage() {
   if (error && !data) {
     return (
       <div>
-        <h1 className="text-xl font-semibold text-white mb-6">Referrals</h1>
-        <div className="rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3">{error}</div>
+        <h1 className="text-xl font-semibold text-gray-900 mb-6">Referrals</h1>
+        <div className="rounded-lg bg-red-50 border border-red-300 text-red-600 px-4 py-3">{error}</div>
       </div>
     );
   }
@@ -47,24 +47,24 @@ export function ReferralsPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold text-white mb-6">Funil de Referrals</h1>
+      <h1 className="text-xl font-semibold text-gray-900 mb-6">Funil de Referrals</h1>
       <div className="mb-4 flex items-center gap-2">
-        <label className="text-zinc-400 text-sm">Convertido</label>
+        <label className="text-gray-500 text-sm">Convertido</label>
         <select
           value={convertedFilter}
           onChange={(e) => { setConvertedFilter(e.target.value); setOffset(0); }}
-          className="rounded border border-zinc-700 bg-zinc-800 text-zinc-200 px-3 py-2 text-sm"
+          className="rounded border border-gray-300 bg-gray-100 text-gray-700 px-3 py-2 text-sm"
         >
           <option value="">Todos</option>
           <option value="true">Sim</option>
           <option value="false">Não</option>
         </select>
       </div>
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 overflow-hidden">
+      <div className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-zinc-800 text-left text-zinc-500">
+              <tr className="border-b border-gray-200 text-left text-gray-500">
                 <th className="px-4 py-3 font-medium">Afiliado</th>
                 <th className="px-4 py-3 font-medium">Email (mascarado)</th>
                 <th className="px-4 py-3 font-medium">Cadastro</th>
@@ -75,14 +75,14 @@ export function ReferralsPage() {
             </thead>
             <tbody>
               {items.map((r) => (
-                <tr key={r.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/30">
+                <tr key={r.id} className="border-b border-gray-200 hover:bg-gray-50">
                   <td className="px-4 py-3">
-                    <Link to={`/affiliates/${r.affiliateId}`} className="text-violet-400 hover:text-violet-300 font-mono">{r.affiliateCode}</Link>
+                    <Link to={`/affiliates/${r.affiliateId}`} className="text-violet-600 hover:text-violet-700 font-mono">{r.affiliateCode}</Link>
                   </td>
-                  <td className="px-4 py-3 text-zinc-400">{r.emailMasked ?? '—'}</td>
-                  <td className="px-4 py-3 text-zinc-300">{new Date(r.signupAt).toLocaleDateString('pt-BR')}</td>
+                  <td className="px-4 py-3 text-gray-500">{r.emailMasked ?? '—'}</td>
+                  <td className="px-4 py-3 text-gray-600">{new Date(r.signupAt).toLocaleDateString('pt-BR')}</td>
                   <td className="px-4 py-3">{r.convertedAt ? `Sim (${new Date(r.convertedAt).toLocaleDateString('pt-BR')})` : 'Não'}</td>
-                  <td className="px-4 py-3 text-zinc-400">{r.planId ?? '—'}</td>
+                  <td className="px-4 py-3 text-gray-500">{r.planId ?? '—'}</td>
                   <td className="px-4 py-3">{r.valueCents != null ? `R$ ${(r.valueCents / 100).toFixed(2)}` : '—'}</td>
                 </tr>
               ))}
@@ -91,10 +91,10 @@ export function ReferralsPage() {
         </div>
       </div>
       {totalPages > 1 && (
-        <div className="mt-4 flex items-center gap-2 text-sm text-zinc-400">
-          <button type="button" disabled={offset === 0} onClick={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))} className="px-3 py-1 rounded border border-zinc-700 disabled:opacity-50">Anterior</button>
+        <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
+          <button type="button" disabled={offset === 0} onClick={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))} className="px-3 py-1 rounded border border-gray-300 disabled:opacity-50">Anterior</button>
           <span>Página {currentPage} de {totalPages}</span>
-          <button type="button" disabled={offset + PAGE_SIZE >= total} onClick={() => setOffset((o) => o + PAGE_SIZE)} className="px-3 py-1 rounded border border-zinc-700 disabled:opacity-50">Próxima</button>
+          <button type="button" disabled={offset + PAGE_SIZE >= total} onClick={() => setOffset((o) => o + PAGE_SIZE)} className="px-3 py-1 rounded border border-gray-300 disabled:opacity-50">Próxima</button>
         </div>
       )}
     </div>

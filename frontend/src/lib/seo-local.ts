@@ -27,6 +27,11 @@ const CIDADES_ANCHOR: string[] = [
   'sao-paulo',
   'guaruja',
   'sao-vicente',
+  'rio-de-janeiro',
+  'belo-horizonte',
+  'curitiba',
+  'porto-alegre',
+  'campinas',
 ];
 
 /** Nichos para combinar com cidade (Mês 1–3) */
@@ -34,8 +39,9 @@ const NICHOS: string[] = [
   'dentistas',
   'imobiliarias',
   'contadores',
-  'clinicas',
+  'advogados',
   'restaurantes',
+  'clinicas',
 ];
 
 const BASE = 'geracao-de-leads-b2b';
@@ -74,16 +80,22 @@ export function slugBairro(bairroSlug: string): string {
  * Lista de slugs da primeira onda (Mês 1) para sitemap e rotas
  */
 export function getWave1Slugs(): SeoLandingSlug[] {
+  const regionMap: Record<string, string> = {
+    'rio-de-janeiro': 'BR-RJ',
+    'belo-horizonte': 'BR-MG',
+    curitiba: 'BR-PR',
+    'porto-alegre': 'BR-RS',
+  };
   const list: SeoLandingSlug[] = [];
   for (const c of CIDADES_ANCHOR) {
     list.push({
       slug: slugCidade(c),
       type: 'cidade',
       city: slugToTitle(c),
-      region: 'BR-SP',
+      region: regionMap[c] || 'BR-SP',
     });
   }
-  for (const n of NICHOS.slice(0, 3)) {
+  for (const n of NICHOS) {
     for (const c of CIDADES_ANCHOR.slice(0, 3)) {
       list.push({
         slug: slugCidadeNicho(n, c),
@@ -102,15 +114,15 @@ export function getWave1Slugs(): SeoLandingSlug[] {
  */
 export function getSeoTitle(entry: SeoLandingSlug): string {
   if (entry.type === 'cidade' && entry.city) {
-    return `Geração de Leads B2B em ${entry.city} | Innexar`;
+    return `Geração de Leads B2B em ${entry.city} | PrecisionAI`;
   }
   if (entry.type === 'cidade-nicho' && entry.city && entry.niche) {
-    return `Prospecção B2B para ${entry.niche} em ${entry.city} | Innexar`;
+    return `Prospecção B2B para ${entry.niche} em ${entry.city} | PrecisionAI`;
   }
   if (entry.type === 'bairro' && entry.neighborhood) {
-    return `Lista de Empresas por Bairro: ${entry.neighborhood} | Innexar`;
+    return `Lista de Empresas por Bairro: ${entry.neighborhood} | PrecisionAI`;
   }
-  return 'Geração de Leads B2B e Prospecção com IA | Innexar';
+  return 'Geração de Leads B2B e Prospecção com IA | PrecisionAI';
 }
 
 /**
@@ -158,13 +170,13 @@ export function getSeoIntro(entry: SeoLandingSlug): string[] {
   if (entry.type === 'cidade' && entry.city) {
     return [
       `A região de ${entry.city} concentra milhares de empresas ativas. Para quem vende B2B, a dúvida é: onde atacar primeiro, com qual mensagem e como priorizar leads.`,
-      `O ProspectorAI reúne busca por nicho e endereço, análise de concorrência local e sugestões de abordagem com IA. Você filtra por segmento, vê quem tem site e telefone, e exporta listas para seu CRM.`,
+      `O Precision IA reúne busca por nicho e endereço, análise de concorrência local e sugestões de abordagem com IA. Você filtra por segmento, vê quem tem site e telefone, e exporta listas para seu CRM.`,
     ];
   }
   if (entry.type === 'cidade-nicho' && entry.city && entry.niche) {
     return [
       `Prospectar ${entry.niche} em ${entry.city} exige saber quem já atua na região, quem tem presença digital e onde há espaço para novos fornecedores.`,
-      `Com o ProspectorAI você mapeia empresas do segmento por área, analisa concorrência e recebe sugestões de primeiro contato (ligação, e-mail, WhatsApp) com base no perfil de cada lead.`,
+      `Com o Precision IA você mapeia empresas do segmento por área, analisa concorrência e recebe sugestões de primeiro contato (ligação, e-mail, WhatsApp) com base no perfil de cada lead.`,
     ];
   }
   if (entry.type === 'bairro' && entry.neighborhood) {
@@ -174,7 +186,7 @@ export function getSeoIntro(entry: SeoLandingSlug): string[] {
     ];
   }
   return [
-    'O ProspectorAI combina busca por nicho e região, análise de concorrência local e inteligência comercial para gerar leads B2B qualificados.',
+    'O Precision IA combina busca por nicho e região, análise de concorrência local e inteligência comercial para gerar leads B2B qualificados.',
   ];
 }
 
@@ -217,7 +229,7 @@ export function getSeoFaq(entry: SeoLandingSlug): SeoFaqItem[] {
     return [
       {
         question: `Como encontrar empresas em ${city} para prospecção B2B?`,
-        answer: `No ProspectorAI você busca por nicho e região. Informe o segmento (ex.: clínicas, escritórios, comércio) e a área (${city} ou bairros). A ferramenta lista empresas com filtros por site, telefone e exportação em CSV ou JSON.`,
+        answer: `No Precision IA você busca por nicho e região. Informe o segmento (ex.: clínicas, escritórios, comércio) e a área (${city} ou bairros). A ferramenta lista empresas com filtros por site, telefone e exportação em CSV ou JSON.`,
       },
       {
         question: `A ferramenta usa dados reais para ${city}?`,
@@ -233,7 +245,7 @@ export function getSeoFaq(entry: SeoLandingSlug): SeoFaqItem[] {
     return [
       {
         question: `Como prospectar ${niche} em ${city}?`,
-        answer: `No ProspectorAI você filtra por segmento "${niche}" e região "${city}". A lista mostra empresas do nicho com opção de ver análise de concorrência, presença digital e sugestão de primeiro contato (ligação, e-mail, WhatsApp).`,
+        answer: `No Precision IA você filtra por segmento "${niche}" e região "${city}". A lista mostra empresas do nicho com opção de ver análise de concorrência, presença digital e sugestão de primeiro contato (ligação, e-mail, WhatsApp).`,
       },
       {
         question: `A plataforma sugere abordagem para cada lead de ${niche} em ${city}?`,
@@ -241,7 +253,7 @@ export function getSeoFaq(entry: SeoLandingSlug): SeoFaqItem[] {
       },
       {
         question: `Posso trabalhar em equipe na prospecção de ${niche} em ${city}?`,
-        answer: `Sim. O ProspectorAI tem workspaces: você convida membros, divide listas e acompanha resultados. Exportação e 2FA estão disponíveis nos planos pagos.`,
+        answer: `Sim. O Precision IA tem workspaces: você convida membros, divide listas e acompanha resultados. Exportação e 2FA estão disponíveis nos planos pagos.`,
       },
     ];
   }
@@ -249,7 +261,7 @@ export function getSeoFaq(entry: SeoLandingSlug): SeoFaqItem[] {
     return [
       {
         question: `Como listar empresas por bairro em ${neighborhood}?`,
-        answer: `No ProspectorAI você escolhe o bairro (${neighborhood}) e filtra por segmento. A lista mostra empresas com dados de contato e, quando disponível, análise de concorrência e sugestão de abordagem.`,
+        answer: `No Precision IA você escolhe o bairro (${neighborhood}) e filtra por segmento. A lista mostra empresas com dados de contato e, quando disponível, análise de concorrência e sugestão de abordagem.`,
       },
       {
         question: `Os dados de ${neighborhood} são reais?`,

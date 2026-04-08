@@ -37,8 +37,8 @@ export function UsersPage() {
   if (loading && !data) {
     return (
       <div>
-        <h1 className="text-xl font-semibold text-white mb-6">Usuários</h1>
-        <div className="h-64 rounded-xl bg-zinc-800/50 animate-pulse" />
+        <h1 className="text-xl font-semibold text-gray-900 mb-6">Usuários</h1>
+        <div className="h-64 rounded-xl bg-gray-200 animate-pulse" />
       </div>
     );
   }
@@ -46,8 +46,8 @@ export function UsersPage() {
   if (error && !data) {
     return (
       <div>
-        <h1 className="text-xl font-semibold text-white mb-6">Usuários</h1>
-        <div className="rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3">
+        <h1 className="text-xl font-semibold text-gray-900 mb-6">Usuários</h1>
+        <div className="rounded-lg bg-red-50 border border-red-300 text-red-600 px-4 py-3">
           {error}
         </div>
       </div>
@@ -62,22 +62,22 @@ export function UsersPage() {
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h1 className="text-xl font-semibold text-white">Usuários</h1>
+        <h1 className="text-xl font-semibold text-gray-900">Usuários</h1>
         {isSupport && (
           <input
             type="search"
             placeholder="Buscar por nome ou email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-sm text-zinc-200 placeholder-zinc-500 w-full sm:w-64"
+            className="rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700 placeholder-gray-400 w-full sm:w-64"
           />
         )}
       </div>
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 overflow-hidden">
+      <div className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-zinc-800 text-left text-zinc-500">
+              <tr className="border-b border-gray-200 text-left text-gray-500">
                 <th className="px-4 py-3 font-medium">Nome</th>
                 <th className="px-4 py-3 font-medium">Email</th>
                 <th className="px-4 py-3 font-medium">Plano</th>
@@ -96,18 +96,18 @@ export function UsersPage() {
             <tbody>
               {items.length === 0 ? (
                 <tr>
-                  <td colSpan={isSupport ? 6 : 7} className="px-4 py-8 text-center text-zinc-500">
+                  <td colSpan={isSupport ? 6 : 7} className="px-4 py-8 text-center text-gray-500">
                     Nenhum usuário encontrado.
                   </td>
                 </tr>
               ) : (
                 items.map((u) => (
-                  <tr key={u.id} className="border-b border-zinc-800/80 hover:bg-zinc-800/50">
-                    <td className="px-4 py-3 text-white">{u.name ?? '—'}</td>
-                    <td className="px-4 py-3 text-zinc-300">{u.email ?? '—'}</td>
-                    <td className="px-4 py-3 text-zinc-400">{u.plan}</td>
+                  <tr key={u.id} className="border-b border-gray-200 hover:bg-gray-200">
+                    <td className="px-4 py-3 text-gray-900">{u.name ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-600">{u.email ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-500">{u.plan}</td>
                     {isSupport ? (
-                      <td className="px-4 py-3 text-zinc-400">
+                      <td className="px-4 py-3 text-gray-500">
                         {u.disabledAt ? 'Desativado' : 'Ativo'}
                       </td>
                     ) : (
@@ -115,21 +115,21 @@ export function UsersPage() {
                         if (!('_count' in u) || !('onboardingCompletedAt' in u)) return null;
                         return (
                           <>
-                            <td className="px-4 py-3 text-zinc-400">
+                            <td className="px-4 py-3 text-gray-500">
                               {u.onboardingCompletedAt ? 'Sim' : 'Não'}
                             </td>
-                            <td className="px-4 py-3 text-zinc-400">{(u as { _count: { workspaces: number } })._count.workspaces}</td>
+                            <td className="px-4 py-3 text-gray-500">{(u as { _count: { workspaces: number } })._count.workspaces}</td>
                           </>
                         );
                       })()
                     )}
-                    <td className="px-4 py-3 text-zinc-500">
+                    <td className="px-4 py-3 text-gray-500">
                       {new Date(u.createdAt).toLocaleDateString('pt-BR')}
                     </td>
                     <td className="px-4 py-3">
                       <Link
                         to={`/users/${u.id}`}
-                        className="text-violet-400 hover:text-violet-300 text-xs font-medium"
+                        className="text-violet-600 hover:text-violet-700 text-xs font-medium"
                       >
                         Ver
                       </Link>
@@ -141,8 +141,8 @@ export function UsersPage() {
           </table>
         </div>
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-800">
-            <p className="text-sm text-zinc-500">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
+            <p className="text-sm text-gray-500">
               {total} resultado(s) · página {currentPage} de {totalPages}
             </p>
             <div className="flex gap-2">
@@ -150,7 +150,7 @@ export function UsersPage() {
                 type="button"
                 disabled={offset === 0}
                 onClick={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}
-                className="px-3 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-zinc-700"
+                className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200"
               >
                 Anterior
               </button>
@@ -158,7 +158,7 @@ export function UsersPage() {
                 type="button"
                 disabled={offset + PAGE_SIZE >= total}
                 onClick={() => setOffset((o) => o + PAGE_SIZE)}
-                className="px-3 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-zinc-700"
+                className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200"
               >
                 Próxima
               </button>

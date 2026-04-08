@@ -30,7 +30,7 @@ export default function CookieConsent({ t }: { t: (key: string) => string }) {
       <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-start sm:items-center gap-4">
         <p className="text-sm text-foreground flex-1">
           {t('cookie.message')}{' '}
-          <Link to="/privacy" className="underline text-violet-500 hover:text-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500 rounded">
+          <Link to="/privacy" className="underline text-violet-700 hover:text-violet-800 dark:text-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-500 rounded">
             {t('cookie.privacyLink')}
           </Link>
           .

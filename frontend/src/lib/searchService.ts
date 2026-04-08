@@ -4,10 +4,13 @@
 
 import { searchApi, type Place } from './api';
 import { getPlaceTypeByValue } from './placeTypes';
+import { getCountryQueryLabel } from './locationData';
 
 export interface SearchPayload {
   textQuery?: string;
   country?: string;
+  /** ISO country code (e.g. 'US', 'BR') — passed to backend for regionCode/languageCode resolution. */
+  countryCode?: string;
   state?: string;
   city?: string;
   radiusKm?: number;
@@ -15,6 +18,8 @@ export interface SearchPayload {
   includedType?: string;
   niches: string[];
   advancedTerm?: string;
+  hasWebsite?: 'any' | 'yes' | 'no';
+  hasPhone?: 'any' | 'yes' | 'no';
 }
 
 export interface SearchResult {
@@ -26,27 +31,33 @@ export interface SearchResult {
 const MIN_QUERY_LENGTH = 3;
 
 export function buildTextQuery(payload: SearchPayload): string {
-  const term = payload.advancedTerm?.trim();
-  if (term && term.length >= MIN_QUERY_LENGTH) return term;
-
   const parts: string[] = [];
 
-  if (payload.includedType) {
+  // 1. Core search intent: advanced term, type label, or niche
+  const term = payload.advancedTerm?.trim();
+  if (term && term.length >= MIN_QUERY_LENGTH) {
+    parts.push(term);
+  } else if (payload.includedType) {
     const typeOption = getPlaceTypeByValue(payload.includedType);
-    if (typeOption) {
-      parts.push(typeOption.label);
-    } else {
-      parts.push('empresas');
-    }
+    parts.push(typeOption ? typeOption.label : 'empresas');
   } else if (payload.niches && payload.niches.length > 0) {
     parts.push(payload.niches[0]);
   } else {
     parts.push('empresas');
   }
 
+  // 2. Always append location context for better Google Places relevance
   if (payload.city?.trim()) parts.push(payload.city.trim());
   if (payload.state?.trim() && payload.state !== 'Todos') parts.push(payload.state.trim());
-  parts.push(payload.country || 'Brasil');
+
+  // 3. Append country using a search-friendly label (e.g. 'USA' not 'Estados Unidos')
+  //    Only when no city/state to avoid overly long queries
+  if (!payload.city?.trim() && (!payload.state?.trim() || payload.state === 'Todos')) {
+    const countryForQuery = payload.countryCode
+      ? getCountryQueryLabel(payload.countryCode)
+      : (payload.country || 'Brasil');
+    parts.push(countryForQuery);
+  }
 
   return parts.join(' ');
 }
@@ -75,8 +86,11 @@ export async function startSearch(payload: SearchPayload): Promise<SearchResult>
     includedType: payload.includedType?.trim() || undefined,
     city: payload.city?.trim() || undefined,
     state: payload.state?.trim() || undefined,
-    country: payload.country?.trim() || undefined,
+    // Send country label for backward compat; backend resolveCountryLocale handles both codes and names
+    country: payload.countryCode?.trim() || payload.country?.trim() || undefined,
     radiusKm: payload.radiusKm,
+    hasWebsite: payload.hasWebsite && payload.hasWebsite !== 'any' ? payload.hasWebsite : undefined,
+    hasPhone: payload.hasPhone && payload.hasPhone !== 'any' ? payload.hasPhone : undefined,
   });
   return {
     places: res.places ?? [],

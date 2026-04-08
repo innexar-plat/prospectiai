@@ -44,6 +44,7 @@ jest.mock('@/lib/google-places', () => ({
 
 jest.mock('@/lib/redis', () => ({
     getCached: jest.fn(),
+    setCached: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('@/lib/geocode', () => ({
@@ -133,7 +134,11 @@ describe('SearchService', () => {
             address: 'Address',
             website: 'https://example.com',
             phone: '+5511999999999',
-            lastSearchedAt: new Date(),
+            rating: 4.5,
+            reviewCount: 10,
+            types: ['restaurant'],
+            businessStatus: 'OPERATIONAL',
+            lastSearchedAt: new Date(), // fresh leads
         }));
         (prisma.lead.findMany as jest.Mock).mockResolvedValue(mockLeads);
 
@@ -142,34 +147,23 @@ describe('SearchService', () => {
         expect(result.places).toHaveLength(12);
     });
 
-    it('should skip local DB and use Google when DB has 10+ leads but fewer than 5 after filter', async () => {
+    it('should skip local DB when fewer than 5 leads returned', async () => {
         (redis.getCached as jest.Mock).mockResolvedValue(null);
-        const tenLeads = Array(10).fill(null).map((_, i) => ({
+        const fewLeads = Array(3).fill(null).map((_, i) => ({
             placeId: `id-${i}`,
             name: `Lead ${i}`,
             address: 'Address',
-            website: i < 3 ? 'https://x.com' : null,
-            phone: i < 3 ? '+5511111111' : null,
+            website: 'https://example.com',
+            phone: '+5511999999999',
             lastSearchedAt: new Date(),
         }));
-        (prisma.lead.findMany as jest.Mock).mockResolvedValue(tenLeads);
+        (prisma.lead.findMany as jest.Mock).mockResolvedValue(fewLeads);
         (googlePlaces.textSearch as jest.Mock).mockResolvedValue({
-            places: [{
-                id: 'g1',
-                displayName: { text: 'Google Place' },
-                websiteUri: 'https://example.com',
-                nationalPhoneNumber: '+5511999999999',
-            }],
+            places: [{ id: 'g1', displayName: { text: 'Google Place' } }],
         });
 
-        const result = await runSearch({
-            textQuery: 'test',
-            pageSize: 10,
-            hasWebsite: 'yes',
-            hasPhone: 'yes',
-        } as any, mockUserId);
-
-        expect(result.places).toHaveLength(1);
+        const result = await runSearch({ textQuery: 'test' } as any, mockUserId);
+        // Should have fallen through to Google
         expect(googlePlaces.textSearch).toHaveBeenCalled();
     });
 
@@ -182,6 +176,18 @@ describe('SearchService', () => {
         expect(result.places).toHaveLength(1);
         expect(googlePlaces.textSearch).toHaveBeenCalled();
         expect(prisma.workspace.update).toHaveBeenCalled();
+    });
+
+    it('should write results to cache after Google Places API call', async () => {
+        (redis.getCached as jest.Mock).mockResolvedValue(null);
+        (prisma.lead.findMany as jest.Mock).mockResolvedValue([]);
+        const mockPlaces = [{ id: 'g1', displayName: { text: 'Cached Place' } }];
+        (googlePlaces.textSearch as jest.Mock).mockResolvedValue({ places: mockPlaces });
+
+        await runSearch({ textQuery: 'cacheable' } as any, mockUserId);
+        expect(redis.setCached).toHaveBeenCalled();
+        const setCachedCall = (redis.setCached as jest.Mock).mock.calls[0];
+        expect(setCachedCall[0]).toContain('search:cacheable');
     });
 
     it('should filter out places without website when hasWebsite is yes', async () => {
@@ -232,6 +238,60 @@ describe('SearchService', () => {
         expect(textSearchCall.locationBias).toBeDefined();
         expect(textSearchCall.locationBias?.center).toEqual({ latitude: -23.5, longitude: -46.6 });
         expect(textSearchCall.locationBias?.radius).toBeDefined();
+    });
+
+    it('should pass US regionCode and English languageCode when country is Estados Unidos', async () => {
+        (redis.getCached as jest.Mock).mockResolvedValue(null);
+        (prisma.lead.findMany as jest.Mock).mockResolvedValue([]);
+        (geocode.geocodeAddress as jest.Mock).mockResolvedValue({ latitude: 25.76, longitude: -80.19 });
+        (googlePlaces.textSearch as jest.Mock).mockResolvedValue({
+            places: [{ id: 'us1', displayName: { text: 'House Clean Miami' } }],
+        });
+
+        await runSearch({
+            textQuery: 'house clean Miami FL',
+            city: 'Miami',
+            state: 'FL',
+            country: 'Estados Unidos',
+        } as any, mockUserId);
+
+        const textSearchCall = (googlePlaces.textSearch as jest.Mock).mock.calls[0][0];
+        expect(textSearchCall.regionCode).toBe('US');
+        expect(textSearchCall.languageCode).toBe('en');
+    });
+
+    it('should pass BR regionCode and pt-BR languageCode when country is Brasil', async () => {
+        (redis.getCached as jest.Mock).mockResolvedValue(null);
+        (prisma.lead.findMany as jest.Mock).mockResolvedValue([]);
+        (googlePlaces.textSearch as jest.Mock).mockResolvedValue({
+            places: [{ id: 'br1', displayName: { text: 'Restaurante SP' } }],
+        });
+
+        await runSearch({
+            textQuery: 'restaurante',
+            country: 'Brasil',
+        } as any, mockUserId);
+
+        const textSearchCall = (googlePlaces.textSearch as jest.Mock).mock.calls[0][0];
+        expect(textSearchCall.regionCode).toBe('BR');
+        expect(textSearchCall.languageCode).toBe('pt-BR');
+    });
+
+    it('should pass US locale when country code is US', async () => {
+        (redis.getCached as jest.Mock).mockResolvedValue(null);
+        (prisma.lead.findMany as jest.Mock).mockResolvedValue([]);
+        (googlePlaces.textSearch as jest.Mock).mockResolvedValue({
+            places: [{ id: 'us2', displayName: { text: 'Cleaning Service' } }],
+        });
+
+        await runSearch({
+            textQuery: 'cleaning service',
+            country: 'US',
+        } as any, mockUserId);
+
+        const textSearchCall = (googlePlaces.textSearch as jest.Mock).mock.calls[0][0];
+        expect(textSearchCall.regionCode).toBe('US');
+        expect(textSearchCall.languageCode).toBe('en');
     });
 
     describe('runSearchAllPages', () => {

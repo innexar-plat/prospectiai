@@ -1,6 +1,9 @@
-import { useState, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Zap, Loader2 } from 'lucide-react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useNavigate, useOutletContext, useSearchParams, Link } from 'react-router-dom';
+import { Zap, Loader2, Sparkles, UtensilsCrossed, Scissors, Dumbbell, Stethoscope, ShoppingBag, Wrench, Building2, Scale, PawPrint, Heart, Hotel, Pill, GraduationCap, Globe, Phone, type LucideIcon, Megaphone, ShieldCheck, Laptop, Plane, HardHat, Coffee, Eye, Car, Pizza, BookOpen, Clock, ArrowRight } from 'lucide-react';
+import { Target, Star, TrendingUp, Search as SearchIcon } from 'lucide-react';
+import { leadsApi, searchApi, type LeadStats, type SearchHistoryItem } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { SearchFiltersRow } from '@/components/dashboard/SearchFiltersRow';
 import { SearchSegmentRow } from '@/components/dashboard/SearchSegmentRow';
@@ -13,17 +16,80 @@ import type { SearchFormValues } from '@/lib/searchFormSchema';
 import type { LocationFormValues } from '@/components/dashboard/SearchParamsLocationCard';
 import type { IntelligenceFormValues } from '@/components/dashboard/SearchParamsIntelligenceCard';
 import { getCountryLabel } from '@/lib/locationData';
+import type { SessionUser } from '@/lib/api';
+import { UpgradeCTAModal } from '@/components/dashboard/UpgradeCTAModal';
 
 const MIN_ADVANCED_TERM = 3;
 
+const QUICK_TEMPLATES: { label: string; icon: LucideIcon; niches: string[]; includedType?: string }[] = [
+  { label: 'Restaurantes', icon: UtensilsCrossed, niches: ['restaurante'], includedType: 'restaurant' },
+  { label: 'Salões de Beleza', icon: Scissors, niches: ['salão de beleza', 'barbearia'], includedType: 'beauty_salon' },
+  { label: 'Academias', icon: Dumbbell, niches: ['academia', 'fitness'], includedType: 'gym' },
+  { label: 'Clínicas', icon: Stethoscope, niches: ['clínica', 'consultório'], includedType: 'doctor' },
+  { label: 'Lojas', icon: ShoppingBag, niches: ['loja', 'comércio'], includedType: 'store' },
+  { label: 'Oficinas', icon: Wrench, niches: ['oficina mecânica', 'auto center'], includedType: 'car_repair' },
+  { label: 'Imobiliárias', icon: Building2, niches: ['imobiliária'], includedType: 'real_estate_agency' },
+  { label: 'Advogados', icon: Scale, niches: ['advogado', 'escritório de advocacia'], includedType: 'lawyer' },
+  { label: 'Contadores', icon: Building2, niches: ['contabilidade', 'contador'], includedType: 'accounting' },
+  { label: 'Pet Shops', icon: PawPrint, niches: ['pet shop', 'veterinário'], includedType: 'pet_store' },
+  { label: 'Dentistas', icon: Heart, niches: ['dentista', 'odontologia'], includedType: 'dentist' },
+  { label: 'Hotéis', icon: Hotel, niches: ['hotel', 'pousada'], includedType: 'hotel' },
+  { label: 'Farmácias', icon: Pill, niches: ['farmácia', 'drogaria'], includedType: 'pharmacy' },
+  { label: 'Escolas', icon: GraduationCap, niches: ['escola', 'colégio'], includedType: 'school' },
+  { label: 'Ag. Marketing', icon: Megaphone, niches: ['agência de marketing', 'marketing digital'], includedType: 'marketing_consultant' },
+  { label: 'Seguradoras', icon: ShieldCheck, niches: ['seguradora', 'seguros'], includedType: 'insurance_agency' },
+  { label: 'Coworkings', icon: Laptop, niches: ['coworking', 'escritório compartilhado'], includedType: 'coworking_space' },
+  { label: 'Ag. Viagens', icon: Plane, niches: ['agência de viagens', 'turismo'], includedType: 'travel_agency' },
+  { label: 'Construtoras', icon: HardHat, niches: ['construtora', 'construção civil'] },
+  { label: 'Cafeterias', icon: Coffee, niches: ['cafeteria', 'padaria', 'café'], includedType: 'cafe' },
+  { label: 'Óticas', icon: Eye, niches: ['ótica', 'óculos'] },
+  { label: 'Lava-rápido', icon: Car, niches: ['lava-rápido', 'lavagem automotiva'], includedType: 'car_wash' },
+  { label: 'Pizzarias', icon: Pizza, niches: ['pizzaria'], includedType: 'pizza_restaurant' },
+  { label: 'Autoescolas', icon: BookOpen, niches: ['autoescola', 'centro de formação de condutores'] },
+];
+
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return 'Bom dia';
+  if (h < 18) return 'Boa tarde';
+  return 'Boa noite';
+}
+
 export default function DashboardIndex() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { user } = useOutletContext<{ user: SessionUser }>();
   const { addToast } = useToast();
   const { setLastSearchResults } = useSearchResults();
 
   const [form, setForm] = useState<SearchFormValues>(DEFAULT_SEARCH_VALUES);
   const [loading, setLoading] = useState(false);
   const [advancedTermError, setAdvancedTermError] = useState<string | null>(null);
+  const [stats, setStats] = useState<LeadStats | null>(null);
+  const [showUpgradeCTA, setShowUpgradeCTA] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<SearchHistoryItem[]>([]);
+
+  // Pre-fill form from URL params (e.g. from "Rebuscar" in history)
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (!q) return;
+    setForm((prev) => ({
+      ...prev,
+      advancedTerm: q,
+      country: searchParams.get('country') || prev.country,
+      state: searchParams.get('state') || prev.state,
+      city: searchParams.get('city') || prev.city,
+      includedType: searchParams.get('type') || prev.includedType,
+      radiusKm: searchParams.get('radius') ? Number(searchParams.get('radius')) : prev.radiusKm,
+    }));
+    // Clear URL params after applying
+    setSearchParams({}, { replace: true });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    leadsApi.stats().then(setStats).catch(() => {/* silently ignore */});
+    searchApi.history({ limit: 3 }).then((r) => setRecentSearches(r.items ?? [])).catch(() => {});
+  }, []);
 
   const locationValue: LocationFormValues = useMemo(
     () => ({
@@ -68,12 +134,15 @@ export default function DashboardIndex() {
     () => ({
       textQuery: '',
       country: getCountryLabel(form.country),
+      countryCode: form.country,
       state: form.state,
       city: form.city ?? '',
       radiusKm: form.radiusKm,
       includedType: form.includedType,
       niches: form.niches,
       advancedTerm: form.advancedTerm ?? '',
+      hasWebsite: form.hasWebsite,
+      hasPhone: form.hasPhone,
     }),
     [form]
   );
@@ -103,6 +172,8 @@ export default function DashboardIndex() {
           city: payload.city?.trim() || undefined,
           state: payload.state?.trim() || undefined,
           radiusKm: payload.radiusKm,
+          hasWebsite: payload.hasWebsite !== 'any' ? payload.hasWebsite : undefined,
+          hasPhone: payload.hasPhone !== 'any' ? payload.hasPhone : undefined,
         },
       });
       window.dispatchEvent(new Event('refresh-user'));
@@ -110,8 +181,13 @@ export default function DashboardIndex() {
       navigate('/dashboard/resultados');
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Erro ao buscar';
-      addToast('error', message);
-      navigate('/dashboard/resultados', { state: { error: message } });
+      if (message.toLowerCase().includes('limit')) {
+        window.dispatchEvent(new Event('refresh-user'));
+        setShowUpgradeCTA(true);
+      } else {
+        addToast('error', message);
+        navigate('/dashboard/resultados', { state: { error: message } });
+      }
     } finally {
       setLoading(false);
     }
@@ -119,11 +195,18 @@ export default function DashboardIndex() {
 
   const goToHistorico = useCallback(() => navigate('/dashboard/historico'), [navigate]);
 
+  const applyTemplate = useCallback((tpl: typeof QUICK_TEMPLATES[number]) => {
+    setForm((prev) => ({ ...prev, niches: tpl.niches, includedType: tpl.includedType }));
+  }, []);
+
+  const firstName = user.name?.split(' ')[0] ?? 'Usuário';
+  const remainingCredits = user.leadsLimit - user.leadsUsed;
+
   return (
     <>
       <HeaderDashboard
-        title="Parâmetros de Busca"
-        subtitle="Configure seu público-alvo e nossa IA fará o resto."
+        title={`${getGreeting()}, ${firstName}!`}
+        subtitle="O que vamos prospectar hoje?"
         breadcrumb="Prospecção Ativa / Nova Busca"
         onHistórico={goToHistorico}
         onIniciarBusca={runSearch}
@@ -131,9 +214,98 @@ export default function DashboardIndex() {
         primaryDisabled={!canSearch}
       />
 
-      <div className="p-4 sm:p-6 max-w-5xl mx-auto w-full space-y-6" data-tour="nova-busca">
+      <div className="p-4 sm:p-6 max-w-5xl mx-auto w-full space-y-6" role="search"
+        onKeyDown={(e) => { if (e.key === 'Enter' && canSearch && !loading) { e.preventDefault(); runSearch(); } }}
+      >
+        {/* Metrics */}
+        {stats && (stats.total > 0 || stats.searchesThisMonth > 0) && (
+          <section aria-label="Resumo da conta" className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { label: 'Leads salvos', value: stats.total, icon: Target, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-500/10 border-violet-500/20' },
+              { label: 'Score alto (≥60)', value: stats.highScore, icon: TrendingUp, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+              { label: 'Favoritos', value: stats.favorites, icon: Star, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
+              { label: 'Buscas este mês', value: stats.searchesThisMonth, icon: SearchIcon, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20' },
+            ].map(({ label, value, icon: Icon, color, bg }) => (
+              <div key={label} className={`rounded-2xl border ${bg} p-4 flex items-center gap-3`}>
+                <div className={`w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center shrink-0`}>
+                  <Icon size={18} className={color} />
+                </div>
+                <div>
+                  <p className="text-xl font-black text-foreground tabular-nums">{value}</p>
+                  <p className="text-[11px] text-muted leading-tight">{label}</p>
+                </div>
+              </div>
+            ))}
+          </section>
+        )}
+
+        {/* Quick Templates */}
+        <section aria-label="Templates rápidos" data-tour="quick-templates">
+          <p className="text-xs text-muted mb-2 font-medium">Busca rápida:</p>
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin sm:flex-wrap sm:overflow-visible sm:pb-0">
+            {QUICK_TEMPLATES.map((tpl) => {
+              const Icon = tpl.icon;
+              const isActive = tpl.includedType ? form.includedType === tpl.includedType : form.niches.length > 0 && tpl.niches.every((n) => form.niches.includes(n));
+              return (
+                <button
+                  key={tpl.label}
+                  type="button"
+                  onClick={() => applyTemplate(tpl)}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors shrink-0',
+                    isActive
+                      ? 'bg-violet-600/15 border-violet-500/40 text-violet-600 dark:text-violet-400'
+                      : 'border-border bg-surface hover:bg-violet-600/10 hover:border-violet-500/30 text-foreground'
+                  )}
+                >
+                  <Icon size={14} className={isActive ? 'text-violet-600 dark:text-violet-400' : 'text-violet-500'} aria-hidden />
+                  {tpl.label}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Recent searches */}
+        {recentSearches.length > 0 && (
+          <section aria-label="Buscas recentes">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-muted font-medium flex items-center gap-1.5">
+                <Clock size={12} className="text-muted" />
+                Buscas recentes
+              </p>
+              <Link to="/dashboard/historico" className="text-[10px] text-violet-500 hover:text-violet-600 dark:text-violet-400 font-semibold flex items-center gap-1 transition-colors">
+                Ver tudo <ArrowRight size={10} />
+              </Link>
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
+              {recentSearches.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => {
+                    setForm((prev) => ({
+                      ...prev,
+                      advancedTerm: s.textQuery,
+                      city: s.city ?? prev.city,
+                      state: s.state ?? prev.state,
+                      includedType: (s.filters as Record<string, string> | undefined)?.includedType || prev.includedType,
+                    }));
+                  }}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-surface/50 hover:bg-violet-600/10 hover:border-violet-500/30 transition-colors shrink-0 max-w-[240px]"
+                  title={s.textQuery}
+                >
+                  <SearchIcon size={12} className="text-muted shrink-0" />
+                  <span className="text-xs text-foreground truncate">{s.textQuery}</span>
+                  <span className="text-[10px] text-muted tabular-nums shrink-0">{s.resultsCount}r</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Linha 1 – Filtros primários */}
-        <section className="pb-4 border-b border-border" aria-label="Filtros de localização">
+        <section className="pb-4 border-b border-border" aria-label="Filtros de localização" data-tour="nova-busca">
           <SearchFiltersRow value={locationValue} onChange={updateLocation} disabled={loading} />
         </section>
 
@@ -147,8 +319,52 @@ export default function DashboardIndex() {
           />
         </section>
 
+        {/* Linha 3 – Filtros de resultado */}
+        <section className="pb-4 border-b border-border" aria-label="Filtros de resultado">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Globe size={14} className="text-violet-500 shrink-0" aria-hidden />
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Website:</span>
+              {(['any', 'yes', 'no'] as const).map((opt) => (
+                <button
+                  key={`web-${opt}`}
+                  type="button"
+                  disabled={loading}
+                  onClick={() => setForm((prev) => ({ ...prev, hasWebsite: opt }))}
+                  className={`h-7 px-2.5 rounded-lg text-[11px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-violet-500/30 ${
+                    form.hasWebsite === opt
+                      ? 'bg-violet-600 text-white'
+                      : 'bg-surface border border-border text-muted hover:border-violet-500/30 hover:text-foreground'
+                  }`}
+                >
+                  {opt === 'any' ? 'Todos' : opt === 'yes' ? 'Com site' : 'Sem site'}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <Phone size={14} className="text-violet-500 shrink-0" aria-hidden />
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Telefone:</span>
+              {(['any', 'yes', 'no'] as const).map((opt) => (
+                <button
+                  key={`phone-${opt}`}
+                  type="button"
+                  disabled={loading}
+                  onClick={() => setForm((prev) => ({ ...prev, hasPhone: opt }))}
+                  className={`h-7 px-2.5 rounded-lg text-[11px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-violet-500/30 ${
+                    form.hasPhone === opt
+                      ? 'bg-violet-600 text-white'
+                      : 'bg-surface border border-border text-muted hover:border-violet-500/30 hover:text-foreground'
+                  }`}
+                >
+                  {opt === 'any' ? 'Todos' : opt === 'yes' ? 'Com tel.' : 'Sem tel.'}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* Linha 3 – Ação principal */}
-        <section className="flex justify-center pt-2" aria-label="Iniciar prospecção">
+        <section className="flex flex-col items-center gap-2 pt-2" aria-label="Iniciar prospecção">
           <Button
             variant="primary"
             size="lg"
@@ -166,8 +382,22 @@ export default function DashboardIndex() {
           >
             {loading ? 'Buscando...' : 'Iniciar Prospecção'}
           </Button>
+          <span className="flex items-center gap-1 text-xs text-muted">
+            <Sparkles size={12} className="text-violet-500" />
+            <span className="tabular-nums font-medium text-violet-500">{remainingCredits}</span>
+            créditos restantes
+          </span>
         </section>
       </div>
+
+      {showUpgradeCTA && (
+        <UpgradeCTAModal
+          currentPlan={user.plan}
+          leadsUsed={user.leadsUsed}
+          leadsLimit={user.leadsLimit}
+          onClose={() => setShowUpgradeCTA(false)}
+        />
+      )}
     </>
   );
 }

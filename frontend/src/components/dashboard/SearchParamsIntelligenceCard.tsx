@@ -66,7 +66,7 @@ export function SearchParamsIntelligenceCard({
       <div className="bg-card p-8 rounded-[2.4rem] h-full space-y-8 border border-border/50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-cyan-600/10 flex items-center justify-center text-cyan-400 shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-cyan-600/10 flex items-center justify-center text-cyan-600 dark:text-cyan-400 shrink-0">
               <Sparkles size={24} aria-hidden />
             </div>
             <div>
@@ -101,7 +101,7 @@ export function SearchParamsIntelligenceCard({
                   className={cn(
                     'min-h-[44px] px-4 py-2 rounded-xl text-sm font-bold transition-all border focus:outline-none focus:ring-2 focus:ring-violet-500/50',
                     value.niches.includes(tag)
-                      ? 'bg-violet-600/10 border-violet-500/20 text-violet-400'
+                      ? 'bg-violet-600/10 border-violet-500/20 text-violet-600 dark:text-violet-400'
                       : 'bg-surface border-border text-muted hover:text-foreground hover:border-border'
                   )}
                 >
@@ -113,7 +113,7 @@ export function SearchParamsIntelligenceCard({
                 .map((tag) => (
                   <span
                     key={tag}
-                    className="inline-flex items-center gap-1.5 min-h-[44px] px-4 py-2 rounded-xl text-sm font-bold bg-violet-600/10 border border-violet-500/20 text-violet-400"
+                    className="inline-flex items-center gap-1.5 min-h-[44px] px-4 py-2 rounded-xl text-sm font-bold bg-violet-600/10 border border-violet-500/20 text-violet-600 dark:text-violet-400"
                   >
                     {tag}
                     <button
@@ -145,7 +145,7 @@ export function SearchParamsIntelligenceCard({
                   <button
                     type="button"
                     onClick={addNiche}
-                    className="min-h-[44px] px-3 py-2 rounded-xl text-xs font-black bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-600/30"
+                    className="min-h-[44px] px-3 py-2 rounded-xl text-xs font-black bg-emerald-600/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600/30"
                   >
                     OK
                   </button>
@@ -162,7 +162,7 @@ export function SearchParamsIntelligenceCard({
                   type="button"
                   onClick={() => setAddOpen(true)}
                   disabled={disabled}
-                  className="min-h-[44px] px-4 py-2 bg-violet-600/10 border border-violet-500/20 rounded-xl text-xs font-black text-violet-400 hover:bg-violet-600/20 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                  className="min-h-[44px] px-4 py-2 bg-violet-600/10 border border-violet-500/20 rounded-xl text-xs font-black text-violet-600 dark:text-violet-400 hover:bg-violet-600/20 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                 >
                   + Adicionar
                 </button>

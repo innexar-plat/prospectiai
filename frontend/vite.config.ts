@@ -4,6 +4,9 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { readFileSync } from 'node:fs'
+
+const pkg = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf-8'));
 
 /** SPA fallback: serve index.html for client routes (evita 404 em /dashboard, /auth/signin, etc.) */
 function spaFallback() {
@@ -27,6 +30,19 @@ function spaFallback() {
 // Plugins array: workspace hoists some deps; cast to satisfy defineConfig (single vite type).
 export default defineConfig({
   plugins: [tailwindcss(), react(), spaFallback()] as import('vite').PluginOption[],
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (id.includes('lucide-react')) return 'icons';
+          if (id.includes('node_modules/react-dom')) return 'react-dom';
+        },
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src')
@@ -34,7 +50,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    allowedHosts: ['prospectorai.innexar.com.br', 'localhost'],
+    allowedHosts: ['precisionia.com.br', 'localhost'],
     proxy: {
       // In dev: proxy /api/* to the Next.js backend (container name for stable DNS)
       '/api': {
@@ -42,7 +58,7 @@ export default defineConfig({
         changeOrigin: false,
         secure: false,
         headers: {
-          'X-Forwarded-Host': 'prospectorai.innexar.com.br',
+          'X-Forwarded-Host': 'precisionia.com.br',
           'X-Forwarded-Proto': 'https'
         }
       }

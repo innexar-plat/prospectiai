@@ -12,7 +12,7 @@ export default function ListasPage() {
           <div className="absolute bottom-0 left-0 w-72 h-72 bg-indigo-500/5 blur-[100px] rounded-full pointer-events-none" />
 
           <div className="relative z-10 w-20 h-20 rounded-3xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
-            <Layers size={36} className="text-violet-400" />
+            <Layers size={36} className="text-violet-600 dark:text-violet-400" />
           </div>
 
           <div className="relative z-10 space-y-3 max-w-lg">
@@ -24,8 +24,8 @@ export default function ListasPage() {
           </div>
 
           <div className="relative z-10 flex items-center gap-2 mt-4 px-5 py-3 rounded-2xl bg-violet-500/5 border border-violet-500/10">
-            <Sparkles size={16} className="text-violet-400" />
-            <span className="text-xs font-bold text-violet-400 uppercase tracking-wider">Em desenvolvimento</span>
+            <Sparkles size={16} className="text-violet-600 dark:text-violet-400" />
+            <span className="text-xs font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider">Em desenvolvimento</span>
           </div>
         </div>
       </div>

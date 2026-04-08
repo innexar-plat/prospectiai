@@ -147,7 +147,7 @@ describe('email lib', () => {
       expect(mockSend).toHaveBeenCalledWith(
         expect.objectContaining({
           to: ['u@x.com'],
-          subject: 'Redefinir sua senha – ProspectorAI',
+          subject: 'Redefinir sua senha – Precision IA',
         })
       );
       const html = mockSend.mock.calls[0][0].html;
@@ -164,7 +164,7 @@ describe('email lib', () => {
       expect(mockSend).toHaveBeenCalledWith(
         expect.objectContaining({
           to: ['u@x.com'],
-          subject: 'Confirme seu e-mail – ProspectorAI',
+          subject: 'Confirme seu e-mail – Precision IA',
         })
       );
       const html = mockSend.mock.calls[0][0].html;
@@ -182,7 +182,7 @@ describe('email lib', () => {
       expect(mockSend).toHaveBeenCalledWith(
         expect.objectContaining({
           to: ['m@x.com'],
-          subject: 'Convite para o workspace "Acme" – ProspectorAI',
+          subject: 'Convite para o workspace "Acme" – Precision IA',
         })
       );
       const html = mockSend.mock.calls[0][0].html;
@@ -206,7 +206,7 @@ describe('email lib', () => {
       expect(mockSend).toHaveBeenCalledWith(
         expect.objectContaining({
           to: ['u@x.com'],
-          subject: 'Defina sua senha – Workspace X – ProspectorAI',
+          subject: 'Defina sua senha – Workspace X – Precision IA',
         })
       );
       const html = mockSend.mock.calls[0][0].html;
@@ -225,7 +225,7 @@ describe('email lib', () => {
       expect(mockSend).toHaveBeenCalledWith(
         expect.objectContaining({
           to: ['a@b.com'],
-          subject: 'Sua conta de afiliado foi aprovada – ProspectorAI',
+          subject: 'Sua conta de afiliado foi aprovada – Precision IA',
         })
       );
       const html = mockSend.mock.calls[0][0].html;
@@ -243,7 +243,7 @@ describe('email lib', () => {
       expect(mockSend).toHaveBeenCalledWith(
         expect.objectContaining({
           to: ['a@b.com'],
-          subject: 'Nova conversão no programa de afiliados – ProspectorAI',
+          subject: 'Nova conversão no programa de afiliados – Precision IA',
         })
       );
       const html = mockSend.mock.calls[0][0].html;
@@ -261,7 +261,7 @@ describe('email lib', () => {
       expect(mockSend).toHaveBeenCalledWith(
         expect.objectContaining({
           to: ['a@b.com'],
-          subject: 'Comissão paga – ProspectorAI',
+          subject: 'Comissão paga – Precision IA',
         })
       );
       const html = mockSend.mock.calls[0][0].html;
@@ -279,7 +279,7 @@ describe('email lib', () => {
       expect(mockSend).toHaveBeenCalledWith(
         expect.objectContaining({
           to: ['a@b.com'],
-          subject: 'Comissão disponível para saque – ProspectorAI',
+          subject: 'Comissão disponível para saque – Precision IA',
         })
       );
       const html = mockSend.mock.calls[0][0].html;

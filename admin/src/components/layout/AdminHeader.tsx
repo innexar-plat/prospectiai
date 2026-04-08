@@ -12,6 +12,7 @@ const pathToTitle: Record<string, string> = {
   'search-history': 'Histórico de buscas',
   audit: 'Auditoria',
   'ai-config': 'IA / Provedores',
+  'crm-integrations': 'Integrações CRM',
   email: 'Email',
   notifications: 'Notificações',
   plans: 'Planos',
@@ -42,16 +43,16 @@ export function AdminHeader({ user }: { user: SessionUser }) {
   };
 
   return (
-    <header className="h-12 shrink-0 border-b border-zinc-800 bg-zinc-900/80 flex items-center justify-between px-4">
-      <h2 className="text-sm font-medium text-zinc-300 truncate">{pageTitle}</h2>
+    <header className="h-14 shrink-0 border-b border-gray-200 bg-white flex items-center justify-between px-6 shadow-sm">
+      <h2 className="text-base font-semibold text-gray-800 truncate">{pageTitle}</h2>
       <div className="flex items-center gap-3">
-        <span className="text-sm text-zinc-400 truncate max-w-[180px]">
+        <span className="text-sm text-gray-500 truncate max-w-[180px]">
           {user.email ?? user.name ?? 'Admin'}
         </span>
         <button
           type="button"
           onClick={handleSignOut}
-          className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 text-sm transition-colors"
+          className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 text-sm transition-colors"
           title="Sair"
         >
           <LogOut className="w-4 h-4" />

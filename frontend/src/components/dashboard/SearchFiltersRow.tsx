@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { COUNTRIES, getStatesByCountry } from '@/lib/locationData';
+import { searchApi } from '@/lib/api';
 import type { LocationFormValues } from '@/components/dashboard/SearchParamsLocationCard';
 
 const RADIUS_OPTIONS = [5, 10, 20, 30, 50, 100];
@@ -15,8 +16,12 @@ interface SearchFiltersRowProps {
 export function SearchFiltersRow({ value, onChange, disabled }: SearchFiltersRowProps) {
   const [countryOpen, setCountryOpen] = useState(false);
   const [stateOpen, setStateOpen] = useState(false);
+  const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
+  const [cityOpen, setCityOpen] = useState(false);
+  const [cityLoading, setCityLoading] = useState(false);
   const countryRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef<HTMLDivElement>(null);
+  const cityRef = useRef<HTMLDivElement>(null);
 
   const states = getStatesByCountry(value.country);
   const selectedCountry = COUNTRIES.find((c) => c.value === value.country);
@@ -38,6 +43,51 @@ export function SearchFiltersRow({ value, onChange, disabled }: SearchFiltersRow
     document.addEventListener('mousedown', onOutside);
     return () => document.removeEventListener('mousedown', onOutside);
   }, [stateOpen]);
+
+  useEffect(() => {
+    if (!cityOpen) return;
+    const onOutside = (e: MouseEvent) => {
+      if (cityRef.current && !cityRef.current.contains(e.target as Node)) setCityOpen(false);
+    };
+    document.addEventListener('mousedown', onOutside);
+    return () => document.removeEventListener('mousedown', onOutside);
+  }, [cityOpen]);
+
+  useEffect(() => {
+    const country = value.country;
+    const state = value.state;
+    const q = value.city.trim();
+    if (disabled || country !== 'BR' || !state || state === 'Todos' || q.length < 3) {
+      setCitySuggestions([]);
+      setCityOpen(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timeoutId = window.setTimeout(() => {
+      setCityLoading(true);
+      searchApi
+        .citySuggestions({ state, country, q })
+        .then((res) => {
+          if (cancelled) return;
+          setCitySuggestions(res.cities ?? []);
+          setCityOpen((res.cities?.length ?? 0) > 0);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setCitySuggestions([]);
+          setCityOpen(false);
+        })
+        .finally(() => {
+          if (!cancelled) setCityLoading(false);
+        });
+    }, 220);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [value.city, value.state, value.country, disabled]);
 
   const selectClass =
     'h-9 w-full rounded-lg border border-border bg-surface px-3 text-xs font-medium text-foreground hover:border-violet-500/30 focus:outline-none focus:ring-2 focus:ring-violet-500/30 flex items-center justify-between';
@@ -122,17 +172,50 @@ export function SearchFiltersRow({ value, onChange, disabled }: SearchFiltersRow
         )}
       </div>
 
-      <div>
+      <div className="relative" ref={cityRef}>
         <label htmlFor="search-city" className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-1 block">Cidade</label>
         <input
           id="search-city"
           type="text"
-          placeholder="Opcional"
+          placeholder={value.state && value.state !== 'Todos' ? 'Digite 3 letras...' : 'Selecione o estado primeiro'}
           value={value.city}
-          onChange={(e) => onChange({ city: e.target.value })}
-          disabled={disabled}
+          onChange={(e) => {
+            onChange({ city: e.target.value });
+            if (!e.target.value.trim()) {
+              setCityOpen(false);
+              setCitySuggestions([]);
+            }
+          }}
+          disabled={disabled || value.state === 'Todos'}
           className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-violet-500/30 disabled:opacity-50"
         />
+        {cityOpen && citySuggestions.length > 0 && (
+          <ul
+            role="listbox"
+            className="absolute z-20 mt-1 w-full rounded-lg bg-card border border-border shadow-lg py-1 max-h-56 overflow-auto"
+          >
+            {citySuggestions.map((city) => (
+              <li key={city} role="option" aria-selected={value.city === city}>
+                <button
+                  type="button"
+                  className={cn(
+                    'w-full px-3 py-2 text-left text-xs hover:bg-surface focus:outline-none',
+                    value.city === city && 'bg-violet-600/10 text-violet-500 font-medium'
+                  )}
+                  onClick={() => {
+                    onChange({ city });
+                    setCityOpen(false);
+                  }}
+                >
+                  {city}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {cityLoading && (
+          <p className="absolute -bottom-4 left-0 text-[10px] text-muted">Buscando cidades...</p>
+        )}
       </div>
 
       <div>

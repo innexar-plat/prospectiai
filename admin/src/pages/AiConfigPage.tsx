@@ -240,8 +240,8 @@ export function AiConfigPage() {
   if (loading && items.length === 0) {
     return (
       <div>
-        <h1 className="text-xl font-semibold text-white mb-6">IA / Provedores</h1>
-        <div className="h-64 rounded-xl bg-zinc-800/50 animate-pulse" />
+        <h1 className="text-xl font-semibold text-gray-900 mb-6">IA / Provedores</h1>
+        <div className="h-64 rounded-xl bg-gray-200 animate-pulse" />
       </div>
     );
   }
@@ -249,7 +249,7 @@ export function AiConfigPage() {
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h1 className="text-xl font-semibold text-white">IA / Provedores</h1>
+        <h1 className="text-xl font-semibold text-gray-900">IA / Provedores</h1>
         <Button onClick={openCreate} size="sm">
           Adicionar configuração
         </Button>
@@ -259,8 +259,8 @@ export function AiConfigPage() {
         <div
           className={`mb-4 rounded-lg px-4 py-3 text-sm ${
             toast.type === 'success'
-              ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400'
-              : 'bg-red-500/10 border border-red-500/30 text-red-400'
+              ? 'bg-emerald-50 border border-emerald-300 text-emerald-600'
+              : 'bg-red-50 border border-red-300 text-red-600'
           }`}
         >
           {toast.message}
@@ -268,16 +268,16 @@ export function AiConfigPage() {
       )}
 
       {error && items.length === 0 && (
-        <div className="rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3">
+        <div className="rounded-lg bg-red-50 border border-red-300 text-red-600 px-4 py-3">
           {error}
         </div>
       )}
 
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 overflow-hidden">
+      <div className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-zinc-800 text-left text-zinc-500">
+              <tr className="border-b border-gray-200 text-left text-gray-500">
                 <th className="px-4 py-3 font-medium">Papel</th>
                 <th className="px-4 py-3 font-medium">Provedor</th>
                 <th className="px-4 py-3 font-medium">Modelo</th>
@@ -289,23 +289,23 @@ export function AiConfigPage() {
             <tbody>
               {items.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-zinc-500">
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
                     Nenhuma configuração. Adicione uma para usar IA por papel (análise de lead, viabilidade).
                   </td>
                 </tr>
               ) : (
                 items.map((c) => (
-                  <tr key={c.id} className="border-b border-zinc-800/80 hover:bg-zinc-800/50">
-                    <td className="px-4 py-3 text-white">
+                  <tr key={c.id} className="border-b border-gray-200 hover:bg-gray-200">
+                    <td className="px-4 py-3 text-gray-900">
                       {c.role === 'lead_analysis' ? 'Análise de lead' : 'Viabilidade'}
                     </td>
-                    <td className="px-4 py-3 text-zinc-300">{c.provider}</td>
-                    <td className="px-4 py-3 text-zinc-400">{c.model}</td>
-                    <td className="px-4 py-3 text-zinc-500">{c.hasApiKey ? '••••••' : '—'}</td>
+                    <td className="px-4 py-3 text-gray-600">{c.provider}</td>
+                    <td className="px-4 py-3 text-gray-500">{c.model}</td>
+                    <td className="px-4 py-3 text-gray-500">{c.hasApiKey ? '••••••' : '—'}</td>
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
-                          c.enabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-600/30 text-zinc-500'
+                          c.enabled ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-200 text-gray-500'
                         }`}
                       >
                         {c.enabled ? 'Ativo' : 'Inativo'}
@@ -316,21 +316,21 @@ export function AiConfigPage() {
                         type="button"
                         onClick={() => handleTest(c.id)}
                         disabled={!c.hasApiKey || testingId === c.id}
-                        className="text-violet-400 hover:text-violet-300 text-xs font-medium disabled:opacity-50"
+                        className="text-violet-600 hover:text-violet-700 text-xs font-medium disabled:opacity-50"
                       >
                         {testingId === c.id ? 'Testando...' : 'Testar'}
                       </button>
                       <button
                         type="button"
                         onClick={() => openEdit(c)}
-                        className="text-violet-400 hover:text-violet-300 text-xs font-medium"
+                        className="text-violet-600 hover:text-violet-700 text-xs font-medium"
                       >
                         Editar
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDelete(c.id)}
-                        className="text-red-400 hover:text-red-300 text-xs font-medium"
+                        className="text-red-600 hover:text-red-600 text-xs font-medium"
                       >
                         Excluir
                       </button>
@@ -344,15 +344,15 @@ export function AiConfigPage() {
       </div>
 
       <div className="mt-8">
-        <h2 className="text-lg font-semibold text-white mb-3">Enriquecimento com busca na web</h2>
-        <p className="text-sm text-zinc-500 mb-4">
+        <h2 className="text-lg font-semibold text-gray-900 mb-3">Enriquecimento com busca na web</h2>
+        <p className="text-sm text-gray-500 mb-4">
           Opcional. Se ativo, análises (lead e viabilidade) recebem contexto real da web (ex.: Serper). Configure por papel.
         </p>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 overflow-hidden">
+        <div className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-zinc-800 text-left text-zinc-500">
+                <tr className="border-b border-gray-200 text-left text-gray-500">
                   <th className="px-4 py-3 font-medium">Papel</th>
                   <th className="px-4 py-3 font-medium">Provedor</th>
                   <th className="px-4 py-3 font-medium">Chave API</th>
@@ -363,8 +363,8 @@ export function AiConfigPage() {
               </thead>
               <tbody>
                 {(['lead_analysis', 'viability'] as const).map((role) => (
-                  <tr key={role} className="border-b border-zinc-800/80">
-                    <td className="px-4 py-3 text-white">
+                  <tr key={role} className="border-b border-gray-200">
+                    <td className="px-4 py-3 text-gray-900">
                       {role === 'lead_analysis' ? 'Análise de lead' : 'Viabilidade'}
                     </td>
                     <td className="px-4 py-3">
@@ -376,7 +376,7 @@ export function AiConfigPage() {
                             [role]: { ...prev[role], provider: e.target.value as WebSearchProvider },
                           }))
                         }
-                        className="border-zinc-700 bg-zinc-800 text-zinc-200 w-32"
+                        className="border-gray-300 bg-gray-100 text-gray-700 w-32"
                       >
                         {WEB_SEARCH_PROVIDERS.map((p) => (
                           <option key={p.value} value={p.value}>
@@ -396,7 +396,7 @@ export function AiConfigPage() {
                           }))
                         }
                         placeholder="Deixe vazio para manter"
-                        className="border-zinc-700 bg-zinc-800 text-zinc-200 max-w-xs"
+                        className="border-gray-300 bg-gray-100 text-gray-700 max-w-xs"
                         autoComplete="off"
                       />
                     </td>
@@ -412,7 +412,7 @@ export function AiConfigPage() {
                             [role]: { ...prev[role], maxResults: parseInt(e.target.value, 10) || 5 },
                           }))
                         }
-                        className="border-zinc-700 bg-zinc-800 text-zinc-200 w-20"
+                        className="border-gray-300 bg-gray-100 text-gray-700 w-20"
                       />
                     </td>
                     <td className="px-4 py-3">
@@ -425,7 +425,7 @@ export function AiConfigPage() {
                             [role]: { ...prev[role], enabled: e.target.checked },
                           }))
                         }
-                        className="rounded border-zinc-600 bg-zinc-800 text-violet-500"
+                        className="rounded border-gray-300 bg-gray-100 text-violet-500"
                       />
                     </td>
                     <td className="px-4 py-3">
@@ -447,23 +447,23 @@ export function AiConfigPage() {
       </div>
 
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setModalOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30" onClick={() => setModalOpen(false)}>
           <div
-            className="rounded-xl border border-zinc-700 bg-zinc-900 w-full max-w-md shadow-xl"
+            className="rounded-xl border border-gray-200 bg-white w-full max-w-md shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-4 border-b border-zinc-800">
-              <h2 className="text-lg font-semibold text-white">
+            <div className="p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">
                 {editing ? 'Editar configuração' : 'Nova configuração'}
               </h2>
             </div>
             <form onSubmit={handleSubmit} className="p-4 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-1">Papel</label>
+                <label className="block text-sm font-medium text-gray-500 mb-1">Papel</label>
                 <Select
                   value={form.role}
                   onChange={(e) => setForm((f) => ({ ...f, role: e.target.value as AiConfigRole }))}
-                  className="w-full border-zinc-700 bg-zinc-800 text-zinc-200"
+                  className="w-full border-gray-300 bg-gray-100 text-gray-700"
                 >
                   {ROLES.map((r) => (
                     <option key={r.value} value={r.value}>
@@ -473,11 +473,11 @@ export function AiConfigPage() {
                 </Select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-1">Provedor</label>
+                <label className="block text-sm font-medium text-gray-500 mb-1">Provedor</label>
                 <Select
                   value={form.provider}
                   onChange={(e) => setProvider(e.target.value as AiConfigProvider)}
-                  className="w-full border-zinc-700 bg-zinc-800 text-zinc-200"
+                  className="w-full border-gray-300 bg-gray-100 text-gray-700"
                 >
                   {PROVIDERS.map((p) => (
                     <option key={p.value} value={p.value}>
@@ -487,14 +487,14 @@ export function AiConfigPage() {
                 </Select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-1">Modelo</label>
+                <label className="block text-sm font-medium text-gray-500 mb-1">Modelo</label>
                 {form.provider === 'CLOUDFLARE' ? (
                   <>
-                    <p className="text-xs text-zinc-500 mb-1">Cloudflare usa protocolo OpenAI (chat completions).</p>
+                    <p className="text-xs text-gray-500 mb-1">Cloudflare usa protocolo OpenAI (chat completions).</p>
                     <Select
                       value={form.model}
                       onChange={(e) => setForm((f) => ({ ...f, model: e.target.value }))}
-                      className="w-full border-zinc-700 bg-zinc-800 text-zinc-200 mb-2"
+                      className="w-full border-gray-300 bg-gray-100 text-gray-700 mb-2"
                     >
                       {CLOUDFLARE_MODELS.map((m) => (
                         <option key={m.value} value={m.value}>
@@ -506,7 +506,7 @@ export function AiConfigPage() {
                       value={form.model}
                       onChange={(e) => setForm((f) => ({ ...f, model: e.target.value }))}
                       placeholder="ou digite outro ID (@cf/...)"
-                      className="border-zinc-700 bg-zinc-800 text-zinc-200 text-sm"
+                      className="border-gray-300 bg-gray-100 text-gray-700 text-sm"
                       required
                     />
                   </>
@@ -515,13 +515,13 @@ export function AiConfigPage() {
                     value={form.model}
                     onChange={(e) => setForm((f) => ({ ...f, model: e.target.value }))}
                     placeholder={form.provider === 'OPENAI' ? 'ex: gpt-4o-mini, gpt-4o' : 'ex: gemini-2.0-flash'}
-                    className="border-zinc-700 bg-zinc-800 text-zinc-200"
+                    className="border-gray-300 bg-gray-100 text-gray-700"
                     required
                   />
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-1">
+                <label className="block text-sm font-medium text-gray-500 mb-1">
                   Chave API {editing && '(deixe vazio para manter a atual)'}
                 </label>
                 <Input
@@ -529,18 +529,18 @@ export function AiConfigPage() {
                   value={form.apiKey}
                   onChange={(e) => setForm((f) => ({ ...f, apiKey: e.target.value }))}
                   placeholder="••••••••"
-                  className="border-zinc-700 bg-zinc-800 text-zinc-200"
+                  className="border-gray-300 bg-gray-100 text-gray-700"
                   autoComplete="off"
                 />
               </div>
               {form.provider === 'CLOUDFLARE' && (
                 <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-1">Cloudflare Account ID</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Cloudflare Account ID</label>
                   <Input
                     value={form.cloudflareAccountId}
                     onChange={(e) => setForm((f) => ({ ...f, cloudflareAccountId: e.target.value }))}
                     placeholder="Account ID"
-                    className="border-zinc-700 bg-zinc-800 text-zinc-200"
+                    className="border-gray-300 bg-gray-100 text-gray-700"
                   />
                 </div>
               )}
@@ -550,9 +550,9 @@ export function AiConfigPage() {
                   id="enabled"
                   checked={form.enabled}
                   onChange={(e) => setForm((f) => ({ ...f, enabled: e.target.checked }))}
-                  className="rounded border-zinc-600 bg-zinc-800 text-violet-500"
+                  className="rounded border-gray-300 bg-gray-100 text-violet-500"
                 />
-                <label htmlFor="enabled" className="text-sm text-zinc-400">
+                <label htmlFor="enabled" className="text-sm text-gray-500">
                   Ativo
                 </label>
               </div>

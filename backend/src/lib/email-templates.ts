@@ -4,8 +4,8 @@
  */
 
 const SITE_URL = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-const APP_NAME = 'ProspectorAI';
-const LOGO_URL = process.env.EMAIL_LOGO_URL ?? `${SITE_URL.replace(/\/$/, '')}/lopclaro.png`;
+const APP_NAME = 'Precision IA';
+const LOGO_URL = process.env.EMAIL_LOGO_URL ?? `${SITE_URL.replace(/\/$/, '')}/precisionai-logo-light.png`;
 const BRAND_COLOR = '#8B5CF6';
 const TEXT_COLOR = '#1f2937';
 const MUTED_COLOR = '#6b7280';
@@ -138,7 +138,7 @@ export function passwordResetTemplate(resetLink: string): string {
   return buildEmail({
     title: 'Redefinir sua senha',
     body: [
-      'Você solicitou a redefinição de senha da sua conta no ProspectorAI.',
+      'Você solicitou a redefinição de senha da sua conta no Precision IA.',
       'Clique no botão abaixo para definir uma nova senha. Se você não solicitou isso, ignore este e-mail.',
     ],
     ctaHref: resetLink,
@@ -154,7 +154,7 @@ export function verificationTemplate(verifyLink: string): string {
   return buildEmail({
     title: 'Confirme seu e-mail',
     body: [
-      'Obrigado por se cadastrar no ProspectorAI.',
+      'Obrigado por se cadastrar no Precision IA.',
       'Clique no botão abaixo para confirmar seu endereço de e-mail e ativar sua conta.',
     ],
     ctaHref: verifyLink,
@@ -193,7 +193,7 @@ export function teamInviteAccountCreatedTemplate(
   return buildEmail({
     title: `Você foi adicionado à equipe "${safeWorkspace}"`,
     body: [
-      `${safeInviter} adicionou você ao workspace "${safeWorkspace}" no ProspectorAI.`,
+      `${safeInviter} adicionou você ao workspace "${safeWorkspace}" no Precision IA.`,
       'Sua conta foi criada. Clique no botão abaixo para definir sua senha e acessar o dashboard.',
     ],
     ctaHref: setPasswordUrl,
@@ -209,7 +209,7 @@ export function testEmailTemplate(): string {
   return buildEmail({
     title: 'E-mail de teste',
     body: [
-      'Este é um e-mail de teste enviado pelo painel administrativo do ProspectorAI.',
+      'Este é um e-mail de teste enviado pelo painel administrativo do Precision IA.',
       'Se você recebeu esta mensagem, a configuração de e-mail está funcionando corretamente.',
     ],
   });
@@ -238,7 +238,7 @@ export function notificationTemplate(titleText: string, message: string, linkUrl
 export function paymentSuccessTemplate(planName: string, leadsLimit: number, dashboardUrl: string): string {
   const safePlanName = escapeHtml(planName);
   const body = [
-    'Obrigado por assinar o ProspectorAI. Seu pagamento foi aprovado e seu plano já está ativo.',
+    'Obrigado por assinar o Precision IA. Seu pagamento foi aprovado e seu plano já está ativo.',
     `Você agora tem acesso ao plano <strong>${safePlanName}</strong>, com até ${leadsLimit} buscas por mês. Use o dashboard para fazer sua primeira prospecção, salvar leads e aproveitar as análises com IA.`,
     'Próximos passos: acesse o dashboard, defina nicho e região na Nova Busca e execute sua primeira busca. Em Inteligência você encontra concorrência, relatórios e análise da sua empresa conforme seu plano.',
   ];
@@ -264,7 +264,7 @@ export function paymentFailureTemplate(dashboardOrPlansUrl: string): string {
   return buildEmail({
     title: 'Pagamento não aprovado',
     body: [
-      'O pagamento do seu plano ProspectorAI não foi processado. Isso pode ocorrer por dados incorretos do cartão, limite insuficiente ou recusa do emissor.',
+      'O pagamento do seu plano Precision IA não foi processado. Isso pode ocorrer por dados incorretos do cartão, limite insuficiente ou recusa do emissor.',
       'Verifique os dados do cartão ou tente outro cartão ou meio de pagamento. Você pode acessar a página de planos para tentar novamente.',
     ],
     ctaHref,
@@ -284,7 +284,7 @@ export function affiliateApprovedTemplate(affiliateCode: string, loginUrl: strin
   return buildEmail({
     title: 'Sua conta de afiliado foi aprovada',
     body: [
-      `Sua conta de afiliado no ProspectorAI foi aprovada. Seu código exclusivo é: <strong>${safeCode}</strong>.`,
+      `Sua conta de afiliado no Precision IA foi aprovada. Seu código exclusivo é: <strong>${safeCode}</strong>.`,
       'Use o link abaixo para indicar clientes. Quando alguém se cadastrar por esse link e assinar um plano pago, você receberá comissão conforme a política do programa.',
       `Seu link de indicação: <a href="${affiliateLinkAttr}" style="color:${BRAND_COLOR};word-break:break-all;">${escapeHtml(affiliateLink)}</a>`,
     ],
@@ -318,7 +318,7 @@ export function affiliateCommissionPaidTemplate(amountFormatted: string, payoutI
   const safeAmount = escapeHtml(amountFormatted);
   const safePayout = escapeHtml(payoutInfo);
   return buildEmail({
-    title: 'Comissão paga — ProspectorAI',
+    title: 'Comissão paga — Precision IA',
     body: [
       `Uma comissão no valor de <strong>${safeAmount}</strong> foi paga conforme os dados de saque informados.`,
       safePayout,
@@ -331,7 +331,7 @@ export function affiliateCommissionPaidTemplate(amountFormatted: string, payoutI
  */
 export function affiliateCommissionAvailableTemplate(dashboardUrl: string): string {
   return buildEmail({
-    title: 'Comissão disponível para saque — ProspectorAI',
+    title: 'Comissão disponível para saque — Precision IA',
     body: [
       'Uma ou mais comissões do programa de afiliados passaram do período de carência e estão disponíveis para saque.',
       'Acesse o painel do afiliado para acompanhar os valores. O pagamento será processado conforme a política do programa.',

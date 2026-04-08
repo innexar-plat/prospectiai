@@ -269,6 +269,32 @@ export interface EmailConfigUpdateBody {
   smtpPassword?: string;
 }
 
+export interface CrmConfigPublic {
+  configured: boolean;
+  provider: 'rdstation' | 'agendor' | 'hubspot';
+  clientId: string;
+  hasClientSecret: boolean;
+}
+
+export interface CrmConfigUpdateBody {
+  provider: 'rdstation' | 'agendor' | 'hubspot';
+  clientId: string;
+  clientSecret?: string;
+}
+
+export interface AgendorObservability {
+  connectedUsers: number;
+  totalUsers: number;
+  percentConnected: number;
+  usesEnvFallback: boolean;
+}
+
+export interface HubspotObservability {
+  connectedUsers: number;
+  totalUsers: number;
+  percentConnected: number;
+}
+
 export interface SupportUsersParams {
   limit?: number;
   offset?: number;
@@ -419,6 +445,23 @@ export const adminApi = {
         method: 'POST',
         body: JSON.stringify({ to }),
       }),
+  },
+
+  crmConfig: {
+    getConfig: (provider: 'rdstation' | 'agendor' | 'hubspot' = 'rdstation') => request<CrmConfigPublic>(`/admin/crm-config?provider=${provider}`),
+    updateConfig: (body: CrmConfigUpdateBody) =>
+      request<CrmConfigPublic>('/admin/crm-config', {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      }),
+  },
+
+  agendorObservability: {
+    get: () => request<AgendorObservability>('/admin/integrations/agendor/observability'),
+  },
+
+  hubspotObservability: {
+    get: () => request<HubspotObservability>('/admin/integrations/hubspot/observability'),
   },
 
   notifications: {

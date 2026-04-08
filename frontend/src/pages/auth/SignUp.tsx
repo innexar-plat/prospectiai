@@ -44,7 +44,7 @@ export default function SignUpPage() {
     return (
         <AuthLayout
             sideTitle={<>Comece a <span className="accent-gradient">Prospectar</span> com Inteligência.</>}
-            sideDescription="Junte-se a milhares de empresas que já usam ProspectorAI para encontrar os melhores leads."
+            sideDescription="Junte-se a milhares de empresas que já usam Precision IA para encontrar os melhores leads."
             sideElements={
                 <div className="space-y-4 mt-5">
                     {[
@@ -67,13 +67,13 @@ export default function SignUpPage() {
                             <Zap size={16} />
                         </div>
                         <p className="text-xs font-bold text-muted">
-                            <span className="text-green-600 dark:text-green-400">Free:</span> 5 créditos grátis para começar.
+                            <span className="text-green-600 dark:text-green-400">Free:</span> 10 créditos grátis para começar.
                         </p>
                     </div>
                 </div>
             }
             formTitle="Criar conta"
-            formSubtitle="Junte-se a milhares de empresas que já usam ProspectorAI."
+            formSubtitle="Junte-se a milhares de empresas que já usam PrecisionAI."
         >
             <form onSubmit={handleEmailSignUp} className="space-y-3">
                 <div className="space-y-1">
@@ -161,7 +161,7 @@ export default function SignUpPage() {
                     onClick={() => { authApi.initiateOAuthSignIn('google', '/onboarding').catch(() => { }); }}
                     variant="secondary"
                     className="h-10 text-xs font-semibold border border-border hover:border-violet-500/30"
-                    icon={<img src="https://authjs.dev/img/providers/google.svg" width={20} height={20} alt="" className="shrink-0" />}
+                    icon={<img src="/icons/google.svg" width={20} height={20} alt="Google" className="shrink-0" />}
                 >
                     Google
                 </Button>
@@ -170,7 +170,7 @@ export default function SignUpPage() {
                     onClick={() => { authApi.initiateOAuthSignIn('github', '/onboarding').catch(() => { }); }}
                     variant="secondary"
                     className="h-10 text-xs font-semibold border border-border hover:border-violet-500/30"
-                    icon={<img src="https://authjs.dev/img/providers/github.svg" width={20} height={20} alt="" className="shrink-0" />}
+                    icon={<img src="/icons/github.svg" width={20} height={20} alt="GitHub" className="shrink-0" />}
                 >
                     GitHub
                 </Button>
@@ -178,7 +178,7 @@ export default function SignUpPage() {
 
             <p className="mt-4 text-center text-xs text-muted">
                 Já possui uma conta?{' '}
-                <Link to="/auth/signin" className="text-violet-500 hover:text-violet-400 font-bold hover:underline">
+                <Link to="/auth/signin" className="text-violet-500 hover:text-violet-600 dark:text-violet-400 font-bold hover:underline">
                     Entrar
                 </Link>
             </p>

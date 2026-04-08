@@ -96,7 +96,7 @@ function MinhaEmpresaFormAndReport(props: MinhaEmpresaFormProps) {
         <div className="rounded-3xl bg-card border border-border p-6 sm:p-8">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <h3 className="text-lg font-bold text-foreground">Gerar análise da empresa</h3>
-                <Link to="/dashboard/historico?tab=intelligence&module=MY_COMPANY" className="text-sm text-violet-400 hover:text-violet-300 font-medium">
+                <Link to="/dashboard/historico?tab=intelligence&module=MY_COMPANY" className="text-sm text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 font-medium">
                     Ver histórico
                 </Link>
             </div>
@@ -108,7 +108,7 @@ function MinhaEmpresaFormAndReport(props: MinhaEmpresaFormProps) {
                 <button
                     type="button"
                     onClick={() => setMode('profile')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${mode === 'profile' ? 'bg-violet-500/20 text-violet-400' : 'text-muted hover:text-foreground'}`}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${mode === 'profile' ? 'bg-violet-500/20 text-violet-600 dark:text-violet-400' : 'text-muted hover:text-foreground'}`}
                 >
                     <User size={16} />
                     Usar perfil da empresa
@@ -116,7 +116,7 @@ function MinhaEmpresaFormAndReport(props: MinhaEmpresaFormProps) {
                 <button
                     type="button"
                     onClick={() => setMode('search')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${mode === 'search' ? 'bg-violet-500/20 text-violet-400' : 'text-muted hover:text-foreground'}`}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${mode === 'search' ? 'bg-violet-500/20 text-violet-600 dark:text-violet-400' : 'text-muted hover:text-foreground'}`}
                 >
                     <Globe size={16} />
                     Pesquisar por nome e cidade
@@ -129,7 +129,7 @@ function MinhaEmpresaFormAndReport(props: MinhaEmpresaFormProps) {
                         <div className="mb-5 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-sm text-muted">
                             <p className="font-bold text-foreground mb-1">Preencha o perfil da empresa</p>
                             <p className="mb-3">Informe o nome da empresa (e opcionalmente produto/serviço e redes) em Empresa para que a análise use seus dados.</p>
-                            <Link to="/dashboard/empresa" className="inline-flex items-center gap-1.5 text-violet-400 font-bold hover:underline">
+                            <Link to="/dashboard/empresa" className="inline-flex items-center gap-1.5 text-violet-600 dark:text-violet-400 font-bold hover:underline">
                                 Ir para Perfil da empresa
                             </Link>
                         </div>
@@ -266,13 +266,13 @@ function MinhaEmpresaReportView({ report }: { report: CompanyAnalysisReport }) {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="rounded-3xl bg-card border border-border p-6">
                     <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <CheckCircle2 size={16} className="text-emerald-400" /> Pontos fortes
+                        <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400" /> Pontos fortes
                     </h3>
                     <ul className="space-y-2">
                         {report.strengths.map((s) => (
                             <li key={`strength-${String(s).slice(0, 80)}`} className="flex items-start gap-2 text-sm text-muted">
                                 <span className="w-5 h-5 rounded bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                                    <CheckCircle2 size={12} className="text-emerald-400" />
+                                    <CheckCircle2 size={12} className="text-emerald-600 dark:text-emerald-400" />
                                 </span>
                                 {s}
                             </li>
@@ -281,13 +281,13 @@ function MinhaEmpresaReportView({ report }: { report: CompanyAnalysisReport }) {
                 </div>
                 <div className="rounded-3xl bg-card border border-border p-6">
                     <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <AlertTriangle size={16} className="text-amber-400" /> Pontos fracos
+                        <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400" /> Pontos fracos
                     </h3>
                     <ul className="space-y-2">
                         {report.weaknesses.map((w) => (
                             <li key={`weak-${String(w).slice(0, 80)}`} className="flex items-start gap-2 text-sm text-muted">
                                 <span className="w-5 h-5 rounded bg-amber-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                                    <AlertTriangle size={12} className="text-amber-400" />
+                                    <AlertTriangle size={12} className="text-amber-600 dark:text-amber-400" />
                                 </span>
                                 {w}
                             </li>
@@ -299,12 +299,12 @@ function MinhaEmpresaReportView({ report }: { report: CompanyAnalysisReport }) {
             {report.opportunities.length > 0 && (
                 <div className="rounded-3xl bg-card border border-border p-6">
                     <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <Lightbulb size={16} className="text-violet-400" /> Oportunidades
+                        <Lightbulb size={16} className="text-violet-600 dark:text-violet-400" /> Oportunidades
                     </h3>
                     <ul className="space-y-2">
                         {report.opportunities.map((o, i) => (
                             <li key={`opp-${String(o).slice(0, 80)}`} className="text-sm text-muted flex items-start gap-2">
-                                <span className="text-violet-400 font-bold shrink-0">{i + 1}.</span>
+                                <span className="text-violet-600 dark:text-violet-400 font-bold shrink-0">{i + 1}.</span>
                                 {o}
                             </li>
                         ))}
@@ -323,7 +323,7 @@ function MinhaEmpresaReportView({ report }: { report: CompanyAnalysisReport }) {
                     {report.googlePresenceScore != null && (
                         <div className="rounded-2xl bg-card border border-border p-5 flex flex-col gap-2">
                             <h4 className="text-xs font-bold text-muted uppercase tracking-wider flex items-center gap-1.5">
-                                <Star size={12} className="text-amber-400" /> Presença Google
+                                <Star size={12} className="text-amber-600 dark:text-amber-400" /> Presença Google
                             </h4>
                             <div className="flex items-baseline gap-2">
                                 <span className="text-2xl font-black text-foreground">{report.googlePresenceScore}</span>
@@ -340,7 +340,7 @@ function MinhaEmpresaReportView({ report }: { report: CompanyAnalysisReport }) {
             {report.socialNetworks?.presence && (
                 <div className="rounded-3xl bg-card border border-border p-6">
                     <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
-                        <Share2 size={16} className="text-blue-400" /> Redes sociais
+                        <Share2 size={16} className="text-blue-600 dark:text-blue-400" /> Redes sociais
                     </h3>
                     <p className="text-sm text-muted mb-4">{report.socialNetworks.presence}</p>
                     {report.socialNetworks.perNetwork && report.socialNetworks.perNetwork.length > 0 && (
@@ -350,7 +350,7 @@ function MinhaEmpresaReportView({ report }: { report: CompanyAnalysisReport }) {
                                     <p className="font-bold text-foreground text-sm mb-1">{n.network}</p>
                                     {n.link && <p className="text-xs text-muted flex items-center gap-1 mb-1"><LinkIcon size={10} /> {n.link}</p>}
                                     {n.found && <p className="text-sm text-muted mb-1">{n.found}</p>}
-                                    {n.suggestions && <p className="text-xs text-violet-400">{n.suggestions}</p>}
+                                    {n.suggestions && <p className="text-xs text-violet-600 dark:text-violet-400">{n.suggestions}</p>}
                                 </div>
                             ))}
                         </div>
@@ -372,13 +372,13 @@ function MinhaEmpresaReportView({ report }: { report: CompanyAnalysisReport }) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {report.suggestedNiche && (
                         <div className="rounded-2xl bg-gradient-to-br from-violet-900/20 to-card border border-violet-500/20 p-5">
-                            <h4 className="text-xs font-bold text-violet-400 uppercase tracking-wider mb-2">Nicho sugerido</h4>
+                            <h4 className="text-xs font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider mb-2">Nicho sugerido</h4>
                             <p className="text-sm font-bold text-foreground">{report.suggestedNiche}</p>
                         </div>
                     )}
                     {report.suggestedBusinessModel && (
                         <div className="rounded-2xl bg-gradient-to-br from-emerald-900/20 to-card border border-emerald-500/20 p-5">
-                            <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2">Modelo de negócio sugerido</h4>
+                            <h4 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-2">Modelo de negócio sugerido</h4>
                             <p className="text-sm font-bold text-foreground">{report.suggestedBusinessModel}</p>
                         </div>
                     )}
@@ -387,12 +387,12 @@ function MinhaEmpresaReportView({ report }: { report: CompanyAnalysisReport }) {
 
             <div className="rounded-3xl bg-card border border-border p-6">
                 <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <Lightbulb size={16} className="text-amber-400" /> Recomendações
+                    <Lightbulb size={16} className="text-amber-600 dark:text-amber-400" /> Recomendações
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {report.recommendations.map((rec, i) => (
                         <div key={`recommendation-${String(rec).slice(0, 80)}`} className="flex items-start gap-3 p-4 bg-surface rounded-xl border border-border/50">
-                            <span className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center font-bold text-xs text-amber-400 shrink-0">{i + 1}</span>
+                            <span className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center font-bold text-xs text-amber-600 dark:text-amber-400 shrink-0">{i + 1}</span>
                             <p className="text-sm text-muted">{rec}</p>
                         </div>
                     ))}
@@ -410,13 +410,13 @@ function MinhaEmpresaNoAccess({ onUpgrade }: { onUpgrade: () => void }) {
                 <div className="rounded-[2.4rem] bg-gradient-to-br from-violet-900/30 via-emerald-900/20 to-background border border-violet-500/20 p-12 flex flex-col items-center justify-center gap-6 min-h-[400px] text-center shadow-2xl relative overflow-hidden">
                     <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-violet-500/10 blur-[100px] -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none" />
                     <div className="w-20 h-20 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center relative z-10">
-                        <Lock size={32} className="text-violet-400" />
+                        <Lock size={32} className="text-violet-600 dark:text-violet-400" />
                     </div>
                     <div className="space-y-2 relative z-10 max-w-xl">
                         <h2 className="text-2xl font-black text-foreground">Análise da minha empresa</h2>
                         <p className="text-muted leading-relaxed">
-                            A IA analisa <span className="text-violet-400 font-bold">Reclame Aqui</span>, avaliações Google,
-                            <span className="text-violet-400 font-bold"> redes sociais</span> (link + dados públicos) e sugere nicho e modelo de negócio.
+                            A IA analisa <span className="text-violet-600 dark:text-violet-400 font-bold">Reclame Aqui</span>, avaliações Google,
+                            <span className="text-violet-600 dark:text-violet-400 font-bold"> redes sociais</span> (link + dados públicos) e sugere nicho e modelo de negócio.
                         </p>
                     </div>
                     <Button variant="primary" onClick={onUpgrade} className="mt-4 min-h-[56px] px-8 rounded-xl font-bold text-white bg-gradient-to-r from-violet-600 to-violet-700 hover:from-violet-500 hover:to-violet-600 shadow-lg shadow-violet-500/25 border-0 relative z-10">
@@ -528,7 +528,7 @@ export default function MinhaEmpresaPage() {
                 />
                 {loading && (
                     <div className="flex flex-col items-center justify-center p-16 gap-4">
-                        <Loader2 size={40} className="animate-spin text-violet-400" />
+                        <Loader2 size={40} className="animate-spin text-violet-600 dark:text-violet-400" />
                         <p className="text-sm text-muted">Buscando Reclame Aqui, avaliações, redes sociais e gerando relatório...</p>
                         <p className="text-xs text-muted/60">Isso pode levar até 60 segundos</p>
                     </div>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getStatesByCountry, getCountryLabel, BR_STATES, COUNTRIES } from './locationData';
+import { getStatesByCountry, getCountryLabel, BR_STATES, US_STATES, COUNTRIES } from './locationData';
 
 describe('locationData', () => {
   describe('getStatesByCountry', () => {
@@ -7,9 +7,19 @@ describe('locationData', () => {
       expect(getStatesByCountry('BR')).toEqual(BR_STATES);
     });
 
-    it('returns ["Todos"] for non-BR', () => {
+    it('returns US_STATES for US', () => {
+      const states = getStatesByCountry('US');
+      expect(states[0]).toBe('Todos');
+      expect(states).toHaveLength(52);
+      expect(states).toContain('CA');
+      expect(states).toContain('NY');
+      expect(states).toContain('TX');
+      expect(states).toContain('DC');
+      expect(states).toEqual(US_STATES);
+    });
+
+    it('returns ["Todos"] for other countries', () => {
       expect(getStatesByCountry('AR')).toEqual(['Todos']);
-      expect(getStatesByCountry('US')).toEqual(['Todos']);
     });
   });
 
@@ -27,7 +37,7 @@ describe('locationData', () => {
   describe('constants', () => {
     it('COUNTRIES has expected shape', () => {
       expect(COUNTRIES.length).toBeGreaterThan(0);
-      expect(COUNTRIES[0]).toEqual({ value: 'BR', label: 'Brasil', flag: '🇧🇷' });
+      expect(COUNTRIES[0]).toEqual({ value: 'BR', label: 'Brasil', queryLabel: 'Brasil', flag: '🇧🇷' });
     });
 
     it('BR_STATES includes Todos and UFs', () => {

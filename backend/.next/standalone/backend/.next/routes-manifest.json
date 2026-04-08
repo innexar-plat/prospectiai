@@ -140,6 +140,14 @@
       "namedRegex": "^/api/admin/workspaces/(?<nxtPid>[^/]+?)(?:/)?$"
     },
     {
+      "page": "/api/analyze/batch/[id]",
+      "regex": "^/api/analyze/batch/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/analyze/batch/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
       "page": "/api/auth/[...nextauth]",
       "regex": "^/api/auth/(.+?)(?:/)?$",
       "routeKeys": {
@@ -268,6 +276,12 @@
       "namedRegex": "^/api/admin/commissions/bulk(?:/)?$"
     },
     {
+      "page": "/api/admin/crm-config",
+      "regex": "^/api/admin/crm\\-config(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/crm\\-config(?:/)?$"
+    },
+    {
       "page": "/api/admin/email",
       "regex": "^/api/admin/email(?:/)?$",
       "routeKeys": {},
@@ -284,6 +298,12 @@
       "regex": "^/api/admin/email/test(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/admin/email/test(?:/)?$"
+    },
+    {
+      "page": "/api/admin/integrations/agendor/observability",
+      "regex": "^/api/admin/integrations/agendor/observability(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/integrations/agendor/observability(?:/)?$"
     },
     {
       "page": "/api/admin/leads",
@@ -392,6 +412,12 @@
       "regex": "^/api/analyze(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/analyze(?:/)?$"
+    },
+    {
+      "page": "/api/analyze/batch",
+      "regex": "^/api/analyze/batch(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/analyze/batch(?:/)?$"
     },
     {
       "page": "/api/auth/2fa/disable",
@@ -520,6 +546,78 @@
       "namedRegex": "^/api/health(?:/)?$"
     },
     {
+      "page": "/api/integrations/agendor",
+      "regex": "^/api/integrations/agendor(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/integrations/agendor(?:/)?$"
+    },
+    {
+      "page": "/api/integrations/agendor/deal-stages",
+      "regex": "^/api/integrations/agendor/deal\\-stages(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/integrations/agendor/deal\\-stages(?:/)?$"
+    },
+    {
+      "page": "/api/integrations/agendor/funnels",
+      "regex": "^/api/integrations/agendor/funnels(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/integrations/agendor/funnels(?:/)?$"
+    },
+    {
+      "page": "/api/integrations/agendor/send",
+      "regex": "^/api/integrations/agendor/send(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/integrations/agendor/send(?:/)?$"
+    },
+    {
+      "page": "/api/integrations/agendor/users",
+      "regex": "^/api/integrations/agendor/users(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/integrations/agendor/users(?:/)?$"
+    },
+    {
+      "page": "/api/integrations/rdstation",
+      "regex": "^/api/integrations/rdstation(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/integrations/rdstation(?:/)?$"
+    },
+    {
+      "page": "/api/integrations/rdstation/campaigns",
+      "regex": "^/api/integrations/rdstation/campaigns(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/integrations/rdstation/campaigns(?:/)?$"
+    },
+    {
+      "page": "/api/integrations/rdstation/disconnect",
+      "regex": "^/api/integrations/rdstation/disconnect(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/integrations/rdstation/disconnect(?:/)?$"
+    },
+    {
+      "page": "/api/integrations/rdstation/oauth/callback",
+      "regex": "^/api/integrations/rdstation/oauth/callback(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/integrations/rdstation/oauth/callback(?:/)?$"
+    },
+    {
+      "page": "/api/integrations/rdstation/oauth/connect",
+      "regex": "^/api/integrations/rdstation/oauth/connect(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/integrations/rdstation/oauth/connect(?:/)?$"
+    },
+    {
+      "page": "/api/integrations/rdstation/send",
+      "regex": "^/api/integrations/rdstation/send(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/integrations/rdstation/send(?:/)?$"
+    },
+    {
+      "page": "/api/integrations/rdstation/sources",
+      "regex": "^/api/integrations/rdstation/sources(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/integrations/rdstation/sources(?:/)?$"
+    },
+    {
       "page": "/api/intelligence/history",
       "regex": "^/api/intelligence/history(?:/)?$",
       "routeKeys": {},
@@ -530,6 +628,18 @@
       "regex": "^/api/leads(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/leads(?:/)?$"
+    },
+    {
+      "page": "/api/leads/stats",
+      "regex": "^/api/leads/stats(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/leads/stats(?:/)?$"
+    },
+    {
+      "page": "/api/location/cities",
+      "regex": "^/api/location/cities(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/location/cities(?:/)?$"
     },
     {
       "page": "/api/market-report",
@@ -602,6 +712,12 @@
       "regex": "^/api/team(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/team(?:/)?$"
+    },
+    {
+      "page": "/api/team/credits",
+      "regex": "^/api/team/credits(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/team/credits(?:/)?$"
     },
     {
       "page": "/api/team/dashboard",

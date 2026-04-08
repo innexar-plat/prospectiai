@@ -15,13 +15,27 @@ describe('searchService', () => {
   });
 
   describe('buildTextQuery', () => {
-    it('uses advancedTerm when at least 3 chars', () => {
+    it('uses advancedTerm with location context when city provided', () => {
+      const q = buildTextQuery({
+        advancedTerm: '  cafes especiais  ',
+        city: 'São Paulo',
+        state: 'SP',
+        country: 'BR',
+        niches: [],
+      });
+      expect(q).toContain('cafes especiais');
+      expect(q).toContain('São Paulo');
+      expect(q).toContain('SP');
+    });
+
+    it('uses advancedTerm with country fallback when no city/state', () => {
       const q = buildTextQuery({
         advancedTerm: '  cafes especiais  ',
         country: 'BR',
         niches: [],
       });
-      expect(q).toBe('cafes especiais');
+      expect(q).toContain('cafes especiais');
+      expect(q).toContain('BR');
     });
 
     it('uses includedType label when provided', () => {
@@ -34,7 +48,6 @@ describe('searchService', () => {
       });
       expect(q).toContain('BH');
       expect(q).toContain('MG');
-      expect(q).toContain('Brasil');
     });
 
     it('uses first niche when no includedType', () => {

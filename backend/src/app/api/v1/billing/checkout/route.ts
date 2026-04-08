@@ -40,7 +40,7 @@ export async function POST(req: Request) {
                     items: [
                         {
                             id: planId,
-                            title: `ProspectorAI Plano ${plan.name} (${billingCycle})`,
+                            title: `Precision IA Plano ${plan.name} (${billingCycle})`,
                             description: `Assinatura para ${plan.leadsLimit} buscas por mês.`,
                             quantity: 1,
                             unit_price: plan[billingCycle].price_brl,
@@ -48,15 +48,16 @@ export async function POST(req: Request) {
                         }
                     ],
                     back_urls: {
-                        success: `${process.env.NEXT_PUBLIC_APP_URL}/api/billing/success`,
-                        failure: `${process.env.NEXT_PUBLIC_APP_URL}/`,
-                        pending: `${process.env.NEXT_PUBLIC_APP_URL}/`
+                        success: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/planos?billing=success`,
+                        failure: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/planos?billing=failure`,
+                        pending: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/planos?billing=pending`
                     },
                     auto_return: 'approved',
                     notification_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/billing/webhook/mercadopago`,
                     metadata: {
-                        userId: session.user.id,
-                        planId,
+                        user_id: session.user.id,
+                        plan_id: planId,
+                        interval: billingCycle,
                     }
                 }
             });
@@ -71,7 +72,7 @@ export async function POST(req: Request) {
                         price_data: {
                             currency: 'usd',
                             product_data: {
-                                name: `ProspectorAI ${plan.name} Plan (${billingCycle})`,
+                                name: `Precision IA ${plan.name} Plan (${billingCycle})`,
                                 description: `Subscription for ${plan.leadsLimit} leads searches per month.`,
                             },
                             unit_amount: plan[billingCycle].price_usd * 100,

@@ -25,19 +25,15 @@ export async function GET() {
         const googlePlacesDetailsTotal = byType.GOOGLE_PLACES_DETAILS ?? 0;
         const serperRequestsTotal = byType.SERPER_REQUEST ?? 0;
 
-        const aiEvents = await prisma.usageEvent.findMany({
-            where: { type: 'AI_TOKENS' },
-            select: { metadata: true },
-        });
-        let aiInputTokensTotal = 0;
-        let aiOutputTokensTotal = 0;
-        for (const e of aiEvents) {
-            const m = e.metadata as { inputTokens?: number; outputTokens?: number } | null;
-            if (m) {
-                aiInputTokensTotal += Number(m.inputTokens) || 0;
-                aiOutputTokensTotal += Number(m.outputTokens) || 0;
-            }
-        }
+        const aiTokensResult = await prisma.$queryRaw<[{ aiInputTokensTotal: bigint; aiOutputTokensTotal: bigint }]>`
+            SELECT
+                COALESCE(SUM((metadata->>'inputTokens')::int), 0) AS "aiInputTokensTotal",
+                COALESCE(SUM((metadata->>'outputTokens')::int), 0) AS "aiOutputTokensTotal"
+            FROM "UsageEvent"
+            WHERE type = 'AI_TOKENS'
+        `;
+        const aiInputTokensTotal = Number(aiTokensResult[0]?.aiInputTokensTotal ?? 0);
+        const aiOutputTokensTotal = Number(aiTokensResult[0]?.aiOutputTokensTotal ?? 0);
 
         const payload = {
             users,

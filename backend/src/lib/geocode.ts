@@ -6,21 +6,10 @@
  */
 
 import { fetchWithRetry } from '@/lib/fetch-http';
+import { resolveCountryLocale } from '@/lib/country-locale';
 
 const GEOCODE_BASE = 'https://maps.googleapis.com/maps/api/geocode/json';
-const GEOCODE_TIMEOUT_MS = 10000;
-
-/** Map country name/label to Google Geocoding API region code (biasing). */
-function getRegionCodeForCountry(country: string): string {
-  const normalized = country.trim().toLowerCase();
-  if (normalized.includes('brasil') || normalized === 'br') return 'br';
-  if (normalized.includes('argentina') || normalized === 'ar') return 'ar';
-  if (normalized.includes('méxico') || normalized.includes('mexico') || normalized === 'mx') return 'mx';
-  if (normalized.includes('estados unidos') || normalized.includes('united states') || normalized === 'us') return 'us';
-  if (normalized.includes('portugal') || normalized === 'pt') return 'pt';
-  if (normalized.includes('espanha') || normalized.includes('spain') || normalized === 'es') return 'es';
-  return 'br';
-}
+const GEOCODE_TIMEOUT_MS = 15000;
 
 export interface GeocodeResult {
   latitude: number;
@@ -35,17 +24,18 @@ export async function geocodeAddress(
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   if (!apiKey) return null;
 
+  const locale = resolveCountryLocale(country);
+
   const parts = [city.trim()];
   if (state?.trim()) parts.push(state.trim());
   parts.push(country);
   const address = parts.join(', ');
 
-  const regionCode = getRegionCodeForCountry(country);
   const url = new URL(GEOCODE_BASE);
   url.searchParams.set('address', address);
   url.searchParams.set('key', apiKey);
-  url.searchParams.set('region', regionCode);
-  url.searchParams.set('language', 'pt-BR');
+  url.searchParams.set('region', locale.regionCode.toLowerCase());
+  url.searchParams.set('language', locale.languageCode);
 
   const res = await fetchWithRetry(url.toString(), { method: 'GET' }, {
     timeoutMs: GEOCODE_TIMEOUT_MS,

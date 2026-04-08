@@ -17,7 +17,7 @@ describe('Header', () => {
 
   it('renders logo and Planos link', () => {
     renderWithProviders(<Header {...defaultProps} />);
-    expect(screen.getByRole('button', { name: /ProspectorAI/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Precision IA/ })).toBeInTheDocument();
     expect(screen.getByText('Planos')).toBeInTheDocument();
   });
 

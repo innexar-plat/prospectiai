@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Bell, Shield, AlertTriangle } from 'lucide-react';
+import { Bell, Shield, AlertTriangle, Plug } from 'lucide-react';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
-import { useOutletContext } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import { userApi, type SessionUser } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/contexts/ToastContext';
@@ -39,9 +39,8 @@ export default function ConfiguracoesPage() {
         {/* Notifications */}
         <div className="rounded-3xl bg-card border border-border p-6 space-y-5">
           <h3 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
-            <Bell size={16} className="text-violet-400" /> Notificações
+            <Bell size={16} className="text-violet-600 dark:text-violet-400" /> Notificações
           </h3>
-
           <div className="space-y-4">
             <ToggleRow
               label="Notificações por email"
@@ -60,9 +59,8 @@ export default function ConfiguracoesPage() {
         {/* Security */}
         <div className="rounded-3xl bg-card border border-border p-6 space-y-5">
           <h3 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
-            <Shield size={16} className="text-emerald-400" /> Segurança
+            <Shield size={16} className="text-emerald-600 dark:text-emerald-400" /> Segurança
           </h3>
-
           <div className="space-y-3">
             <div className="flex items-center justify-between text-sm">
               <div>
@@ -71,26 +69,38 @@ export default function ConfiguracoesPage() {
                   {user.twoFactorEnabled ? 'Ativo — sua conta está protegida' : 'Desativado'}
                 </p>
               </div>
-              <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${user.twoFactorEnabled ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-surface text-muted border border-border'}`}>
+              <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${user.twoFactorEnabled ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' : 'bg-surface text-muted border border-border'}`}>
                 {user.twoFactorEnabled ? 'Ativo' : 'Inativo'}
               </span>
             </div>
-
             <div className="flex items-center justify-between text-sm">
               <div>
                 <p className="font-medium text-foreground">Email verificado</p>
                 <p className="text-xs text-muted mt-0.5">{user.email}</p>
               </div>
-              <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+              <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                 Verificado
               </span>
             </div>
           </div>
         </div>
 
+        {/* Integrations shortcut */}
+        <div className="rounded-3xl bg-card border border-border p-6 space-y-5">
+          <h3 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
+            <Plug size={16} className="text-violet-600 dark:text-violet-400" /> Integrações
+          </h3>
+          <p className="text-xs text-muted">
+            Conecte e gerencie CRMs em uma área dedicada (RD Station, HubSpot, Agendor e próximos conectores).
+          </p>
+          <Link to="/dashboard/integracoes" className="inline-flex">
+            <Button variant="secondary" size="sm">Abrir Integrações</Button>
+          </Link>
+        </div>
+
         {/* Danger Zone */}
         <div className="rounded-3xl bg-card border border-rose-500/20 p-6 space-y-4">
-          <h3 className="text-sm font-bold text-rose-400 uppercase tracking-wider flex items-center gap-2">
+          <h3 className="text-sm font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider flex items-center gap-2">
             <AlertTriangle size={16} /> Zona de Perigo
           </h3>
           <p className="text-xs text-muted">
@@ -100,7 +110,7 @@ export default function ConfiguracoesPage() {
           <Button
             variant="secondary"
             size="sm"
-            className="border-rose-500/30 text-rose-400 hover:bg-rose-500/10"
+            className="border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10"
             onClick={() => addToast('error', 'Funcionalidade disponível em breve.')}
           >
             Excluir minha conta

@@ -45,3 +45,14 @@ const PLAN_DISPLAY_NAME: Record<string, string> = {
 export function getPlanDisplayName(planKey: string): string {
     return PLAN_DISPLAY_NAME[planKey] ?? planKey;
 }
+
+const PLAN_TIER_ORDER: PlanType[] = ['FREE', 'BASIC', 'PRO', 'BUSINESS', 'SCALE'];
+
+/** Returns the next plan above the user's current plan, or null if already on SCALE. */
+export function getNextUpgradePlan(currentPlan: string): { key: PlanType; name: string; leadsLimit: number; priceBrl: number } | null {
+    const idx = PLAN_TIER_ORDER.indexOf(currentPlan as PlanType);
+    if (idx < 0 || idx >= PLAN_TIER_ORDER.length - 1) return null;
+    const nextKey = PLAN_TIER_ORDER[idx + 1];
+    const plan = PLANS[nextKey];
+    return { key: nextKey, name: plan.name, leadsLimit: plan.leadsLimit, priceBrl: plan.monthly.price_brl };
+}

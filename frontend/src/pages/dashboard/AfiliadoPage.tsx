@@ -135,7 +135,7 @@ export default function AfiliadoPage() {
           <div className="rounded-xl border border-border bg-card p-6 text-center space-y-4">
             <h2 className="text-lg font-bold text-foreground">Programa de Afiliados</h2>
             <p className="text-muted text-sm">
-              Indique o ProspectorAI e ganhe comissão quando alguém assinar um plano pago. Cadastre-se e receba seu link exclusivo após aprovação.
+              Indique o Precision IA e ganhe comissão quando alguém assinar um plano pago. Cadastre-se e receba seu link exclusivo após aprovação.
             </p>
             <Button onClick={handleRegister} disabled={registering} className="gap-2">
               {registering ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}

@@ -2,5 +2,33 @@ User-agent: *
 Allow: /
 Disallow: /dashboard
 Disallow: /auth/
+Disallow: /onboarding
 
-Sitemap: https://prospectorai.innexar.com.br/sitemap.xml
+# AI crawlers — explicitly allowed
+User-agent: GPTBot
+Allow: /
+Disallow: /dashboard
+Disallow: /auth/
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+Sitemap: https://precisionia.com.br/sitemap.xml

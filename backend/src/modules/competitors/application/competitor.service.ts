@@ -171,7 +171,7 @@ export async function runCompetitorAnalysis(
   );
 
   const rawPlaces = result.places ?? [];
-  const places = rawPlaces.map((p) => toCompetitorPlace(p as Record<string, unknown>)).filter((p) => p.id && p.name);
+  const places = rawPlaces.map((p) => toCompetitorPlace(p as unknown as Record<string, unknown>)).filter((p) => p.id && p.name);
 
   const withWebsite = places.filter((p) => !!p.websiteUri?.trim()).length;
   const withPhone = places.filter((p) => !!p.nationalPhoneNumber?.trim()).length;

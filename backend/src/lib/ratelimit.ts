@@ -32,40 +32,38 @@ export async function rateLimit(
     try {
         const client = getRedis();
         if (!client) {
-            // If redis is down, we allow the request but log it
-            logger.warn('Redis down, bypassing rate limit', { identifier });
-            return { success: true, remaining: limit, reset: 0 };
+            // Fail-closed: deny requests when Redis is unavailable
+            logger.warn('Redis down, denying request (fail-closed)', { identifier });
+            return { success: false, remaining: 0, reset: Date.now() + windowSeconds * 1000 };
         }
 
         await client.connect().catch(() => { });
 
         const key = `ratelimit:${identifier}`;
-        const current = await client.get(key);
-        const count = current ? parseInt(current) : 0;
 
-        if (count >= limit) {
+        // Atomic: INCR returns the new count; set TTL only on first increment
+        const count = await client.incr(key);
+        if (count === 1) {
+            await client.expire(key, windowSeconds);
+        }
+
+        if (count > limit) {
             const ttl = await client.ttl(key);
             return {
                 success: false,
                 remaining: 0,
-                reset: Date.now() + (ttl > 0 ? ttl * 1000 : windowSeconds * 1000)
+                reset: Date.now() + (ttl > 0 ? ttl * 1000 : windowSeconds * 1000),
             };
         }
 
-        const multi = client.multi();
-        multi.incr(key);
-        if (!current) {
-            multi.expire(key, windowSeconds);
-        }
-        await multi.exec();
-
         return {
             success: true,
-            remaining: limit - (count + 1),
-            reset: Date.now() + windowSeconds * 1000
+            remaining: limit - count,
+            reset: Date.now() + windowSeconds * 1000,
         };
     } catch (error) {
-        logger.error('Rate limit error', { error: error instanceof Error ? error.message : 'Unknown' });
-        return { success: true, remaining: limit, reset: 0 };
+        // Fail-closed: deny on error
+        logger.error('Rate limit error (fail-closed)', { error: error instanceof Error ? error.message : 'Unknown' });
+        return { success: false, remaining: 0, reset: Date.now() + windowSeconds * 1000 };
     }
 }

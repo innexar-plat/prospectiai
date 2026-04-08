@@ -80,7 +80,7 @@ function EmpresaPerfilForm({
           <img src={form.logoUrl} alt="Logo" className="w-14 h-14 rounded-2xl object-cover border border-violet-500/20" />
         ) : (
           <div className="w-14 h-14 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
-            <Building2 size={24} className="text-violet-400" />
+            <Building2 size={24} className="text-violet-600 dark:text-violet-400" />
           </div>
         )}
         <div>
