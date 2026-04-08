@@ -27,6 +27,10 @@ export interface LeadAnalysis {
     reclameAquiAnalysis?: string;
     jusBrasilAnalysis?: string;
     cnpjAnalysis?: string;
+    /** Lead Intelligence Engine — AI-predicted fields */
+    closeProbability?: number;
+    estimatedDealValue?: number;
+    bestContactWindow?: string;
 }
 
 export interface UserBusinessProfile {
@@ -196,6 +200,7 @@ interface BuildLeadPromptInput {
     openingHoursText: string;
     webContext: string;
     isBusinessPlan: boolean;
+    conversionContext: string;
 }
 
 const LEAD_DATA_LABELS = {
@@ -360,6 +365,8 @@ ${D.openingHours}
 ${opts.openingHoursText}
 ${webBlock}
 
+${opts.conversionContext}
+
 ${L.header}
 1. ${L.gaps}
 2. ${L.painPoints}
@@ -387,7 +394,10 @@ ${J.intro}
   "reviewTrend": "<${J.reviewTrend}>",
   "suggestedContactTime": "<${J.contactTime}>",
   "socialMedia": { "instagram": "<${J.instagram}>", "facebook": "<${J.facebook}>", "linkedin": "<${J.linkedin}>" },
-  "fullReport": "<${J.fullReport}>"
+  "fullReport": "<${J.fullReport}>",
+  "closeProbability": <${isEn ? 'number 0-100, predicted chance of closing THIS specific lead based on your conversion history and lead profile. 0=impossible, 100=guaranteed' : 'número 0-100, chance prevista de fechar ESTE lead baseado no histórico de conversão e perfil do lead. 0=impossível, 100=garantido'}>,
+  "estimatedDealValue": <${isEn ? 'number in BRL, estimated deal size based on business size, type, and your avg ticket' : 'número em BRL, valor estimado do deal baseado no tamanho do negócio, tipo e seu ticket médio'}>,
+  "bestContactWindow": "<${isEn ? 'Specific day and time window, e.g. Tuesday 10am-12pm, with rationale' : 'Dia e horário específico, ex: Terça 10h-12h, com justificativa'}>"
 ${getExtendedJsonSchemaBlock(isBusinessPlan, isEn)}
 }`;
 }
@@ -432,6 +442,7 @@ async function prepareLeadAnalysisPrompt(
     isEn: boolean,
     isBusinessPlan: boolean,
     context: AnalyzeLeadContext | undefined,
+    onProgress?: AnalyzeProgressCallback,
 ): Promise<{ prompt: string; finalProfile: UserBusinessProfile | undefined }> {
     const finalProfile = await resolveFinalProfile(userProfile, userId);
     const address = business.formattedAddress || business.address || '';
@@ -443,6 +454,7 @@ async function prepareLeadAnalysisPrompt(
         `JusBrasil ${business.name}`,
         business.primaryType || business.types?.[0] || '',
     ].filter(Boolean);
+    onProgress?.('web_search', isEn ? 'Searching web intelligence (Reclame Aqui, CNPJ, JusBrasil)...' : 'Buscando inteligência web (Reclame Aqui, CNPJ, JusBrasil)...');
     const webContext = await getWebContextForRole('lead_analysis', webQueries, context ? { workspaceId: context.workspaceId, userId: context.userId } : undefined);
     const phone = business.nationalPhoneNumber || business.internationalPhoneNumber || business.phone || '';
     const website = business.websiteUri || business.website || '';
@@ -455,6 +467,19 @@ async function prepareLeadAnalysisPrompt(
     const openingHoursText = buildOpeningHoursText(business.currentOpeningHours, isEn);
     const companyContext = buildCompanyContext(finalProfile, isEn);
     const taskDescription = buildTaskDescription(isEn);
+
+    // Build conversion context from real user data
+    onProgress?.('conversion', isEn ? 'Analyzing your conversion history...' : 'Analisando seu histórico de conversão...');
+    let conversionContext = '';
+    try {
+        const { getConversionStats, buildConversionContext: buildConvCtx } = await import('@/lib/lead-intelligence');
+        const stats = await getConversionStats(userId || '', context?.workspaceId);
+        conversionContext = buildConvCtx(stats, isEn);
+    } catch {
+        conversionContext = isEn ? 'Conversion data: Not available.' : 'Dados de conversão: Indisponíveis.';
+    }
+
+    onProgress?.('prompt', isEn ? 'Building strategic prompt...' : 'Construindo prompt estratégico...');
     const prompt = buildLeadAnalysisPrompt({
         business,
         isEn,
@@ -469,9 +494,22 @@ async function prepareLeadAnalysisPrompt(
         openingHoursText,
         webContext,
         isBusinessPlan,
+        conversionContext,
     });
     return { prompt, finalProfile };
 }
+
+export type AnalyzeProgressStep =
+    | 'profile'       // Resolving user profile
+    | 'web_search'    // Web context (Reclame Aqui, CNPJ, JusBrasil)
+    | 'conversion'    // Building conversion context
+    | 'prompt'        // Building prompt
+    | 'ai_call'       // Calling AI provider
+    | 'parsing'       // Parsing response
+    | 'saving'        // Saving to DB
+    | 'done';         // Complete
+
+export type AnalyzeProgressCallback = (step: AnalyzeProgressStep, detail?: string) => void;
 
 export async function analyzeLead(
     business: BusinessData,
@@ -479,26 +517,32 @@ export async function analyzeLead(
     locale: string = 'pt',
     userId?: string,
     isBusinessPlan: boolean = false,
-    context?: AnalyzeLeadContext
+    context?: AnalyzeLeadContext,
+    onProgress?: AnalyzeProgressCallback
 ): Promise<{ analysis: LeadAnalysis; usage?: { inputTokens: number; outputTokens: number }; provider?: string }> {
     const isEn = locale === 'en';
-    const { prompt, finalProfile } = await prepareLeadAnalysisPrompt(business, userProfile, userId, isEn, isBusinessPlan, context);
+    onProgress?.('profile', isEn ? 'Loading business profile...' : 'Carregando perfil do negócio...');
+    const { prompt, finalProfile } = await prepareLeadAnalysisPrompt(business, userProfile, userId, isEn, isBusinessPlan, context, onProgress);
 
     try {
         const { resolveAiForRole } = await import('@/lib/ai');
         const { config } = await resolveAiForRole('lead_analysis');
+        onProgress?.('ai_call', isEn ? `Analyzing with ${config.provider}...` : `Analisando com ${config.provider}...`);
         const result = await generateCompletionForRole('lead_analysis', { prompt, jsonMode: true, maxTokens: 8192 });
 
+        onProgress?.('parsing', isEn ? 'Processing AI response...' : 'Processando resposta da IA...');
         const firstBrace = result.text.indexOf('{');
         const lastBrace = result.text.lastIndexOf('}');
         const jsonExtracted = firstBrace !== -1 && lastBrace > firstBrace ? result.text.slice(firstBrace, lastBrace + 1) : null;
         const cleaned = jsonExtracted ?? result.text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
         const analysis = JSON.parse(cleaned) as LeadAnalysis;
 
+        onProgress?.('saving', isEn ? 'Saving analysis...' : 'Salvando análise...');
         saveAnalysisToDb(business.placeId, analysis, finalProfile, userId, context?.workspaceId).catch(err =>
             import('@/lib/logger').then(({ logger }) => logger.error('Save analysis error', { error: err instanceof Error ? err.message : 'Unknown' }))
         );
 
+        onProgress?.('done', isEn ? 'Analysis complete!' : 'Análise concluída!');
         return { analysis, usage: result.usage, provider: config.provider };
     } catch (error: unknown) {
         const { logger } = await import('@/lib/logger');
@@ -574,10 +618,36 @@ async function saveAnalysisToDb(placeId: string, analysis: LeadAnalysis, profile
                 socialInstagram: analysis.socialMedia?.instagram,
                 socialFacebook: analysis.socialMedia?.facebook,
                 socialLinkedin: analysis.socialMedia?.linkedin,
+                closeProbability: typeof analysis.closeProbability === 'number' ? analysis.closeProbability : undefined,
+                estimatedDealValue: typeof analysis.estimatedDealValue === 'number' ? analysis.estimatedDealValue : undefined,
+                bestContactWindow: analysis.bestContactWindow || undefined,
             }
         });
         if (userId && userId !== 'cl_guest_default') {
             await sendAnalysisReadyNotification(userId, placeId, workspaceId);
+            // Record AI_ANALYSIS event
+            const { recordLeadEvent } = await import('@/lib/lead-intelligence');
+            recordLeadEvent({
+                leadId: lead.id,
+                userId,
+                workspaceId,
+                type: 'AI_ANALYSIS',
+                newValue: String(analysis.score),
+                metadata: {
+                    scoreLabel: analysis.scoreLabel,
+                    closeProbability: analysis.closeProbability,
+                    estimatedDealValue: analysis.estimatedDealValue,
+                },
+            });
+
+            // Invalidate PipelineBrief cache so new analysis appears immediately
+            if (workspaceId) {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                prisma.pipelineBrief.deleteMany({
+                    where: { workspaceId, briefDate: today },
+                }).catch(() => {});
+            }
         }
     } catch (error) {
         const msg = error instanceof Error ? error.message : 'Unknown';

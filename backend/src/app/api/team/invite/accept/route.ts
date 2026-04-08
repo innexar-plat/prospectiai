@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { getOrCreateRequestId, jsonWithRequestId } from '@/lib/request-id';
 import { z } from 'zod';
+import { PLANS, INVITE_EXPIRATION_DAYS, type PlanType } from '@/lib/billing-config';
 
 /** POST /api/team/invite/accept — aceitar convite com token (usuário deve estar logado com o mesmo email) */
 export async function POST(req: NextRequest) {
@@ -26,6 +27,14 @@ export async function POST(req: NextRequest) {
 
         if (!invitation || invitation.status !== 'PENDING') {
             return jsonWithRequestId({ error: 'Convite não encontrado ou já utilizado' }, { status: 404, requestId });
+        }
+
+        // 7-day expiration check
+        const sentAt = invitation.lastSentAt ?? invitation.createdAt;
+        const expiresAt = new Date(sentAt.getTime() + INVITE_EXPIRATION_DAYS * 24 * 60 * 60 * 1000);
+        if (new Date() > expiresAt) {
+            await prisma.workspaceInvitation.update({ where: { id: invitation.id }, data: { status: 'EXPIRED' } });
+            return jsonWithRequestId({ error: 'Convite expirado. Solicite um novo convite ao administrador.' }, { status: 410, requestId });
         }
 
         const emailLower = session.user.email.trim().toLowerCase();
@@ -55,6 +64,17 @@ export async function POST(req: NextRequest) {
                 data: { status: 'ACCEPTED' },
             });
             return jsonWithRequestId({ ok: true, alreadyMember: true }, { requestId });
+        }
+
+        // Max members per plan check
+        const plan = (invitation.workspace.plan ?? 'FREE') as PlanType;
+        const maxMembers = PLANS[plan]?.maxMembers ?? 1;
+        const currentMemberCount = await prisma.workspaceMember.count({ where: { workspaceId: invitation.workspaceId } });
+        if (currentMemberCount >= maxMembers) {
+            return jsonWithRequestId(
+                { error: `O workspace atingiu o limite de membros do plano ${PLANS[plan].name} (${maxMembers}).` },
+                { status: 403, requestId },
+            );
         }
 
         await prisma.$transaction([

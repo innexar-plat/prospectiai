@@ -1,0 +1,3 @@
+{
+  "/api/integrations/hubspot/webhook/route": "app/api/integrations/hubspot/webhook/route.js"
+}

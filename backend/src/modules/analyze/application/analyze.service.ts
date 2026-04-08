@@ -4,7 +4,7 @@
  * Route (api) only validates, rate-limits, authenticates and calls runAnalyze.
  */
 
-import { analyzeLead, type BusinessData, type UserBusinessProfile } from '@/lib/gemini';
+import { analyzeLead, type BusinessData, type UserBusinessProfile, type AnalyzeProgressCallback } from '@/lib/gemini';
 import { resolveAiForRole } from '@/lib/ai';
 import { prisma } from '@/lib/prisma';
 import { checkMemberLimits, MemberLimitExceededError } from '@/lib/team-credits';
@@ -127,8 +127,75 @@ function buildAnalyzeProfile(
     };
 }
 
-export async function runAnalyze(input: AnalyzeInput, userId: string): Promise<AnalyzeOutput> {
-    const { userProfile, locale, placeId, name: businessName, ...rest } = input;
+/**
+ * Pre-check: validates auth, limits, existing analysis cache.
+ * Returns { cached: AnalyzeOutput } if already analyzed (no AI needed).
+ * Throws AnalyzeHttpError on limit/onboarding violations.
+ * Returns { cached: null } if analysis needs to run.
+ */
+export async function runAnalyzePreChecks(input: AnalyzeInput, userId: string): Promise<{ cached: AnalyzeOutput | null }> {
+    const { placeId: rawPlaceId } = input;
+
+    const isGooglePlaceId = rawPlaceId.startsWith('ChIJ') || rawPlaceId.startsWith('Eh');
+    let placeId = rawPlaceId;
+    if (!isGooglePlaceId) {
+        const lead = await prisma.lead.findUnique({ where: { id: rawPlaceId }, select: { placeId: true } });
+        if (lead?.placeId) placeId = lead.placeId;
+    }
+
+    const { activeWorkspace, membership } = await getUserAndWorkspaceOrThrow(userId);
+
+    try {
+        await checkMemberLimits(
+            prisma,
+            {
+                dailyLeadsLimit: membership.dailyLeadsLimit,
+                weeklyLeadsLimit: membership.weeklyLeadsLimit,
+                monthlyLeadsLimit: membership.monthlyLeadsLimit,
+            },
+            activeWorkspace.id,
+            userId,
+        );
+    } catch (err) {
+        if (err instanceof MemberLimitExceededError) {
+            throw new AnalyzeHttpError(403, {
+                error: err.message,
+                code: err.code,
+                period: err.period,
+                used: err.used,
+                limit: err.limit,
+            });
+        }
+        throw err;
+    }
+
+    const existingAnalysis = await prisma.leadAnalysis.findFirst({
+        where: { userId, lead: { placeId } },
+        include: { lead: true },
+    });
+    if (existingAnalysis) return { cached: mapExistingAnalysisToOutput(existingAnalysis) };
+
+    if (activeWorkspace.leadsUsed >= activeWorkspace.leadsLimit) {
+        throw new AnalyzeHttpError(403, {
+            error: 'Limit reached',
+            code: 'LIMIT_EXCEEDED',
+            details: `Used: ${activeWorkspace.leadsUsed}, Limit: ${activeWorkspace.leadsLimit}`,
+        });
+    }
+
+    return { cached: null };
+}
+
+export async function runAnalyze(input: AnalyzeInput, userId: string, onProgress?: AnalyzeProgressCallback): Promise<AnalyzeOutput> {
+    const { userProfile, locale, placeId: rawPlaceId, name: businessName, ...rest } = input;
+
+    // If placeId is a Prisma CUID (from pipeline/leads navigation), resolve to Google Place ID.
+    const isGooglePlaceId = rawPlaceId.startsWith('ChIJ') || rawPlaceId.startsWith('Eh');
+    let placeId = rawPlaceId;
+    if (!isGooglePlaceId) {
+        const lead = await prisma.lead.findUnique({ where: { id: rawPlaceId }, select: { placeId: true } });
+        if (lead?.placeId) placeId = lead.placeId;
+    }
     const businessData = { ...rest, placeId, name: businessName };
 
     const { user, activeWorkspace, membership } = await getUserAndWorkspaceOrThrow(userId);
@@ -176,7 +243,8 @@ export async function runAnalyze(input: AnalyzeInput, userId: string): Promise<A
 
     const { config } = await resolveAiForRole('lead_analysis');
     const { logger } = await import('@/lib/logger');
-    logger.info('Analyze using AI provider', { provider: config.provider, role: 'lead_analysis' });
+    const analyzeStart = Date.now();
+    logger.info('Analyze using AI provider', { provider: config.provider, role: 'lead_analysis', placeId: businessData.placeId });
 
     const result = await analyzeLead(
         businessData as BusinessData,
@@ -184,8 +252,12 @@ export async function runAnalyze(input: AnalyzeInput, userId: string): Promise<A
         locale || 'pt',
         userId,
         isBusinessPlan,
-        { workspaceId: activeWorkspace.id, userId }
+        { workspaceId: activeWorkspace.id, userId },
+        onProgress
     );
+
+    const durationMs = Date.now() - analyzeStart;
+    logger.info('Analyze completed', { provider: result.provider ?? config.provider, durationMs, hasUsage: !!result.usage, placeId: businessData.placeId });
 
     if (result.usage) {
         recordUsageEvent({

@@ -27,6 +27,7 @@ const ConfiguracoesPage = lazy(() => import('./pages/dashboard/ConfiguracoesPage
 const IntegracoesPage = lazy(() => import('./pages/dashboard/IntegracoesPage'));
 const ConcorrenciaPage = lazy(() => import('./pages/dashboard/ConcorrenciaPage'));
 const MercadoPage = lazy(() => import('./pages/dashboard/MercadoPage'));
+const PipelinePage = lazy(() => import('./pages/dashboard/PipelinePage'));
 const ViabilidadePage = lazy(() => import('./pages/dashboard/ViabilidadePage'));
 const MinhaEmpresaPage = lazy(() => import('./pages/dashboard/MinhaEmpresaPage'));
 const EquipePage = lazy(() => import('./pages/dashboard/EquipePage'));
@@ -151,6 +152,7 @@ function App() {
           <Route path="integracoes" element={<IntegracoesPage />} />
           <Route path="concorrencia" element={<ConcorrenciaPage />} />
           <Route path="mercado" element={<MercadoPage />} />
+          <Route path="pipeline" element={<PipelinePage />} />
           <Route path="viabilidade" element={<ViabilidadePage />} />
           <Route path="minha-empresa" element={<MinhaEmpresaPage />} />
           <Route path="equipe" element={<EquipePage />} />

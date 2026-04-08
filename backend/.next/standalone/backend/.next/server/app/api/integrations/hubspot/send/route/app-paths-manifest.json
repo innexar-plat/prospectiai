@@ -1,0 +1,3 @@
+{
+  "/api/integrations/hubspot/send/route": "app/api/integrations/hubspot/send/route.js"
+}

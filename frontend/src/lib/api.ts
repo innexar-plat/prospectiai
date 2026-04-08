@@ -57,6 +57,117 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     return res.json();
 }
 
+export type AnalyzeProgressStep = 'profile' | 'web_search' | 'conversion' | 'prompt' | 'ai_call' | 'parsing' | 'saving' | 'done';
+
+export interface AnalyzeStreamCallbacks {
+    onProgress: (step: AnalyzeProgressStep, detail?: string) => void;
+    onResult: (result: Analysis) => void;
+    onError: (error: string) => void;
+}
+
+const STEP_LABELS: Record<AnalyzeProgressStep, string> = {
+    profile: 'Carregando perfil do negócio...',
+    web_search: 'Buscando inteligência web (Reclame Aqui, CNPJ, JusBrasil)...',
+    conversion: 'Analisando seu histórico de conversão...',
+    prompt: 'Construindo prompt estratégico...',
+    ai_call: 'IA analisando o lead...',
+    parsing: 'Processando resposta da IA...',
+    saving: 'Salvando análise...',
+    done: 'Análise concluída!',
+};
+
+/**
+ * Analyze with async fire-and-poll pattern.
+ * 1. POST /api/analyze → { jobId } (fast, <1s)
+ * 2. Poll GET /api/analyze/status?jobId every 2s
+ * 3. Backend updates Redis with real progress steps
+ */
+export function analyzeStream(
+    body: Record<string, unknown>,
+    callbacks: AnalyzeStreamCallbacks,
+): { abort: () => void } {
+    let aborted = false;
+    let pollTimer: ReturnType<typeof setTimeout> | null = null;
+
+    (async () => {
+        try {
+            // 1. Fire the job
+            const { jobId, ...immediate } = await request<{ jobId?: string; score?: number }>('/analyze', {
+                method: 'POST',
+                body: JSON.stringify(body),
+            });
+
+            // If backend returned a cached result directly (no jobId), finish immediately
+            if (!jobId) {
+                callbacks.onProgress('done', STEP_LABELS.done);
+                callbacks.onResult(immediate as unknown as Analysis);
+                return;
+            }
+
+            callbacks.onProgress('profile', STEP_LABELS.profile);
+
+            // 2. Poll for status
+            const POLL_INTERVAL = 2000;
+            const MAX_POLLS = 90; // 3 min max
+            let polls = 0;
+
+            const poll = async () => {
+                if (aborted) return;
+                polls++;
+
+                try {
+                    const job = await request<{
+                        status: string;
+                        step?: AnalyzeProgressStep;
+                        result?: Analysis;
+                        error?: string;
+                    }>(`/analyze/status?jobId=${jobId}`);
+
+                    if (aborted) return;
+
+                    if (job.status === 'processing') {
+                        if (job.step) {
+                            callbacks.onProgress(job.step, STEP_LABELS[job.step] || job.step);
+                        }
+                        if (polls < MAX_POLLS) {
+                            pollTimer = setTimeout(poll, POLL_INTERVAL);
+                        } else {
+                            callbacks.onError('Tempo limite excedido. Tente novamente.');
+                        }
+                    } else if (job.status === 'done' && job.result) {
+                        callbacks.onProgress('done', STEP_LABELS.done);
+                        callbacks.onResult(job.result);
+                    } else if (job.status === 'error') {
+                        callbacks.onError(job.error || 'Erro ao analisar');
+                    } else {
+                        callbacks.onError('Job não encontrado ou expirado.');
+                    }
+                } catch (err) {
+                    if (aborted) return;
+                    // Transient poll error — retry unless max reached
+                    if (polls < MAX_POLLS) {
+                        pollTimer = setTimeout(poll, POLL_INTERVAL);
+                    } else {
+                        callbacks.onError(err instanceof Error ? err.message : 'Erro ao verificar status');
+                    }
+                }
+            };
+
+            pollTimer = setTimeout(poll, POLL_INTERVAL);
+        } catch (err) {
+            if (aborted) return;
+            callbacks.onError(err instanceof Error ? err.message : 'Erro ao iniciar análise');
+        }
+    })();
+
+    return {
+        abort: () => {
+            aborted = true;
+            if (pollTimer) clearTimeout(pollTimer);
+        },
+    };
+}
+
 // ─── Auth ────────────────────────────────────────────────────────────────────
 
 /** Get CSRF token required for NextAuth credentials sign-in */
@@ -511,6 +622,15 @@ export interface LeadAnalysisListItem {
     summary?: string;
     isFavorite?: boolean;
     suggestedWhatsAppMessage?: string;
+    closeProbability?: number;
+    estimatedDealValue?: number;
+    bestContactWindow?: string;
+    conversionReason?: string;
+    dealValue?: number;
+    lostReason?: string;
+    contactedAt?: string;
+    convertedAt?: string;
+    lostAt?: string;
     createdAt: string;
     lead: Lead;
 }
@@ -536,11 +656,70 @@ export const leadsApi = {
             method: 'PATCH',
             body: JSON.stringify({ isFavorite }),
         }),
-    updateStatus: (analysisId: string, status: 'NEW' | 'CONTACTED' | 'CONVERTED' | 'LOST') =>
+    updateStatus: (analysisId: string, status: 'NEW' | 'CONTACTED' | 'CONVERTED' | 'LOST', extra?: {
+        conversionReason?: string;
+        dealValue?: number;
+        lostReason?: string;
+    }) =>
         request<LeadAnalysisListItem>(`/leads/${analysisId}`, {
             method: 'PATCH',
-            body: JSON.stringify({ status }),
+            body: JSON.stringify({ status, ...extra }),
         }),
+};
+
+/** Pipeline Intelligence API */
+export interface PipelineRecommendation {
+    rank: number;
+    leadId: string;
+    leadPlaceId?: string;
+    analysisId: string;
+    leadName: string;
+    phone?: string;
+    closeProbability?: number;
+    estimatedDealValue?: number;
+    bestContactWindow?: string;
+    scoreLabel?: string;
+    status: string;
+    reasons: string[];
+    suggestedAction: string;
+}
+
+export interface PipelineStats {
+    totalActive: number;
+    hotLeads: number;
+    avgCloseProbability: number;
+    pipelineValue: number;
+    conversionRate: number | null;
+    avgDealValue: number | null;
+    avgCycleDays: number | null;
+    totalConverted: number;
+    totalLost: number;
+    topLostReasons: { reason: string; count: number }[];
+}
+
+export interface PipelineBrief {
+    recommendations: PipelineRecommendation[];
+    stats: PipelineStats;
+}
+
+export interface ConversionStats {
+    totalAnalyzed: number;
+    contacted: number;
+    converted: number;
+    lost: number;
+    conversionRate: number | null;
+    avgDealValue: number | null;
+    totalRevenue: number | null;
+    avgCycleDays: number | null;
+    topLostReasons: { reason: string; count: number }[];
+    topConvertingTypes: { type: string; count: number }[];
+    convertedWithoutWebsite: number | null;
+    convertedWithoutPhone: number | null;
+}
+
+export const pipelineApi = {
+    getDailyBrief: () => request<PipelineBrief>('/pipeline/daily-brief'),
+    getStats: () => request<ConversionStats>('/pipeline/stats'),
 };
 
 // ─── User ────────────────────────────────────────────────────────────────────
@@ -606,6 +785,8 @@ export interface SessionUser {
     websiteUrl?: string | null;
     /** When true, front must redirect to /onboarding before using dashboard. */
     requiresOnboarding?: boolean;
+    /** True if user has verified their email address. */
+    emailVerified?: boolean;
     twoFactorEnabled?: boolean;
     subscriptionStatus?: string | null;
     currentPeriodEnd?: string | null;

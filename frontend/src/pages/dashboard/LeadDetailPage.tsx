@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Sparkles, Loader2, ExternalLink, Phone, MapPin, Globe, Tag, Plus, X, MessageCircle, Copy, Check, Star, ChevronDown, ChevronUp, Target, AlertTriangle, TrendingUp, Share2, Mail, Zap } from 'lucide-react';
-import type { Place, PlaceDetail, Analysis, LeadTagItem, LeadAnalysisListItem } from '@/lib/api';
-import { searchApi, activityApi, tagsApi, leadsApi } from '@/lib/api';
+import type { Place, PlaceDetail, Analysis, LeadTagItem, LeadAnalysisListItem, AnalyzeProgressStep } from '@/lib/api';
+import { searchApi, activityApi, tagsApi, leadsApi, analyzeStream } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { useToast } from '@/contexts/ToastContext';
@@ -344,6 +344,7 @@ interface LeadDetailContentProps {
   showTagInput: boolean;
   newTag: string;
   analyzing: boolean;
+  currentStep: AnalyzeProgressStep | null;
   copiedPhone: boolean;
   savingLead: boolean;
   onBack: () => void;
@@ -494,10 +495,12 @@ function LeadDetailTagsSection({
 function LeadDetailAnalysisSection({
   analysis,
   analyzing,
+  currentStep,
   onAnalyze,
 }: {
   analysis: Analysis | null;
   analyzing: boolean;
+  currentStep: AnalyzeProgressStep | null;
   onAnalyze: () => void;
 }) {
   return (
@@ -508,10 +511,13 @@ function LeadDetailAnalysisSection({
       </h2>
       {!analysis ? (
         <div className="flex flex-col items-start gap-4 pb-2">
-          <p className="text-sm text-muted">
-            Descubra oportunidades ocultas, pontos fracos da concorrência e receba um relatório completo
-            de como abordar este lead de forma imbatível usando nossa Inteligência Artificial Mapeadora.
-          </p>
+          {!analyzing && (
+            <p className="text-sm text-muted">
+              Descubra oportunidades ocultas, pontos fracos da concorrência e receba um relatório completo
+              de como abordar este lead de forma imbatível usando nossa Inteligência Artificial Mapeadora.
+            </p>
+          )}
+          {analyzing && currentStep && <AnalysisProgressSteps currentStep={currentStep} />}
           <Button
             variant="primary"
             onClick={onAnalyze}
@@ -529,8 +535,67 @@ function LeadDetailAnalysisSection({
   );
 }
 
+const STEP_CONFIG: { key: AnalyzeProgressStep; icon: string; label: string }[] = [
+  { key: 'profile', icon: '👤', label: 'Carregando perfil do negócio' },
+  { key: 'web_search', icon: '🌐', label: 'Buscando inteligência web' },
+  { key: 'conversion', icon: '📊', label: 'Analisando histórico de conversão' },
+  { key: 'prompt', icon: '🧠', label: 'Construindo prompt estratégico' },
+  { key: 'ai_call', icon: '🤖', label: 'IA analisando o lead' },
+  { key: 'parsing', icon: '📋', label: 'Processando resposta' },
+  { key: 'saving', icon: '💾', label: 'Salvando análise' },
+  { key: 'done', icon: '✅', label: 'Análise concluída!' },
+];
+
+function AnalysisProgressSteps({ currentStep }: { currentStep: AnalyzeProgressStep }) {
+  const stepIndex = STEP_CONFIG.findIndex((s) => s.key === currentStep);
+
+  return (
+    <div className="w-full space-y-2 py-2">
+      <div className="h-1.5 w-full bg-surface rounded-full overflow-hidden">
+        <div
+          className="h-full bg-gradient-to-r from-violet-500 to-indigo-500 rounded-full transition-all duration-700 ease-out"
+          style={{ width: `${Math.max(5, ((stepIndex + 1) / STEP_CONFIG.length) * 100)}%` }}
+        />
+      </div>
+      <div className="space-y-1.5">
+        {STEP_CONFIG.map((step, i) => {
+          const isActive = i === stepIndex;
+          const isDone = i < stepIndex;
+          const isPending = i > stepIndex;
+          return (
+            <div
+              key={step.key}
+              className={`flex items-center gap-2.5 text-xs px-2 py-1 rounded-lg transition-all duration-500 ${
+                isActive
+                  ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400 font-semibold'
+                  : isDone
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : isPending
+                  ? 'text-muted/40'
+                  : 'text-muted'
+              }`}
+            >
+              <span className="w-5 text-center flex-shrink-0">
+                {isDone ? (
+                  <Check size={14} className="text-emerald-500" />
+                ) : isActive ? (
+                  <Loader2 size={14} className="animate-spin text-violet-500" />
+                ) : (
+                  <span className="opacity-40">{step.icon}</span>
+                )}
+              </span>
+              <span>{step.label}</span>
+              {isActive && <span className="ml-auto text-[10px] text-muted animate-pulse">processando...</span>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function LeadDetailContent(props: LeadDetailContentProps) {
-  const { place, analysis, tags, leadAnalysisItem, togglingFavorite, showTagInput, newTag, analyzing, copiedPhone, savingLead, onBack, onToggleFavorite, onSaveLead, onCopyPhone, onAddTag, onRemoveTag, setNewTag, setShowTagInput, onAnalyze, trackAction, onCrmSuccess, onCrmError, onCrmWarning } = props;
+  const { place, analysis, tags, leadAnalysisItem, togglingFavorite, showTagInput, newTag, analyzing, currentStep, copiedPhone, savingLead, onBack, onToggleFavorite, onSaveLead, onCopyPhone, onAddTag, onRemoveTag, setNewTag, setShowTagInput, onAnalyze, trackAction, onCrmSuccess, onCrmError, onCrmWarning } = props;
   const name = place.displayName?.text ?? place.id;
   return (
     <>
@@ -540,7 +605,7 @@ function LeadDetailContent(props: LeadDetailContentProps) {
         <LeadDetailInfoSection place={place} trackAction={trackAction} />
         <LeadContactActions place={place} copiedPhone={copiedPhone} onCopyPhone={onCopyPhone} trackAction={trackAction} />
         <LeadDetailTagsSection tags={tags} showTagInput={showTagInput} newTag={newTag} onAddTag={onAddTag} onRemoveTag={onRemoveTag} setNewTag={setNewTag} setShowTagInput={setShowTagInput} />
-        <LeadDetailAnalysisSection analysis={analysis} analyzing={analyzing} onAnalyze={onAnalyze} />
+        <LeadDetailAnalysisSection analysis={analysis} analyzing={analyzing} currentStep={currentStep} onAnalyze={onAnalyze} />
       </div>
       <CrmSidePanel place={place} analysis={analysis} analyzing={analyzing} onSuccess={onCrmSuccess} onError={onCrmError} onWarning={onCrmWarning} />
     </>
@@ -558,6 +623,8 @@ export default function LeadDetailPage() {
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(!placeFromState && !!placeId);
   const [analyzing, setAnalyzing] = useState(false);
+  const [currentStep, setCurrentStep] = useState<AnalyzeProgressStep | null>(null);
+  const streamAbortRef = useRef<{ abort: () => void } | null>(null);
   const [tags, setTags] = useState<LeadTagItem[]>([]);
   const [newTag, setNewTag] = useState('');
   const [showTagInput, setShowTagInput] = useState(false);
@@ -572,7 +639,8 @@ export default function LeadDetailPage() {
     let cancelled = false;
     leadsApi.list().then((list) => {
       if (!cancelled) {
-        const found = list.find((a) => a.lead?.placeId === placeId);
+        // Match by placeId (Google Place ID) OR lead.id (Prisma CUID — from pipeline navigation)
+        const found = list.find((a) => a.lead?.placeId === placeId || a.lead?.id === placeId);
         setLeadAnalysisItem(found ?? null);
       }
     }).catch(() => {});
@@ -585,7 +653,7 @@ export default function LeadDetailPage() {
     let cancelled = false;
     leadsApi.list().then((list) => {
       if (!cancelled) {
-        const found = list.find((a) => a.lead?.placeId === placeId);
+        const found = list.find((a) => a.lead?.placeId === placeId || a.lead?.id === placeId);
         setLeadAnalysisItem((prev) => found ?? prev);
       }
     }).catch(() => {});
@@ -706,21 +774,38 @@ export default function LeadDetailPage() {
     };
   }, [placeId, placeFromState, navigate, addToast]);
 
-  const handleAnalyze = async () => {
-    if (!place?.id) return;
+  const handleAnalyze = useCallback(() => {
+    if (!place?.id || analyzing) return;
     setAnalyzing(true);
-    try {
-      const result = await searchApi.analyze(buildAnalyzePayload(place));
-      setAnalysis(result);
-      window.dispatchEvent(new Event('refresh-user'));
-      addToast('success', result.aiProvider ? `Análise concluída (${getAnalysisProviderLabel(result.aiProvider)}).` : 'Análise concluída.');
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Erro ao analisar';
-      addToast('error', msg);
-    } finally {
-      setAnalyzing(false);
-    }
-  };
+    setCurrentStep(null);
+
+    const payload = buildAnalyzePayload(place);
+
+    streamAbortRef.current = analyzeStream(payload as unknown as Record<string, unknown>, {
+      onProgress: (step) => {
+        setCurrentStep(step);
+      },
+      onResult: (result) => {
+        setAnalysis(result);
+        setAnalyzing(false);
+        setCurrentStep(null);
+        streamAbortRef.current = null;
+        window.dispatchEvent(new Event('refresh-user'));
+        addToast('success', result.aiProvider ? `Análise concluída (${getAnalysisProviderLabel(result.aiProvider)}).` : 'Análise concluída.');
+      },
+      onError: (msg) => {
+        setAnalyzing(false);
+        setCurrentStep(null);
+        streamAbortRef.current = null;
+        addToast('error', msg);
+      },
+    });
+  }, [place, analyzing, addToast]);
+
+  // Cleanup stream on unmount
+  useEffect(() => {
+    return () => { streamAbortRef.current?.abort(); };
+  }, []);
 
   if (!placeId) return null;
   if (loadingDetails && !place) return <LeadDetailLoading />;
@@ -736,6 +821,7 @@ export default function LeadDetailPage() {
       showTagInput={showTagInput}
       newTag={newTag}
       analyzing={analyzing}
+      currentStep={currentStep}
       copiedPhone={copiedPhone}
       savingLead={savingLead}
       onBack={() => navigate(-1)}

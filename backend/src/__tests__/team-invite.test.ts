@@ -2,15 +2,17 @@ const { POST } = require('@/app/api/team/invite/route');
 const { auth } = require('@/auth');
 const { prisma } = require('@/lib/prisma');
 const { sendTeamInviteEmail } = require('@/lib/email');
+const { rateLimit } = require('@/lib/ratelimit');
 jest.mock('@/auth', () => ({ auth: jest.fn() }));
 jest.mock('@/lib/prisma', () => ({
   prisma: {
     user: { findUnique: jest.fn() },
-    workspaceMember: { findFirst: jest.fn() },
-    workspaceInvitation: { upsert: jest.fn() },
+    workspaceMember: { findFirst: jest.fn(), count: jest.fn().mockResolvedValue(1) },
+    workspaceInvitation: { upsert: jest.fn(), count: jest.fn().mockResolvedValue(0) },
   },
 }));
 jest.mock('@/lib/email', () => ({ sendTeamInviteEmail: jest.fn().mockResolvedValue({ sent: true }) }));
+jest.mock('@/lib/ratelimit', () => ({ rateLimit: jest.fn().mockResolvedValue({ success: true, remaining: 9, reset: Date.now() + 300000 }) }));
 
 describe('POST /api/team/invite', () => {
   beforeEach(() => { jest.clearAllMocks(); });
@@ -25,7 +27,7 @@ describe('POST /api/team/invite', () => {
   });
   it('returns 400 when email invalid', async () => {
     auth.mockResolvedValue({ user: { id: 'u1' }, expires: '' });
-    prisma.user.findUnique.mockResolvedValue({ name: 'Alice', workspaces: [{ workspaceId: 'w1', role: 'OWNER', workspace: { name: 'WS' } }] });
+    prisma.user.findUnique.mockResolvedValue({ name: 'Alice', workspaces: [{ workspaceId: 'w1', role: 'OWNER', workspace: { name: 'WS', plan: 'SCALE' } }] });
     const res = await POST(new Request('http://localhost/api/team/invite', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
@@ -44,7 +46,7 @@ describe('POST /api/team/invite', () => {
   });
   it('returns 403 when not OWNER or ADMIN', async () => {
     auth.mockResolvedValue({ user: { id: 'u1' }, expires: '' });
-    prisma.user.findUnique.mockResolvedValue({ workspaces: [{ workspaceId: 'w1', role: 'MEMBER', workspace: { name: 'WS' } }] });
+    prisma.user.findUnique.mockResolvedValue({ workspaces: [{ workspaceId: 'w1', role: 'MEMBER', workspace: { name: 'WS', plan: 'SCALE' } }] });
     const res = await POST(new Request('http://localhost/api/team/invite', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: 'x@y.com' }),
@@ -53,7 +55,7 @@ describe('POST /api/team/invite', () => {
   });
   it('returns 400 when user already in workspace', async () => {
     auth.mockResolvedValue({ user: { id: 'u1' }, expires: '' });
-    prisma.user.findUnique.mockResolvedValue({ name: 'Alice', workspaces: [{ workspaceId: 'w1', role: 'OWNER', workspace: { name: 'My Workspace' } }] });
+    prisma.user.findUnique.mockResolvedValue({ name: 'Alice', workspaces: [{ workspaceId: 'w1', role: 'OWNER', workspace: { name: 'My Workspace', plan: 'SCALE' } }] });
     prisma.workspaceMember.findFirst.mockResolvedValue({ id: 'wm1' });
     const res = await POST(new Request('http://localhost/api/team/invite', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -67,7 +69,7 @@ describe('POST /api/team/invite', () => {
     prisma.user.findUnique.mockResolvedValue({
       name: 'Alice',
       email: 'alice@x.com',
-      workspaces: [{ workspaceId: 'w1', role: 'OWNER', workspace: { name: 'My Workspace' } }],
+      workspaces: [{ workspaceId: 'w1', role: 'OWNER', workspace: { name: 'My Workspace', plan: 'SCALE' } }],
     });
     prisma.workspaceMember.findFirst.mockResolvedValue(null);
     prisma.workspaceInvitation.upsert.mockResolvedValue({
@@ -96,7 +98,7 @@ describe('POST /api/team/invite', () => {
     auth.mockResolvedValue({ user: { id: 'u1', name: 'Alice' }, expires: '' });
     prisma.user.findUnique.mockResolvedValue({
       name: 'Alice',
-      workspaces: [{ workspaceId: 'w1', role: 'OWNER', workspace: { name: 'My Workspace' } }],
+      workspaces: [{ workspaceId: 'w1', role: 'OWNER', workspace: { name: 'My Workspace', plan: 'SCALE' } }],
     });
     prisma.workspaceMember.findFirst.mockResolvedValue(null);
     prisma.workspaceInvitation.upsert.mockResolvedValue({
@@ -116,7 +118,7 @@ describe('POST /api/team/invite', () => {
   it('returns 200 when invite created but sendTeamInviteEmail rejects (catch path)', async () => {
     auth.mockResolvedValue({ user: { id: 'u1' }, expires: '' });
     prisma.user.findUnique.mockResolvedValue({
-      workspaces: [{ workspaceId: 'w1', role: 'OWNER', workspace: { name: 'WS' } }],
+      workspaces: [{ workspaceId: 'w1', role: 'OWNER', workspace: { name: 'WS', plan: 'SCALE' } }],
     });
     prisma.workspaceMember.findFirst.mockResolvedValue(null);
     prisma.workspaceInvitation.upsert.mockResolvedValue({
@@ -136,7 +138,7 @@ describe('POST /api/team/invite', () => {
   it('returns 500 when upsert throws', async () => {
     auth.mockResolvedValue({ user: { id: 'u1' }, expires: '' });
     prisma.user.findUnique.mockResolvedValue({
-      workspaces: [{ workspaceId: 'w1', role: 'OWNER', workspace: { name: 'WS' } }],
+      workspaces: [{ workspaceId: 'w1', role: 'OWNER', workspace: { name: 'WS', plan: 'SCALE' } }],
     });
     prisma.workspaceMember.findFirst.mockResolvedValue(null);
     prisma.workspaceInvitation.upsert.mockRejectedValue(new Error('DB error'));
@@ -146,5 +148,37 @@ describe('POST /api/team/invite', () => {
     }));
     expect(res.status).toBe(500);
     expect(await res.json()).toMatchObject({ error: 'Internal Server Error' });
+  });
+  it('returns 429 when rate limited', async () => {
+    auth.mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    prisma.user.findUnique.mockResolvedValue({
+      name: 'Alice',
+      workspaces: [{ workspaceId: 'w1', role: 'OWNER', workspace: { name: 'WS', plan: 'SCALE' } }],
+    });
+    prisma.workspaceMember.findFirst.mockResolvedValue(null);
+    rateLimit.mockResolvedValue({ success: false, remaining: 0, reset: Date.now() + 300000 });
+    const res = await POST(new Request('http://localhost/api/team/invite', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'new@x.com' }),
+    }));
+    expect(res.status).toBe(429);
+  });
+  it('returns 403 when max members per plan reached', async () => {
+    auth.mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    prisma.user.findUnique.mockResolvedValue({
+      name: 'Alice',
+      workspaces: [{ workspaceId: 'w1', role: 'OWNER', workspace: { name: 'WS', plan: 'FREE' } }],
+    });
+    prisma.workspaceMember.findFirst.mockResolvedValue(null);
+    prisma.workspaceMember.count.mockResolvedValue(1);
+    prisma.workspaceInvitation.count.mockResolvedValue(0);
+    rateLimit.mockResolvedValue({ success: true, remaining: 9, reset: Date.now() + 300000 });
+    const res = await POST(new Request('http://localhost/api/team/invite', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'new@x.com' }),
+    }));
+    expect(res.status).toBe(403);
+    const json = await res.json();
+    expect(json.error).toMatch(/Limite de membros/);
   });
 });

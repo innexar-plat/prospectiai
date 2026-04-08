@@ -7,6 +7,7 @@ import { analyzeLead } from '@/lib/gemini';
 jest.mock('@/lib/prisma', () => ({
     prisma: {
         user: { findUnique: jest.fn() },
+        lead: { findUnique: jest.fn() },
         leadAnalysis: { findFirst: jest.fn(), updateMany: jest.fn() },
         workspace: { update: jest.fn() },
         searchHistory: { count: jest.fn() },
@@ -93,6 +94,7 @@ describe('runAnalyze', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         (prisma.user.findUnique as jest.Mock).mockResolvedValue(defaultUser());
+        ((prisma as any).lead.findUnique as jest.Mock).mockResolvedValue(null);
         (checkMemberLimits as jest.Mock).mockResolvedValue(undefined);
         (prisma.leadAnalysis.findFirst as jest.Mock).mockResolvedValue(null);
         (prisma.workspace.update as jest.Mock).mockResolvedValue({});
@@ -263,7 +265,8 @@ describe('runAnalyze', () => {
             'pt',
             userId,
             false,
-            { workspaceId, userId }
+            { workspaceId, userId },
+            undefined
         );
         expect(prisma.workspace.update).toHaveBeenCalledWith({
             where: { id: workspaceId },
@@ -297,7 +300,8 @@ describe('runAnalyze', () => {
             'pt',
             userId,
             false,
-            expect.any(Object)
+            expect.any(Object),
+            undefined
         );
     });
 
@@ -339,7 +343,8 @@ describe('runAnalyze', () => {
             'pt',
             userId,
             false,
-            expect.any(Object)
+            expect.any(Object),
+            undefined
         );
     });
 });

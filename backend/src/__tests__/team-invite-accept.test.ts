@@ -7,7 +7,7 @@ jest.mock('@/lib/prisma', () => ({
   prisma: {
     workspaceInvitation: { findUnique: jest.fn(), update: jest.fn() },
     user: { findUnique: jest.fn() },
-    workspaceMember: { findUnique: jest.fn(), create: jest.fn() },
+    workspaceMember: { findUnique: jest.fn(), create: jest.fn(), count: jest.fn().mockResolvedValue(1) },
     $transaction: jest.fn((fn) => (Array.isArray(fn) ? Promise.all(fn.map((p) => p)) : fn(prisma))),
   },
 }));
@@ -79,7 +79,7 @@ describe('POST /api/team/invite/accept', () => {
       email: 'a@x.com',
       workspaceId: 'w1',
       status: 'ACCEPTED',
-      workspace: {},
+      workspace: { plan: 'SCALE' },
     });
     const res = await POST(req({ token: 't1' }));
     expect(res.status).toBe(404);
@@ -91,8 +91,8 @@ describe('POST /api/team/invite/accept', () => {
       id: 'inv1',
       email: 'invited@x.com',
       workspaceId: 'w1',
-      status: 'PENDING',
-      workspace: {},
+      status: 'PENDING', lastSentAt: new Date(),
+      workspace: { plan: 'SCALE' },
     });
     const res = await POST(req({ token: 't1' }));
     expect(res.status).toBe(403);
@@ -105,8 +105,8 @@ describe('POST /api/team/invite/accept', () => {
       id: 'inv1',
       email: 'a@x.com',
       workspaceId: 'w1',
-      status: 'PENDING',
-      workspace: {},
+      status: 'PENDING', lastSentAt: new Date(),
+      workspace: { plan: 'SCALE' },
     });
     (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue(null);
     const res = await POST(req({ token: 't1' }));
@@ -120,8 +120,8 @@ describe('POST /api/team/invite/accept', () => {
       id: 'inv1',
       email: 'a@x.com',
       workspaceId: 'w1',
-      status: 'PENDING',
-      workspace: {},
+      status: 'PENDING', lastSentAt: new Date(),
+      workspace: { plan: 'SCALE' },
     });
     (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({ id: 'u1' });
     (mockPrisma.workspaceMember.findUnique as jest.Mock).mockResolvedValue({ id: 'wm1' });
@@ -144,8 +144,8 @@ describe('POST /api/team/invite/accept', () => {
       id: 'inv1',
       email: 'a@x.com',
       workspaceId: 'w1',
-      status: 'PENDING',
-      workspace: {},
+      status: 'PENDING', lastSentAt: new Date(),
+      workspace: { plan: 'SCALE' },
     });
     (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({ id: 'u1' });
     (mockPrisma.workspaceMember.findUnique as jest.Mock).mockResolvedValue(null);
@@ -170,8 +170,8 @@ describe('POST /api/team/invite/accept', () => {
       id: 'inv1',
       email: 'a@x.com',
       workspaceId: 'w1',
-      status: 'PENDING',
-      workspace: {},
+      status: 'PENDING', lastSentAt: new Date(),
+      workspace: { plan: 'SCALE' },
     });
     (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({ id: 'u1' });
     (mockPrisma.workspaceMember.findUnique as jest.Mock).mockResolvedValue(null);
@@ -188,8 +188,8 @@ describe('POST /api/team/invite/accept', () => {
       id: 'inv1',
       email: 'a@x.com',
       workspaceId: 'w1',
-      status: 'PENDING',
-      workspace: {},
+      status: 'PENDING', lastSentAt: new Date(),
+      workspace: { plan: 'SCALE' },
     });
     (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({ id: 'u1' });
     (mockPrisma.workspaceMember.findUnique as jest.Mock).mockResolvedValue(null);
@@ -198,5 +198,47 @@ describe('POST /api/team/invite/accept', () => {
     const res = await POST(req({ token: 't1' }));
     expect(res.status).toBe(500);
     expect(await res.json()).toMatchObject({ error: 'Internal server error' });
+  });
+
+  it('returns 410 when invitation is expired (7+ days old)', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1', email: 'a@x.com' }, expires: '' });
+    const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
+    (mockPrisma.workspaceInvitation.findUnique as jest.Mock).mockResolvedValue({
+      id: 'inv1',
+      email: 'a@x.com',
+      workspaceId: 'w1',
+      status: 'PENDING', lastSentAt: eightDaysAgo,
+      createdAt: eightDaysAgo,
+      workspace: { plan: 'SCALE' },
+    });
+    (mockPrisma.workspaceInvitation.update as jest.Mock).mockResolvedValue({});
+
+    const res = await POST(req({ token: 't1' }));
+    expect(res.status).toBe(410);
+    const json = await res.json();
+    expect(json.error).toMatch(/expirado/i);
+    expect(mockPrisma.workspaceInvitation.update).toHaveBeenCalledWith({
+      where: { id: 'inv1' },
+      data: { status: 'EXPIRED' },
+    });
+  });
+
+  it('returns 403 when workspace max members reached', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1', email: 'a@x.com' }, expires: '' });
+    (mockPrisma.workspaceInvitation.findUnique as jest.Mock).mockResolvedValue({
+      id: 'inv1',
+      email: 'a@x.com',
+      workspaceId: 'w1',
+      status: 'PENDING', lastSentAt: new Date(),
+      workspace: { plan: 'FREE' },
+    });
+    (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({ id: 'u1' });
+    (mockPrisma.workspaceMember.findUnique as jest.Mock).mockResolvedValue(null);
+    (mockPrisma.workspaceMember.count as jest.Mock).mockResolvedValue(1);
+
+    const res = await POST(req({ token: 't1' }));
+    expect(res.status).toBe(403);
+    const json = await res.json();
+    expect(json.error).toMatch(/limite de membros/i);
   });
 });

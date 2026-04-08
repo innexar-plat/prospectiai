@@ -107,6 +107,15 @@ export async function POST(req: NextRequest) {
             include: { lead: true },
         });
 
+        // Invalidate PipelineBrief cache so new lead appears
+        if (workspaceId) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            prisma.pipelineBrief.deleteMany({
+                where: { workspaceId, briefDate: today },
+            }).catch(() => {});
+        }
+
         return NextResponse.json(analysis, { status: 201 });
     } catch (error) {
         const { logger } = await import('@/lib/logger');

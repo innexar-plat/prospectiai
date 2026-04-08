@@ -1,0 +1,3 @@
+{
+  "/api/push-subscription/vapid-key/route": "app/api/push-subscription/vapid-key/route.js"
+}

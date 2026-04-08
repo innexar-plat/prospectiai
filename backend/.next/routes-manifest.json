@@ -24,7 +24,7 @@
         },
         {
           "key": "Access-Control-Allow-Origin",
-          "value": "https://prospectorai.innexar.com.br"
+          "value": "https://precisionia.com.br"
         },
         {
           "key": "Access-Control-Allow-Methods",
@@ -59,10 +59,6 @@
         {
           "key": "Permissions-Policy",
           "value": "camera=(), microphone=(), geolocation=()"
-        },
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self'; frame-ancestors 'none'; form-action 'self'"
         }
       ],
       "regex": "^(?:/(.*))(?:/)?$"
@@ -172,12 +168,28 @@
       "namedRegex": "^/api/leads/(?<nxtPid>[^/]+?)(?:/)?$"
     },
     {
+      "page": "/api/leads/[id]/events",
+      "regex": "^/api/leads/([^/]+?)/events(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/leads/(?<nxtPid>[^/]+?)/events(?:/)?$"
+    },
+    {
       "page": "/api/notifications/[id]",
       "regex": "^/api/notifications/([^/]+?)(?:/)?$",
       "routeKeys": {
         "nxtPid": "nxtPid"
       },
       "namedRegex": "^/api/notifications/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/oauth/[provider]",
+      "regex": "^/api/oauth/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPprovider": "nxtPprovider"
+      },
+      "namedRegex": "^/api/oauth/(?<nxtPprovider>[^/]+?)(?:/)?$"
     },
     {
       "page": "/api/search/history/[id]",
@@ -306,6 +318,12 @@
       "namedRegex": "^/api/admin/integrations/agendor/observability(?:/)?$"
     },
     {
+      "page": "/api/admin/integrations/hubspot/observability",
+      "regex": "^/api/admin/integrations/hubspot/observability(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/integrations/hubspot/observability(?:/)?$"
+    },
+    {
       "page": "/api/admin/leads",
       "regex": "^/api/admin/leads(?:/)?$",
       "routeKeys": {},
@@ -420,6 +438,18 @@
       "namedRegex": "^/api/analyze/batch(?:/)?$"
     },
     {
+      "page": "/api/analyze/status",
+      "regex": "^/api/analyze/status(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/analyze/status(?:/)?$"
+    },
+    {
+      "page": "/api/analyze/stream",
+      "regex": "^/api/analyze/stream(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/analyze/stream(?:/)?$"
+    },
+    {
       "page": "/api/auth/2fa/disable",
       "regex": "^/api/auth/2fa/disable(?:/)?$",
       "routeKeys": {},
@@ -472,6 +502,18 @@
       "regex": "^/api/billing/apply\\-pending\\-plans(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/billing/apply\\-pending\\-plans(?:/)?$"
+    },
+    {
+      "page": "/api/billing/cancel-pending-downgrade",
+      "regex": "^/api/billing/cancel\\-pending\\-downgrade(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/billing/cancel\\-pending\\-downgrade(?:/)?$"
+    },
+    {
+      "page": "/api/billing/cancel-subscription",
+      "regex": "^/api/billing/cancel\\-subscription(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/billing/cancel\\-subscription(?:/)?$"
     },
     {
       "page": "/api/billing/checkout",
@@ -576,6 +618,54 @@
       "namedRegex": "^/api/integrations/agendor/users(?:/)?$"
     },
     {
+      "page": "/api/integrations/hubspot",
+      "regex": "^/api/integrations/hubspot(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/integrations/hubspot(?:/)?$"
+    },
+    {
+      "page": "/api/integrations/hubspot/disconnect",
+      "regex": "^/api/integrations/hubspot/disconnect(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/integrations/hubspot/disconnect(?:/)?$"
+    },
+    {
+      "page": "/api/integrations/hubspot/oauth/callback",
+      "regex": "^/api/integrations/hubspot/oauth/callback(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/integrations/hubspot/oauth/callback(?:/)?$"
+    },
+    {
+      "page": "/api/integrations/hubspot/oauth/connect",
+      "regex": "^/api/integrations/hubspot/oauth/connect(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/integrations/hubspot/oauth/connect(?:/)?$"
+    },
+    {
+      "page": "/api/integrations/hubspot/owners",
+      "regex": "^/api/integrations/hubspot/owners(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/integrations/hubspot/owners(?:/)?$"
+    },
+    {
+      "page": "/api/integrations/hubspot/pipelines",
+      "regex": "^/api/integrations/hubspot/pipelines(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/integrations/hubspot/pipelines(?:/)?$"
+    },
+    {
+      "page": "/api/integrations/hubspot/send",
+      "regex": "^/api/integrations/hubspot/send(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/integrations/hubspot/send(?:/)?$"
+    },
+    {
+      "page": "/api/integrations/hubspot/webhook",
+      "regex": "^/api/integrations/hubspot/webhook(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/integrations/hubspot/webhook(?:/)?$"
+    },
+    {
       "page": "/api/integrations/rdstation",
       "regex": "^/api/integrations/rdstation(?:/)?$",
       "routeKeys": {},
@@ -660,6 +750,18 @@
       "namedRegex": "^/api/onboarding/complete(?:/)?$"
     },
     {
+      "page": "/api/pipeline/daily-brief",
+      "regex": "^/api/pipeline/daily\\-brief(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/pipeline/daily\\-brief(?:/)?$"
+    },
+    {
+      "page": "/api/pipeline/stats",
+      "regex": "^/api/pipeline/stats(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/pipeline/stats(?:/)?$"
+    },
+    {
       "page": "/api/plans",
       "regex": "^/api/plans(?:/)?$",
       "routeKeys": {},
@@ -670,6 +772,18 @@
       "regex": "^/api/product/modules(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/product/modules(?:/)?$"
+    },
+    {
+      "page": "/api/push-subscription",
+      "regex": "^/api/push\\-subscription(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/push\\-subscription(?:/)?$"
+    },
+    {
+      "page": "/api/push-subscription/vapid-key",
+      "regex": "^/api/push\\-subscription/vapid\\-key(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/push\\-subscription/vapid\\-key(?:/)?$"
     },
     {
       "page": "/api/ready",
@@ -772,6 +886,18 @@
       "regex": "^/api/team/role(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/team/role(?:/)?$"
+    },
+    {
+      "page": "/api/user/account",
+      "regex": "^/api/user/account(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/user/account(?:/)?$"
+    },
+    {
+      "page": "/api/user/export",
+      "regex": "^/api/user/export(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/user/export(?:/)?$"
     },
     {
       "page": "/api/user/me",

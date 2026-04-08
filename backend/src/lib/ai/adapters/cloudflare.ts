@@ -64,8 +64,8 @@ type CloudflareResponse = {
     usage?: { prompt_tokens?: number; completion_tokens?: number };
 };
 
-const CLOUDFLARE_TIMEOUT_MS = 60000;
-const CLOUDFLARE_MAX_RETRIES = 2;
+const CLOUDFLARE_TIMEOUT_MS = 45000;
+const CLOUDFLARE_MAX_RETRIES = 1;
 
 function cfSleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -81,6 +81,7 @@ async function runCloudflareCompletion(
     for (let attempt = 0; attempt <= CLOUDFLARE_MAX_RETRIES; attempt++) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), CLOUDFLARE_TIMEOUT_MS);
+        const startMs = Date.now();
         try {
             const res = await fetch(url, {
                 method: 'POST',
@@ -89,9 +90,11 @@ async function runCloudflareCompletion(
                 signal: controller.signal,
             });
             clearTimeout(timeoutId);
+            const elapsed = Date.now() - startMs;
 
             // Retry on 520 (Cloudflare transient) or 5xx
             if (!res.ok && attempt < CLOUDFLARE_MAX_RETRIES && (res.status === 520 || res.status >= 500)) {
+                console.error(`[CF-AI] Attempt ${attempt + 1} failed: status ${res.status} (${elapsed}ms)`);
                 const backoff = 2000 * Math.pow(2, attempt);
                 await cfSleep(backoff);
                 continue;
@@ -105,10 +108,13 @@ async function runCloudflareCompletion(
             const usage = data.usage
                 ? { inputTokens: data.usage.prompt_tokens ?? 0, outputTokens: data.usage.completion_tokens ?? 0 }
                 : undefined;
+            console.log(`[CF-AI] OK in ${elapsed}ms, tokens: in=${usage?.inputTokens ?? '?'} out=${usage?.outputTokens ?? '?'}`);
             return { text, usage };
         } catch (err) {
             clearTimeout(timeoutId);
+            const elapsed = Date.now() - startMs;
             lastErr = err instanceof Error ? err : new Error(String(err));
+            console.error(`[CF-AI] Attempt ${attempt + 1} error after ${elapsed}ms: ${lastErr.message}`);
             if (attempt < CLOUDFLARE_MAX_RETRIES) {
                 const backoff = 2000 * Math.pow(2, attempt);
                 await cfSleep(backoff);

@@ -17,7 +17,19 @@ export async function GET(req: NextRequest) {
         if (!parsed.success) {
             return jsonWithRequestId({ error: formatZodError(parsed) }, { status: 400, requestId });
         }
-        const { placeId } = parsed.data;
+        const { placeId: rawPlaceId } = parsed.data;
+
+        // If the provided ID is a Prisma CUID (not a Google Place ID), resolve it from the DB.
+        const isGooglePlaceId = rawPlaceId.startsWith('ChIJ') || rawPlaceId.startsWith('Eh');
+        let placeId = rawPlaceId;
+        if (!isGooglePlaceId) {
+            const lead = await prisma.lead.findUnique({ where: { id: rawPlaceId }, select: { placeId: true } });
+            if (lead?.placeId) {
+                placeId = lead.placeId;
+            } else {
+                return jsonWithRequestId({ error: 'Lead not found' }, { status: 404, requestId });
+            }
+        }
 
         // Check cache
         const cacheKey = `details:${placeId}`;

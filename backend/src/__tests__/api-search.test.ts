@@ -23,7 +23,8 @@ jest.mock('@/lib/redis', () => ({
     setCached: jest.fn().mockResolvedValue(undefined)
 }));
 jest.mock('@/lib/db-sync', () => ({
-    syncLeads: jest.fn().mockResolvedValue(true)
+    syncLeads: jest.fn().mockResolvedValue(true),
+    computeOpportunityScore: jest.fn().mockReturnValue({ score: 50, factors: {} }),
 }));
 
 describe('Search API Route', () => {

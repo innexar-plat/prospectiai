@@ -299,6 +299,17 @@ model LeadAnalysis {
   socialLinkedin           String?
   isFavorite               Boolean        @default(false)
 
+  // --- Lead Intelligence Engine ---
+  closeProbability         Int?           // 0-100% AI-predicted chance of closing
+  estimatedDealValue       Float?         // Estimated deal size in BRL
+  bestContactWindow        String?        // e.g. "Terça 10h-12h"
+  conversionReason         String?        @db.Text  // Why converted/lost (user fills)
+  dealValue                Float?         // Actual deal value (user fills on CONVERTED)
+  lostReason               String?        // PRICE | NO_NEED | COMPETITOR | NO_RESPONSE | OTHER
+  contactedAt              DateTime?      // When status changed to CONTACTED
+  convertedAt              DateTime?      // When status changed to CONVERTED
+  lostAt                   DateTime?      // When status changed to LOST
+
   createdAt                DateTime       @default(now())
   updatedAt                DateTime       @updatedAt
 
@@ -655,4 +666,54 @@ model CrmIntegrationConfig {
   clientId              String
   clientSecretEncrypted String
   updatedAt             DateTime @updatedAt
+}
+
+// --- Lead Intelligence Engine: Histórico de eventos do lead ---
+enum LeadEventType {
+  STATUS_CHANGE       // NEW→CONTACTED, CONTACTED→CONVERTED, etc.
+  SCORE_CHANGE        // opportunityScore or AI score changed
+  AI_ANALYSIS         // New AI analysis generated
+  NOTE                // User added a note
+  TAG_ADDED           // Tag added
+  TAG_REMOVED         // Tag removed
+  CRM_SYNCED          // Pushed to RD Station / HubSpot / Agendor
+  CONTACTED           // User marked as contacted  
+  CONVERTED           // User marked as converted
+  LOST                // User marked as lost
+}
+
+model LeadEvent {
+  id           String        @id @default(cuid())
+  leadId       String
+  userId       String
+  workspaceId  String?
+  type         LeadEventType
+  
+  // Context data (flexible per event type)
+  oldValue     String?       // e.g. "NEW" for status change, "45" for score change
+  newValue     String?       // e.g. "CONTACTED", "72"
+  metadata     Json?         // Extra: { reason, dealValue, note, tagLabel, crmProvider }
+  
+  createdAt    DateTime      @default(now())
+
+  @@index([leadId])
+  @@index([userId])
+  @@index([workspaceId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// --- Pipeline Intelligence: cached daily brief ---
+model PipelineBrief {
+  id           String   @id @default(cuid())
+  userId       String
+  workspaceId  String
+  briefDate    DateTime @db.Date      // One per day per workspace
+  recommendations Json                // Array of { leadId, leadName, reason, priority, suggestedAction }
+  stats        Json?                  // { totalActive, avgCloseProbability, hotLeads, conversionRate30d }
+  createdAt    DateTime @default(now())
+
+  @@unique([workspaceId, briefDate])
+  @@index([userId])
+  @@index([workspaceId])
 }

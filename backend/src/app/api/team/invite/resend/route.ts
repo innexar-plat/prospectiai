@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { getOrCreateRequestId, jsonWithRequestId } from '@/lib/request-id';
 import { sendTeamInviteEmail } from '@/lib/email';
 import { logger } from '@/lib/logger';
+import { rateLimit } from '@/lib/ratelimit';
 import { z } from 'zod';
 
 const SITE_URL = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
@@ -37,6 +38,12 @@ export async function POST(req: NextRequest) {
         });
         if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
             return jsonWithRequestId({ error: 'Forbidden' }, { status: 403, requestId });
+        }
+
+        // Rate limit: 5 resends per 5 minutes per workspace
+        const rl = await rateLimit(`invite-resend:${invitation.workspaceId}`, 5, 300);
+        if (!rl.success) {
+            return jsonWithRequestId({ error: 'Muitos reenvios. Tente novamente em alguns minutos.' }, { status: 429, requestId });
         }
 
         const token = crypto.randomBytes(32).toString('hex');

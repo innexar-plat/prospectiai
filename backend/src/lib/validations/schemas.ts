@@ -238,6 +238,10 @@ export const leadStatusSchema = z
   .object({
     status: z.enum(['NEW', 'CONTACTED', 'CONVERTED', 'LOST']).optional(),
     isFavorite: z.boolean().optional(),
+    // Conversion feedback fields
+    conversionReason: z.string().max(1000).optional(),
+    dealValue: z.number().min(0).optional(),
+    lostReason: z.enum(['PRICE', 'NO_NEED', 'COMPETITOR', 'NO_RESPONSE', 'OTHER']).optional(),
   })
   .refine((d) => d.status !== undefined || d.isFavorite !== undefined, {
     message: 'At least one of status or isFavorite is required',

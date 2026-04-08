@@ -5,17 +5,20 @@ import { prisma } from '@/lib/prisma';
 import { teamInviteSchema, formatZodError } from '@/lib/validations/schemas';
 import { sendTeamInviteEmail } from '@/lib/email';
 import { logger } from '@/lib/logger';
+import { rateLimit } from '@/lib/ratelimit';
+import { PLANS, type PlanType } from '@/lib/billing-config';
 
 const SITE_URL = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
 async function getInviteContext(sessionUserId: string, email: string) {
     const currentUser = await prisma.user.findUnique({
         where: { id: sessionUserId },
-        include: { workspaces: { take: 1, include: { workspace: { select: { name: true } } } } },
+        include: { workspaces: { take: 1, include: { workspace: { select: { name: true, plan: true } } } } },
     });
     const activeWorkspaceId = currentUser?.workspaces[0]?.workspaceId;
     const currentUserRole = currentUser?.workspaces[0]?.role;
     const workspaceName = currentUser?.workspaces[0]?.workspace?.name ?? 'Workspace';
+    const workspacePlan = (currentUser?.workspaces[0]?.workspace?.plan ?? 'FREE') as PlanType;
     const inviterName = currentUser?.name ?? currentUser?.email ?? 'A team member';
     if (!activeWorkspaceId) return { error: 'Workspace not found' as const, status: 404 as const };
     if (currentUserRole !== 'OWNER' && currentUserRole !== 'ADMIN') return { error: 'Only owners or admins can invite members' as const, status: 403 as const };
@@ -23,7 +26,7 @@ async function getInviteContext(sessionUserId: string, email: string) {
         where: { workspaceId: activeWorkspaceId, user: { email } },
     });
     if (existingMember) return { error: 'User is already in this workspace' as const, status: 400 as const };
-    return { currentUser, activeWorkspaceId, workspaceName, inviterName };
+    return { currentUser, activeWorkspaceId, workspaceName, workspacePlan, inviterName };
 }
 
 /** POST /api/team/invite — cria convite pendente e envia email; usuário só entra ao aceitar. */
@@ -45,7 +48,24 @@ export async function POST(req: NextRequest) {
         if ('status' in ctx) {
             return NextResponse.json({ error: ctx.error }, { status: ctx.status });
         }
-        const { activeWorkspaceId, workspaceName, inviterName } = ctx;
+        const { activeWorkspaceId, workspaceName, workspacePlan, inviterName } = ctx;
+
+        // Rate limit: 10 invites per 5 minutes per workspace
+        const rl = await rateLimit(`team-invite:${activeWorkspaceId}`, 10, 300);
+        if (!rl.success) {
+            return NextResponse.json({ error: 'Muitos convites enviados. Tente novamente em alguns minutos.' }, { status: 429 });
+        }
+
+        // Max members per plan
+        const maxMembers = PLANS[workspacePlan]?.maxMembers ?? 1;
+        const currentMemberCount = await prisma.workspaceMember.count({ where: { workspaceId: activeWorkspaceId } });
+        const pendingInviteCount = await prisma.workspaceInvitation.count({ where: { workspaceId: activeWorkspaceId, status: 'PENDING' } });
+        if (currentMemberCount + pendingInviteCount >= maxMembers) {
+            return NextResponse.json(
+                { error: `Limite de membros atingido para o plano ${PLANS[workspacePlan].name} (${maxMembers}). Faça upgrade para adicionar mais membros.` },
+                { status: 403 },
+            );
+        }
 
         const token = crypto.randomBytes(32).toString('hex');
         const baseUrl = SITE_URL.replace(/\/$/, '');

@@ -40,6 +40,7 @@ const userMeSelect = {
     facebookUrl: true,
     websiteUrl: true,
     onboardingCompletedAt: true,
+    emailVerified: true,
     notifyByEmail: true,
     workspaces: { include: { workspace: true }, take: 1 },
 } as const;
@@ -122,6 +123,7 @@ function buildUiUser(
         pendingPlanEffectiveAt: w?.pendingPlanEffectiveAt?.toISOString() ?? null,
         workspaces: undefined,
         requiresOnboarding: user.onboardingCompletedAt == null,
+        emailVerified: user.emailVerified != null,
         notifyByEmail: user.notifyByEmail,
     };
 }

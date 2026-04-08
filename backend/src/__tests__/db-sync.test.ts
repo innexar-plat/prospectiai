@@ -1,9 +1,15 @@
-const { syncLead, syncLeads } = require('@/lib/db-sync');
+const { syncLead, syncLeads, computeOpportunityScore } = require('@/lib/db-sync');
 const { prisma } = require('@/lib/prisma');
 
 jest.mock('@/lib/prisma', () => ({
-  prisma: { lead: { upsert: jest.fn() } },
+  prisma: { lead: { upsert: jest.fn(), findUnique: jest.fn().mockResolvedValue(null) } },
 }));
+jest.mock('@/lib/brasilapi-cnpj', () => ({
+  extractCnpjFromText: jest.fn().mockReturnValue(null),
+  fetchCnpjFromBrasilApi: jest.fn().mockResolvedValue(null),
+  normalizeCnpj: jest.fn().mockReturnValue(null),
+}));
+jest.mock('@/lib/logger', () => ({ logger: { info: jest.fn(), error: jest.fn() } }));
 
 const minimalPlace = {
   id: 'place-1',
@@ -25,19 +31,22 @@ describe('db-sync', () => {
     it('calls prisma.lead.upsert with place data', async () => {
       prisma.lead.upsert.mockResolvedValue({ id: 'lead-1', placeId: 'place-1' });
       const result = await syncLead(minimalPlace);
-      expect(prisma.lead.upsert).toHaveBeenCalledWith({
-        where: { placeId: 'place-1' },
-        update: expect.objectContaining({
-          name: 'Business Name',
-          address: 'Rua X, 1',
-          rating: 4.5,
-          reviewCount: 10,
-        }),
-        create: expect.objectContaining({
-          placeId: 'place-1',
-          name: 'Business Name',
-        }),
-      });
+      expect(prisma.lead.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { placeId: 'place-1' },
+          update: expect.objectContaining({
+            name: 'Business Name',
+            address: 'Rua X, 1',
+            rating: 4.5,
+            reviewCount: 10,
+            opportunityScore: expect.any(Number),
+          }),
+          create: expect.objectContaining({
+            placeId: 'place-1',
+            name: 'Business Name',
+          }),
+        })
+      );
       expect(result).toEqual({ id: 'lead-1', placeId: 'place-1' });
     });
     it('uses phone and website when present', async () => {

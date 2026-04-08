@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, Link, useLocation } from "react-router-dom";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Sun, Moon, Bell, BellOff, Target, X, AlertTriangle, Menu, User, Settings, CreditCard, LogOut, ChevronDown, Sparkles, Building2, Share2 } from "lucide-react";
 import { SidebarNav } from "@/components/dashboard/SidebarNav";
 import { InstallPrompt } from "@/components/dashboard/InstallPrompt";
@@ -19,6 +19,7 @@ const BREADCRUMB_MAP: Record<string, string> = {
   '/dashboard/leads': 'Leads Salvos',
   '/dashboard/resultados': 'Resultados',
   '/dashboard/concorrencia': 'Concorrência',
+  '/dashboard/pipeline': 'Pipeline Inteligente',
   '/dashboard/relatorios': 'Relatórios',
   '/dashboard/minha-empresa': 'Minha Empresa',
   '/dashboard/viabilidade': 'Viabilidade',
@@ -197,6 +198,25 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
   if (!checked) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background text-muted">Carregando...</div>
+    );
+  }
+
+  // Gate: email verification required before using dashboard
+  if (user.emailVerified === false) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
+        <div className="max-w-md text-center space-y-4 p-8">
+          <div className="mx-auto w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+            <svg className="w-8 h-8 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+          </div>
+          <h2 className="text-xl font-semibold">Verifique seu email</h2>
+          <p className="text-muted text-sm">Enviamos um link de verificação para <strong>{user.email}</strong>. Clique no link para ativar sua conta.</p>
+          <p className="text-muted text-xs">Não recebeu? Verifique a caixa de spam ou faça login novamente para reenviar.</p>
+          <button onClick={handleLogout} className="mt-4 px-4 py-2 text-sm rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors">
+            Voltar ao login
+          </button>
+        </div>
+      </div>
     );
   }
 

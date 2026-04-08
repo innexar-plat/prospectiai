@@ -2,34 +2,42 @@ export const PLANS = {
     FREE: {
         name: 'Free',
         leadsLimit: 5,
+        maxMembers: 1,
         monthly: { price_usd: 0, price_brl: 0 },
         annual: { price_usd: 0, price_brl: 0 },
     },
     BASIC: {
         name: 'Starter',
         leadsLimit: 100,
+        maxMembers: 1,
         monthly: { price_usd: 25, price_brl: 129 },
         annual: { price_usd: 255, price_brl: 1315 }, // ~15% discount
     },
     PRO: {
         name: 'Growth',
         leadsLimit: 400,
+        maxMembers: 3,
         monthly: { price_usd: 79, price_brl: 397 },
         annual: { price_usd: 805, price_brl: 4049 }, // ~15% discount
     },
     BUSINESS: {
         name: 'Business',
         leadsLimit: 1200,
+        maxMembers: 10,
         monthly: { price_usd: 199, price_brl: 997 },
         annual: { price_usd: 2029, price_brl: 10169 }, // ~15% discount
     },
     SCALE: {
         name: 'Enterprise',
         leadsLimit: 5000,
+        maxMembers: 50,
         monthly: { price_usd: 499, price_brl: 2497 },
         annual: { price_usd: 5089, price_brl: 25469 }, // ~15% discount
     },
 } as const;
+
+/** Number of days an invitation link remains valid after being sent. */
+export const INVITE_EXPIRATION_DAYS = 7;
 
 export type PlanType = keyof typeof PLANS;
 

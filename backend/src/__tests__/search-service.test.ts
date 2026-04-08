@@ -65,6 +65,7 @@ jest.mock('@/lib/usage', () => ({
 // Mock db-sync
 jest.mock('@/lib/db-sync', () => ({
     syncLeads: jest.fn().mockResolvedValue(undefined),
+    computeOpportunityScore: jest.fn().mockReturnValue({ score: 50, factors: {} }),
 }));
 
 describe('SearchService', () => {

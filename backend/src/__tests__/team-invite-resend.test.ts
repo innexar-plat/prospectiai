@@ -2,6 +2,7 @@ const { POST } = require('@/app/api/team/invite/resend/route');
 const { auth } = require('@/auth');
 const { prisma } = require('@/lib/prisma');
 const { sendTeamInviteEmail } = require('@/lib/email');
+const { rateLimit } = require('@/lib/ratelimit');
 
 jest.mock('@/auth', () => ({ auth: jest.fn() }));
 jest.mock('@/lib/prisma', () => ({
@@ -11,6 +12,7 @@ jest.mock('@/lib/prisma', () => ({
   },
 }));
 jest.mock('@/lib/email', () => ({ sendTeamInviteEmail: jest.fn() }));
+jest.mock('@/lib/ratelimit', () => ({ rateLimit: jest.fn().mockResolvedValue({ success: true, remaining: 4, reset: Date.now() + 300000 }) }));
 
 function req(body: object) {
   return new Request('http://localhost/api/team/invite/resend', {
@@ -131,5 +133,24 @@ describe('POST /api/team/invite/resend', () => {
     const res = await POST(req({ invitationId: 'inv1' }));
     expect(res.status).toBe(500);
     expect(await res.json()).toMatchObject({ error: 'Internal server error' });
+  });
+
+  it('returns 429 when rate limited', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    (prisma.workspaceInvitation.findUnique as jest.Mock).mockResolvedValue({
+      id: 'inv1',
+      email: 'b@x.com',
+      workspaceId: 'w1',
+      status: 'PENDING',
+      workspace: { name: 'WS' },
+      inviter: { name: 'Alice', email: 'alice@x.com' },
+    });
+    (prisma.workspaceMember.findFirst as jest.Mock).mockResolvedValue({ id: 'wm1', role: 'OWNER' });
+    (rateLimit as jest.Mock).mockResolvedValue({ success: false, remaining: 0, reset: Date.now() + 300000 });
+
+    const res = await POST(req({ invitationId: 'inv1' }));
+    expect(res.status).toBe(429);
+    const json = await res.json();
+    expect(json.error).toMatch(/reenvios/i);
   });
 });

@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo } from 'react';
-import { Target, Loader2, ArrowRight, ExternalLink, Download, Star, Copy, Check, MessageCircle } from 'lucide-react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
+import { Target, Loader2, ArrowRight, ExternalLink, Download, Star, Copy, Check, MessageCircle, X } from 'lucide-react';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { leadsApi, type LeadAnalysisListItem, type SessionUser } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
@@ -275,6 +275,11 @@ export default function LeadsPage() {
   };
 
   const handleStatusChange = async (item: LeadAnalysisListItem, status: 'NEW' | 'CONTACTED' | 'CONVERTED' | 'LOST') => {
+    // For CONVERTED or LOST, open feedback modal
+    if (status === 'CONVERTED' || status === 'LOST') {
+      setFeedbackModal({ item, status });
+      return;
+    }
     try {
       await leadsApi.updateStatus(item.id, status);
       setLeads((prev) => prev.map((r) => (r.id === item.id ? { ...r, status } : r)));
@@ -282,6 +287,35 @@ export default function LeadsPage() {
       addToast('error', 'Falha ao atualizar status.');
     }
   };
+
+  // Conversion/Lost feedback modal state
+  const [feedbackModal, setFeedbackModal] = useState<{ item: LeadAnalysisListItem; status: 'CONVERTED' | 'LOST' } | null>(null);
+  const [feedbackReason, setFeedbackReason] = useState('');
+  const [feedbackDealValue, setFeedbackDealValue] = useState('');
+  const [feedbackLostReason, setFeedbackLostReason] = useState('');
+  const [feedbackSaving, setFeedbackSaving] = useState(false);
+
+  const submitFeedback = useCallback(async () => {
+    if (!feedbackModal) return;
+    setFeedbackSaving(true);
+    try {
+      const extra: { conversionReason?: string; dealValue?: number; lostReason?: string } = {};
+      if (feedbackReason.trim()) extra.conversionReason = feedbackReason.trim();
+      if (feedbackModal.status === 'CONVERTED' && feedbackDealValue) extra.dealValue = parseFloat(feedbackDealValue);
+      if (feedbackModal.status === 'LOST' && feedbackLostReason) extra.lostReason = feedbackLostReason;
+      await leadsApi.updateStatus(feedbackModal.item.id, feedbackModal.status, extra);
+      setLeads((prev) => prev.map((r) => (r.id === feedbackModal.item.id ? { ...r, status: feedbackModal.status } : r)));
+      addToast('success', feedbackModal.status === 'CONVERTED' ? 'Lead convertido!' : 'Lead marcado como perdido.');
+      setFeedbackModal(null);
+      setFeedbackReason('');
+      setFeedbackDealValue('');
+      setFeedbackLostReason('');
+    } catch {
+      addToast('error', 'Falha ao atualizar status.');
+    } finally {
+      setFeedbackSaving(false);
+    }
+  }, [feedbackModal, feedbackReason, feedbackDealValue, feedbackLostReason, addToast]);
 
   const { user } = useOutletContext<{ user: SessionUser }>();
 
@@ -310,6 +344,89 @@ export default function LeadsPage() {
           onStatusChange={handleStatusChange}
         />
       </div>
+
+      {/* Conversion / Lost Feedback Modal */}
+      {feedbackModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setFeedbackModal(null)}>
+          <div className="bg-card border border-border rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-foreground">
+                {feedbackModal.status === 'CONVERTED' ? '🎉 Marcar como Convertido' : '📝 Marcar como Perdido'}
+              </h3>
+              <button type="button" onClick={() => setFeedbackModal(null)} className="p-1 rounded-lg text-muted hover:text-foreground hover:bg-surface transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            <p className="text-sm text-muted">{feedbackModal.item.lead.name}</p>
+
+            {feedbackModal.status === 'CONVERTED' && (
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1">Valor do Deal (R$)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={feedbackDealValue}
+                  onChange={(e) => setFeedbackDealValue(e.target.value)}
+                  placeholder="Ex: 2500"
+                  className="w-full h-10 bg-surface border border-border rounded-xl px-3 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                />
+              </div>
+            )}
+
+            {feedbackModal.status === 'LOST' && (
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1">Motivo da Perda</label>
+                <select
+                  value={feedbackLostReason}
+                  onChange={(e) => setFeedbackLostReason(e.target.value)}
+                  className="w-full h-10 bg-surface border border-border rounded-xl px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-rose-500/50"
+                >
+                  <option value="">Selecione...</option>
+                  <option value="PRICE">Preço alto</option>
+                  <option value="NO_NEED">Não tem necessidade</option>
+                  <option value="COMPETITOR">Escolheu concorrente</option>
+                  <option value="NO_RESPONSE">Sem resposta</option>
+                  <option value="OTHER">Outro</option>
+                </select>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-medium text-muted mb-1">
+                {feedbackModal.status === 'CONVERTED' ? 'O que funcionou? (opcional)' : 'Detalhes (opcional)'}
+              </label>
+              <textarea
+                value={feedbackReason}
+                onChange={(e) => setFeedbackReason(e.target.value)}
+                placeholder={feedbackModal.status === 'CONVERTED' ? 'Ex: Fechou após demo, aceitou pacote premium...' : 'Ex: Disse que já tem contrato com outro fornecedor...'}
+                rows={3}
+                className="w-full bg-surface border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-violet-500/50 resize-none"
+              />
+            </div>
+
+            <p className="text-[10px] text-muted/60">Esses dados melhoram a IA — quanto mais feedbacks, mais precisas ficam as previsões de fechamento.</p>
+
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setFeedbackModal(null)} className="flex-1 h-10 rounded-xl border border-border text-sm font-medium text-muted hover:bg-surface transition-colors">
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={submitFeedback}
+                disabled={feedbackSaving}
+                className={`flex-1 h-10 rounded-xl text-sm font-bold text-white transition-colors ${
+                  feedbackModal.status === 'CONVERTED'
+                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                    : 'bg-rose-600 hover:bg-rose-700'
+                } disabled:opacity-50`}
+              >
+                {feedbackSaving ? 'Salvando...' : feedbackModal.status === 'CONVERTED' ? 'Confirmar Conversão' : 'Confirmar Perda'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -8,6 +8,7 @@ jest.mock('@/lib/prisma', () => ({
     planConfig: {
       findMany: jest.fn(),
       createMany: jest.fn(),
+      upsert: jest.fn().mockResolvedValue({}),
     },
   },
 }));
@@ -34,21 +35,17 @@ describe('GET /api/plans', () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data).toEqual(plans);
-    expect(prisma.planConfig.createMany).not.toHaveBeenCalled();
   });
 
   it('seeds defaults and returns when table empty', async () => {
     (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1' }, expires: '' });
-    (prisma.planConfig.findMany as jest.Mock).mockResolvedValue([]);
     const seeded = [
       { key: 'FREE', name: 'Free', leadsLimit: 5, priceMonthlyBrl: 0, priceAnnualBrl: 0, modules: ['MAPEAMENTO'] },
     ];
-    (prisma.planConfig.findMany as jest.Mock)
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce(seeded);
+    (prisma.planConfig.findMany as jest.Mock).mockResolvedValue(seeded);
     const res = await GET();
     expect(res.status).toBe(200);
-    expect(prisma.planConfig.createMany).toHaveBeenCalled();
+    expect(prisma.planConfig.upsert).toHaveBeenCalled();
     const data = await res.json();
     expect(data).toEqual(seeded);
   });

@@ -22,8 +22,10 @@ jest.mock('@/lib/prisma', () => ({
             ]),
             findMany: jest.fn().mockResolvedValue([]),
         },
+        $queryRaw: jest.fn().mockResolvedValue([{ aiInputTokensTotal: BigInt(0), aiOutputTokensTotal: BigInt(0) }]),
     },
 }));
+jest.mock('@/lib/logger', () => ({ logger: { info: jest.fn(), error: jest.fn() } }));
 
 describe('Admin API', () => {
     it('GET /api/admin/stats returns 401 when unauthenticated', async () => {
