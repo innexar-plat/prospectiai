@@ -36,7 +36,7 @@ jobs:
           fi
           URL="${BACKEND_URL%/}/api/cron/affiliate-approve-commissions"
           echo "Calling $URL ..."
-          HTTP=$(curl -s -o /tmp/out -w "%{http_code}" -H "x-cron-secret: $CRON_SECRET" "$URL")
+          HTTP=$(curl -sL -o /tmp/out -w "%{http_code}" -H "x-cron-secret: $CRON_SECRET" "$URL")
           cat /tmp/out
           echo ""
           if [ "$HTTP" = "200" ]; then

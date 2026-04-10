@@ -28,7 +28,7 @@ jobs:
           fi
           URL="${BACKEND_URL%/}/api/cron/campaign-processor"
           echo "Calling $URL ..."
-          HTTP=$(curl -s -o /tmp/out -w "%{http_code}" \
+          HTTP=$(curl -sL -o /tmp/out -w "%{http_code}" \
             -X POST \
             -H "Authorization: Bearer $CRON_SECRET" \
             -H "Content-Type: application/json" \

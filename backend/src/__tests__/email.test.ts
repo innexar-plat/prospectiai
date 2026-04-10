@@ -176,7 +176,7 @@ describe('email lib', () => {
     it('builds subject and body with inviter, workspace name and accept URL', async () => {
       process.env.RESEND_API_KEY = 're_xxx';
       mockSend.mockResolvedValue({ data: {}, error: null });
-      const acceptUrl = 'https://app.example.com/accept-invite?token=abc';
+      const acceptUrl = '/accept-invite?token=abc';
       const result = await sendTeamInviteEmail('m@x.com', 'Alice', 'Acme', acceptUrl);
       expect(result.sent).toBe(true);
       expect(mockSend).toHaveBeenCalledWith(
@@ -188,7 +188,7 @@ describe('email lib', () => {
       const html = mockSend.mock.calls[0][0].html;
       expect(html).toContain('Alice');
       expect(html).toContain('Acme');
-      expect(html).toContain(acceptUrl);
+      expect(html).toContain('/accept-invite?token=abc');
     });
   });
 
@@ -200,7 +200,7 @@ describe('email lib', () => {
         'u@x.com',
         'Admin',
         'Workspace X',
-        'https://app.com/reset-password?token=tok',
+        '/reset-password?token=tok',
       );
       expect(result.sent).toBe(true);
       expect(mockSend).toHaveBeenCalledWith(
@@ -212,7 +212,7 @@ describe('email lib', () => {
       const html = mockSend.mock.calls[0][0].html;
       expect(html).toContain('Admin');
       expect(html).toContain('Workspace X');
-      expect(html).toContain('https://app.com/reset-password?token=tok');
+      expect(html).toContain('/reset-password?token=tok');
     });
   });
 
@@ -220,7 +220,7 @@ describe('email lib', () => {
     it('sends email with affiliate code and login URL', async () => {
       process.env.RESEND_API_KEY = 're_xxx';
       mockSend.mockResolvedValue({ data: {}, error: null });
-      const result = await sendAffiliateApprovedEmail('a@b.com', 'AFF01', 'https://app.com/login');
+      const result = await sendAffiliateApprovedEmail('a@b.com', 'AFF01', '/login');
       expect(result.sent).toBe(true);
       expect(mockSend).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -230,7 +230,7 @@ describe('email lib', () => {
       );
       const html = mockSend.mock.calls[0][0].html;
       expect(html).toContain('AFF01');
-      expect(html).toContain('https://app.com/login');
+      expect(html).toContain('/login');
     });
   });
 
@@ -238,7 +238,7 @@ describe('email lib', () => {
     it('sends email with conversion summary and dashboard URL', async () => {
       process.env.RESEND_API_KEY = 're_xxx';
       mockSend.mockResolvedValue({ data: {}, error: null });
-      const result = await sendAffiliateConversionEmail('a@b.com', 'Cliente X assinou Pro.', 'https://app.com/affiliate');
+      const result = await sendAffiliateConversionEmail('a@b.com', 'Cliente X assinou Pro.', '/affiliate');
       expect(result.sent).toBe(true);
       expect(mockSend).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -248,7 +248,7 @@ describe('email lib', () => {
       );
       const html = mockSend.mock.calls[0][0].html;
       expect(html).toContain('Cliente X assinou Pro.');
-      expect(html).toContain('https://app.com/affiliate');
+      expect(html).toContain('/affiliate');
     });
   });
 
@@ -274,7 +274,7 @@ describe('email lib', () => {
     it('sends email with dashboard URL', async () => {
       process.env.RESEND_API_KEY = 're_xxx';
       mockSend.mockResolvedValue({ data: {}, error: null });
-      const result = await sendAffiliateCommissionAvailableEmail('a@b.com', 'https://app.com/affiliate/dashboard');
+      const result = await sendAffiliateCommissionAvailableEmail('a@b.com', '/affiliate/dashboard');
       expect(result.sent).toBe(true);
       expect(mockSend).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -283,7 +283,7 @@ describe('email lib', () => {
         })
       );
       const html = mockSend.mock.calls[0][0].html;
-      expect(html).toContain('https://app.com/affiliate/dashboard');
+      expect(html).toContain('/affiliate/dashboard');
     });
   });
 

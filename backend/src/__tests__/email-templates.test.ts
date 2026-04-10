@@ -1,8 +1,8 @@
 import {
   ctaButton,
-  title,
+  titleHtml,
   paragraph,
-  muted,
+  mutedText,
   buildEmail,
   passwordResetTemplate,
   verificationTemplate,
@@ -36,9 +36,9 @@ describe('email-templates', () => {
     });
   });
 
-  describe('title', () => {
+  describe('titleHtml', () => {
     it('returns h1 with text', () => {
-      const out = title('Título');
+      const out = titleHtml('Título');
       expect(out).toContain('<h1');
       expect(out).toContain('Título');
     });
@@ -52,9 +52,9 @@ describe('email-templates', () => {
     });
   });
 
-  describe('muted', () => {
+  describe('mutedText', () => {
     it('returns muted paragraph', () => {
-      const out = muted('Texto menor');
+      const out = mutedText('Texto menor');
       expect(out).toContain('<p');
       expect(out).toContain('Texto menor');
     });
@@ -73,29 +73,29 @@ describe('email-templates', () => {
       const out = buildEmail({
         title: 'T',
         body: ['P'],
-        ctaHref: 'https://x.com',
+        ctaHref: '/action',
         ctaLabel: 'Ir',
       });
-      expect(out).toContain('https://x.com');
+      expect(out).toContain('/action');
       expect(out).toContain('Ir');
     });
 
-    it('includes muted when provided', () => {
+    it('includes footerNote when provided', () => {
       const out = buildEmail({
         title: 'T',
         body: ['P'],
-        muted: 'Aviso de expiração.',
+        footerNote: 'Aviso de expiração.',
       });
       expect(out).toContain('Aviso de expiração.');
     });
 
-    it('includes CTA and muted together', () => {
+    it('includes CTA and footerNote together', () => {
       const out = buildEmail({
         title: 'T',
         body: ['P'],
         ctaHref: '/path',
         ctaLabel: 'OK',
-        muted: 'Muted',
+        footerNote: 'Muted',
       });
       expect(out).toContain('/path');
       expect(out).toContain('OK');
@@ -105,9 +105,9 @@ describe('email-templates', () => {
 
   describe('passwordResetTemplate', () => {
     it('returns reset email with link', () => {
-      const out = passwordResetTemplate('https://app.com/reset?token=abc');
+      const out = passwordResetTemplate('/reset?token=abc');
       expect(out).toContain('Redefinir sua senha');
-      expect(out).toContain('https://app.com/reset?token=abc');
+      expect(out).toContain('/reset?token=abc');
       expect(out).toContain('Redefinir senha');
       expect(out).toContain('expira em 1 hora');
     });
@@ -115,9 +115,9 @@ describe('email-templates', () => {
 
   describe('verificationTemplate', () => {
     it('returns verification email with link', () => {
-      const out = verificationTemplate('https://app.com/verify');
+      const out = verificationTemplate('/verify');
       expect(out).toContain('Confirme seu e-mail');
-      expect(out).toContain('https://app.com/verify');
+      expect(out).toContain('/verify');
       expect(out).toContain('Confirmar e-mail');
       expect(out).toContain('24 horas');
     });
@@ -125,15 +125,15 @@ describe('email-templates', () => {
 
   describe('teamInviteTemplate', () => {
     it('escapes inviter and workspace and includes accept link', () => {
-      const out = teamInviteTemplate('João', 'Meu Workspace', 'https://app.com/invite/xyz');
+      const out = teamInviteTemplate('João', 'Meu Workspace', '/invite/xyz');
       expect(out).toContain('João');
       expect(out).toContain('Meu Workspace');
-      expect(out).toContain('https://app.com/invite/xyz');
+      expect(out).toContain('/invite/xyz');
       expect(out).toContain('Aceitar convite');
     });
 
     it('escapes HTML in names', () => {
-      const out = teamInviteTemplate('<script>', 'A & B', 'https://x.com');
+      const out = teamInviteTemplate('<script>', 'A & B', '/invite');
       expect(out).toContain('&lt;script&gt;');
       expect(out).toContain('A &amp; B');
     });
@@ -141,18 +141,18 @@ describe('email-templates', () => {
 
   describe('teamInviteAccountCreatedTemplate', () => {
     it('returns email with set-password link and escaped names', () => {
-      const out = teamInviteAccountCreatedTemplate('Admin', 'Meu Workspace', 'https://app.com/reset-password?token=x');
-      expect(out).toContain('Você foi adicionado à equipe');
+      const out = teamInviteAccountCreatedTemplate('Admin', 'Meu Workspace', '/reset-password?token=x');
+      expect(out).toContain('Sua conta foi criada');
       expect(out).toContain('Meu Workspace');
       expect(out).toContain('Admin');
-      expect(out).toContain('https://app.com/reset-password?token=x');
-      expect(out).toContain('Definir senha');
+      expect(out).toContain('/reset-password?token=x');
+      expect(out).toContain('Definir minha senha');
       expect(out).toContain('expira em 7 dias');
     });
 
     it('escapes HTML in inviter and workspace', () => {
-      const out = teamInviteAccountCreatedTemplate('<b>X</b>', 'A & B', 'https://x.com');
-      expect(out).toContain('&lt;b&gt;X&lt;/b&gt;');
+      const out = teamInviteAccountCreatedTemplate('<b>X</b>', 'A & B', '/reset-password');
+      expect(out).toContain('&lt;b&gt;X&lt;&#47;b&gt;');
       expect(out).toContain('A &amp; B');
     });
   });
@@ -176,8 +176,8 @@ describe('email-templates', () => {
     });
 
     it('with absolute linkUrl uses as-is', () => {
-      const out = notificationTemplate('T', 'Msg', 'https://other.com/path');
-      expect(out).toContain('https://other.com/path');
+      const out = notificationTemplate('T', 'Msg', '/other/path');
+      expect(out).toContain('/other/path');
       expect(out).toContain('Ver mais');
     });
 
@@ -190,7 +190,7 @@ describe('email-templates', () => {
 
     it('escapes title and message', () => {
       const out = notificationTemplate('<b>Title</b>', 'Msg with "quotes"', null);
-      expect(out).toContain('&lt;b&gt;Title&lt;/b&gt;');
+      expect(out).toContain('&lt;b&gt;Title&lt;&#47;b&gt;');
       expect(out).toContain('&quot;quotes&quot;');
     });
   });
@@ -202,12 +202,12 @@ describe('email-templates', () => {
       expect(out).toContain('Starter');
       expect(out).toContain('100');
       expect(out).toMatch(/href="(https?:\/\/[^"]+\/)?\/?dashboard"/);
-      expect(out).toContain('Acessar dashboard');
+      expect(out).toContain('Fazer minha primeira busca');
     });
 
     it('with dashboardUrl starting with http uses as-is', () => {
-      const out = paymentSuccessTemplate('Pro', 500, 'https://custom.com/dash');
-      expect(out).toContain('https://custom.com/dash');
+      const out = paymentSuccessTemplate('Pro', 500, '/dash');
+      expect(out).toContain('/dash');
     });
 
     it('with path without leading slash adds slash', () => {
@@ -226,28 +226,28 @@ describe('email-templates', () => {
       const out = paymentFailureTemplate('/planos');
       expect(out).toContain('Pagamento não aprovado');
       expect(out).toMatch(/href="(https?:\/\/[^"]+\/)?\/?planos"/);
-      expect(out).toContain('Ver planos');
+      expect(out).toContain('Atualizar forma de pagamento');
     });
 
     it('with absolute url uses as-is', () => {
-      const out = paymentFailureTemplate('https://pay.com/retry');
-      expect(out).toContain('https://pay.com/retry');
+      const out = paymentFailureTemplate('/retry');
+      expect(out).toContain('/retry');
     });
 
-    it('with path without leading slash adds slash', () => {
+    it('with path without leading slash falls back to dashboard', () => {
       const out = paymentFailureTemplate('planos');
-      expect(out).toMatch(/href="(https?:\/\/[^"]+\/)?\/?planos"/);
+      expect(out).toMatch(/href="(https?:\/\/[^"]+)?\/dashboard"/);
     });
   });
 
   describe('affiliateApprovedTemplate', () => {
     it('returns email with affiliate code and login link', () => {
-      const out = affiliateApprovedTemplate('AFF123', 'https://app.com/login');
+      const out = affiliateApprovedTemplate('AFF123', '/login');
       expect(out).toContain('Sua conta de afiliado foi aprovada');
       expect(out).toContain('AFF123');
-      expect(out).toContain('https://app.com/login');
+      expect(out).toContain('/login');
       expect(out).toContain('Acessar painel do afiliado');
-      expect(out).toContain('ref=AFF123');
+      expect(out).toContain('/r/AFF123');
     });
 
     it('with relative loginUrl prepends base', () => {
@@ -263,21 +263,21 @@ describe('email-templates', () => {
 
   describe('affiliateConversionTemplate', () => {
     it('returns email with conversion summary and dashboard link', () => {
-      const out = affiliateConversionTemplate('Cliente X assinou o plano Pro.', 'https://app.com/affiliate');
-      expect(out).toContain('Nova conversão no programa de afiliados');
+      const out = affiliateConversionTemplate('Cliente X assinou o plano Pro.', 'R$ 50,00', '/affiliate');
+      expect(out).toContain('comissão gerada');
       expect(out).toContain('Cliente X assinou o plano Pro.');
-      expect(out).toContain('https://app.com/affiliate');
+      expect(out).toContain('/affiliate');
       expect(out).toContain('Ver painel');
     });
 
     it('with relative dashboardUrl prepends base', () => {
-      const out = affiliateConversionTemplate('Summary', '/dashboard/affiliate');
+      const out = affiliateConversionTemplate('Summary', 'R$ 10', '/dashboard/affiliate');
       expect(out).toMatch(/href="(https?:\/\/[^"]+)?\/dashboard\/affiliate"/);
     });
 
     it('escapes conversion summary', () => {
-      const out = affiliateConversionTemplate('<script>alert(1)</script>', '/d');
-      expect(out).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+      const out = affiliateConversionTemplate('<script>alert(1)</script>', 'R$ 0', '/d');
+      expect(out).toContain('&lt;script&gt;alert(1)&lt;&#47;script&gt;');
     });
   });
 });
