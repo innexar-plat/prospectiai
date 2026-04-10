@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { useConfirm } from '@/lib/useConfirm';
 
 const ROLES: { value: AiConfigRole; label: string }[] = [
   { value: 'lead_analysis', label: 'Análise de lead' },
@@ -31,29 +32,59 @@ const WEB_SEARCH_PROVIDERS: { value: WebSearchProvider; label: string }[] = [
   { value: 'TAVILY', label: 'Tavily' },
 ];
 
-/** Cloudflare Workers AI — Text Generation (protocolo OpenAI). Só modelos de texto para chat/completion. */
-const CLOUDFLARE_MODELS: { value: string; label: string }[] = [
-  { value: '@cf/openai/gpt-oss-120b', label: 'OpenAI gpt-oss-120b (120B, produção)' },
-  { value: '@cf/openai/gpt-oss-20b', label: 'OpenAI gpt-oss-20b (20B, baixa latência)' },
-  { value: '@cf/meta/llama-4-scout-17b-16e-instruct', label: 'Meta Llama 4 Scout 17B' },
-  { value: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', label: 'Meta Llama 3.3 70B (fp8 fast)' },
-  { value: '@cf/meta/llama-3.1-8b-instruct-fast', label: 'Meta Llama 3.1 8B (fast)' },
-  { value: '@cf/meta/llama-3.1-8b-instruct', label: 'Meta Llama 3.1 8B' },
-  { value: '@cf/meta/llama-3.1-70b-instruct', label: 'Meta Llama 3.1 70B' },
-  { value: '@cf/meta/llama-3.2-3b-instruct', label: 'Meta Llama 3.2 3B' },
-  { value: '@cf/meta/llama-3.2-1b-instruct', label: 'Meta Llama 3.2 1B' },
-  { value: '@cf/ibm/granite-4.0-h-micro', label: 'IBM Granite 4.0 H Micro' },
-  { value: '@cf/zai-org/glm-4.7-flash', label: 'GLM-4.7-Flash (zai-org)' },
-  { value: '@cf/aisingapore/gemma-sea-lion-v4-27b-it', label: 'SEA-LION v4 27B (aisingapore)' },
-  { value: '@cf/qwen/qwen3-30b-a3b-fp8', label: 'Qwen3 30B (fp8)' },
-  { value: '@cf/qwen/qwq-32b', label: 'Qwen QwQ-32B (reasoning)' },
-  { value: '@cf/mistralai/mistral-small-3.1-24b-instruct', label: 'Mistral Small 3.1 24B' },
-  { value: '@cf/mistralai/mistral-7b-instruct-v0.2', label: 'Mistral 7B Instruct v0.2' },
-  { value: '@cf/deepseek/deepseek-r1-distill-qwen-32b', label: 'DeepSeek R1 Distill Qwen 32B' },
-  { value: '@cf/google/gemma-3-12b-it', label: 'Google Gemma 3 12B' },
-  { value: '@cf/google/gemma-7b-it', label: 'Google Gemma 7B' },
-  { value: '@cf/microsoft/phi-2', label: 'Microsoft Phi-2' },
-];
+/** Modelos sugeridos por provedor */
+const PROVIDER_MODELS: Record<AiConfigProvider, { value: string; label: string }[]> = {
+  GEMINI: [
+    { value: 'gemini-2.5-flash-preview-05-20', label: 'Gemini 2.5 Flash Preview' },
+    { value: 'gemini-2.5-pro-preview-05-06', label: 'Gemini 2.5 Pro Preview' },
+    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+    { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite' },
+    { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
+    { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' },
+  ],
+  OPENAI: [
+    { value: 'gpt-4.1', label: 'GPT-4.1' },
+    { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
+    { value: 'gpt-4.1-nano', label: 'GPT-4.1 Nano' },
+    { value: 'gpt-4o', label: 'GPT-4o' },
+    { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+    { value: 'o3-mini', label: 'o3-mini (reasoning)' },
+  ],
+  CLOUDFLARE: [
+    { value: '@cf/openai/gpt-oss-120b', label: 'OpenAI gpt-oss-120b (120B, produção)' },
+    { value: '@cf/openai/gpt-oss-20b', label: 'OpenAI gpt-oss-20b (20B, baixa latência)' },
+    { value: '@cf/meta/llama-4-scout-17b-16e-instruct', label: 'Meta Llama 4 Scout 17B' },
+    { value: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', label: 'Meta Llama 3.3 70B (fp8 fast)' },
+    { value: '@cf/meta/llama-3.1-8b-instruct-fast', label: 'Meta Llama 3.1 8B (fast)' },
+    { value: '@cf/meta/llama-3.1-8b-instruct', label: 'Meta Llama 3.1 8B' },
+    { value: '@cf/meta/llama-3.1-70b-instruct', label: 'Meta Llama 3.1 70B' },
+    { value: '@cf/meta/llama-3.2-3b-instruct', label: 'Meta Llama 3.2 3B' },
+    { value: '@cf/meta/llama-3.2-1b-instruct', label: 'Meta Llama 3.2 1B' },
+    { value: '@cf/qwen/qwen3-30b-a3b-fp8', label: 'Qwen3 30B (fp8)' },
+    { value: '@cf/qwen/qwq-32b', label: 'Qwen QwQ-32B (reasoning)' },
+    { value: '@cf/mistralai/mistral-small-3.1-24b-instruct', label: 'Mistral Small 3.1 24B' },
+    { value: '@cf/deepseek/deepseek-r1-distill-qwen-32b', label: 'DeepSeek R1 Distill Qwen 32B' },
+    { value: '@cf/google/gemma-3-12b-it', label: 'Google Gemma 3 12B' },
+  ],
+  GROQ: [
+    { value: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B Versatile' },
+    { value: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B Instant' },
+    { value: 'meta-llama/llama-4-scout-17b-16e-instruct', label: 'Llama 4 Scout 17B' },
+    { value: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B' },
+    { value: 'gemma2-9b-it', label: 'Gemma 2 9B' },
+    { value: 'deepseek-r1-distill-llama-70b', label: 'DeepSeek R1 Distill 70B' },
+  ],
+  DEEPSEEK: [
+    { value: 'deepseek-chat', label: 'DeepSeek Chat (V3)' },
+    { value: 'deepseek-reasoner', label: 'DeepSeek Reasoner (R1)' },
+  ],
+  ANTHROPIC: [
+    { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
+    { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
+    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
+    { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
+  ],
+};
 
 export function AiConfigPage() {
   const [items, setItems] = useState<AiConfigListItem[]>([]);
@@ -69,6 +100,7 @@ export function AiConfigPage() {
     viability: { provider: 'SERPER', apiKey: '', maxResults: 5, enabled: false },
   });
   const [webSearchSaving, setWebSearchSaving] = useState<AiConfigRole | null>(null);
+  const { confirm, ConfirmDialog } = useConfirm();
   const [form, setForm] = useState<{
     role: AiConfigRole;
     provider: AiConfigProvider;
@@ -137,12 +169,11 @@ export function AiConfigPage() {
   };
   const setProvider = (provider: AiConfigProvider) => {
     setForm((f) => {
+      const models = PROVIDER_MODELS[provider];
       const next = { ...f, provider };
-      if (provider === 'CLOUDFLARE' && !CLOUDFLARE_MODELS.some((m) => m.value === f.model)) {
-        next.model = '@cf/openai/gpt-oss-120b';
+      if (!models.some((m) => m.value === f.model)) {
+        next.model = models[0]?.value ?? '';
       }
-      if (provider === 'GEMINI') next.model = 'gemini-flash-latest';
-      if (provider === 'OPENAI') next.model = 'gpt-4o-mini';
       return next;
     });
   };
@@ -210,7 +241,7 @@ export function AiConfigPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Excluir esta configuração?')) return;
+    if (!(await confirm({ title: 'Excluir configuração', message: 'Tem certeza que deseja excluir esta configuração de IA?', confirmLabel: 'Excluir' }))) return;
     try {
       await adminApi.aiConfig.delete(id);
       setToast({ type: 'success', message: 'Configuração excluída.' });
@@ -491,37 +522,30 @@ export function AiConfigPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-500 mb-1">Modelo</label>
-                {form.provider === 'CLOUDFLARE' ? (
-                  <>
-                    <p className="text-xs text-gray-500 mb-1">Cloudflare usa protocolo OpenAI (chat completions).</p>
-                    <Select
-                      value={form.model}
-                      onChange={(e) => setForm((f) => ({ ...f, model: e.target.value }))}
-                      className="w-full border-gray-300 bg-gray-100 text-gray-700 mb-2"
-                    >
-                      {CLOUDFLARE_MODELS.map((m) => (
-                        <option key={m.value} value={m.value}>
-                          {m.label}
-                        </option>
-                      ))}
-                    </Select>
-                    <Input
-                      value={form.model}
-                      onChange={(e) => setForm((f) => ({ ...f, model: e.target.value }))}
-                      placeholder="ou digite outro ID (@cf/...)"
-                      className="border-gray-300 bg-gray-100 text-gray-700 text-sm"
-                      required
-                    />
-                  </>
-                ) : (
-                  <Input
-                    value={form.model}
-                    onChange={(e) => setForm((f) => ({ ...f, model: e.target.value }))}
-                    placeholder={form.provider === 'OPENAI' ? 'ex: gpt-4o-mini, gpt-4o' : 'ex: gemini-2.0-flash'}
-                    className="border-gray-300 bg-gray-100 text-gray-700"
-                    required
-                  />
+                {form.provider === 'CLOUDFLARE' && (
+                  <p className="text-xs text-gray-500 mb-1">Cloudflare usa protocolo OpenAI (chat completions).</p>
                 )}
+                <Select
+                  value={PROVIDER_MODELS[form.provider].some((m) => m.value === form.model) ? form.model : '__custom__'}
+                  onChange={(e) => {
+                    if (e.target.value !== '__custom__') setForm((f) => ({ ...f, model: e.target.value }));
+                  }}
+                  className="w-full border-gray-300 bg-gray-100 text-gray-700 mb-2"
+                >
+                  {PROVIDER_MODELS[form.provider].map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                  <option value="__custom__">Outro (digitar manualmente)</option>
+                </Select>
+                <Input
+                  value={form.model}
+                  onChange={(e) => setForm((f) => ({ ...f, model: e.target.value }))}
+                  placeholder="ID do modelo (ex: gemini-2.0-flash)"
+                  className="border-gray-300 bg-gray-100 text-gray-700 text-sm"
+                  required
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-500 mb-1">
@@ -571,6 +595,7 @@ export function AiConfigPage() {
           </div>
         </div>
       )}
+      {ConfirmDialog}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { GET as getStats } from '@/app/api/admin/stats/route';
+import { GET as getStatsHistory } from '@/app/api/admin/stats/history/route';
 import { GET as getUsers } from '@/app/api/admin/users/route';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
@@ -96,6 +97,48 @@ describe('Admin API', () => {
         prisma.user.findMany.mockRejectedValue(new Error('DB error'));
         const req = new NextRequest('http://localhost/api/admin/users');
         const res = await getUsers(req);
+        expect(res.status).toBe(500);
+    });
+
+    it('GET /api/admin/stats/history returns 401 when unauthenticated', async () => {
+        jest.mocked(auth).mockResolvedValue(null);
+        const req = new Request('http://localhost/api/admin/stats/history?days=7');
+        const res = await getStatsHistory(req);
+        expect(res.status).toBe(401);
+    });
+
+    it('GET /api/admin/stats/history returns 403 when not admin', async () => {
+        jest.mocked(auth).mockResolvedValue({ user: { id: 'u1', email: 'user@test.com' }, expires: '' });
+        jest.mocked(isAdmin).mockReturnValue(false);
+        const req = new Request('http://localhost/api/admin/stats/history?days=7');
+        const res = await getStatsHistory(req);
+        expect(res.status).toBe(403);
+    });
+
+    it('GET /api/admin/stats/history returns series when admin', async () => {
+        jest.mocked(auth).mockResolvedValue({ user: { id: 'u1', email: 'admin@test.com' }, expires: '' });
+        jest.mocked(isAdmin).mockReturnValue(true);
+        const today = new Date().toISOString().slice(0, 10);
+        prisma.$queryRaw
+            .mockResolvedValueOnce([{ date: new Date(today), count: BigInt(2) }])   // users
+            .mockResolvedValueOnce([{ date: new Date(today), count: BigInt(5) }])   // analyses
+            .mockResolvedValueOnce([{ date: new Date(today), count: BigInt(10) }])  // searches
+            .mockResolvedValueOnce([{ date: new Date(today), type: 'GOOGLE_PLACES_SEARCH', total: BigInt(3) }]); // usage
+        const req = new Request('http://localhost/api/admin/stats/history?days=3');
+        const res = await getStatsHistory(req);
+        expect(res.status).toBe(200);
+        const data = await res.json();
+        expect(data.days).toBe(3);
+        expect(Array.isArray(data.series)).toBe(true);
+        expect(data.series.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('GET /api/admin/stats/history returns 500 on DB error', async () => {
+        jest.mocked(auth).mockResolvedValue({ user: { id: 'u1', email: 'admin@test.com' }, expires: '' });
+        jest.mocked(isAdmin).mockReturnValue(true);
+        prisma.$queryRaw.mockRejectedValue(new Error('DB fail'));
+        const req = new Request('http://localhost/api/admin/stats/history');
+        const res = await getStatsHistory(req);
         expect(res.status).toBe(500);
     });
 });

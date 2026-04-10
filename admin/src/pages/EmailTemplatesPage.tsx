@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { FileText, Plus, Pencil, Trash2 } from 'lucide-react';
+import { useConfirm } from '@/lib/useConfirm';
 
 const TYPE_LABELS: Record<string, string> = {
   PROMOTION: 'Promoção',
@@ -29,6 +30,7 @@ export function EmailTemplatesPage() {
   const [filterStatus, setFilterStatus] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const { confirm, ConfirmDialog } = useConfirm();
 
   // Form state for quick create
   const [formName, setFormName] = useState('');
@@ -52,7 +54,7 @@ export function EmailTemplatesPage() {
   useEffect(() => { load(); }, [filterType, filterStatus]);
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Excluir template "${name}"?`)) return;
+    if (!(await confirm({ title: 'Excluir template', message: `Excluir template "${name}"? Esta ação não pode ser desfeita.`, confirmLabel: 'Excluir' }))) return;
     try {
       await emailMarketingApi.templates.delete(id);
       setToast({ type: 'success', message: 'Template excluído.' });
@@ -226,6 +228,7 @@ export function EmailTemplatesPage() {
           </div>
         </div>
       )}
+      {ConfirmDialog}
     </div>
   );
 }

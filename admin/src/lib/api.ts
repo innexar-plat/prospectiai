@@ -27,6 +27,21 @@ export interface AdminStats {
   aiOutputTokensTotal?: number;
 }
 
+export interface StatsHistoryDay {
+  date: string;
+  users: number;
+  analyses: number;
+  searches: number;
+  googleSearch: number;
+  googleDetails: number;
+  serper: number;
+}
+
+export interface StatsHistoryResponse {
+  days: number;
+  series: StatsHistoryDay[];
+}
+
 export interface WorkspaceUsage {
   googlePlacesSearch: number;
   googlePlacesDetails: number;
@@ -369,6 +384,7 @@ export const authApi = {
 
 export const adminApi = {
   stats: () => request<AdminStats>('/admin/stats'),
+  statsHistory: (days = 7) => request<StatsHistoryResponse>(`/admin/stats/history?days=${days}`),
 
   users: (params?: AdminListParams) =>
     request<AdminListResponse<AdminUserListItem>>(`/admin/users${buildQuery(params)}`),

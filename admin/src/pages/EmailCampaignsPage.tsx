@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Send, Plus, Eye, Play, XCircle, Trash2, Users, Calendar, BarChart3, Pencil } from 'lucide-react';
+import { useConfirm } from '@/lib/useConfirm';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   DRAFT: { label: 'Rascunho', color: 'bg-gray-100 text-gray-700' },
@@ -39,6 +40,7 @@ export function EmailCampaignsPage() {
   const [templates, setTemplates] = useState<EmailTemplateItem[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const { confirm, ConfirmDialog } = useConfirm();
 
   // Create form
   const [formName, setFormName] = useState('');
@@ -122,7 +124,7 @@ export function EmailCampaignsPage() {
   };
 
   const handleSend = async (id: string, name: string) => {
-    if (!confirm(`Enviar campanha "${name}" agora?`)) return;
+    if (!(await confirm({ title: 'Enviar campanha', message: `Enviar campanha "${name}" agora?`, confirmLabel: 'Enviar', variant: 'primary' }))) return;
     try {
       const res = await emailMarketingApi.campaigns.send(id);
       setToast({ type: 'success', message: `${res.message}. Enviados: ${res.totalSent ?? 0}` });
@@ -133,7 +135,7 @@ export function EmailCampaignsPage() {
   };
 
   const handleCancel = async (id: string) => {
-    if (!confirm('Cancelar esta campanha?')) return;
+    if (!(await confirm({ title: 'Cancelar campanha', message: 'Tem certeza que deseja cancelar esta campanha?', confirmLabel: 'Cancelar campanha' }))) return;
     try {
       await emailMarketingApi.campaigns.cancel(id);
       setToast({ type: 'success', message: 'Campanha cancelada.' });
@@ -144,7 +146,7 @@ export function EmailCampaignsPage() {
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Excluir campanha "${name}"?`)) return;
+    if (!(await confirm({ title: 'Excluir campanha', message: `Excluir campanha "${name}"? Esta ação não pode ser desfeita.`, confirmLabel: 'Excluir' }))) return;
     try {
       await emailMarketingApi.campaigns.delete(id);
       setToast({ type: 'success', message: 'Campanha excluída.' });
@@ -390,6 +392,7 @@ export function EmailCampaignsPage() {
           </div>
         </div>
       )}
+      {ConfirmDialog}
     </div>
   );
 }

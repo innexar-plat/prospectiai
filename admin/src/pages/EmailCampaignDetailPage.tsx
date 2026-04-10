@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { emailMarketingApi, type EmailCampaignItem, type EmailCampaignRecipientItem } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { ArrowLeft, Play, XCircle, Users, Send, CheckCircle2, AlertCircle, Clock, Mail } from 'lucide-react';
+import { useConfirm } from '@/lib/useConfirm';
 
 const STATUS_BADGE: Record<string, { label: string; color: string }> = {
   DRAFT: { label: 'Rascunho', color: 'bg-gray-100 text-gray-700' },
@@ -28,6 +29,7 @@ export function EmailCampaignDetailPage() {
   const [recipientPage, setRecipientPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const { confirm, ConfirmDialog } = useConfirm();
 
   const load = async () => {
     if (!id) return;
@@ -50,7 +52,7 @@ export function EmailCampaignDetailPage() {
   useEffect(() => { load(); }, [id, recipientPage]);
 
   const handleSend = async () => {
-    if (!campaign || !confirm(`Enviar campanha "${campaign.name}" agora?`)) return;
+    if (!campaign || !(await confirm({ title: 'Enviar campanha', message: `Enviar campanha "${campaign.name}" agora?`, confirmLabel: 'Enviar', variant: 'primary' }))) return;
     try {
       const res = await emailMarketingApi.campaigns.send(campaign.id);
       setToast({ type: 'success', message: `${res.message}. Enviados: ${res.totalSent ?? 0}` });
@@ -61,7 +63,7 @@ export function EmailCampaignDetailPage() {
   };
 
   const handleCancel = async () => {
-    if (!campaign || !confirm('Cancelar campanha?')) return;
+    if (!campaign || !(await confirm({ title: 'Cancelar campanha', message: 'Tem certeza que deseja cancelar esta campanha?', confirmLabel: 'Cancelar campanha' }))) return;
     try {
       await emailMarketingApi.campaigns.cancel(campaign.id);
       setToast({ type: 'success', message: 'Campanha cancelada.' });
@@ -229,6 +231,7 @@ export function EmailCampaignDetailPage() {
           </div>
         )}
       </div>
+      {ConfirmDialog}
     </div>
   );
 }

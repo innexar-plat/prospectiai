@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { adminApi, type PlanConfigItem, type PlanConfigCreateBody } from '@/lib/api';
+import { useConfirm } from '@/lib/useConfirm';
 
 const ALL_MODULES = [
     { key: 'MAPEAMENTO', label: 'Mapeamento' },
@@ -31,6 +32,7 @@ export function PlansPage() {
     const [form, setForm] = useState<PlanConfigCreateBody>({ ...emptyForm });
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState<string | null>(null);
+    const { confirm, ConfirmDialog } = useConfirm();
 
     const loadPlans = () => {
         setLoading(true);
@@ -103,7 +105,7 @@ export function PlansPage() {
     };
 
     const handleDelete = async (plan: PlanConfigItem) => {
-        if (!confirm(`Desativar plano "${plan.name}"?`)) return;
+        if (!(await confirm({ title: 'Desativar plano', message: `Desativar plano "${plan.name}"?`, confirmLabel: 'Desativar' }))) return;
         try {
             await adminApi.plans.delete(plan.id);
             loadPlans();
@@ -385,6 +387,7 @@ export function PlansPage() {
                     </div>
                 </div>
             )}
+            {ConfirmDialog}
         </div>
     );
 }
