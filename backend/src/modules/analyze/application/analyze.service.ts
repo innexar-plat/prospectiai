@@ -37,6 +37,17 @@ export type AnalyzeOutput = {
     socialMedia: { instagram?: string; facebook?: string; linkedin?: string };
     /** Provider used for this analysis (e.g. GEMINI, OPENAI, CLOUDFLARE). */
     aiProvider?: string;
+    // Lead Intelligence fields
+    closeProbability?: number;
+    estimatedDealValue?: number;
+    bestContactWindow?: string;
+    // Deep analysis fields
+    reclameAquiAnalysis?: string;
+    jusBrasilAnalysis?: string;
+    cnpjAnalysis?: string;
+    reviewTrend?: string;
+    suggestedContactTime?: string;
+    reviewAnalysis?: string;
 };
 
 async function getUserAndWorkspaceOrThrow(userId: string) {
@@ -83,6 +94,14 @@ function mapExistingAnalysisToOutput(existingAnalysis: {
     socialInstagram: string | null;
     socialFacebook: string | null;
     socialLinkedin: string | null;
+    closeProbability?: number | null;
+    estimatedDealValue?: number | null;
+    bestContactWindow?: string | null;
+    reclameAquiAnalysis?: string | null;
+    jusBrasilAnalysis?: string | null;
+    cnpjAnalysis?: string | null;
+    reviewTrend?: string | null;
+    suggestedContactTime?: string | null;
 }): AnalyzeOutput {
     return {
         score: existingAnalysis.score ?? 0,
@@ -102,6 +121,14 @@ function mapExistingAnalysisToOutput(existingAnalysis: {
             facebook: existingAnalysis.socialFacebook ?? undefined,
             linkedin: existingAnalysis.socialLinkedin ?? undefined,
         },
+        closeProbability: existingAnalysis.closeProbability ?? undefined,
+        estimatedDealValue: existingAnalysis.estimatedDealValue ?? undefined,
+        bestContactWindow: existingAnalysis.bestContactWindow ?? undefined,
+        reclameAquiAnalysis: existingAnalysis.reclameAquiAnalysis ?? undefined,
+        jusBrasilAnalysis: existingAnalysis.jusBrasilAnalysis ?? undefined,
+        cnpjAnalysis: existingAnalysis.cnpjAnalysis ?? undefined,
+        reviewTrend: existingAnalysis.reviewTrend ?? undefined,
+        suggestedContactTime: existingAnalysis.suggestedContactTime ?? undefined,
         aiProvider: undefined,
     };
 }
@@ -240,6 +267,37 @@ export async function runAnalyze(input: AnalyzeInput, userId: string, onProgress
 
     const isBusinessPlan = activeWorkspace.plan === 'BUSINESS' || activeWorkspace.plan === 'SCALE';
     const profile = buildAnalyzeProfile(userProfile, user, activeWorkspace);
+
+    // Enrich businessData with RF (Receita Federal) data from Lead table
+    const leadRfData = await prisma.lead.findUnique({
+        where: { placeId: businessData.placeId },
+        select: {
+            cnpj: true,
+            companyLegalName: true,
+            companyTradeName: true,
+            companyPorte: true,
+            companyCapitalSocial: true,
+            companyMainCnae: true,
+            cnpjStatus: true,
+            cnpjOpenedAt: true,
+            email: true,
+            matchConfidence: true,
+            matchMethod: true,
+        },
+    });
+    if (leadRfData) {
+        (businessData as BusinessData).cnpj = leadRfData.cnpj ?? undefined;
+        (businessData as BusinessData).companyLegalName = leadRfData.companyLegalName ?? undefined;
+        (businessData as BusinessData).companyTradeName = leadRfData.companyTradeName ?? undefined;
+        (businessData as BusinessData).companyPorte = leadRfData.companyPorte ?? undefined;
+        (businessData as BusinessData).companyCapitalSocial = leadRfData.companyCapitalSocial ?? undefined;
+        (businessData as BusinessData).companyMainCnae = leadRfData.companyMainCnae ?? undefined;
+        (businessData as BusinessData).cnpjStatus = leadRfData.cnpjStatus ?? undefined;
+        (businessData as BusinessData).cnpjOpenedAt = leadRfData.cnpjOpenedAt ?? undefined;
+        (businessData as BusinessData).rfEmail = leadRfData.email ?? undefined;
+        (businessData as BusinessData).matchConfidence = leadRfData.matchConfidence ?? undefined;
+        (businessData as BusinessData).matchMethod = leadRfData.matchMethod ?? undefined;
+    }
 
     const { config } = await resolveAiForRole('lead_analysis');
     const { logger } = await import('@/lib/logger');

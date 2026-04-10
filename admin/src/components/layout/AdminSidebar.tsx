@@ -16,6 +16,9 @@ import {
   UserPlus,
   DollarSign,
   User,
+  Send,
+  BarChart3,
+  TrendingUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -44,6 +47,15 @@ const sections: NavSection[] = [
     ],
   },
   {
+    title: 'Email Marketing',
+    items: [
+      { to: 'email-analytics', end: false, label: 'Analytics', icon: TrendingUp },
+      { to: 'email-templates', end: false, label: 'Templates Email', icon: FileText },
+      { to: 'email-campaigns', end: false, label: 'Campanhas', icon: Send },
+      { to: 'email-weekly-report', end: false, label: 'Relatório Semanal', icon: BarChart3 },
+    ],
+  },
+  {
     title: 'Sistema',
     items: [
       { to: 'ai-config', end: false, label: 'IA / Provedores', icon: Bot },
@@ -61,9 +73,9 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
     isActive ? 'bg-violet-50 text-violet-700 border border-violet-200' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
   );
 
-export function AdminSidebar() {
+export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
-    <aside className="flex-shrink-0 w-60 border-r border-gray-200 bg-white flex flex-col overflow-y-auto">
+    <aside className="flex-shrink-0 w-60 border-r border-gray-200 bg-white flex flex-col overflow-y-auto h-full">
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center">
@@ -84,7 +96,7 @@ export function AdminSidebar() {
               </h2>
               <div className="space-y-0.5">
                 {section.items.map(({ to, end, label, icon: Icon }) => (
-                  <NavLink key={to} to={to} end={end} className={linkClass}>
+                  <NavLink key={to} to={to} end={end} className={linkClass} onClick={onNavigate}>
                     <Icon className="w-4 h-4 shrink-0" />
                     {label}
                   </NavLink>
@@ -94,7 +106,7 @@ export function AdminSidebar() {
           ))}
         </div>
         <div className="mt-auto pt-4 border-t border-gray-200">
-          <NavLink to="profile" end={true} className={linkClass}>
+          <NavLink to="profile" end={true} className={linkClass} onClick={onNavigate}>
             <User className="w-4 h-4 shrink-0" />
             Perfil
           </NavLink>

@@ -4,9 +4,10 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 
 const pkg = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf-8'));
+const buildTimestamp = new Date().toISOString();
 
 /** SPA fallback: serve index.html for client routes (evita 404 em /dashboard, /auth/signin, etc.) */
 function spaFallback() {
@@ -27,11 +28,28 @@ function spaFallback() {
   }
 }
 
+/** Generates version.json in the build output so the app can detect new deploys. */
+function versionJsonPlugin() {
+  return {
+    name: 'version-json',
+    apply: 'build' as const,
+    closeBundle() {
+      const outDir = path.resolve(__dirname, 'dist');
+      mkdirSync(outDir, { recursive: true });
+      writeFileSync(
+        path.join(outDir, 'version.json'),
+        JSON.stringify({ version: pkg.version, buildTime: buildTimestamp }),
+      );
+    },
+  }
+}
+
 // Plugins array: workspace hoists some deps; cast to satisfy defineConfig (single vite type).
 export default defineConfig({
-  plugins: [tailwindcss(), react(), spaFallback()] as import('vite').PluginOption[],
+  plugins: [tailwindcss(), react(), spaFallback(), versionJsonPlugin()] as import('vite').PluginOption[],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
+    __BUILD_TIME__: JSON.stringify(buildTimestamp),
   },
   build: {
     rollupOptions: {

@@ -119,6 +119,7 @@ services:
     env_file:
       - .env
     environment:
+      - TZ=America/Sao_Paulo
       - FRONTEND_URL=https://precisionia.com.br
       - ADMIN_EMAILS=${ADMIN_EMAILS}
       - SUPPORT_EMAILS=${SUPPORT_EMAILS:-}

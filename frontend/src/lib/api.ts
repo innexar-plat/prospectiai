@@ -254,6 +254,12 @@ export const authApi = {
             body: JSON.stringify(data),
         }),
 
+    /** Resend email verification. POST /api/auth/resend-verification */
+    resendVerification: () =>
+        request<{ sent?: boolean; cooldown?: number; error?: string }>('/auth/resend-verification', {
+            method: 'POST',
+        }),
+
     /** Sign out — sends JSON POST with CSRF token to properly clear NextAuth session */
     signOut: async () => {
         const csrfToken = await getCsrfToken();
@@ -821,7 +827,7 @@ export interface UserProfileResponse {
 
 export interface Place {
     id: string;
-    displayName?: { text: string };
+    displayName?: { text: string; languageCode?: string };
     formattedAddress?: string;
     nationalPhoneNumber?: string;
     internationalPhoneNumber?: string;
@@ -833,6 +839,11 @@ export interface Place {
     primaryType?: string;
     businessStatus?: string;
     opportunityScore?: number;
+    cnpj?: string;
+    companyLegalName?: string;
+    companyTradeName?: string;
+    companyMainCnae?: string;
+    cnpjStatus?: string;
     currentOpeningHours?: {
         openNow?: boolean;
         weekdayDescriptions?: string[];
@@ -843,6 +854,16 @@ export interface Place {
         authorAttribution?: { displayName: string };
         relativePublishTimeDescription?: string;
     }>;
+    /** Extra data from Receita Federal (present when result came from RF search) */
+    rfData?: {
+        porte: string | null;
+        capitalSocial: number | null;
+        email: string | null;
+        cep: string | null;
+        dataAbertura: string | null;
+        cnaePrincipal: string | null;
+        cnaeDescricao: string | null;
+    };
 }
 
 export type PlaceDetail = Place & {
@@ -1194,4 +1215,106 @@ export const integrationsApi = {
             method: 'POST',
             body: JSON.stringify(lead),
         }),
+};
+
+// ─── CNAE & Receita Federal ──────────────────────────────────────────────────
+
+export interface CnaeCode {
+    code: string;
+    description: string;
+}
+
+export interface RfCompanyResult {
+    cnpj: string;
+    razaoSocial: string;
+    nomeFantasia: string | null;
+    cnaePrincipal: string;
+    cnaeDescricao: string | null;
+    uf: string;
+    municipio: string | null;
+    cep: string | null;
+    bairro: string | null;
+    logradouro: string | null;
+    numero: string | null;
+    telefone: string | null;
+    email: string | null;
+    porte: string | null;
+    capitalSocial: number | null;
+    dataAbertura: string | null;
+}
+
+export const cnaeApi = {
+    /** Autocomplete de códigos CNAE por código ou descrição */
+    search: (q: string, limit = 20) =>
+        request<{ codes: CnaeCode[] }>(`/cnae?q=${encodeURIComponent(q)}&limit=${limit}`),
+};
+
+export const rfSearchApi = {
+    /** Buscar empresas da Receita Federal por CNAE(s) + filtros */
+    search: (params: {
+        cnae?: string;
+        cnaes?: string[];
+        uf?: string;
+        municipio?: string;
+        porte?: string;
+        razaoSocial?: string;
+        page?: number;
+        pageSize?: number;
+    }) =>
+        request<{
+            companies: RfCompanyResult[];
+            total: number;
+            page: number;
+            pageSize: number;
+            totalPages: number;
+        }>('/rf-search', {
+            method: 'POST',
+            body: JSON.stringify(params),
+        }),
+
+    /** Estatísticas da base RF */
+    stats: () =>
+        request<{ totalCompanies: number; totalCnaes: number; available: boolean }>('/rf-search'),
+};
+
+/* ------------------------------------------------------------------ */
+/*  Smart Relations (Knowledge Graph)                                  */
+/* ------------------------------------------------------------------ */
+
+export interface RelatedCompany {
+    cnpj: string;
+    name: string;
+    tradeName: string | null;
+    cnae: string | null;
+    city: string | null;
+    uf: string | null;
+    phone: string | null;
+    email: string | null;
+    capitalSocial: number | null;
+    porte: string | null;
+    relation: string;
+    relevance: number;
+}
+
+export interface SmartRelationsResult {
+    lead: { placeId: string; name: string; cnpj: string | null };
+    relations: RelatedCompany[];
+    clusters: {
+        sameSector: RelatedCompany[];
+        sameRegion: RelatedCompany[];
+        contactNetwork: RelatedCompany[];
+        userLeads: RelatedCompany[];
+    };
+    stats: {
+        totalFound: number;
+        sameSector: number;
+        sameRegion: number;
+        contactNetwork: number;
+        userLeads: number;
+    };
+}
+
+export const smartRelationsApi = {
+    get: (leadId: string) =>
+        request<{ data: SmartRelationsResult }>(`/leads/${encodeURIComponent(leadId)}/relations`),
 };

@@ -1,6 +1,6 @@
 import { Outlet, useNavigate, Link, useLocation } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Sun, Moon, Bell, BellOff, Target, X, AlertTriangle, Menu, User, Settings, CreditCard, LogOut, ChevronDown, Sparkles, Building2, Share2 } from "lucide-react";
+import { Sun, Moon, Bell, BellOff, Target, X, AlertTriangle, Menu, User, Settings, CreditCard, LogOut, ChevronDown, Sparkles, Building2, Share2, Mail, RefreshCw, CheckCircle2 } from "lucide-react";
 import { SidebarNav } from "@/components/dashboard/SidebarNav";
 import { InstallPrompt } from "@/components/dashboard/InstallPrompt";
 import { CommandPalette, CommandPaletteTrigger } from "@/components/dashboard/CommandPalette";
@@ -203,21 +203,7 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
 
   // Gate: email verification required before using dashboard
   if (user.emailVerified === false) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
-        <div className="max-w-md text-center space-y-4 p-8">
-          <div className="mx-auto w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-            <svg className="w-8 h-8 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-          </div>
-          <h2 className="text-xl font-semibold">Verifique seu email</h2>
-          <p className="text-muted text-sm">Enviamos um link de verificação para <strong>{user.email}</strong>. Clique no link para ativar sua conta.</p>
-          <p className="text-muted text-xs">Não recebeu? Verifique a caixa de spam ou faça login novamente para reenviar.</p>
-          <button onClick={handleLogout} className="mt-4 px-4 py-2 text-sm rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors">
-            Voltar ao login
-          </button>
-        </div>
-      </div>
-    );
+    return <EmailVerificationGate user={user} onLogout={handleLogout} />;
   }
 
   return (
@@ -554,6 +540,144 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Email Verification Gate ────────────────────────────────────────────── */
+
+function EmailVerificationGate({ user, onLogout }: { user: SessionUser; onLogout: () => void }) {
+  const [cooldown, setCooldown] = useState(0);
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => setCooldown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
+  const handleResend = async () => {
+    if (cooldown > 0 || sending) return;
+    setSending(true);
+    setError('');
+    setSent(false);
+    try {
+      const res = await authApi.resendVerification();
+      if (res.sent) {
+        setSent(true);
+        setCooldown(res.cooldown ?? 60);
+      } else if (res.error) {
+        setError(res.error);
+        if (res.cooldown) setCooldown(res.cooldown);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro ao reenviar';
+      if (msg.includes('Aguarde')) {
+        const match = msg.match(/(\d+)/);
+        if (match) setCooldown(parseInt(match[1], 10));
+      }
+      setError(msg);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 via-background to-indigo-50 dark:from-violet-950/20 dark:via-background dark:to-indigo-950/20 text-foreground p-4">
+      <div className="w-full max-w-md">
+        {/* Card */}
+        <div className="bg-card border border-border rounded-2xl shadow-xl overflow-hidden">
+          {/* Gradient top bar */}
+          <div className="h-1.5 bg-gradient-to-r from-violet-600 to-indigo-600" />
+
+          <div className="p-8 text-center space-y-6">
+            {/* Icon */}
+            <div className="mx-auto w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-100 to-indigo-100 dark:from-violet-900/40 dark:to-indigo-900/40 flex items-center justify-center shadow-sm">
+              <Mail className="w-10 h-10 text-violet-600 dark:text-violet-400" />
+            </div>
+
+            {/* Title */}
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold tracking-tight">Verifique seu e-mail</h2>
+              <p className="text-muted text-sm leading-relaxed">
+                Enviamos um link de verificação para<br />
+                <strong className="text-foreground">{user.email}</strong>
+              </p>
+            </div>
+
+            {/* Instructions */}
+            <div className="bg-surface/50 border border-border rounded-xl p-4 text-left space-y-2">
+              <p className="text-xs text-muted leading-relaxed">
+                <span className="font-medium text-foreground">1.</span> Abra seu e-mail e procure por uma mensagem de <strong>Precision IA</strong>
+              </p>
+              <p className="text-xs text-muted leading-relaxed">
+                <span className="font-medium text-foreground">2.</span> Clique no botão <strong>"Confirmar e-mail"</strong> na mensagem
+              </p>
+              <p className="text-xs text-muted leading-relaxed">
+                <span className="font-medium text-foreground">3.</span> Verifique a <strong>caixa de spam</strong> se não encontrar
+              </p>
+            </div>
+
+            {/* Resend button */}
+            <div className="space-y-3">
+              {sent && (
+                <div className="flex items-center justify-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg py-2 px-3">
+                  <CheckCircle2 size={16} />
+                  <span>E-mail reenviado com sucesso!</span>
+                </div>
+              )}
+              {error && !error.includes('Aguarde') && (
+                <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg py-2 px-3">
+                  {error}
+                </div>
+              )}
+              <button
+                onClick={handleResend}
+                disabled={cooldown > 0 || sending}
+                className={cn(
+                  "w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200",
+                  cooldown > 0 || sending
+                    ? "bg-surface text-muted cursor-not-allowed border border-border"
+                    : "bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-700 hover:to-indigo-700 shadow-md hover:shadow-lg"
+                )}
+              >
+                <RefreshCw size={16} className={cn(sending && "animate-spin")} />
+                {sending
+                  ? 'Enviando...'
+                  : cooldown > 0
+                    ? `Reenviar em ${cooldown}s`
+                    : 'Reenviar e-mail de verificação'}
+              </button>
+            </div>
+
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-card px-3 text-muted">ou</span>
+              </div>
+            </div>
+
+            {/* Logout */}
+            <button
+              onClick={onLogout}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm text-muted hover:text-foreground rounded-xl border border-border hover:bg-surface transition-all duration-200"
+            >
+              <LogOut size={16} />
+              Voltar ao login
+            </button>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <p className="mt-6 text-center text-xs text-muted">
+          Precision IA &middot; precisionIA.com.br
+        </p>
       </div>
     </div>
   );

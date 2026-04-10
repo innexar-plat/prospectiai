@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { SearchFiltersRow } from '@/components/dashboard/SearchFiltersRow';
 import { SearchSegmentRow } from '@/components/dashboard/SearchSegmentRow';
+import { CnaeAutocomplete } from '@/components/dashboard/CnaeAutocomplete';
 import { Button } from '@/components/ui/Button';
 import { startSearch, validateSearchPayload, buildTextQuery } from '@/lib/searchService';
 import { useToast } from '@/contexts/ToastContext';
@@ -21,31 +22,31 @@ import { UpgradeCTAModal } from '@/components/dashboard/UpgradeCTAModal';
 
 const MIN_ADVANCED_TERM = 3;
 
-const QUICK_TEMPLATES: { label: string; icon: LucideIcon; niches: string[]; includedType?: string }[] = [
-  { label: 'Restaurantes', icon: UtensilsCrossed, niches: ['restaurante'], includedType: 'restaurant' },
-  { label: 'Salões de Beleza', icon: Scissors, niches: ['salão de beleza', 'barbearia'], includedType: 'beauty_salon' },
-  { label: 'Academias', icon: Dumbbell, niches: ['academia', 'fitness'], includedType: 'gym' },
-  { label: 'Clínicas', icon: Stethoscope, niches: ['clínica', 'consultório'], includedType: 'doctor' },
-  { label: 'Lojas', icon: ShoppingBag, niches: ['loja', 'comércio'], includedType: 'store' },
-  { label: 'Oficinas', icon: Wrench, niches: ['oficina mecânica', 'auto center'], includedType: 'car_repair' },
-  { label: 'Imobiliárias', icon: Building2, niches: ['imobiliária'], includedType: 'real_estate_agency' },
-  { label: 'Advogados', icon: Scale, niches: ['advogado', 'escritório de advocacia'], includedType: 'lawyer' },
-  { label: 'Contadores', icon: Building2, niches: ['contabilidade', 'contador'], includedType: 'accounting' },
-  { label: 'Pet Shops', icon: PawPrint, niches: ['pet shop', 'veterinário'], includedType: 'pet_store' },
-  { label: 'Dentistas', icon: Heart, niches: ['dentista', 'odontologia'], includedType: 'dentist' },
-  { label: 'Hotéis', icon: Hotel, niches: ['hotel', 'pousada'], includedType: 'hotel' },
-  { label: 'Farmácias', icon: Pill, niches: ['farmácia', 'drogaria'], includedType: 'pharmacy' },
-  { label: 'Escolas', icon: GraduationCap, niches: ['escola', 'colégio'], includedType: 'school' },
-  { label: 'Ag. Marketing', icon: Megaphone, niches: ['agência de marketing', 'marketing digital'], includedType: 'marketing_consultant' },
-  { label: 'Seguradoras', icon: ShieldCheck, niches: ['seguradora', 'seguros'], includedType: 'insurance_agency' },
-  { label: 'Coworkings', icon: Laptop, niches: ['coworking', 'escritório compartilhado'], includedType: 'coworking_space' },
-  { label: 'Ag. Viagens', icon: Plane, niches: ['agência de viagens', 'turismo'], includedType: 'travel_agency' },
-  { label: 'Construtoras', icon: HardHat, niches: ['construtora', 'construção civil'] },
-  { label: 'Cafeterias', icon: Coffee, niches: ['cafeteria', 'padaria', 'café'], includedType: 'cafe' },
-  { label: 'Óticas', icon: Eye, niches: ['ótica', 'óculos'] },
-  { label: 'Lava-rápido', icon: Car, niches: ['lava-rápido', 'lavagem automotiva'], includedType: 'car_wash' },
-  { label: 'Pizzarias', icon: Pizza, niches: ['pizzaria'], includedType: 'pizza_restaurant' },
-  { label: 'Autoescolas', icon: BookOpen, niches: ['autoescola', 'centro de formação de condutores'] },
+const QUICK_TEMPLATES: { label: string; icon: LucideIcon; niches: string[]; includedType?: string; cnaes?: string[] }[] = [
+  { label: 'Restaurantes', icon: UtensilsCrossed, niches: ['restaurante'], includedType: 'restaurant', cnaes: ['5611201', '5611202', '5611203'] },
+  { label: 'Salões de Beleza', icon: Scissors, niches: ['salão de beleza', 'barbearia'], includedType: 'beauty_salon', cnaes: ['9602501', '9602502'] },
+  { label: 'Academias', icon: Dumbbell, niches: ['academia', 'fitness'], includedType: 'gym', cnaes: ['9313100', '9319101'] },
+  { label: 'Clínicas', icon: Stethoscope, niches: ['clínica', 'consultório'], includedType: 'doctor', cnaes: ['8630501', '8630502', '8630503', '8630504'] },
+  { label: 'Lojas', icon: ShoppingBag, niches: ['loja', 'comércio'], includedType: 'store', cnaes: ['4712100', '4713002', '4713004'] },
+  { label: 'Oficinas', icon: Wrench, niches: ['oficina mecânica', 'auto center'], includedType: 'car_repair', cnaes: ['4520001', '4520002', '4520003'] },
+  { label: 'Imobiliárias', icon: Building2, niches: ['imobiliária'], includedType: 'real_estate_agency', cnaes: ['6821801', '6821802'] },
+  { label: 'Advogados', icon: Scale, niches: ['advogado', 'escritório de advocacia'], includedType: 'lawyer', cnaes: ['6911701', '6911702', '6911703'] },
+  { label: 'Contadores', icon: Building2, niches: ['contabilidade', 'contador'], includedType: 'accounting', cnaes: ['6920601', '6920602'] },
+  { label: 'Pet Shops', icon: PawPrint, niches: ['pet shop', 'veterinário'], includedType: 'pet_store', cnaes: ['4789004', '7500100'] },
+  { label: 'Dentistas', icon: Heart, niches: ['dentista', 'odontologia'], includedType: 'dentist', cnaes: ['8630506'] },
+  { label: 'Hotéis', icon: Hotel, niches: ['hotel', 'pousada'], includedType: 'hotel', cnaes: ['5510801', '5510802', '5510803'] },
+  { label: 'Farmácias', icon: Pill, niches: ['farmácia', 'drogaria'], includedType: 'pharmacy', cnaes: ['4771701', '4771702', '4771703'] },
+  { label: 'Escolas', icon: GraduationCap, niches: ['escola', 'colégio'], includedType: 'school', cnaes: ['8511200', '8512100', '8513900'] },
+  { label: 'Ag. Marketing', icon: Megaphone, niches: ['agência de marketing', 'marketing digital'], includedType: 'marketing_consultant', cnaes: ['7311400', '7312200', '6319400'] },
+  { label: 'Seguradoras', icon: ShieldCheck, niches: ['seguradora', 'seguros'], includedType: 'insurance_agency', cnaes: ['6622300', '6621501', '6621502'] },
+  { label: 'Coworkings', icon: Laptop, niches: ['coworking', 'escritório compartilhado'], includedType: 'coworking_space', cnaes: ['8211300'] },
+  { label: 'Ag. Viagens', icon: Plane, niches: ['agência de viagens', 'turismo'], includedType: 'travel_agency', cnaes: ['7911200', '7912100'] },
+  { label: 'Construtoras', icon: HardHat, niches: ['construtora', 'construção civil'], cnaes: ['4120400', '4110700'] },
+  { label: 'Cafeterias', icon: Coffee, niches: ['cafeteria', 'padaria', 'café'], includedType: 'cafe', cnaes: ['5611203', '1091101', '1091102'] },
+  { label: 'Óticas', icon: Eye, niches: ['ótica', 'óculos'], cnaes: ['4774100'] },
+  { label: 'Lava-rápido', icon: Car, niches: ['lava-rápido', 'lavagem automotiva'], includedType: 'car_wash', cnaes: ['4520005'] },
+  { label: 'Pizzarias', icon: Pizza, niches: ['pizzaria'], includedType: 'pizza_restaurant', cnaes: ['5611201'] },
+  { label: 'Autoescolas', icon: BookOpen, niches: ['autoescola', 'centro de formação de condutores'], cnaes: ['8599604'] },
 ];
 
 function getGreeting(): string {
@@ -143,6 +144,9 @@ export default function DashboardIndex() {
       advancedTerm: form.advancedTerm ?? '',
       hasWebsite: form.hasWebsite,
       hasPhone: form.hasPhone,
+      cnae: form.cnae,
+      cnaeDescricao: form.cnaeDescricao,
+      cnaes: form.cnaes,
     }),
     [form]
   );
@@ -196,7 +200,15 @@ export default function DashboardIndex() {
   const goToHistorico = useCallback(() => navigate('/dashboard/historico'), [navigate]);
 
   const applyTemplate = useCallback((tpl: typeof QUICK_TEMPLATES[number]) => {
-    setForm((prev) => ({ ...prev, niches: tpl.niches, includedType: tpl.includedType }));
+    setForm((prev) => ({
+      ...prev,
+      niches: tpl.niches,
+      includedType: tpl.includedType,
+      cnaes: tpl.cnaes ?? [],
+      // Keep single cnae for backward compat (first code)
+      cnae: tpl.cnaes?.[0],
+      cnaeDescricao: tpl.cnaes?.length ? tpl.label : undefined,
+    }));
   }, []);
 
   const firstName = user.name?.split(' ')[0] ?? 'Usuário';
@@ -318,6 +330,22 @@ export default function DashboardIndex() {
             advancedTermError={advancedTermError ?? undefined}
           />
         </section>
+
+        {/* Linha 2.5 – Filtro CNAE (atividade econômica) */}
+        {form.country === 'BR' && (
+          <section className="pb-4 border-b border-border" aria-label="Filtro por CNAE">
+            <div className="flex items-center gap-2 mb-2">
+              <Building2 size={14} className="text-violet-500 shrink-0" />
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Atividade Econômica (CNAE)</span>
+              <span className="text-[10px] text-muted/60 italic">Dados da Receita Federal</span>
+            </div>
+            <CnaeAutocomplete
+              values={form.cnaes ?? []}
+              onChange={(codes, desc) => setForm((prev) => ({ ...prev, cnaes: codes, cnae: codes[0], cnaeDescricao: desc }))}
+              disabled={loading}
+            />
+          </section>
+        )}
 
         {/* Linha 3 – Filtros de resultado */}
         <section className="pb-4 border-b border-border" aria-label="Filtros de resultado">

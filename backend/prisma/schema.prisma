@@ -245,13 +245,16 @@ model Lead {
   name             String
   address          String?
   phone            String?
+  email            String?
   website          String?
   cnpj             String?  @db.VarChar(14)
   companyLegalName String?
   companyTradeName String?
   companySize      String?
+  companyPorte     String?
   companyLegalNature String?
   companyMainCnae  String?
+  companyCapitalSocial Float?
   cnpjStatus       String?
   cnpjOpenedAt     String?
   cnpjLastFetchedAt DateTime?
@@ -263,6 +266,8 @@ model Lead {
   opportunityScore Int?      // 0-100 unified opportunity score
   scoreFactors     Json?     // { noWebsite, fewReviews, lowRating, noPhone, ... }
   lastScoredAt     DateTime?
+  matchConfidence  Int?      // 0-100 RF match confidence
+  matchMethod      String?   // cnpj_direct, name_exact_city, name_fuzzy_city, etc.
   
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -270,6 +275,7 @@ model Lead {
   analyses         LeadAnalysis[]
   tags             LeadTag[]
 
+  @@index([cnpj])
   @@index([lastSearchedAt(sort: Desc)])
 }
 
@@ -303,6 +309,11 @@ model LeadAnalysis {
   closeProbability         Int?           // 0-100% AI-predicted chance of closing
   estimatedDealValue       Float?         // Estimated deal size in BRL
   bestContactWindow        String?        // e.g. "Terça 10h-12h"
+  reclameAquiAnalysis      String?        @db.Text  // AI analysis of Reclame Aqui data
+  jusBrasilAnalysis        String?        @db.Text  // AI analysis of legal proceedings
+  cnpjAnalysis             String?        @db.Text  // AI analysis of CNPJ/RF data
+  reviewTrend              String?        // IMPROVING, STABLE, DECLINING
+  suggestedContactTime     String?        // e.g. "Segunda a Sexta, 9h-11h"
   conversionReason         String?        @db.Text  // Why converted/lost (user fills)
   dealValue                Float?         // Actual deal value (user fills on CONVERTED)
   lostReason               String?        // PRICE | NO_NEED | COMPETITOR | NO_RESPONSE | OTHER
@@ -716,4 +727,206 @@ model PipelineBrief {
   @@unique([workspaceId, briefDate])
   @@index([userId])
   @@index([workspaceId])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// EMAIL MARKETING — Templates, Campanhas, Envios, Unsubscribe
+// ═══════════════════════════════════════════════════════════════════
+
+enum EmailTemplateType {
+  PROMOTION
+  WEEKLY_REPORT
+  FEATURE_ANNOUNCEMENT
+  REENGAGEMENT
+  CUSTOM
+}
+
+enum EmailTemplateStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum EmailCampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  CANCELLED
+}
+
+enum EmailCampaignAudience {
+  ALL
+  FREE
+  PAID
+  TRIAL
+  CHURNED
+  INACTIVE
+  CUSTOM
+}
+
+enum EmailSendStatus {
+  PENDING
+  SENT
+  FAILED
+  BOUNCED
+}
+
+enum EmailSendType {
+  TRANSACTIONAL
+  CAMPAIGN
+  WEEKLY_REPORT
+  SYSTEM
+}
+
+enum EmailUnsubscribeCategory {
+  ALL
+  MARKETING
+  WEEKLY_REPORT
+  PROMOTIONS
+}
+
+model EmailTemplate {
+  id          String              @id @default(cuid())
+  name        String
+  slug        String              @unique
+  type        EmailTemplateType   @default(CUSTOM)
+  status      EmailTemplateStatus @default(DRAFT)
+  subject     String
+  preheader   String?
+  body        Json                // { paragraphs, benefits, badge, badgeColor, subtitle, legalNote, expiresAt, accentColor }
+  ctaLabel    String?
+  ctaUrl      String?
+  accentColor String?
+  createdBy   String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  campaigns   EmailCampaign[]
+
+  @@index([type])
+  @@index([status])
+}
+
+model EmailCampaign {
+  id              String                @id @default(cuid())
+  name            String
+  templateId      String
+  template        EmailTemplate         @relation(fields: [templateId], references: [id])
+  audience        EmailCampaignAudience @default(ALL)
+  audienceFilter  Json?                 // { plans, inactiveDays, minDaysSinceSignup, cities }
+  status          EmailCampaignStatus   @default(DRAFT)
+  scheduledAt     DateTime?
+  sentAt          DateTime?
+  totalRecipients Int                   @default(0)
+  totalSent       Int                   @default(0)
+  totalFailed     Int                   @default(0)
+  createdBy       String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  recipients      EmailCampaignRecipient[]
+
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([templateId])
+}
+
+model EmailCampaignRecipient {
+  id         String          @id @default(cuid())
+  campaignId String
+  campaign   EmailCampaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  userId     String
+  email      String
+  status     EmailSendStatus @default(PENDING)
+  sentAt     DateTime?
+  error      String?
+
+  @@unique([campaignId, userId])
+  @@index([campaignId, status])
+}
+
+model EmailSendLog {
+  id                String        @id @default(cuid())
+  type              EmailSendType @default(TRANSACTIONAL)
+  campaignId        String?
+  userId            String?
+  email             String
+  subject           String
+  status            EmailSendStatus @default(SENT)
+  provider          String?       // resend | smtp
+  providerMessageId String?
+  error             String?
+  createdAt         DateTime      @default(now())
+
+  @@index([type])
+  @@index([campaignId])
+  @@index([userId])
+  @@index([email])
+  @@index([createdAt])
+}
+
+model EmailUnsubscribe {
+  id              String                    @id @default(cuid())
+  userId          String?
+  email           String
+  category        EmailUnsubscribeCategory  @default(ALL)
+  token           String                    @unique @default(cuid())
+  unsubscribedAt  DateTime                  @default(now())
+
+  @@unique([email, category])
+  @@index([email])
+  @@index([userId])
+}
+
+model WeeklyReportConfig {
+  id              String   @id @default(cuid())
+  enabled         Boolean  @default(false)
+  customTitle     String?
+  customHighlight String?
+  ctaLabel        String?
+  ctaUrl          String?
+  footerPromo     String?
+  sendDay         Int      @default(1) // 0=Sunday, 1=Monday ... 6=Saturday
+  sendHour        Int      @default(9) // Hour in BRT (UTC-3)
+  updatedAt       DateTime @updatedAt
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RECEITA FEDERAL — Dados Abertos CNPJ (Empresas + CNAE)
+// ═══════════════════════════════════════════════════════════════════
+
+/// Tabela de referência CNAE — ~1.300 subclasses da classificação econômica.
+model CnaeCode {
+  code        String @id @db.VarChar(7)   // "7020400" (7 dígitos, sem pontuação)
+  description String                      // "Atividades de consultoria em gestão empresarial"
+
+  @@index([description])
+}
+
+/// Empresas da Receita Federal (dados abertos CNPJ).
+/// Apenas matrizes ativas. Populada via script de importação.
+model RfCompany {
+  cnpj          String  @id @db.VarChar(14) // CNPJ completo (14 dígitos)
+  razaoSocial   String                      // Razão social
+  nomeFantasia  String?                     // Nome fantasia
+  cnaePrincipal String  @db.VarChar(7)      // CNAE fiscal principal (7 dígitos)
+  uf            String  @db.VarChar(2)      // UF (ex: "SP")
+  municipio     String?                     // Nome do município
+  cep           String? @db.VarChar(8)      // CEP (8 dígitos)
+  bairro        String?                     // Bairro
+  logradouro    String?                     // Tipo + Logradouro
+  numero        String?                     // Número
+  ddd           String? @db.VarChar(4)      // DDD telefone
+  telefone      String?                     // Telefone
+  email         String?                     // Email (correio eletrônico)
+  porte         String?                     // "ME" (Micro), "EPP" (Pequeno Porte), "DEMAIS"
+  capitalSocial Float?                      // Capital social (R$)
+  dataAbertura  String?                     // Data início atividade (YYYYMMDD)
+
+  @@index([cnaePrincipal])
+  @@index([uf])
+  @@index([uf, cnaePrincipal])
+  @@index([municipio])
+  @@index([porte])
 }

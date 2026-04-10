@@ -21,6 +21,12 @@ import { AffiliateSettingsPage } from '@/pages/AffiliateSettingsPage';
 import { CommissionsPage } from '@/pages/CommissionsPage';
 import { ReferralsPage } from '@/pages/ReferralsPage';
 import { ProfilePage } from '@/pages/ProfilePage';
+import { EmailTemplatesPage } from '@/pages/EmailTemplatesPage';
+import { EmailTemplateEditorPage } from '@/pages/EmailTemplateEditorPage';
+import { EmailCampaignsPage } from '@/pages/EmailCampaignsPage';
+import { EmailCampaignDetailPage } from '@/pages/EmailCampaignDetailPage';
+import { WeeklyReportConfigPage } from '@/pages/WeeklyReportConfigPage';
+import { EmailAnalyticsPage } from '@/pages/EmailAnalyticsPage';
 
 function RedirectAffiliateDetail() {
   const { id } = useParams<{ id: string }>();
@@ -52,6 +58,12 @@ function App() {
               <Route path="commissions" element={<CommissionsPage />} />
               <Route path="referrals" element={<ReferralsPage />} />
               <Route path="profile" element={<ProfilePage />} />
+              <Route path="email-templates" element={<EmailTemplatesPage />} />
+              <Route path="email-templates/:id" element={<EmailTemplateEditorPage />} />
+              <Route path="email-campaigns" element={<EmailCampaignsPage />} />
+              <Route path="email-campaigns/:id" element={<EmailCampaignDetailPage />} />
+              <Route path="email-weekly-report" element={<WeeklyReportConfigPage />} />
+              <Route path="email-analytics" element={<EmailAnalyticsPage />} />
             </Route>
             <Route path="users" element={<UsersPage />} />
             <Route path="users/:id" element={<UserDetailPage />} />

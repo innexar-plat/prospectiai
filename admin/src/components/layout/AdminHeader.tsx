@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router-dom';
-import { LogOut } from 'lucide-react';
+import { LogOut, Menu } from 'lucide-react';
 import type { SessionUser } from '@/lib/api';
 import { authApi } from '@/lib/api';
 
@@ -21,6 +21,10 @@ const pathToTitle: Record<string, string> = {
   referrals: 'Referrals',
   'affiliate-settings': 'Config. Afiliados',
   profile: 'Perfil',
+  'email-analytics': 'Email Analytics',
+  'email-templates': 'Templates Email',
+  'email-campaigns': 'Campanhas',
+  'email-weekly-report': 'Relatório Semanal',
 };
 
 function getPageTitle(pathname: string): string {
@@ -28,7 +32,7 @@ function getPageTitle(pathname: string): string {
   return pathToTitle[segment] ?? 'Painel';
 }
 
-export function AdminHeader({ user }: { user: SessionUser }) {
+export function AdminHeader({ user, onMenuToggle }: { user: SessionUser; onMenuToggle?: () => void }) {
   const location = useLocation();
   const pageTitle = getPageTitle(location.pathname);
 
@@ -43,20 +47,32 @@ export function AdminHeader({ user }: { user: SessionUser }) {
   };
 
   return (
-    <header className="h-14 shrink-0 border-b border-gray-200 bg-white flex items-center justify-between px-6 shadow-sm">
-      <h2 className="text-base font-semibold text-gray-800 truncate">{pageTitle}</h2>
-      <div className="flex items-center gap-3">
-        <span className="text-sm text-gray-500 truncate max-w-[180px]">
+    <header className="h-14 shrink-0 border-b border-gray-200 bg-white flex items-center justify-between px-4 sm:px-6 shadow-sm">
+      <div className="flex items-center gap-2 min-w-0">
+        {onMenuToggle && (
+          <button
+            type="button"
+            onClick={onMenuToggle}
+            className="p-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 md:hidden"
+            aria-label="Menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
+        <h2 className="text-base font-semibold text-gray-800 truncate">{pageTitle}</h2>
+      </div>
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <span className="text-sm text-gray-500 truncate max-w-[100px] sm:max-w-[180px] hidden sm:inline">
           {user.email ?? user.name ?? 'Admin'}
         </span>
         <button
           type="button"
           onClick={handleSignOut}
-          className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 text-sm transition-colors"
+          className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 text-sm transition-colors"
           title="Sair"
         >
           <LogOut className="w-4 h-4" />
-          Sair
+          <span className="hidden sm:inline">Sair</span>
         </button>
       </div>
     </header>

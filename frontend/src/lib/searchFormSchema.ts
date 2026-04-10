@@ -18,6 +18,11 @@ export const searchFormSchema = z.object({
     }),
   hasWebsite: z.enum(['any', 'yes', 'no']).default('any'),
   hasPhone: z.enum(['any', 'yes', 'no']).default('any'),
+  /** CNAE code filter — 7-digit code from Receita Federal */
+  cnae: z.string().max(7).optional(),
+  cnaeDescricao: z.string().optional(),
+  /** Multiple CNAE codes for broader RF search */
+  cnaes: z.array(z.string().max(7)).max(10).default([]),
 });
 
 export type SearchFormValues = z.infer<typeof searchFormSchema>;
@@ -32,4 +37,7 @@ export const DEFAULT_SEARCH_VALUES: SearchFormValues = {
   advancedTerm: '',
   hasWebsite: 'any',
   hasPhone: 'any',
+  cnae: undefined,
+  cnaeDescricao: undefined,
+  cnaes: [],
 };

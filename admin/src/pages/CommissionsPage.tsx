@@ -131,8 +131,8 @@ export function CommissionsPage() {
           </div>
         )}
       </div>
-      <div className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
-        <table className="w-full text-sm">
+      <div className="rounded-xl border border-gray-200 bg-white overflow-hidden overflow-x-auto shadow-sm">
+        <table className="w-full text-sm min-w-[600px]">
           <thead>
             <tr className="border-b border-gray-200 text-left text-gray-500">
               <th className="px-4 py-3 font-medium w-10">

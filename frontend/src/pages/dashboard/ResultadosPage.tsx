@@ -405,6 +405,11 @@ export default function ResultadosPage() {
                           <Star size={10} /> Favorito
                         </span>
                       )}
+                      {p.id.startsWith('rf_') && (
+                        <span className="text-[10px] px-2 py-1 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300">
+                          Receita Federal
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 mt-1 text-sm text-muted">
@@ -437,6 +442,26 @@ export default function ResultadosPage() {
                       </span>
                     )}
                   </div>
+                  {/* RF-specific extra info */}
+                  {(p as { rfData?: { cnaeDescricao?: string | null; porte?: string | null; email?: string | null } }).rfData && (
+                    <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                      {(p as { rfData?: { cnaeDescricao?: string | null } }).rfData?.cnaeDescricao && (
+                        <span className="text-[11px] text-cyan-600 dark:text-cyan-400 truncate max-w-[300px]">
+                          CNAE: {(p as { rfData: { cnaeDescricao: string } }).rfData.cnaeDescricao}
+                        </span>
+                      )}
+                      {(p as { rfData?: { porte?: string | null } }).rfData?.porte && (
+                        <span className="text-[11px] text-muted">
+                          Porte: {(p as { rfData: { porte: string } }).rfData.porte === 'ME' ? 'Micro' : (p as { rfData: { porte: string } }).rfData.porte === 'EPP' ? 'Pequeno' : 'Médio/Grande'}
+                        </span>
+                      )}
+                      {(p as { rfData?: { email?: string | null } }).rfData?.email && (
+                        <span className="text-[11px] text-muted truncate max-w-[200px]">
+                          ✉ {(p as { rfData: { email: string } }).rfData.email}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <p className="text-xs text-violet-500 mt-2 font-medium">Clique para ver detalhes e analisar com IA →</p>
                 </button>
                 <div className="flex items-center pr-4">

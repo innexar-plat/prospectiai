@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.tsx'
 import MaintenancePage from './pages/MaintenancePage'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { UpdateBanner } from './components/UpdateBanner'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { ToastProvider } from './contexts/ToastContext'
 
@@ -27,6 +28,7 @@ createRoot(document.getElementById('root')!).render(
         <ThemeProvider>
           <ToastProvider>
             <App />
+            <UpdateBanner />
           </ToastProvider>
         </ThemeProvider>
       )}

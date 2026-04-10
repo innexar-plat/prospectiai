@@ -218,6 +218,18 @@
 .animation-delay-500 { animation-delay: 500ms; }
 .animation-fill-both { animation-fill-mode: both; }
 
+/* Infinite marquee scroll */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes marquee-reverse {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
+}
+.animate-marquee { animation: marquee linear infinite; }
+.animate-marquee-reverse { animation: marquee-reverse linear infinite; }
+
 /* Custom Scrollbar (theme-aware) */
 ::-webkit-scrollbar {
   width: 8px;

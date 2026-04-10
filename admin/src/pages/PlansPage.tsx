@@ -124,11 +124,11 @@ export function PlansPage() {
 
     return (
         <div>
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
                 <h1 className="text-xl font-semibold text-gray-900">Configuração de Planos</h1>
                 <button
                     onClick={openCreate}
-                    className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-600"
+                    className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-600 w-full sm:w-auto text-center"
                 >
                     + Novo Plano
                 </button>

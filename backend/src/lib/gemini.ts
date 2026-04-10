@@ -1,5 +1,6 @@
 import { generateCompletionForRole } from '@/lib/ai';
 import { getWebContextForRole } from '@/lib/web-search/resolve';
+import { scrapeWebsite, formatWebsiteMetadataForPrompt } from '@/lib/website-scraper';
 import { prisma } from './prisma';
 
 export interface LeadAnalysis {
@@ -67,6 +68,18 @@ export interface BusinessData {
         authorAttribution: { displayName: string };
         relativePublishTimeDescription: string;
     }>;
+    // RF (Receita Federal) enrichment data
+    cnpj?: string;
+    companyLegalName?: string;
+    companyTradeName?: string;
+    companyPorte?: string;
+    companyCapitalSocial?: number;
+    companyMainCnae?: string;
+    cnpjStatus?: string;
+    cnpjOpenedAt?: string;
+    rfEmail?: string;
+    matchConfidence?: number;
+    matchMethod?: string;
 }
 
 export interface AnalyzeLeadContext {
@@ -116,10 +129,43 @@ function buildTaskDescription(isEn: boolean): string {
     return isEn
         ? `Your task is to generate a DEEP, DETAILED, and ACTIONABLE strategic prospecting report for the lead below.
 Be like a senior consultant who has researched this company thoroughly. Avoid generic statements.
-Every insight must be specific to THIS business and how YOUR product/service can help them.`
+Every insight must be specific to THIS business and how YOUR product/service can help them.
+
+REPORT LENGTH REQUIREMENTS:
+- The "fullReport" field MUST be at least 2000 words with rich Markdown formatting.
+- Each section (Executive Summary, Digital Strategy, Deep Gaps, Operational Vulnerabilities, Competitor Profile, Complete Action Plan) must have multiple detailed paragraphs.
+- Include specific data points, numbers, percentages, and actionable recommendations.
+- The report should read like a professional consulting deliverable, not a brief summary.
+- DO NOT be brief. The user is PAYING for depth and detail. More analysis = more value.`
         : `Sua tarefa é gerar um relatório estratégico de prospecção PROFUNDO, DETALHADO e ACIONÁVEL para o lead abaixo.
 Seja como um consultor sênior que pesquisou a fundo esta empresa. Evite afirmações genéricas.
-Cada análise deve ser específica para ESTE negócio e como o SEU produto/serviço pode ajudá-los.`;
+Cada análise deve ser específica para ESTE negócio e como o SEU produto/serviço pode ajudá-los.
+
+REQUISITOS DE TAMANHO DO RELATÓRIO:
+- O campo "fullReport" DEVE ter no mínimo 2000 palavras com formatação Markdown rica.
+- Cada seção (Resumo Executivo, Estratégia Digital, Lacunas Profundas, Vulnerabilidades Operacionais, Perfil do Concorrente, Plano de Ação Completo) deve ter múltiplos parágrafos detalhados.
+- Inclua dados específicos, números, percentuais e recomendações acionáveis.
+- O relatório deve parecer uma entrega de consultoria profissional, não um resumo breve.
+- NÃO seja breve. O usuário está PAGANDO pela profundidade e detalhe. Mais análise = mais valor.`;
+}
+
+function expandProductService(raw: string): string {
+    const lower = raw.toLowerCase().trim();
+    const EXPANSIONS: Record<string, string> = {
+        'imobiliaria': 'Imobiliária — venda, locação e administração de imóveis residenciais e comerciais, avaliação de propriedades, consultoria imobiliária',
+        'imobiliária': 'Imobiliária — venda, locação e administração de imóveis residenciais e comerciais, avaliação de propriedades, consultoria imobiliária',
+        'contabilidade': 'Escritório de contabilidade — serviços contábeis, fiscais, trabalhistas, abertura de empresas, planejamento tributário',
+        'advocacia': 'Escritório de advocacia — consultoria jurídica, contencioso, contratos, compliance',
+        'seguros': 'Corretora de seguros — seguros de vida, auto, empresarial, saúde, patrimonial',
+        'marketing': 'Agência de marketing — marketing digital, redes sociais, SEO, anúncios pagos, criação de sites',
+        'tecnologia': 'Empresa de tecnologia — desenvolvimento de software, aplicativos, sistemas, infraestrutura de TI',
+        'limpeza': 'Empresa de limpeza — limpeza comercial, industrial, residencial, pós-obra',
+        'consultoria': 'Consultoria empresarial — gestão, processos, estratégia, planejamento',
+    };
+    for (const [key, expanded] of Object.entries(EXPANSIONS)) {
+        if (lower === key || lower.includes(key)) return expanded;
+    }
+    return raw;
 }
 
 function buildCompanyContext(finalProfile: UserBusinessProfile | undefined, isEn: boolean): string {
@@ -127,19 +173,44 @@ function buildCompanyContext(finalProfile: UserBusinessProfile | undefined, isEn
         ? 'You are a Senior B2B Strategic Consultant specialized in commercial prospecting.'
         : 'Você é um Consultor Estratégico B2B Sênior especializado em prospecção comercial.';
     if (!finalProfile) return fallbackRole;
+    const expandedProduct = expandProductService(finalProfile.productService);
     return isEn
         ? `You are a Senior B2B Commercial Consultant for "${finalProfile.companyName}".
-"${finalProfile.companyName}" offers: "${finalProfile.productService}".
+"${finalProfile.companyName}" offers: "${expandedProduct}".
 Target audience: "${finalProfile.targetAudience}".
 Main competitive advantage: "${finalProfile.mainBenefit}".
-CRUCIAL CONTEXT: Analyze the "website" gap through the lens of YOUR product ("${finalProfile.productService}"). If you sell websites/marketing, a missing website is a massive sales opportunity. If you sell Insurance, Cleaning, Logistics, Real Estate, or other physical/B2B services, a missing website is just a minor communication detail, NOT a critical flaw.
-MANDATORY: The ENTIRE report (summary, strengths, weaknesses, gaps, painPoints, approachStrategy, suggestedScripts, fullReport) must be from the perspective of "${finalProfile.companyName}" selling ONLY "${finalProfile.productService}". Do NOT recommend or offer services that are not what this company sells (e.g. if they sell real estate, do NOT suggest offering websites, SEO, or digital marketing to the lead; suggest only real estate services such as finding space, listings, rentals).`
+
+CRUCIAL CONTEXT — YOUR PERSPECTIVE:
+- You are analyzing this lead FROM THE PERSPECTIVE of "${finalProfile.companyName}", which sells "${expandedProduct}".
+- The goal is to discover whether this lead NEEDS what you sell and how to approach them.
+- If the lead has no website, that is ONLY relevant if YOUR product is websites/marketing. Otherwise, ignore it or mention it briefly.
+- NEVER suggest the lead create a website, do SEO, or improve digital marketing UNLESS that is exactly what "${finalProfile.companyName}" sells.
+- Focus on: Does this lead need YOUR service? What specific pain points make them a good prospect FOR YOUR OFFERING?
+
+MANDATORY RULES:
+1. The ENTIRE analysis must answer: "Why would this lead buy from ${finalProfile.companyName}?"
+2. Gaps/weaknesses must be relevant to YOUR product ("${expandedProduct}"), not generic digital marketing gaps.
+3. Approach strategy must pitch YOUR specific service, not generic advice.
+4. Scripts/messages must mention YOUR service naturally.
+5. fullReport must deeply analyze the match between this lead's needs and YOUR offering.`
         : `Você é um Consultor Comercial B2B Sênior trabalhando para "${finalProfile.companyName}".
-"${finalProfile.companyName}" oferece: "${finalProfile.productService}".
+"${finalProfile.companyName}" oferece: "${expandedProduct}".
 Público-alvo: "${finalProfile.targetAudience}".
 Principal diferencial: "${finalProfile.mainBenefit}".
-CONTEXTO CRUCIAL: Analise a lacuna de "website" através da lente do SEU produto ("${finalProfile.productService}"). Se você vende sites/marketing, a falta de um site é uma enorme oportunidade de venda. Se você vende Seguros, Limpeza, Logística, Imobiliária ou outros serviços físicos/B2B, a falta de um site é apenas um detalhe de comunicação menor, NÃO uma falha crítica.
-OBRIGATÓRIO: O relatório INTEIRO (resumo, pontos fortes, fraquezas, lacunas, dores, estratégia de abordagem, scripts sugeridos, relatório completo) deve ser na perspectiva de "${finalProfile.companyName}" vendendo APENAS "${finalProfile.productService}". NÃO recomende nem ofereça serviços que não sejam o que esta empresa vende (ex.: se for imobiliária, NÃO sugira oferecer site, SEO ou marketing digital ao lead; sugira apenas serviços imobiliários como encontrar espaço, imóveis para locação/venda).`;
+
+CONTEXTO CRUCIAL — SUA PERSPECTIVA:
+- Você está analisando este lead DO PONTO DE VISTA de "${finalProfile.companyName}", que vende "${expandedProduct}".
+- O objetivo é descobrir se este lead PRECISA do que você vende e como abordá-lo.
+- Se o lead não tem website, isso SÓ é relevante se o SEU produto for sites/marketing. Caso contrário, ignore ou mencione brevemente.
+- NUNCA sugira que o lead crie um site, faça SEO ou melhore marketing digital A MENOS que seja exatamente o que "${finalProfile.companyName}" vende.
+- Foque em: Este lead precisa do SEU serviço? Quais dores específicas fazem dele um bom prospect PARA A SUA OFERTA?
+
+REGRAS OBRIGATÓRIAS:
+1. A análise INTEIRA deve responder: "Por que este lead compraria de ${finalProfile.companyName}?"
+2. Lacunas/fraquezas devem ser relevantes ao SEU produto ("${expandedProduct}"), não lacunas genéricas de marketing digital.
+3. Estratégia de abordagem deve vender O SEU serviço específico, não dar conselhos genéricos.
+4. Scripts/mensagens devem mencionar O SEU serviço naturalmente.
+5. fullReport deve analisar profundamente o match entre as necessidades do lead e a SUA oferta.`;
 }
 
 function getPoint6Requirement(isBusinessPlan: boolean, isEn: boolean): string {
@@ -201,6 +272,8 @@ interface BuildLeadPromptInput {
     webContext: string;
     isBusinessPlan: boolean;
     conversionContext: string;
+    rfDataBlock: string;
+    websiteScrapingBlock: string;
 }
 
 const LEAD_DATA_LABELS = {
@@ -247,7 +320,7 @@ const LEAD_DATA_LABELS = {
 const LEAD_REQUIREMENTS_LABELS = {
     en: {
         header: 'ANALYSIS REQUIREMENTS (be extremely specific, not generic):',
-        gaps: 'DIGITAL PRESENCE GAPS: What is this business missing? (website, online booking, e-commerce, CRM, social media management, paid ads, SEO, etc.) Consider if missing a website is actually a problem for them based on what YOU sell.',
+        gaps: 'GAPS & OPPORTUNITIES: What is this business missing that YOUR company can solve? Focus on gaps relevant to YOUR product/service. Only mention digital gaps (website, SEO) if that is what you sell. If you sell real estate, look for space/property needs. If you sell insurance, look for risk gaps.',
         painPoints: 'CUSTOMER PAIN POINTS: Based on reviews and business type, what frustrations do their customers likely face? What operational challenges does this business have?',
         socialMedia: 'SOCIAL MEDIA STRATEGY: Proactively analyze scenarios for Instagram, LinkedIn, and Facebook based on their niche. Suggest what kind of content they SHOULD be posting to get more clients. Be highly sincere about what they can improve.',
         firstContact: 'FIRST CONTACT MESSAGE: Write a professional, personalized opening message for the FIRST contact (WhatsApp/email). It should reference something specific about this business (their rating, a review pattern, missing digital element). Max 3 short paragraphs. No generic templates.',
@@ -257,7 +330,7 @@ const LEAD_REQUIREMENTS_LABELS = {
     },
     pt: {
         header: 'REQUISITOS DA ANÁLISE (seja extremamente específico, não genérico):',
-        gaps: 'LACUNAS DE PRESENÇA DIGITAL: O que este negócio está faltando? (website, agendamento online, e-commerce, CRM, gestão de redes sociais, anúncios pagos, SEO, etc.) Considere se a falta de um site é realmente um problema para eles com base no que VOCÊ vende.',
+        gaps: 'LACUNAS & OPORTUNIDADES: O que este negócio está faltando que A SUA empresa pode resolver? Foque em lacunas relevantes ao SEU produto/serviço. Só mencione lacunas digitais (website, SEO) se for isso que você vende. Se você é imobiliária, busque necessidades de espaço/imóvel. Se vende seguros, busque lacunas de risco.',
         painPoints: 'DORES DO CLIENTE: Com base nas avaliações e tipo de negócio, quais frustrações os clientes provavelmente enfrentam? Quais desafios operacionais este negócio tem?',
         socialMedia: 'ESTRATÉGIA DE REDES SOCIAIS: Analise proativamente cenários para Instagram, LinkedIn e Facebook com base no nicho deles. Sugira que tipo de conteúdo eles DEVERIAM postar para atrair mais clientes. Seja altamente sincero sobre o que eles podem melhorar.',
         firstContact: 'MENSAGEM DE PRIMEIRO CONTATO: Escreva uma mensagem de abertura profissional e personalizada para o PRIMEIRO contato (WhatsApp/email). Deve referenciar algo específico deste negócio (avaliação, padrão nas reviews, elemento digital faltando). Máximo 3 parágrafos curtos. Sem templates genéricos.',
@@ -296,7 +369,7 @@ const JSON_SCHEMA_LABELS = {
         instagram: 'CRITICAL: ONLY return real URLs. NEVER invent or hallucinate. If unsure, return Not found',
         facebook: 'CRITICAL: NEVER hallucinate URLs. If unsure, return Not found',
         linkedin: 'CRITICAL: NEVER hallucinate URLs. If unsure, return Not found',
-        fullReport: 'EXTREMELY DETAILED and extensive report in Markdown. Dive deep into all possibilities. Sections: ## Executive Summary | ## Digital Strategy | ## Deep Gaps | ## Operational Vulnerabilities | ## Competitor Profile | ## Complete Action Plan.',
+        fullReport: 'EXTREMELY DETAILED and extensive report in Markdown (MINIMUM 2000 words). Each section must have 3-5 substantial paragraphs with concrete data, examples, and actionable recommendations. DO NOT be brief in any section. Required sections: ## Executive Summary (contextualize the lead, their market, and the opportunity for OUR company) | ## Business Analysis (size, maturity, differentiators, positioning) | ## Market & Competition Analysis (regional competitive landscape, sector trends) | ## Opportunities for Our Offering (how OUR product/service solves real pain points of this lead) | ## Risks and Vulnerabilities (aspects that could hinder the deal) | ## Complete Action Plan (detailed step-by-step with timeline, owners, and success metrics).',
     },
     pt: {
         intro: 'CRÍTICO: Responda APENAS com JSON válido, sem markdown, sem blocos de código. Valores devem estar em PORTUGUÊS:',
@@ -327,7 +400,7 @@ const JSON_SCHEMA_LABELS = {
         instagram: 'CRÍTICO: Retorne APENAS URLs reais. NUNCA invente ou alucine. Se não tiver certeza absoluta, retorne exatamente Não encontrado',
         facebook: 'CRÍTICO: NUNCA alucine URLs. Se não tiver certeza, retorne exatamente Não encontrado',
         linkedin: 'CRÍTICO: NUNCA alucine URLs. Se não tiver certeza, retorne exatamente Não encontrado',
-        fullReport: 'Relatório EXTREMAMENTE DETALHADO e extenso em Markdown. Aprofunde-se muito nas possibilidades, sem medo de gerar um texto grande. Seções: ## Resumo Executivo | ## Estratégia Digital | ## Lacunas Profundas | ## Vulnerabilidades Operacionais | ## Perfil do Concorrente | ## Plano de Ação Completo.',
+        fullReport: 'Relatório EXTREMAMENTE DETALHADO e extenso em Markdown (MÍNIMO 2000 palavras). Cada seção deve ter 3-5 parágrafos substanciais com dados concretos, exemplos e recomendações acionáveis. NÃO seja breve em nenhuma seção. Seções obrigatórias: ## Resumo Executivo (contextualizar o lead, seu mercado, e a oportunidade para NOSSA empresa) | ## Análise do Negócio (porte, maturidade, diferenciais, posicionamento) | ## Análise de Mercado e Concorrência (cenário competitivo regional, tendências do setor) | ## Oportunidades para Nossa Oferta (como NOSSO produto/serviço resolve dores reais deste lead) | ## Riscos e Vulnerabilidades (aspectos que podem dificultar o negócio) | ## Plano de Ação Completo (passo a passo detalhado com timeline, responsáveis e métricas de sucesso).',
     }
 } as const;
 
@@ -354,6 +427,8 @@ ${D.section}
 - ${D.reviews}: ${opts.reviewCount}
 - ${D.status}: ${opts.business.businessStatus || 'OPERATIONAL'}
 ${getWebsiteNote(opts.website, isEn)}
+${opts.rfDataBlock}
+${opts.websiteScrapingBlock}
 
 ${D.reviewsSection}
 ${opts.reviewsText}
@@ -400,6 +475,30 @@ ${J.intro}
   "bestContactWindow": "<${isEn ? 'Specific day and time window, e.g. Tuesday 10am-12pm, with rationale' : 'Dia e horário específico, ex: Terça 10h-12h, com justificativa'}>"
 ${getExtendedJsonSchemaBlock(isBusinessPlan, isEn)}
 }`;
+}
+
+function buildRfDataBlock(business: BusinessData, isEn: boolean): string {
+    if (!business.cnpj) return '';
+    const lines: string[] = [];
+    const header = isEn ? 'RECEITA FEDERAL DATA (official Brazilian government records):' : 'DADOS DA RECEITA FEDERAL (registros oficiais do governo brasileiro):';
+    lines.push(`\n${header}`);
+    lines.push(`- CNPJ: ${business.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')}`);
+    if (business.companyLegalName) lines.push(`- ${isEn ? 'Legal Name' : 'Razão Social'}: ${business.companyLegalName}`);
+    if (business.companyTradeName) lines.push(`- ${isEn ? 'Trade Name' : 'Nome Fantasia'}: ${business.companyTradeName}`);
+    if (business.companyPorte) lines.push(`- ${isEn ? 'Company Size' : 'Porte'}: ${business.companyPorte}`);
+    if (business.companyCapitalSocial != null) lines.push(`- ${isEn ? 'Share Capital' : 'Capital Social'}: R$ ${business.companyCapitalSocial.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
+    if (business.companyMainCnae) lines.push(`- ${isEn ? 'Main Activity (CNAE)' : 'Atividade Principal (CNAE)'}: ${business.companyMainCnae}`);
+    if (business.cnpjStatus) lines.push(`- ${isEn ? 'CNPJ Status' : 'Situação CNPJ'}: ${business.cnpjStatus}`);
+    if (business.cnpjOpenedAt) lines.push(`- ${isEn ? 'Founded' : 'Data de Abertura'}: ${business.cnpjOpenedAt}`);
+    if (business.rfEmail) lines.push(`- ${isEn ? 'RF Email' : 'Email (RF)'}: ${business.rfEmail}`);
+    if (business.matchConfidence != null) {
+        lines.push(`- ${isEn ? 'Match Confidence' : 'Confiança do Match'}: ${business.matchConfidence}% (${business.matchMethod || 'unknown'})`);
+    }
+    const note = isEn
+        ? '\nIMPORTANT: Use this official data to assess company maturity, financial capacity, legal status, and business size. This data is from the Brazilian Federal Revenue Service and is highly reliable.'
+        : '\nIMPORTANTE: Use esses dados oficiais para avaliar maturidade da empresa, capacidade financeira, situação legal e porte do negócio. Esses dados são da Receita Federal do Brasil e são altamente confiáveis.';
+    lines.push(note);
+    return lines.join('\n');
 }
 
 function buildReviewSignalsText(
@@ -453,6 +552,9 @@ async function prepareLeadAnalysisPrompt(
         `CNPJ ${business.name} ${cityPart}`.trim(),
         `JusBrasil ${business.name}`,
         business.primaryType || business.types?.[0] || '',
+        `"${business.name}" site:instagram.com`,
+        `"${business.name}" site:facebook.com`,
+        `"${business.name}" site:linkedin.com`,
     ].filter(Boolean);
     onProgress?.('web_search', isEn ? 'Searching web intelligence (Reclame Aqui, CNPJ, JusBrasil)...' : 'Buscando inteligência web (Reclame Aqui, CNPJ, JusBrasil)...');
     const webContext = await getWebContextForRole('lead_analysis', webQueries, context ? { workspaceId: context.workspaceId, userId: context.userId } : undefined);
@@ -480,6 +582,19 @@ async function prepareLeadAnalysisPrompt(
     }
 
     onProgress?.('prompt', isEn ? 'Building strategic prompt...' : 'Construindo prompt estratégico...');
+    const rfDataBlock = buildRfDataBlock(business, isEn);
+
+    // F6: Scrape lead website for metadata (emails, social, technologies)
+    let websiteScrapingBlock = '';
+    if (website) {
+        try {
+            const meta = await scrapeWebsite(website);
+            websiteScrapingBlock = formatWebsiteMetadataForPrompt(meta, isEn);
+        } catch {
+            // Silently skip if scraping fails
+        }
+    }
+
     const prompt = buildLeadAnalysisPrompt({
         business,
         isEn,
@@ -495,6 +610,8 @@ async function prepareLeadAnalysisPrompt(
         webContext,
         isBusinessPlan,
         conversionContext,
+        rfDataBlock,
+        websiteScrapingBlock,
     });
     return { prompt, finalProfile };
 }
@@ -528,13 +645,23 @@ export async function analyzeLead(
         const { resolveAiForRole } = await import('@/lib/ai');
         const { config } = await resolveAiForRole('lead_analysis');
         onProgress?.('ai_call', isEn ? `Analyzing with ${config.provider}...` : `Analisando com ${config.provider}...`);
-        const result = await generateCompletionForRole('lead_analysis', { prompt, jsonMode: true, maxTokens: 8192 });
+        const result = await generateCompletionForRole('lead_analysis', { prompt, jsonMode: true, maxTokens: 16384 });
 
         onProgress?.('parsing', isEn ? 'Processing AI response...' : 'Processando resposta da IA...');
         const firstBrace = result.text.indexOf('{');
         const lastBrace = result.text.lastIndexOf('}');
         const jsonExtracted = firstBrace !== -1 && lastBrace > firstBrace ? result.text.slice(firstBrace, lastBrace + 1) : null;
-        const cleaned = jsonExtracted ?? result.text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        let cleaned = jsonExtracted ?? result.text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        // Fix control characters ONLY inside JSON string values (LLMs emit raw newlines/tabs in strings).
+        // We match quoted strings and sanitize only their content, preserving structural whitespace.
+        cleaned = cleaned.replace(/"(?:[^"\\]|\\.)*"/g, (match) =>
+            match.replace(/[\x00-\x1F\x7F]/g, (ch) => {
+                if (ch === '\n') return '\\n';
+                if (ch === '\r') return '\\r';
+                if (ch === '\t') return '\\t';
+                return '';
+            })
+        );
         const analysis = JSON.parse(cleaned) as LeadAnalysis;
 
         onProgress?.('saving', isEn ? 'Saving analysis...' : 'Salvando análise...');
@@ -621,6 +748,11 @@ async function saveAnalysisToDb(placeId: string, analysis: LeadAnalysis, profile
                 closeProbability: typeof analysis.closeProbability === 'number' ? analysis.closeProbability : undefined,
                 estimatedDealValue: typeof analysis.estimatedDealValue === 'number' ? analysis.estimatedDealValue : undefined,
                 bestContactWindow: analysis.bestContactWindow || undefined,
+                reclameAquiAnalysis: analysis.reclameAquiAnalysis || undefined,
+                jusBrasilAnalysis: analysis.jusBrasilAnalysis || undefined,
+                cnpjAnalysis: analysis.cnpjAnalysis || undefined,
+                reviewTrend: analysis.reviewTrend || undefined,
+                suggestedContactTime: analysis.suggestedContactTime || undefined,
             }
         });
         if (userId && userId !== 'cl_guest_default') {

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { useToast } from '@/contexts/ToastContext';
 import { CrmSidePanel } from '@/components/dashboard/CrmSidePanel';
+import SmartRelations from '@/components/SmartRelations';
 
 /** Rótulo amigável do provedor de IA (não expõe Cloudflare ao usuário). */
 function getAnalysisProviderLabel(provider: string | undefined): string | undefined {
@@ -60,6 +61,27 @@ function CopyButton({ text, label }: { text: string; label: string }) {
   );
 }
 
+/** Simple Markdown to HTML converter for fullReport rendering. */
+function renderSimpleMarkdown(md: string): string {
+  const escaped = md
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  return escaped
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, (match) => {
+      return `<ul>${match}</ul>`;
+    })
+    .replace(/\n{2,}/g, '<br/><br/>')
+    .replace(/\n/g, '<br/>');
+}
+
 function LeadDetailAnalysisView({
   analysis,
   onReanalyze,
@@ -78,6 +100,7 @@ function LeadDetailAnalysisView({
   const gaps = Array.isArray(analysis.gaps) ? (analysis.gaps as string[]) : [];
   const painPoints = Array.isArray(analysis.painPoints) ? (analysis.painPoints as string[]) : [];
   const approach = analysis.approach != null ? String(analysis.approach) : '';
+  const contactStrategy = analysis.contactStrategy != null ? String(analysis.contactStrategy) : '';
   const socialMedia = analysis.socialMedia && typeof analysis.socialMedia === 'object' && !Array.isArray(analysis.socialMedia)
     ? (analysis.socialMedia as Record<string, unknown>)
     : {};
@@ -87,6 +110,12 @@ function LeadDetailAnalysisView({
   const reviewTrend = analysis.reviewTrend != null ? String(analysis.reviewTrend) : '';
   const suggestedContactTime = analysis.suggestedContactTime != null ? String(analysis.suggestedContactTime) : '';
   const reviewAnalysis = analysis.reviewAnalysis != null ? String(analysis.reviewAnalysis) : '';
+  const closeProbability = typeof analysis.closeProbability === 'number' ? analysis.closeProbability : null;
+  const estimatedDealValue = typeof analysis.estimatedDealValue === 'number' ? analysis.estimatedDealValue : null;
+  const bestContactWindow = analysis.bestContactWindow != null ? String(analysis.bestContactWindow) : '';
+  const reclameAquiAnalysis = analysis.reclameAquiAnalysis != null ? String(analysis.reclameAquiAnalysis) : '';
+  const jusBrasilAnalysis = analysis.jusBrasilAnalysis != null ? String(analysis.jusBrasilAnalysis) : '';
+  const cnpjAnalysis = analysis.cnpjAnalysis != null ? String(analysis.cnpjAnalysis) : '';
   const socialEntries = Object.entries(socialMedia).filter(
     ([, link]) => link && String(link).toLowerCase() !== 'não encontrado' && String(link).toLowerCase() !== 'not found'
   );
@@ -120,6 +149,30 @@ function LeadDetailAnalysisView({
           )}
         </div>
       </div>
+
+      {/* Lead Intelligence — probability, deal value, contact window */}
+      {(closeProbability != null || estimatedDealValue != null || bestContactWindow) && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {closeProbability != null && (
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-center">
+              <div className="text-3xl font-black text-emerald-500">{closeProbability}%</div>
+              <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mt-1">Prob. Fechamento</div>
+            </div>
+          )}
+          {estimatedDealValue != null && (
+            <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 text-center">
+              <div className="text-3xl font-black text-blue-500">R$ {estimatedDealValue.toLocaleString('pt-BR')}</div>
+              <div className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mt-1">Valor Estimado</div>
+            </div>
+          )}
+          {bestContactWindow && (
+            <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4 text-center">
+              <div className="text-lg font-bold text-violet-500">{bestContactWindow}</div>
+              <div className="text-xs font-bold text-violet-600 dark:text-violet-400 uppercase tracking-widest mt-1">Melhor Horário</div>
+            </div>
+          )}
+        </div>
+      )}
 
       {reviewAnalysis && (
         <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-2">
@@ -176,7 +229,13 @@ function LeadDetailAnalysisView({
               <h3 className="text-xs font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-widest flex items-center gap-1.5">
                 <Zap size={14} /> Estratégia de Abordagem
               </h3>
-              <div className="text-sm text-foreground leading-relaxed">{approach}</div>
+              <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{approach}</div>
+              {contactStrategy && (
+                <div className="pt-2 border-t border-cyan-500/10">
+                  <h4 className="text-[10px] font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-widest mb-1">Estratégia de Contato</h4>
+                  <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{contactStrategy}</div>
+                </div>
+              )}
             </div>
           )}
           {socialEntries.length > 0 && (
@@ -229,6 +288,30 @@ function LeadDetailAnalysisView({
         </div>
       )}
 
+      {/* Deep Analysis — Reclame Aqui, JusBrasil, CNPJ */}
+      {(reclameAquiAnalysis || jusBrasilAnalysis || cnpjAnalysis) && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {reclameAquiAnalysis && (
+            <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4 space-y-2">
+              <h3 className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-widest">Reclame Aqui</h3>
+              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{reclameAquiAnalysis}</p>
+            </div>
+          )}
+          {jusBrasilAnalysis && (
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-2">
+              <h3 className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest">JusBrasil — Processos</h3>
+              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{jusBrasilAnalysis}</p>
+            </div>
+          )}
+          {cnpjAnalysis && (
+            <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 space-y-2">
+              <h3 className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">Análise CNPJ / RF</h3>
+              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{cnpjAnalysis}</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Full Report — collapsible */}
       {fullReport && (
         <div className="rounded-xl border border-border bg-card overflow-hidden">
@@ -245,7 +328,10 @@ function LeadDetailAnalysisView({
           </button>
           {showFullReport && (
             <div className="px-4 pb-4">
-              <div className="prose prose-sm prose-invert max-w-none text-muted p-4 bg-surface rounded-xl border border-border shadow-inner font-mono text-xs overflow-x-auto whitespace-pre-wrap">{fullReport}</div>
+              <div
+                className="prose prose-sm prose-invert max-w-none text-muted p-4 bg-surface rounded-xl border border-border shadow-inner text-sm overflow-x-auto leading-relaxed [&_h1]:text-lg [&_h1]:font-bold [&_h1]:text-foreground [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-foreground [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:text-foreground [&_h3]:mt-3 [&_h3]:mb-1 [&_strong]:text-foreground [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1"
+                dangerouslySetInnerHTML={{ __html: renderSimpleMarkdown(fullReport) }}
+              />
             </div>
           )}
         </div>
@@ -606,6 +692,7 @@ function LeadDetailContent(props: LeadDetailContentProps) {
         <LeadContactActions place={place} copiedPhone={copiedPhone} onCopyPhone={onCopyPhone} trackAction={trackAction} />
         <LeadDetailTagsSection tags={tags} showTagInput={showTagInput} newTag={newTag} onAddTag={onAddTag} onRemoveTag={onRemoveTag} setNewTag={setNewTag} setShowTagInput={setShowTagInput} />
         <LeadDetailAnalysisSection analysis={analysis} analyzing={analyzing} currentStep={currentStep} onAnalyze={onAnalyze} />
+        <SmartRelations placeId={place.id} />
       </div>
       <CrmSidePanel place={place} analysis={analysis} analyzing={analyzing} onSuccess={onCrmSuccess} onError={onCrmError} onWarning={onCrmWarning} />
     </>

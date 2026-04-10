@@ -127,7 +127,7 @@ export async function getWebContextForRole(
     const config = await getWebSearchConfig(role);
     if (!config || queries.length === 0) return '';
 
-    const maxQueries = role === 'company_analysis' ? 6 : 5;
+    const maxQueries = role === 'company_analysis' ? 10 : 8;
     const toRun = queries.slice(0, maxQueries).filter((q) => q.trim());
     const results = await Promise.all(toRun.map((q) => runOneQuerySection(config, q)));
     const sections = results.map((r) => r.section);

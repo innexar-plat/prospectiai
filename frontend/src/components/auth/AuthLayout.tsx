@@ -1,4 +1,6 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import { Logo } from '@/components/brand/Logo';
 
 interface AuthLayoutProps {
@@ -38,7 +40,14 @@ export function AuthLayout({
             </div>
 
             {/* RIGHT SIDE: Form */}
-            <div className="flex flex-col justify-center items-center py-8 px-6 md:px-10">
+            <div className="flex flex-col justify-center items-center py-8 px-6 md:px-10 relative">
+                <Link
+                    to="/"
+                    className="absolute top-6 left-6 flex items-center gap-2 text-sm font-medium text-muted hover:text-foreground transition-colors"
+                >
+                    <ArrowLeft size={18} />
+                    <span>Voltar</span>
+                </Link>
                 <div className="w-full max-w-[380px] animate-fade">
                     <div className="lg:hidden flex justify-center mb-6">
                         <Logo height={168} />

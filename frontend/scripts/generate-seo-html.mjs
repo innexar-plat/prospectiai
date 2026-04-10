@@ -109,6 +109,11 @@ function getIndexableRoutes() {
     title: 'Integração PrecisionAI + Agendor CRM | Envie Leads Automaticamente',
     description: 'Conecte o PrecisionAI ao Agendor e envie leads prospectados direto para seu CRM.',
   });
+  routes.push({
+    path: 'integracoes/hubspot',
+    title: 'Integração PrecisionAI + HubSpot CRM | Envie Leads Automaticamente',
+    description: 'Conecte o PrecisionAI ao HubSpot CRM via OAuth e envie leads prospectados direto para seu funil de vendas.',
+  });
 
   return routes;
 }

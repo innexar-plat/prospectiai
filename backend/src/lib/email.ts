@@ -20,7 +20,7 @@ import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 
 const SITE_URL = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-const ENV_FROM = process.env.EMAIL_FROM ?? 'Precision IA <onboarding@resend.dev>';
+const ENV_FROM = process.env.EMAIL_FROM ?? 'Precision IA <noreply@precisionia.com.br>';
 
 async function getEmailConfigFromDb(): Promise<{
   provider: string;
@@ -170,7 +170,7 @@ export async function sendAffiliateApprovedEmail(to: string, code: string, login
 }
 
 export async function sendAffiliateConversionEmail(to: string, summary: string, dashboardUrl: string): Promise<SendResult> {
-  const html = affiliateConversionTemplate(summary, dashboardUrl);
+  const html = affiliateConversionTemplate(summary, '', dashboardUrl);
   return sendEmail(to, 'Nova conversão no programa de afiliados – Precision IA', html);
 }
 
@@ -183,6 +183,6 @@ export async function sendAffiliateCommissionPaidEmail(to: string, amountFormatt
  * Notifica o afiliado que uma ou mais comissões estão disponíveis para saque (após aprovação pelo cron).
  */
 export async function sendAffiliateCommissionAvailableEmail(to: string, dashboardUrl: string): Promise<SendResult> {
-  const html = affiliateCommissionAvailableTemplate(dashboardUrl);
+  const html = affiliateCommissionAvailableTemplate('', dashboardUrl);
   return sendEmail(to, 'Comissão disponível para saque – Precision IA', html);
 }

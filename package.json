@@ -2,7 +2,11 @@
   "name": "prospector-ai-monorepo",
   "version": "1.1.0",
   "private": true,
-  "workspaces": ["frontend", "admin", "backend"],
+  "workspaces": [
+    "frontend",
+    "admin",
+    "backend"
+  ],
   "scripts": {
     "dev:backend": "npm run dev -w backend",
     "dev:frontend": "npm run dev -w frontend",
@@ -15,12 +19,15 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "typescript": "^5.0.0",
-    "prisma": "^6.19.2",
     "husky": "^9.1.7",
-    "lint-staged": "^15.4.3"
+    "lint-staged": "^15.4.3",
+    "prisma": "^6.19.2",
+    "typescript": "^5.0.0"
   },
   "lint-staged": {
     "{backend,frontend,admin}/src/**/*.{ts,tsx}": "bash -c 'npm run lint'"
+  },
+  "dependencies": {
+    "pg": "^8.20.0"
   }
 }

@@ -114,7 +114,7 @@ const DETAILS_FIELD_MASK = [
  * We store the original body (without pageToken) so we can replay it exactly.
  * TTL: 10 minutes in Redis.
  */
-const PAGE_TOKEN_CACHE_TTL_S = 600; // 10 minutes
+const PAGE_TOKEN_CACHE_TTL_S = 1800; // 30 minutes
 const PAGE_TOKEN_CACHE_PREFIX = 'places:pt:';
 
 async function getPageTokenBody(pageToken: string): Promise<Record<string, unknown> | null> {
@@ -158,13 +158,18 @@ async function buildSearchBody(
     if (params.pageToken) {
         const cached = await getPageTokenBody(params.pageToken);
         if (cached) return { ...cached, pageToken: params.pageToken };
-        return {
+        // Cache miss — rebuild with text params only (no locationBias since we
+        // don't know if the original search had it). Include includedType since
+        // Google requires it to match.
+        const body: Record<string, unknown> = {
             textQuery: params.textQuery,
             pageSize: pageSizeClamped,
             languageCode: params.languageCode || 'pt-BR',
             regionCode: params.regionCode || 'BR',
             pageToken: params.pageToken,
         };
+        if (params.includedType) body.includedType = params.includedType;
+        return body;
     }
     return buildSearchBodyNoToken(params, pageSizeClamped);
 }

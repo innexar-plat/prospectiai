@@ -8,7 +8,7 @@ import type { CompletionOptions, IAIAdapter } from '../types';
 const CLOUDFLARE_CHAT_URL = 'https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/v1/chat/completions';
 
 type MessageLike = {
-    content?: string | Array<{ type?: string; text?: string }> | null;
+    content?: string | Array<{ type?: string; text?: string }> | Record<string, unknown> | null;
     reasoning_content?: string | null;
     refusal?: string | null;
     parsed?: unknown;
@@ -20,6 +20,13 @@ function getContentFromRaw(rawContent: MessageLike['content']): string | null {
         const textPart = rawContent.find((p) => p?.type === 'text');
         const text = textPart && typeof (textPart as { text?: string }).text === 'string' ? (textPart as { text: string }).text : null;
         return text;
+    }
+    // Some models (e.g. Llama 4 Scout) return content as a single object {type,text}
+    if (rawContent && typeof rawContent === 'object' && !Array.isArray(rawContent)) {
+        const obj = rawContent as Record<string, unknown>;
+        if (typeof obj.text === 'string') return obj.text;
+        // Fallback: try JSON.stringify if it looks like data
+        return JSON.stringify(obj);
     }
     return null;
 }
@@ -64,7 +71,7 @@ type CloudflareResponse = {
     usage?: { prompt_tokens?: number; completion_tokens?: number };
 };
 
-const CLOUDFLARE_TIMEOUT_MS = 45000;
+const CLOUDFLARE_TIMEOUT_MS = 120000;
 const CLOUDFLARE_MAX_RETRIES = 1;
 
 function cfSleep(ms: number): Promise<void> {

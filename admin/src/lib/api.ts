@@ -655,3 +655,226 @@ export const supportApi = {
       body: JSON.stringify(body ?? {}),
     }),
 };
+
+// ═══════════════════════════════════════════════════════════════
+// EMAIL MARKETING
+// ═══════════════════════════════════════════════════════════════
+
+export type EmailTemplateType = 'PROMOTION' | 'WEEKLY_REPORT' | 'FEATURE_ANNOUNCEMENT' | 'REENGAGEMENT' | 'CUSTOM';
+export type EmailTemplateStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
+export type EmailCampaignStatus = 'DRAFT' | 'SCHEDULED' | 'SENDING' | 'SENT' | 'CANCELLED';
+export type EmailCampaignAudience = 'ALL' | 'FREE' | 'PAID' | 'TRIAL' | 'CHURNED' | 'INACTIVE' | 'CUSTOM';
+
+export interface EmailTemplateItem {
+  id: string;
+  name: string;
+  slug: string;
+  type: EmailTemplateType;
+  status: EmailTemplateStatus;
+  subject: string;
+  preheader?: string | null;
+  body: {
+    paragraphs: string[];
+    benefits?: string[];
+    badge?: string;
+    badgeColor?: string;
+    subtitle?: string;
+    legalNote?: string;
+    expiresAt?: string;
+  };
+  ctaLabel?: string | null;
+  ctaUrl?: string | null;
+  accentColor?: string | null;
+  createdBy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { campaigns: number };
+}
+
+export interface EmailTemplateCreateBody {
+  name: string;
+  slug: string;
+  type: EmailTemplateType;
+  status?: EmailTemplateStatus;
+  subject: string;
+  preheader?: string | null;
+  body: {
+    paragraphs: string[];
+    benefits?: string[];
+    badge?: string;
+    badgeColor?: string;
+    subtitle?: string;
+    legalNote?: string;
+    expiresAt?: string;
+  };
+  ctaLabel?: string | null;
+  ctaUrl?: string | null;
+  accentColor?: string | null;
+}
+
+export interface EmailCampaignItem {
+  id: string;
+  name: string;
+  templateId: string;
+  template: { id: string; name: string; slug: string; type: string; subject: string };
+  audience: EmailCampaignAudience;
+  audienceFilter?: Record<string, unknown> | null;
+  status: EmailCampaignStatus;
+  scheduledAt?: string | null;
+  sentAt?: string | null;
+  totalRecipients: number;
+  totalSent: number;
+  totalFailed: number;
+  createdBy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmailCampaignCreateBody {
+  name: string;
+  templateId: string;
+  audience: EmailCampaignAudience;
+  audienceFilter?: Record<string, unknown> | null;
+  scheduledAt?: string | null;
+}
+
+export interface EmailCampaignRecipientItem {
+  id: string;
+  campaignId: string;
+  userId: string;
+  email: string;
+  status: string;
+  sentAt?: string | null;
+  error?: string | null;
+}
+
+export interface EmailMarketingStats {
+  totalTemplates: number;
+  activeTemplates: number;
+  totalCampaigns: number;
+  totalSent: number;
+  totalFailed: number;
+  recentCampaigns: number;
+}
+
+export interface WeeklyReportConfigItem {
+  id: string;
+  enabled: boolean;
+  customTitle?: string | null;
+  customHighlight?: string | null;
+  ctaLabel?: string | null;
+  ctaUrl?: string | null;
+  footerPromo?: string | null;
+  sendDay: number;
+  sendHour: number;
+  updatedAt: string;
+}
+
+export const emailMarketingApi = {
+  // Stats
+  stats: () => request<EmailMarketingStats>('/admin/email-marketing/stats'),
+
+  // Templates
+  templates: {
+    list: (params?: { type?: string; status?: string; limit?: number; offset?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.type) q.set('type', params.type);
+      if (params?.status) q.set('status', params.status);
+      if (params?.limit != null) q.set('limit', String(params.limit));
+      if (params?.offset != null) q.set('offset', String(params.offset));
+      const suffix = q.toString() ? `?${q}` : '';
+      return request<{ items: EmailTemplateItem[]; total: number; limit: number; offset: number }>(
+        `/admin/email-marketing/templates${suffix}`,
+      );
+    },
+    get: (id: string) => request<{ data: EmailTemplateItem }>(`/admin/email-marketing/templates/${id}`),
+    create: (body: EmailTemplateCreateBody) =>
+      request<{ data: EmailTemplateItem }>('/admin/email-marketing/templates', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    update: (id: string, body: Partial<EmailTemplateCreateBody>) =>
+      request<{ data: EmailTemplateItem }>(`/admin/email-marketing/templates/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      }),
+    delete: (id: string) =>
+      request<{ ok: boolean }>(`/admin/email-marketing/templates/${id}`, { method: 'DELETE' }),
+    preview: (id: string, userName?: string) =>
+      fetch(`${BASE}/admin/email-marketing/templates/${id}/preview`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userName }),
+      }).then(r => r.text()),
+  },
+
+  // Campaigns
+  campaigns: {
+    list: (params?: { status?: string; limit?: number; offset?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.status) q.set('status', params.status);
+      if (params?.limit != null) q.set('limit', String(params.limit));
+      if (params?.offset != null) q.set('offset', String(params.offset));
+      const suffix = q.toString() ? `?${q}` : '';
+      return request<{ items: EmailCampaignItem[]; total: number; limit: number; offset: number }>(
+        `/admin/email-marketing/campaigns${suffix}`,
+      );
+    },
+    get: (id: string) => request<{ data: EmailCampaignItem }>(`/admin/email-marketing/campaigns/${id}`),
+    create: (body: EmailCampaignCreateBody) =>
+      request<{ data: EmailCampaignItem }>('/admin/email-marketing/campaigns', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    update: (id: string, body: Partial<EmailCampaignCreateBody>) =>
+      request<{ data: EmailCampaignItem }>(`/admin/email-marketing/campaigns/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      }),
+    delete: (id: string) =>
+      request<{ ok: boolean }>(`/admin/email-marketing/campaigns/${id}`, { method: 'DELETE' }),
+    send: (id: string) =>
+      request<{ message: string; totalRecipients?: number; totalSent?: number; totalFailed?: number }>(
+        `/admin/email-marketing/campaigns/${id}/send`,
+        { method: 'POST' },
+      ),
+    cancel: (id: string) =>
+      request<{ ok: boolean; message: string }>(`/admin/email-marketing/campaigns/${id}/cancel`, {
+        method: 'POST',
+      }),
+    recipients: (id: string, params?: { status?: string; limit?: number; offset?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.status) q.set('status', params.status);
+      if (params?.limit != null) q.set('limit', String(params.limit));
+      if (params?.offset != null) q.set('offset', String(params.offset));
+      const suffix = q.toString() ? `?${q}` : '';
+      return request<{ items: EmailCampaignRecipientItem[]; total: number }>(
+        `/admin/email-marketing/campaigns/${id}/recipients${suffix}`,
+      );
+    },
+  },
+
+  // Audience count
+  audienceCount: (audience: string, audienceFilter?: Record<string, unknown>) =>
+    request<{ count: number }>('/admin/email-marketing/audience-count', {
+      method: 'POST',
+      body: JSON.stringify({ audience, audienceFilter }),
+    }),
+
+  // Weekly Report
+  weeklyReport: {
+    get: () => request<{ data: WeeklyReportConfigItem }>('/admin/email-marketing/weekly-report'),
+    update: (body: Partial<Omit<WeeklyReportConfigItem, 'id' | 'updatedAt'>>) =>
+      request<{ data: WeeklyReportConfigItem }>('/admin/email-marketing/weekly-report', {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      }),
+    preview: () =>
+      fetch(`${BASE}/admin/email-marketing/weekly-report/preview`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      }).then(r => r.text()),
+  },
+};

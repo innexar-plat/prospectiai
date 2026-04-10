@@ -7,9 +7,9 @@ const nav = [
   { to: 'users', end: false, label: 'Usuários', icon: Users },
 ] as const;
 
-export function SupportSidebar() {
+export function SupportSidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
-    <aside className="w-60 shrink-0 border-r border-gray-200 bg-white flex flex-col">
+    <aside className="w-60 shrink-0 border-r border-gray-200 bg-white flex flex-col h-full">
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center">
@@ -27,6 +27,7 @@ export function SupportSidebar() {
             key={to}
             to={to}
             end={end}
+            onClick={onNavigate}
             className={({ isActive }) =>
               cn(
                 'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors',

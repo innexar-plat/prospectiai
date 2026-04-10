@@ -38,6 +38,10 @@ yarn-error.log*
 
 # local / sensitive
 cookies.txt
+*.bak
+*.log
+backend/.rf-import-temp/
+rf-import.log
 
 # vercel
 .vercel

@@ -1,12 +1,12 @@
 // Precision IA Service Worker — Offline Cache + Push Notifications
-const CACHE_NAME = 'prospector-v5';
+// Cache version is checked dynamically; SW auto-updates because nginx serves sw.js with no-cache.
+const CACHE_NAME = 'prospector-v6';
 const STATIC_ASSETS = [
     '/',
-    '/dashboard',
     '/manifest.json',
 ];
 
-// Install — cache core assets
+// Install — cache core shell only (not JS chunks — they have hashed names and are cached by nginx)
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
@@ -14,7 +14,7 @@ self.addEventListener('install', (event) => {
     self.skipWaiting();
 });
 
-// Activate — clean old caches
+// Activate — clean ALL old caches to ensure fresh assets after deploy
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((keys) =>
@@ -24,13 +24,17 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
-// Fetch — Network-first with cache fallback. Always return a valid Response (required by respondWith).
+// Fetch — Network-first for navigations. DO NOT cache JS/CSS (Vite hashed bundles are already cached by browser with immutable headers).
 self.addEventListener('fetch', (event) => {
-    if (event.request.method !== 'GET' || event.request.url.includes('/api/')) return;
+    if (event.request.method !== 'GET') return;
+    if (event.request.url.includes('/api/')) return;
 
-    // Skip cross-origin requests (Google fonts, profile photos, analytics, etc.)
+    // Skip cross-origin requests
     const url = new URL(event.request.url);
     if (url.origin !== self.location.origin) return;
+
+    // Never intercept version.json — must always come from network
+    if (url.pathname === '/version.json') return;
 
     // Only provide offline fallback for full page navigations.
     if (event.request.mode === 'navigate') {
@@ -53,17 +57,8 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    event.respondWith(
-        fetch(event.request)
-            .then((response) => {
-                if (response.status === 200) {
-                    const clone = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-                }
-                return response;
-            })
-            .catch(() => caches.match(event.request).then((cached) => cached || Response.error()))
-    );
+    // For sub-resources (JS, CSS, images): network only — let browser HTTP cache handle it.
+    // Do NOT add to SW cache to avoid serving stale chunks after deploy.
 });
 
 // Push Notification handler

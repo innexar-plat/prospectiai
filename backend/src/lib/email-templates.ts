@@ -1,69 +1,262 @@
 /**
- * Professional HTML email templates. No emojis; logo, CTA button, footer, signature.
- * Inline CSS and table layout for broad client compatibility.
+ * PrecisionAI — Email Templates
+ * Proprietário: Innexar Brasil
+ * Av. Dona Ophelia Caccerari Reis - Aviação, 363 — São Paulo, SP
+ *
+ * Melhorias aplicadas vs versão anterior:
+ *  - Header com cor da marca (identidade visual imediata)
+ *  - Preheader text (preview na caixa de entrada)
+ *  - Link de descadastro obrigatório (LGPD / CAN-SPAM)
+ *  - Endereço físico no rodapé (obrigação legal)
+ *  - Personalização com nome do usuário em todos os templates
+ *  - Versão texto puro (plain text) via buildEmailText()
+ *  - Interface BuildEmailOptions exportada
+ *  - Validação de URL interna para evitar open redirect
+ *  - escapeHtml() reforçado
+ *  - CTAs específicos por contexto (não genéricos)
+ *  - Data de próxima cobrança no paymentSuccess
+ *  - Templates novos: trial expirando, trial expirado, cancelamento,
+ *    dunning (3 toques), boas-vindas D+3, upgrade, resumo semanal,
+ *    2FA ativado, dispositivo novo, promoção editável, relatório semanal
  */
 
-const SITE_URL = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-const APP_NAME = 'Precision IA';
-const LOGO_URL = process.env.EMAIL_LOGO_URL ?? `${SITE_URL.replace(/\/$/, '')}/precisionai-logo-light.png`;
-const BRAND_COLOR = '#8B5CF6';
-const TEXT_COLOR = '#1f2937';
-const MUTED_COLOR = '#6b7280';
+// ── Configuração ───────────────────────────────────────────────────────────
 
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+const SITE_URL  = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+const APP_NAME  = 'PrecisionAI';
+const LOGO_URL  = process.env.EMAIL_LOGO_URL ?? `${SITE_URL.replace(/\/$/, '')}/precisionai-logo-light.png`;
+const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL ?? 'suporte@precisionai.com.br';
+
+// Marca
+const BRAND_COLOR   = '#8B5CF6';
+const BRAND_DARK    = '#6D28D9';
+const TEXT_COLOR    = '#1f2937';
+const MUTED_COLOR   = '#6b7280';
+const SUCCESS_COLOR = '#059669';
+const WARNING_COLOR = '#d97706';
+const DANGER_COLOR  = '#dc2626';
+
+// Empresa
+const COMPANY_NAME    = 'Innexar Brasil';
+const COMPANY_ADDRESS = 'Av. Dona Ophelia Caccerari Reis - Aviação, 363 — São Paulo, SP';
+// ── Tipos ──────────────────────────────────────────────────────────────────
+
+export interface BuildEmailOptions {
+  title: string;
+  preheader?: string;
+  userName?: string;
+  body: string[];
+  ctaHref?: string;
+  ctaLabel?: string;
+  footerNote?: string;
+  accentColor?: string;
+  /** Linhas extras no rodapé (ex: próxima cobrança, info de segurança) */
+  footerExtra?: string;
+  unsubscribeToken?: string;
 }
 
-function wrapContent(content: string): string {
+// ── Utilitários ────────────────────────────────────────────────────────────
+
+/** Escapa todos os caracteres perigosos em HTML */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g,  '&amp;')
+    .replace(/</g,  '&lt;')
+    .replace(/>/g,  '&gt;')
+    .replace(/"/g,  '&quot;')
+    .replace(/'/g,  '&#39;')
+    .replace(/`/g,  '&#96;')
+    .replace(/\//g, '&#47;');
+}
+
+/**
+ * Garante que a URL seja interna (começa com SITE_URL ou é relativa).
+ * Evita open redirect via argumentos externos.
+ */
+function safeUrl(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+  const base = SITE_URL.replace(/\/$/, '');
+  if (url.startsWith('/'))       return `${base}${url}`;
+  if (url.startsWith(base))      return url;
+  if (url.startsWith('http://localhost') || url.startsWith('http://127.')) return url;
+  // URL externa não permitida — retorna dashboard como fallback seguro
+  console.warn(`[email-templates] URL externa bloqueada: ${url}`);
+  return `${base}/dashboard`;
+}
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+// ── Componentes HTML ───────────────────────────────────────────────────────
+
+/** Texto oculto que aparece no preview da caixa de entrada */
+function preheaderHtml(text: string): string {
+  return `<span style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;color:#ffffff;opacity:0;">${escapeHtml(text)}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</span>`;
+}
+
+export function ctaButton(href: string, label: string, color = BRAND_COLOR): string {
   return `
-<!DOCTYPE html>
-<html lang="pt-BR">
+    <table role="presentation" cellspacing="0" cellpadding="0" style="margin:24px 0 0;">
+      <tr>
+        <td>
+          <a href="${href}"
+             style="display:inline-block;padding:14px 28px;background-color:${color};color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;border-radius:8px;mso-padding-alt:14px 28px;">
+            ${label}
+          </a>
+        </td>
+      </tr>
+    </table>`;
+}
+
+export function ctaButtonSecondary(href: string, label: string): string {
+  return `
+    <table role="presentation" cellspacing="0" cellpadding="0" style="margin:12px 0 0;">
+      <tr>
+        <td>
+          <a href="${href}"
+             style="display:inline-block;padding:12px 24px;background-color:#ffffff;color:${BRAND_COLOR};text-decoration:none;font-weight:600;font-size:14px;border-radius:8px;border:2px solid ${BRAND_COLOR};">
+            ${label}
+          </a>
+        </td>
+      </tr>
+    </table>`;
+}
+
+export function titleHtml(text: string): string {
+  return `<h1 style="margin:0 0 16px;font-size:22px;font-weight:700;color:${TEXT_COLOR};line-height:1.3;">${text}</h1>`;
+}
+
+export function paragraph(text: string): string {
+  return `<p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:${TEXT_COLOR};">${text}</p>`;
+}
+
+export function mutedText(text: string): string {
+  return `<p style="margin:16px 0 0;font-size:13px;color:${MUTED_COLOR};line-height:1.5;">${text}</p>`;
+}
+
+/** Caixa destacada colorida (alertas, resumos, destaques) */
+function infoBox(content: string, color = BRAND_COLOR, bgColor = '#f5f3ff'): string {
+  return `
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:16px 0;">
+      <tr>
+        <td style="padding:16px;background-color:${bgColor};border-radius:8px;border-left:4px solid ${color};">
+          ${content}
+        </td>
+      </tr>
+    </table>`;
+}
+
+/** Linha de detalhe: label + valor lado a lado */
+function detailRow(label: string, value: string): string {
+  return `
+    <tr>
+      <td style="padding:8px 0;font-size:14px;color:${MUTED_COLOR};border-bottom:1px solid #e5e7eb;">${label}</td>
+      <td style="padding:8px 0;font-size:14px;color:${TEXT_COLOR};font-weight:600;text-align:right;border-bottom:1px solid #e5e7eb;">${value}</td>
+    </tr>`;
+}
+
+/** Tabela de detalhes (plano, datas, etc.) */
+function detailTable(rows: Array<[string, string]>): string {
+  const rowsHtml = rows.map(([l, v]) => detailRow(l, v)).join('');
+  return `
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:16px 0;">
+      <tbody>${rowsHtml}</tbody>
+    </table>`;
+}
+
+/** Card de métrica para relatório semanal */
+function metricCard(label: string, value: string, change?: string, changePositive?: boolean): string {
+  const changeHtml = change
+    ? `<span style="font-size:12px;color:${changePositive ? SUCCESS_COLOR : DANGER_COLOR};margin-left:6px;">${change}</span>`
+    : '';
+  return `
+    <td style="width:33%;padding:12px;background-color:#f9fafb;border-radius:8px;text-align:center;vertical-align:top;">
+      <div style="font-size:24px;font-weight:700;color:${BRAND_COLOR};">${value}${changeHtml}</div>
+      <div style="font-size:12px;color:${MUTED_COLOR};margin-top:4px;">${label}</div>
+    </td>`;
+}
+
+// ── Shell principal ────────────────────────────────────────────────────────
+
+function wrapContent(content: string, options: {
+  preheader?: string;
+  accentColor?: string;
+  footerExtra?: string;
+  unsubscribeToken?: string;
+}): string {
+  const accent   = options.accentColor ?? BRAND_COLOR;
+  const base     = SITE_URL.replace(/\/$/, '');
+  const unsub    = options.unsubscribeToken
+    ? `${base}/unsubscribe?token=${encodeURIComponent(options.unsubscribeToken)}`
+    : `${base}/unsubscribe`;
+  const preheader = options.preheader ? preheaderHtml(options.preheader) : '';
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR" xmlns="http://www.w3.org/1999/xhtml">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title>${APP_NAME}</title>
+  <!--[if mso]>
+  <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+  <![endif]-->
 </head>
 <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background-color:#f3f4f6;color:${TEXT_COLOR};">
+  ${preheader}
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f3f4f6;">
     <tr>
       <td align="center" style="padding:32px 16px;">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background-color:#ffffff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;">
+
+          <!-- HEADER com cor da marca -->
           <tr>
-            <td style="padding:32px 32px 24px;border-bottom:1px solid #e5e7eb;">
+            <td style="background-color:${accent};border-radius:12px 12px 0 0;padding:20px 32px;">
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
-                  <td>
-                    <a href="${SITE_URL}" style="text-decoration:none;color:inherit;">
-                      <img src="${LOGO_URL}" alt="${APP_NAME}" width="48" height="48" style="display:block;border:0;border-radius:10px;" />
+                  <td style="vertical-align:middle;">
+                    <a href="${base}" style="text-decoration:none;">
+                      <img src="${LOGO_URL}" alt="${APP_NAME}" width="120" height="40"
+                           style="display:block;border:0;border-radius:8px;background-color:rgba(255,255,255,0.15);object-fit:contain;" />
                     </a>
                   </td>
                   <td align="right" style="vertical-align:middle;">
-                    <span style="font-size:18px;font-weight:700;color:${TEXT_COLOR};">${APP_NAME}</span>
+                    <span style="font-size:18px;font-weight:700;color:#ffffff;">${APP_NAME}</span>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
+
+          <!-- CONTEÚDO -->
           <tr>
-            <td style="padding:32px;">
+            <td style="background-color:#ffffff;padding:32px;">
               ${content}
             </td>
           </tr>
+
+          <!-- RODAPÉ -->
           <tr>
-            <td style="padding:24px 32px 32px;border-top:1px solid #e5e7eb;background-color:#f9fafb;border-radius:0 0 12px 12px;">
-              <p style="margin:0;font-size:12px;color:${MUTED_COLOR};">
-                Este e-mail foi enviado por <strong>${APP_NAME}</strong>.
+            <td style="background-color:#f9fafb;border-radius:0 0 12px 12px;padding:20px 32px;border-top:1px solid #e5e7eb;">
+              ${options.footerExtra ? `<p style="margin:0 0 10px;font-size:13px;color:${TEXT_COLOR};">${options.footerExtra}</p>` : ''}
+              <p style="margin:0 0 4px;font-size:12px;color:${MUTED_COLOR};">
+                Precisa de ajuda?
+                <a href="mailto:${SUPPORT_EMAIL}" style="color:${accent};text-decoration:none;">${SUPPORT_EMAIL}</a>
               </p>
-              <p style="margin:8px 0 0;font-size:12px;">
-                <a href="${SITE_URL}" style="color:${BRAND_COLOR};text-decoration:none;">${SITE_URL.replace(/^https?:\/\//, '')}</a>
+              <p style="margin:0 0 10px;font-size:12px;color:${MUTED_COLOR};">
+                <strong>${COMPANY_NAME}</strong> &mdash; ${COMPANY_ADDRESS}
+              </p>
+              <p style="margin:0;font-size:11px;color:#9ca3af;line-height:1.6;">
+                <a href="${base}" style="color:${MUTED_COLOR};text-decoration:none;">${base.replace(/^https?:\/\//, '')}</a>
+                &nbsp;&middot;&nbsp;
+                <a href="${unsub}" style="color:${MUTED_COLOR};text-decoration:none;">Descadastrar e-mails</a>
+                &nbsp;&middot;&nbsp;
+                <a href="${base}/privacy" style="color:${MUTED_COLOR};text-decoration:none;">Privacidade (LGPD)</a>
               </p>
             </td>
           </tr>
+
         </table>
       </td>
     </tr>
@@ -72,271 +265,855 @@ function wrapContent(content: string): string {
 </html>`;
 }
 
-/**
- * Primary CTA button (single prominent link).
- */
-export function ctaButton(href: string, label: string): string {
-  return `
-    <table role="presentation" cellspacing="0" cellpadding="0" style="margin:24px 0 0;">
-      <tr>
-        <td>
-          <a href="${href}" style="display:inline-block;padding:14px 28px;background-color:${BRAND_COLOR};color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;border-radius:8px;">${label}</a>
-        </td>
-      </tr>
-    </table>`;
-}
+// ── buildEmail central ─────────────────────────────────────────────────────
 
-/**
- * Title (H1) inside content.
- */
-export function title(text: string): string {
-  return `<h1 style="margin:0 0 16px;font-size:22px;font-weight:700;color:${TEXT_COLOR};line-height:1.3;">${text}</h1>`;
-}
+export function buildEmail(options: BuildEmailOptions): string {
+  const {
+    title, preheader, userName, body,
+    ctaHref, ctaLabel, footerNote, footerExtra,
+    accentColor, unsubscribeToken,
+  } = options;
 
-/**
- * Paragraph.
- */
-export function paragraph(text: string): string {
-  return `<p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:${TEXT_COLOR};">${text}</p>`;
-}
+  const greeting = userName
+    ? `<p style="margin:0 0 16px;font-size:15px;color:${MUTED_COLOR};">Olá, <strong style="color:${TEXT_COLOR};">${escapeHtml(userName)}</strong>.</p>`
+    : '';
 
-/**
- * Muted/small text (e.g. expiry notice).
- */
-export function muted(text: string): string {
-  return `<p style="margin:16px 0 0;font-size:13px;color:${MUTED_COLOR};line-height:1.5;">${text}</p>`;
-}
-
-/**
- * Full template: title + body paragraphs + optional CTA + optional muted.
- */
-export function buildEmail(options: {
-  title: string;
-  body: string[];
-  ctaHref?: string;
-  ctaLabel?: string;
-  muted?: string;
-}): string {
-  const { title: titleText, body, ctaHref, ctaLabel, muted: mutedText } = options;
-  let content = title(titleText);
-  body.forEach((p) => {
-    content += paragraph(p);
-  });
+  let content = greeting + titleHtml(title);
+  body.forEach(p => { content += paragraph(p); });
   if (ctaHref && ctaLabel) {
-    content += ctaButton(ctaHref, ctaLabel);
+    content += ctaButton(safeUrl(ctaHref) ?? '#', ctaLabel, accentColor);
   }
-  if (mutedText) {
-    content += muted(mutedText);
-  }
-  return wrapContent(content);
+  if (footerNote) content += mutedText(footerNote);
+
+  return wrapContent(content, { preheader, accentColor, footerExtra, unsubscribeToken });
 }
 
-/**
- * Password reset email (professional template).
- */
-export function passwordResetTemplate(resetLink: string): string {
+/** Versão texto puro — usar como multipart/alternative */
+export function buildEmailText(options: BuildEmailOptions): string {
+  const { title, userName, body, ctaHref, ctaLabel, footerNote } = options;
+  const base = SITE_URL.replace(/\/$/, '');
+  const lines: string[] = [];
+  if (userName) lines.push(`Olá, ${userName}.`, '');
+  lines.push(title, '='.repeat(title.length), '');
+  body.forEach(p => lines.push(p, ''));
+  if (ctaHref && ctaLabel) lines.push(`${ctaLabel}: ${safeUrl(ctaHref)}`, '');
+  if (footerNote) lines.push('---', footerNote, '');
+  lines.push(
+    '---',
+    `${COMPANY_NAME} | ${COMPANY_ADDRESS}`,
+
+    `Suporte: ${SUPPORT_EMAIL}`,
+    `Descadastrar: ${base}/unsubscribe`,
+  );
+  return lines.join('\n');
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// TEMPLATES TRANSACIONAIS
+// ══════════════════════════════════════════════════════════════════════════
+
+/** Redefinição de senha */
+export function passwordResetTemplate(resetLink: string, userName?: string): string {
   return buildEmail({
     title: 'Redefinir sua senha',
+    preheader: 'Você solicitou a redefinição de senha da sua conta.',
+    userName,
     body: [
-      'Você solicitou a redefinição de senha da sua conta no Precision IA.',
-      'Clique no botão abaixo para definir uma nova senha. Se você não solicitou isso, ignore este e-mail.',
+      'Você solicitou a redefinição de senha da sua conta no PrecisionAI.',
+      'Clique no botão abaixo para definir uma nova senha. Se você não solicitou isso, ignore este e-mail — sua senha permanece a mesma.',
     ],
     ctaHref: resetLink,
     ctaLabel: 'Redefinir senha',
-    muted: 'Este link expira em 1 hora.',
+    footerNote: 'Este link expira em 1 hora e só pode ser usado uma vez.',
+    accentColor: BRAND_COLOR,
   });
 }
 
-/**
- * Email verification (sign-up) template.
- */
-export function verificationTemplate(verifyLink: string): string {
+/** Verificação de e-mail no cadastro */
+export function verificationTemplate(verifyLink: string, userName?: string): string {
   return buildEmail({
     title: 'Confirme seu e-mail',
+    preheader: 'Um clique para ativar sua conta no PrecisionAI.',
+    userName,
     body: [
-      'Obrigado por se cadastrar no Precision IA.',
-      'Clique no botão abaixo para confirmar seu endereço de e-mail e ativar sua conta.',
+      'Obrigado por se cadastrar no PrecisionAI.',
+      'Clique no botão abaixo para confirmar seu endereço de e-mail e ativar sua conta. Após confirmar, você já pode fazer sua primeira busca.',
     ],
     ctaHref: verifyLink,
     ctaLabel: 'Confirmar e-mail',
-    muted: 'Este link expira em 24 horas. Se você não criou uma conta, ignore este e-mail.',
+    footerNote: 'Este link expira em 24 horas. Se você não criou uma conta, ignore este e-mail.',
+    accentColor: BRAND_COLOR,
   });
 }
 
-/**
- * Team invite template (convite para workspace X por Y). Link = aceitar convite (com token).
- */
-export function teamInviteTemplate(inviterName: string, workspaceName: string, acceptInviteUrl: string): string {
-  const safeInviter = escapeHtml(inviterName);
-  const safeWorkspace = escapeHtml(workspaceName);
+/** Convite para workspace */
+export function teamInviteTemplate(
+  inviterName: string,
+  workspaceName: string,
+  acceptInviteUrl: string,
+  userName?: string,
+): string {
   return buildEmail({
-    title: `Convite para o workspace "${safeWorkspace}"`,
+    title: `Você foi convidado para "${escapeHtml(workspaceName)}"`,
+    preheader: `${escapeHtml(inviterName)} quer colaborar com você no PrecisionAI.`,
+    userName,
     body: [
-      `${safeInviter} convidou você para o workspace "${safeWorkspace}".`,
-      'Clique no botão abaixo para aceitar o convite e entrar na equipe.',
+      `<strong>${escapeHtml(inviterName)}</strong> convidou você para o workspace <strong>"${escapeHtml(workspaceName)}"</strong> no PrecisionAI.`,
+      'Aceite o convite para acessar os leads, análises e prospecções compartilhadas da equipe.',
     ],
     ctaHref: acceptInviteUrl,
     ctaLabel: 'Aceitar convite',
+    footerNote: 'Este convite expira em 7 dias. Se você não esperava este e-mail, pode ignorá-lo.',
+    accentColor: BRAND_COLOR,
   });
 }
 
-/**
- * Account created by team invite: user must set password via link.
- */
+/** Conta criada via convite — usuário precisa definir senha */
 export function teamInviteAccountCreatedTemplate(
   inviterName: string,
   workspaceName: string,
   setPasswordUrl: string,
+  userName?: string,
 ): string {
-  const safeInviter = escapeHtml(inviterName);
-  const safeWorkspace = escapeHtml(workspaceName);
   return buildEmail({
-    title: `Você foi adicionado à equipe "${safeWorkspace}"`,
+    title: `Sua conta foi criada em "${escapeHtml(workspaceName)}"`,
+    preheader: 'Defina sua senha para começar a usar o PrecisionAI.',
+    userName,
     body: [
-      `${safeInviter} adicionou você ao workspace "${safeWorkspace}" no Precision IA.`,
-      'Sua conta foi criada. Clique no botão abaixo para definir sua senha e acessar o dashboard.',
+      `<strong>${escapeHtml(inviterName)}</strong> criou uma conta para você no workspace <strong>"${escapeHtml(workspaceName)}"</strong>.`,
+      'Clique no botão abaixo para definir sua senha e acessar o dashboard. Após isso, você já pode explorar leads e análises com IA.',
     ],
     ctaHref: setPasswordUrl,
-    ctaLabel: 'Definir senha',
-    muted: 'Este link expira em 7 dias. Se não definir a senha, peça um novo envio ao administrador.',
+    ctaLabel: 'Definir minha senha',
+    footerNote: 'Este link expira em 7 dias. Se não definir a senha, peça um novo envio ao administrador.',
+    accentColor: BRAND_COLOR,
   });
 }
 
-/**
- * Admin test email template.
- */
+/** E-mail de teste (admin) */
 export function testEmailTemplate(): string {
   return buildEmail({
     title: 'E-mail de teste',
+    preheader: 'Configuração de e-mail funcionando corretamente.',
     body: [
-      'Este é um e-mail de teste enviado pelo painel administrativo do Precision IA.',
+      'Este é um e-mail de teste enviado pelo painel administrativo do PrecisionAI.',
       'Se você recebeu esta mensagem, a configuração de e-mail está funcionando corretamente.',
     ],
+    accentColor: MUTED_COLOR,
   });
 }
 
-/**
- * Notification email (in-app notification sent by email). Title and message are escaped for safety.
- * Converts relative links (e.g. /dashboard/lead/xxx) to absolute URLs so the link works in email clients.
- */
-export function notificationTemplate(titleText: string, message: string, linkUrl?: string | null): string {
-  const body = [escapeHtml(message)];
-  const base = SITE_URL.replace(/\/$/, '');
-  const ctaHref = linkUrl?.startsWith('/') ? `${base}${linkUrl}` : (linkUrl ?? undefined);
+/** Notificação in-app por e-mail */
+export function notificationTemplate(
+  titleText: string,
+  message: string,
+  linkUrl?: string | null,
+  userName?: string,
+): string {
+  const ctaHref = linkUrl ? safeUrl(linkUrl) : undefined;
   return buildEmail({
     title: escapeHtml(titleText),
-    body,
+    preheader: escapeHtml(message).slice(0, 90),
+    userName,
+    body: [escapeHtml(message)],
     ctaHref,
-    ctaLabel: linkUrl ? 'Ver mais' : undefined,
+    ctaLabel: ctaHref ? 'Ver mais' : undefined,
+    accentColor: BRAND_COLOR,
   });
 }
 
-/**
- * Payment success / welcome to plan (professional template).
- * Used when Mercado Pago webhook reports approved payment.
- */
-export function paymentSuccessTemplate(planName: string, leadsLimit: number, dashboardUrl: string): string {
-  const safePlanName = escapeHtml(planName);
-  const body = [
-    'Obrigado por assinar o Precision IA. Seu pagamento foi aprovado e seu plano já está ativo.',
-    `Você agora tem acesso ao plano <strong>${safePlanName}</strong>, com até ${leadsLimit} buscas por mês. Use o dashboard para fazer sua primeira prospecção, salvar leads e aproveitar as análises com IA.`,
-    'Próximos passos: acesse o dashboard, defina nicho e região na Nova Busca e execute sua primeira busca. Em Inteligência você encontra concorrência, relatórios e análise da sua empresa conforme seu plano.',
-  ];
-  const base = SITE_URL.replace(/\/$/, '');
-  const pathPrefix = dashboardUrl.startsWith('/') ? '' : '/';
-  const ctaHref = dashboardUrl.startsWith('http') ? dashboardUrl : `${base}${pathPrefix}${dashboardUrl}`;
-  return buildEmail({
-    title: `Bem-vindo ao ${APP_NAME} — seu plano está ativo`,
-    body,
-    ctaHref,
-    ctaLabel: 'Acessar dashboard',
+// ── Pagamentos ─────────────────────────────────────────────────────────────
+
+/** Pagamento aprovado / plano ativo */
+export function paymentSuccessTemplate(
+  planName: string,
+  leadsLimit: number,
+  dashboardUrl: string,
+  userName?: string,
+  nextBillingDate?: Date,
+): string {
+  const safePlan = escapeHtml(planName);
+  const nextDate = nextBillingDate ? formatDate(nextBillingDate) : null;
+
+  const detailsHtml = detailTable([
+    ['Plano ativo', safePlan],
+    ['Buscas por mês', leadsLimit.toLocaleString('pt-BR')],
+    ...(nextDate ? [['Próxima cobrança', nextDate] as [string, string]] : []),
+  ]);
+
+  const base  = SITE_URL.replace(/\/$/, '');
+  const cta   = safeUrl(dashboardUrl) ?? `${base}/dashboard/search?onboarding=1`;
+
+  let content = '';
+  if (userName) {
+    content += `<p style="margin:0 0 16px;font-size:15px;color:${MUTED_COLOR};">Olá, <strong style="color:${TEXT_COLOR};">${escapeHtml(userName)}</strong>.</p>`;
+  }
+  content += titleHtml('Seu plano está ativo!');
+  content += paragraph('Seu pagamento foi aprovado. Bem-vindo ao PrecisionAI — sua equipe de prospecção com inteligência artificial.');
+  content += infoBox(
+    `<p style="margin:0;font-size:15px;color:#5b21b6;font-weight:600;">Plano <strong>${safePlan}</strong> ativado</p>
+     <p style="margin:4px 0 0;font-size:14px;color:#6d28d9;">Você tem <strong>${leadsLimit.toLocaleString('pt-BR')} buscas/mês</strong> disponíveis agora.</p>`,
+    BRAND_COLOR,
+    '#f5f3ff',
+  );
+  content += detailsHtml;
+  content += paragraph('Próximos passos: acesse o dashboard, defina o nicho e a cidade na <strong>Nova Busca</strong> e execute sua primeira prospecção com score de IA.');
+  content += ctaButton(cta, 'Fazer minha primeira busca', SUCCESS_COLOR);
+  content += ctaButtonSecondary(`${base}/dashboard`, 'Ver dashboard completo');
+  if (nextDate) {
+    content += mutedText(`Próxima cobrança: ${nextDate}. Cancele a qualquer momento em Configurações → Assinatura.`);
+  }
+
+  return wrapContent(content, {
+    preheader: `Plano ${safePlan} ativo — ${leadsLimit.toLocaleString('pt-BR')} buscas/mês disponíveis.`,
+    accentColor: SUCCESS_COLOR,
+    footerExtra: `<a href="${base}/settings/subscription" style="color:${MUTED_COLOR};font-size:12px;">Gerenciar assinatura</a>`,
   });
 }
 
-/**
- * Payment failed / rejected (professional template).
- * Used when Mercado Pago webhook reports rejected payment.
- */
-export function paymentFailureTemplate(dashboardOrPlansUrl: string): string {
-  const base = SITE_URL.replace(/\/$/, '');
-  const pathPrefix = dashboardOrPlansUrl.startsWith('/') ? '' : '/';
-  const ctaHref = dashboardOrPlansUrl.startsWith('http') ? dashboardOrPlansUrl : `${base}${pathPrefix}${dashboardOrPlansUrl}`;
+/** Pagamento recusado */
+export function paymentFailureTemplate(
+  dashboardOrPlansUrl: string,
+  userName?: string,
+): string {
   return buildEmail({
     title: 'Pagamento não aprovado',
+    preheader: 'Houve um problema com o pagamento do seu plano. Veja como resolver.',
+    userName,
     body: [
-      'O pagamento do seu plano Precision IA não foi processado. Isso pode ocorrer por dados incorretos do cartão, limite insuficiente ou recusa do emissor.',
-      'Verifique os dados do cartão ou tente outro cartão ou meio de pagamento. Você pode acessar a página de planos para tentar novamente.',
+      'O pagamento do seu plano PrecisionAI não foi processado. Isso pode ocorrer por dados incorretos, limite insuficiente ou recusa do emissor.',
+      'Verifique os dados do cartão ou tente outro meio de pagamento. Sua conta continua ativa por mais 3 dias enquanto você resolve.',
     ],
-    ctaHref,
-    ctaLabel: 'Ver planos',
+    ctaHref: dashboardOrPlansUrl,
+    ctaLabel: 'Atualizar forma de pagamento',
+    accentColor: DANGER_COLOR,
+    footerNote: 'Se precisar de ajuda, responda este e-mail ou acesse nosso suporte.',
   });
 }
 
-/**
- * Afiliado aprovado: conta ativa, pode compartilhar link e receber comissões.
- */
-export function affiliateApprovedTemplate(affiliateCode: string, loginUrl: string): string {
+// ── Dunning sequence (cobrança falhando) ────────────────────────────────────
+
+/** Dunning 1 — aviso suave (dia da falha) */
+export function dunningFirstTemplate(
+  planName: string,
+  retryDate: Date,
+  updatePaymentUrl: string,
+  userName?: string,
+): string {
+  return buildEmail({
+    title: 'Problema com seu pagamento',
+    preheader: 'Não conseguimos processar sua cobrança. Veja como resolver.',
+    userName,
+    body: [
+      `Tentamos cobrar sua assinatura do plano <strong>${escapeHtml(planName)}</strong>, mas o pagamento não foi aprovado.`,
+      `Não se preocupe — sua conta continua ativa. Faremos uma nova tentativa em <strong>${formatDate(retryDate)}</strong>.`,
+      'Se quiser resolver agora, atualize sua forma de pagamento clicando no botão abaixo.',
+    ],
+    ctaHref: updatePaymentUrl,
+    ctaLabel: 'Atualizar pagamento',
+    accentColor: WARNING_COLOR,
+    footerNote: 'Se não atualizar até a data de nova tentativa, sua conta pode ser suspensa.',
+  });
+}
+
+/** Dunning 2 — urgência média (3 dias depois) */
+export function dunningSecondTemplate(
+  planName: string,
+  suspensionDate: Date,
+  updatePaymentUrl: string,
+  userName?: string,
+): string {
+  return buildEmail({
+    title: 'Sua assinatura será suspensa em breve',
+    preheader: `Ação necessária: pagamento do plano ${escapeHtml(planName)} pendente.`,
+    userName,
+    body: [
+      `Ainda não conseguimos processar o pagamento do seu plano <strong>${escapeHtml(planName)}</strong>.`,
+      `Se não resolvermos até <strong>${formatDate(suspensionDate)}</strong>, sua conta será suspensa e você perderá acesso aos leads e análises salvos.`,
+      'Leva menos de 1 minuto para atualizar sua forma de pagamento.',
+    ],
+    ctaHref: updatePaymentUrl,
+    ctaLabel: 'Resolver agora',
+    accentColor: DANGER_COLOR,
+    footerNote: 'Após a suspensão, seus dados ficam guardados por 30 dias. Você pode reativar a conta a qualquer momento.',
+  });
+}
+
+/** Dunning 3 — conta suspensa (dia da suspensão) */
+export function dunningThirdTemplate(
+  reactivateUrl: string,
+  userName?: string,
+): string {
+  return buildEmail({
+    title: 'Sua conta foi suspensa',
+    preheader: 'Reative sua conta para recuperar o acesso ao PrecisionAI.',
+    userName,
+    body: [
+      'Devido a pagamentos em atraso, sua conta PrecisionAI foi suspensa.',
+      'Seus dados, leads salvos e histórico de buscas estão preservados por 30 dias.',
+      'Para reativar, escolha um plano e atualize sua forma de pagamento. Todo seu histórico será restaurado imediatamente.',
+    ],
+    ctaHref: reactivateUrl,
+    ctaLabel: 'Reativar minha conta',
+    accentColor: DANGER_COLOR,
+    footerNote: 'Após 30 dias de suspensão, os dados podem ser excluídos permanentemente.',
+  });
+}
+
+// ── Trial ──────────────────────────────────────────────────────────────────
+
+/** Trial expirando — 1 dia antes */
+export function trialExpiringTemplate(
+  trialEndDate: Date,
+  plansUrl: string,
+  userName?: string,
+): string {
+  const base = SITE_URL.replace(/\/$/, '');
+  return buildEmail({
+    title: 'Seu período de teste termina amanhã',
+    preheader: 'Assine agora para não perder o acesso ao PrecisionAI.',
+    userName,
+    body: [
+      `Seu período de teste gratuito encerra em <strong>${formatDate(trialEndDate)}</strong>.`,
+      'Ao assinar um plano, você mantém acesso a todos os seus leads salvos, histórico de buscas e análises de IA.',
+      'Aproveite: para usuários em trial que convertem, temos uma oferta especial de boas-vindas.',
+    ],
+    ctaHref: plansUrl,
+    ctaLabel: 'Ver planos e assinar',
+    accentColor: WARNING_COLOR,
+    footerNote: `Dúvidas? Responda este e-mail ou acesse ${SUPPORT_EMAIL}.`,
+    footerExtra: `<a href="${base}/settings" style="color:${MUTED_COLOR};font-size:12px;">Gerenciar trial</a>`,
+  });
+}
+
+/** Trial expirado — 24h após expirar */
+export function trialExpiredTemplate(
+  plansUrl: string,
+  userName?: string,
+): string {
+  return buildEmail({
+    title: 'Seu teste gratuito encerrou',
+    preheader: 'Seus dados estão guardados — assine para recuperar o acesso.',
+    userName,
+    body: [
+      'Seu período de teste no PrecisionAI chegou ao fim.',
+      '<strong>Boa notícia:</strong> todos os seus leads salvos, buscas e análises estão preservados por 15 dias. Ao assinar, você recupera tudo imediatamente.',
+      'Escolha o plano ideal para o tamanho da sua prospecção e continue onde parou.',
+    ],
+    ctaHref: plansUrl,
+    ctaLabel: 'Escolher meu plano',
+    accentColor: BRAND_COLOR,
+    footerNote: 'Seus dados serão mantidos por mais 15 dias. Após esse prazo, podem ser excluídos.',
+  });
+}
+
+/** Boas-vindas D+3 — trial ativo mas sem uso */
+export function trialActivationNudgeTemplate(
+  firstSearchUrl: string,
+  userName?: string,
+): string {
+  return buildEmail({
+    title: 'Você ainda não fez sua primeira busca',
+    preheader: 'Leva menos de 2 minutos. Encontre leads qualificados agora.',
+    userName,
+    body: [
+      'Sua conta PrecisionAI está ativa, mas você ainda não explorou a plataforma.',
+      'Em menos de 2 minutos você pode encontrar dezenas de empresas qualificadas para prospectar — com score de IA, dados de contato e análise de potencial.',
+      'Que tal fazer sua primeira busca agora? Escolha uma cidade e um segmento e veja o resultado.',
+    ],
+    ctaHref: firstSearchUrl,
+    ctaLabel: 'Fazer minha primeira busca',
+    accentColor: BRAND_COLOR,
+    footerNote: 'Seu trial é gratuito e termina em alguns dias. Explore sem compromisso.',
+  });
+}
+
+// ── Assinatura ─────────────────────────────────────────────────────────────
+
+/** Upgrade de plano */
+export function planUpgradeTemplate(
+  oldPlan: string,
+  newPlan: string,
+  newLeadsLimit: number,
+  dashboardUrl: string,
+  nextBillingDate?: Date,
+  userName?: string,
+): string {
+  const details: Array<[string, string]> = [
+    ['Plano anterior', escapeHtml(oldPlan)],
+    ['Novo plano', escapeHtml(newPlan)],
+    ['Buscas por mês', newLeadsLimit.toLocaleString('pt-BR')],
+  ];
+  if (nextBillingDate) details.push(['Próxima cobrança', formatDate(nextBillingDate)]);
+
+  let content = '';
+  if (userName) {
+    content += `<p style="margin:0 0 16px;font-size:15px;color:${MUTED_COLOR};">Olá, <strong style="color:${TEXT_COLOR};">${escapeHtml(userName)}</strong>.</p>`;
+  }
+  content += titleHtml(`Upgrade para ${escapeHtml(newPlan)} confirmado!`);
+  content += paragraph(`Seu plano foi atualizado de <strong>${escapeHtml(oldPlan)}</strong> para <strong>${escapeHtml(newPlan)}</strong>. O novo limite já está disponível.`);
+  content += detailTable(details);
+  content += ctaButton(safeUrl(dashboardUrl) ?? '#', 'Explorar novos recursos', SUCCESS_COLOR);
+  if (nextBillingDate) {
+    content += mutedText(`Próxima cobrança: ${formatDate(nextBillingDate)}.`);
+  }
+
+  return wrapContent(content, {
+    preheader: `Upgrade para ${escapeHtml(newPlan)} ativo — ${newLeadsLimit.toLocaleString('pt-BR')} buscas/mês disponíveis.`,
+    accentColor: SUCCESS_COLOR,
+  });
+}
+
+/** Assinatura cancelada */
+export function subscriptionCancelledTemplate(
+  planName: string,
+  accessUntil: Date,
+  reactivateUrl: string,
+  userName?: string,
+): string {
+  const base = SITE_URL.replace(/\/$/, '');
+  return buildEmail({
+    title: 'Assinatura cancelada',
+    preheader: 'Seu acesso continua ativo até o fim do período pago.',
+    userName,
+    body: [
+      `Sua assinatura do plano <strong>${escapeHtml(planName)}</strong> foi cancelada conforme solicitado.`,
+      `Você ainda tem acesso completo até <strong>${formatDate(accessUntil)}</strong>. Após essa data, sua conta será rebaixada para o plano gratuito.`,
+      'Se mudou de ideia, você pode reativar a qualquer momento sem perder seu histórico.',
+    ],
+    ctaHref: reactivateUrl,
+    ctaLabel: 'Reativar assinatura',
+    accentColor: MUTED_COLOR,
+    footerNote: `Lamentamos vê-lo partir. Se tiver sugestões de melhoria, responda este e-mail — lemos todos.`,
+    footerExtra: `Seu histórico de leads e buscas fica salvo por 60 dias após o encerramento.`,
+  });
+}
+
+// ── Segurança ──────────────────────────────────────────────────────────────
+
+/** 2FA ativado */
+export function twoFactorEnabledTemplate(userName?: string): string {
+  const base = SITE_URL.replace(/\/$/, '');
+  return buildEmail({
+    title: 'Autenticação em dois fatores ativada',
+    preheader: 'Sua conta está mais segura agora.',
+    userName,
+    body: [
+      'A autenticação em dois fatores (2FA) foi ativada com sucesso na sua conta PrecisionAI.',
+      'A partir de agora, você precisará do código do seu aplicativo autenticador a cada login.',
+      '<strong>Guarde seus códigos de recuperação em um lugar seguro.</strong> Eles são a única forma de recuperar o acesso caso perca o dispositivo.',
+    ],
+    ctaHref: `${base}/settings/security`,
+    ctaLabel: 'Ver configurações de segurança',
+    accentColor: SUCCESS_COLOR,
+    footerNote: 'Se você não ativou o 2FA, acesse as configurações e desative imediatamente. Em caso de dúvida, entre em contato com o suporte.',
+  });
+}
+
+/** Login de dispositivo desconhecido */
+export function newDeviceLoginTemplate(
+  deviceInfo: string,
+  location: string,
+  loginTime: Date,
+  securityUrl: string,
+  userName?: string,
+): string {
+  const details: Array<[string, string]> = [
+    ['Dispositivo', escapeHtml(deviceInfo)],
+    ['Localização', escapeHtml(location)],
+    ['Horário', loginTime.toLocaleString('pt-BR')],
+  ];
+
+  let content = '';
+  if (userName) {
+    content += `<p style="margin:0 0 16px;font-size:15px;color:${MUTED_COLOR};">Olá, <strong style="color:${TEXT_COLOR};">${escapeHtml(userName)}</strong>.</p>`;
+  }
+  content += titleHtml('Novo login detectado na sua conta');
+  content += paragraph('Detectamos um acesso à sua conta PrecisionAI a partir de um dispositivo ou localização não reconhecidos:');
+  content += detailTable(details);
+  content += paragraph('Se foi você, pode ignorar este e-mail. Se não reconhece este acesso, proteja sua conta imediatamente.');
+  content += ctaButton(safeUrl(securityUrl) ?? '#', 'Proteger minha conta', DANGER_COLOR);
+
+  return wrapContent(content, {
+    preheader: 'Novo login detectado — verifique se foi você.',
+    accentColor: DANGER_COLOR,
+    footerExtra: 'Por segurança, nunca compartilhe sua senha ou código 2FA.',
+  });
+}
+
+// ── Afiliados ──────────────────────────────────────────────────────────────
+
+/** Afiliado aprovado */
+export function affiliateApprovedTemplate(
+  affiliateCode: string,
+  loginUrl: string,
+  userName?: string,
+): string {
   const safeCode = escapeHtml(affiliateCode);
   const base = SITE_URL.replace(/\/$/, '');
-  const ctaHref = loginUrl.startsWith('http') ? loginUrl : `${base}${loginUrl}`;
-  const affiliateLink = `${base}/api/affiliate/click?ref=${encodeURIComponent(affiliateCode)}`;
-  const affiliateLinkAttr = affiliateLink.replace(/"/g, '&quot;');
-  return buildEmail({
-    title: 'Sua conta de afiliado foi aprovada',
-    body: [
-      `Sua conta de afiliado no Precision IA foi aprovada. Seu código exclusivo é: <strong>${safeCode}</strong>.`,
-      'Use o link abaixo para indicar clientes. Quando alguém se cadastrar por esse link e assinar um plano pago, você receberá comissão conforme a política do programa.',
-      `Seu link de indicação: <a href="${affiliateLinkAttr}" style="color:${BRAND_COLOR};word-break:break-all;">${escapeHtml(affiliateLink)}</a>`,
-    ],
-    ctaHref,
-    ctaLabel: 'Acessar painel do afiliado',
+  const affiliateLink = `${base}/r/${encodeURIComponent(affiliateCode)}`;
+  const cta = safeUrl(loginUrl) ?? `${base}/affiliate`;
+
+  let content = '';
+  if (userName) {
+    content += `<p style="margin:0 0 16px;font-size:15px;color:${MUTED_COLOR};">Olá, <strong style="color:${TEXT_COLOR};">${escapeHtml(userName)}</strong>.</p>`;
+  }
+  content += titleHtml('Sua conta de afiliado foi aprovada!');
+  content += paragraph('Você está no programa de afiliados PrecisionAI. Compartilhe seu link e ganhe comissão recorrente por cada assinante ativo.');
+  content += infoBox(
+    `<p style="margin:0;font-size:14px;color:#5b21b6;font-weight:600;">Seu código exclusivo</p>
+     <p style="margin:6px 0 0;font-size:20px;font-weight:700;color:#4c1d95;letter-spacing:2px;">${safeCode}</p>
+     <p style="margin:6px 0 0;font-size:13px;color:#7c3aed;">
+       <a href="${affiliateLink}" style="color:#7c3aed;word-break:break-all;">${affiliateLink}</a>
+     </p>`,
+    BRAND_COLOR,
+    '#f5f3ff',
+  );
+  content += paragraph('Quando alguém se cadastrar pelo seu link e assinar um plano pago, você receberá comissão conforme a política do programa.');
+  content += ctaButton(cta, 'Acessar painel do afiliado', BRAND_COLOR);
+
+  return wrapContent(content, {
+    preheader: `Seu código de afiliado: ${safeCode}. Comece a indicar agora.`,
+    accentColor: BRAND_COLOR,
   });
 }
 
-/**
- * Nova conversão: alguém indicado pelo afiliado assinou.
- */
-export function affiliateConversionTemplate(conversionSummary: string, dashboardUrl: string): string {
-  const safeSummary = escapeHtml(conversionSummary);
-  const base = SITE_URL.replace(/\/$/, '');
-  const ctaHref = dashboardUrl.startsWith('http') ? dashboardUrl : `${base}${dashboardUrl}`;
+/** Nova conversão do afiliado */
+export function affiliateConversionTemplate(
+  conversionSummary: string,
+  commissionAmount: string,
+  dashboardUrl: string,
+  userName?: string,
+): string {
   return buildEmail({
-    title: 'Nova conversão no programa de afiliados',
+    title: 'Nova conversão — comissão gerada!',
+    preheader: `Você ganhou ${escapeHtml(commissionAmount)} em comissão.`,
+    userName,
     body: [
-      safeSummary,
-      'Acesse o painel do afiliado para ver detalhes e o status da comissão.',
-    ],
-    ctaHref,
-    ctaLabel: 'Ver painel',
-  });
-}
-
-/**
- * Comissão paga: valor foi enviado ao afiliado.
- */
-export function affiliateCommissionPaidTemplate(amountFormatted: string, payoutInfo: string): string {
-  const safeAmount = escapeHtml(amountFormatted);
-  const safePayout = escapeHtml(payoutInfo);
-  return buildEmail({
-    title: 'Comissão paga — Precision IA',
-    body: [
-      `Uma comissão no valor de <strong>${safeAmount}</strong> foi paga conforme os dados de saque informados.`,
-      safePayout,
-    ],
-  });
-}
-
-/**
- * Comissão disponível: uma ou mais comissões passaram do período de carência e estão disponíveis para saque.
- */
-export function affiliateCommissionAvailableTemplate(dashboardUrl: string): string {
-  return buildEmail({
-    title: 'Comissão disponível para saque — Precision IA',
-    body: [
-      'Uma ou mais comissões do programa de afiliados passaram do período de carência e estão disponíveis para saque.',
-      'Acesse o painel do afiliado para acompanhar os valores. O pagamento será processado conforme a política do programa.',
+      escapeHtml(conversionSummary),
+      `Comissão gerada: <strong>${escapeHtml(commissionAmount)}</strong>. O valor entrará em período de carência e ficará disponível para saque conforme a política do programa.`,
+      'Acesse o painel para ver detalhes e acompanhar o saldo total.',
     ],
     ctaHref: dashboardUrl,
-    ctaLabel: 'Ver painel do afiliado',
+    ctaLabel: 'Ver painel de afiliado',
+    accentColor: SUCCESS_COLOR,
+  });
+}
+
+/** Comissão paga */
+export function affiliateCommissionPaidTemplate(
+  amountFormatted: string,
+  payoutInfo: string,
+  userName?: string,
+): string {
+  return buildEmail({
+    title: 'Pagamento de comissão enviado',
+    preheader: `${escapeHtml(amountFormatted)} foi transferido para você.`,
+    userName,
+    body: [
+      `Uma comissão no valor de <strong>${escapeHtml(amountFormatted)}</strong> foi processada e enviada conforme seus dados de saque.`,
+      escapeHtml(payoutInfo),
+      'O prazo de compensação pode variar conforme o método de pagamento escolhido.',
+    ],
+    accentColor: SUCCESS_COLOR,
+  });
+}
+
+/** Comissão disponível para saque */
+export function affiliateCommissionAvailableTemplate(
+  amount: string,
+  dashboardUrl: string,
+  userName?: string,
+): string {
+  return buildEmail({
+    title: 'Comissão disponível para saque',
+    preheader: `${escapeHtml(amount)} disponível para saque no painel de afiliados.`,
+    userName,
+    body: [
+      `Você tem <strong>${escapeHtml(amount)}</strong> disponíveis para saque no programa de afiliados PrecisionAI.`,
+      'O valor passou do período de carência e está liberado. Acesse o painel para solicitar o pagamento.',
+    ],
+    ctaHref: dashboardUrl,
+    ctaLabel: 'Sacar comissão',
+    accentColor: SUCCESS_COLOR,
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// TEMPLATES EDITÁVEIS PELO PAINEL ADMIN
+// Estrutura: função recebe variáveis dinâmicas + bloco de conteúdo customizável
+// ══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Relatório semanal de uso — editável pelo admin.
+ * @param config Dados do usuário e métricas da semana
+ * @param adminConfig Personalização via painel admin (assunto, destaque, CTA)
+ */
+export interface WeeklyReportConfig {
+  userName: string;
+  weekStart: Date;
+  weekEnd: Date;
+  totalSearches: number;
+  totalLeadsFound: number;
+  hotLeads: number;
+  warmLeads: number;
+  coldLeads: number;
+  avgScore: number;
+  topSegment: string;
+  topCity: string;
+  dashboardUrl: string;
+}
+
+export interface AdminWeeklyReportConfig {
+  customTitle?: string;
+  customHighlight?: string;   // Texto em destaque (tip da semana, novidade, etc.)
+  ctaLabel?: string;
+  ctaUrl?: string;
+  footerPromo?: string;       // Promoção ou aviso no rodapé
+}
+
+export function weeklyReportTemplate(
+  config: WeeklyReportConfig,
+  adminConfig: AdminWeeklyReportConfig = {},
+): string {
+  const {
+    userName, weekStart, weekEnd,
+    totalSearches, totalLeadsFound, hotLeads, warmLeads, coldLeads,
+    avgScore, topSegment, topCity, dashboardUrl,
+  } = config;
+
+  const {
+    customTitle = `Seu resumo da semana — PrecisionAI`,
+    customHighlight,
+    ctaLabel = 'Ver todos os leads',
+    ctaUrl,
+    footerPromo,
+  } = adminConfig;
+
+  const base = SITE_URL.replace(/\/$/, '');
+  const ctaHref = safeUrl(ctaUrl ?? dashboardUrl) ?? `${base}/dashboard`;
+  const period  = `${formatDate(weekStart)} a ${formatDate(weekEnd)}`;
+
+  let content = `<p style="margin:0 0 16px;font-size:15px;color:${MUTED_COLOR};">Olá, <strong style="color:${TEXT_COLOR};">${escapeHtml(userName)}</strong>.</p>`;
+  content += titleHtml(escapeHtml(customTitle));
+  content += paragraph(`Aqui está o resumo da sua atividade de <strong>${period}</strong>:`);
+
+  // Métricas em grade
+  content += `
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:16px 0;">
+      <tr>
+        ${metricCard('Buscas realizadas', totalSearches.toString())}
+        <td style="width:2%;"></td>
+        ${metricCard('Leads encontrados', totalLeadsFound.toLocaleString('pt-BR'))}
+        <td style="width:2%;"></td>
+        ${metricCard('Score médio', avgScore.toFixed(0) + '/100')}
+      </tr>
+    </table>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:8px 0 16px;">
+      <tr>
+        ${metricCard('Hot leads', hotLeads.toString(), undefined, true)}
+        <td style="width:2%;"></td>
+        ${metricCard('Warm leads', warmLeads.toString())}
+        <td style="width:2%;"></td>
+        ${metricCard('Cold leads', coldLeads.toString())}
+      </tr>
+    </table>`;
+
+  content += detailTable([
+    ['Segmento mais buscado', escapeHtml(topSegment)],
+    ['Cidade com mais leads', escapeHtml(topCity)],
+  ]);
+
+  if (customHighlight) {
+    content += infoBox(
+      `<p style="margin:0;font-size:14px;color:#1e40af;font-weight:600;">Dica da semana</p>
+       <p style="margin:6px 0 0;font-size:14px;color:#1e3a8a;">${customHighlight}</p>`,
+      '#2563eb',
+      '#eff6ff',
+    );
+  }
+
+  content += ctaButton(ctaHref, ctaLabel, BRAND_COLOR);
+
+  return wrapContent(content, {
+    preheader: `${totalLeadsFound} leads encontrados esta semana. Veja seu resumo.`,
+    accentColor: BRAND_COLOR,
+    footerExtra: footerPromo
+      ? `<p style="margin:0 0 8px;font-size:13px;color:${BRAND_COLOR};font-weight:600;">${escapeHtml(footerPromo)}</p>`
+      : undefined,
+  });
+}
+
+/**
+ * E-mail de promoção — totalmente editável pelo painel admin.
+ * Campos editáveis: título, subtítulo, corpo, CTA, cor, imagem de destaque, badge.
+ */
+export interface PromotionEmailConfig {
+  /** Assunto do e-mail (não aparece no HTML mas deve ser passado ao provider) */
+  subject: string;
+  /** Badge/chip acima do título (ex: "Oferta especial", "Novidade") */
+  badge?: string;
+  badgeColor?: string;
+  title: string;
+  subtitle?: string;
+  /** Parágrafos de corpo — suportam HTML limitado (b, strong, a) */
+  bodyParagraphs: string[];
+  ctaLabel: string;
+  ctaUrl: string;
+  /** Cor de destaque (substitui BRAND_COLOR no header e no botão) */
+  accentColor?: string;
+  /** Validade da oferta */
+  expiresAt?: Date;
+  /** Lista de benefícios (bullets) */
+  benefits?: string[];
+  /** Destinatários: 'all' | 'trial' | 'paid' | 'churned' */
+  audience?: string;
+  /** Token de unsubscribe para esta campanha específica */
+  unsubscribeToken?: string;
+  /** Rodapé extra (termos, restrições) */
+  legalNote?: string;
+}
+
+export function promotionEmailTemplate(
+  config: PromotionEmailConfig,
+  userName?: string,
+): string {
+  const {
+    badge, badgeColor = BRAND_COLOR, title, subtitle,
+    bodyParagraphs, ctaLabel, ctaUrl, accentColor = BRAND_COLOR,
+    expiresAt, benefits, legalNote, unsubscribeToken,
+  } = config;
+
+  let content = '';
+
+  if (userName) {
+    content += `<p style="margin:0 0 16px;font-size:15px;color:${MUTED_COLOR};">Olá, <strong style="color:${TEXT_COLOR};">${escapeHtml(userName)}</strong>.</p>`;
+  }
+
+  if (badge) {
+    content += `<p style="margin:0 0 10px;">
+      <span style="display:inline-block;background-color:${badgeColor};color:#ffffff;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;text-transform:uppercase;letter-spacing:.05em;">
+        ${escapeHtml(badge)}
+      </span>
+    </p>`;
+  }
+
+  content += titleHtml(escapeHtml(title));
+
+  if (subtitle) {
+    content += `<p style="margin:-8px 0 16px;font-size:17px;color:${MUTED_COLOR};line-height:1.4;">${escapeHtml(subtitle)}</p>`;
+  }
+
+  bodyParagraphs.forEach(p => { content += paragraph(p); });
+
+  if (benefits && benefits.length > 0) {
+    const items = benefits.map(b =>
+      `<tr><td style="padding:6px 0;font-size:14px;color:${TEXT_COLOR};">
+        <span style="color:${SUCCESS_COLOR};font-weight:700;margin-right:8px;">&#10003;</span>${escapeHtml(b)}
+      </td></tr>`
+    ).join('');
+    content += `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:16px 0;"><tbody>${items}</tbody></table>`;
+  }
+
+  if (expiresAt) {
+    content += infoBox(
+      `<p style="margin:0;font-size:14px;color:#92400e;font-weight:600;">Oferta valida ate ${formatDate(expiresAt)}</p>`,
+      WARNING_COLOR,
+      '#fffbeb',
+    );
+  }
+
+  content += ctaButton(safeUrl(ctaUrl) ?? '#', ctaLabel, accentColor);
+
+  if (legalNote) {
+    content += mutedText(escapeHtml(legalNote));
+  }
+
+  return wrapContent(content, {
+    preheader: escapeHtml(subtitle ?? title).slice(0, 90),
+    accentColor,
+    unsubscribeToken,
+  });
+}
+
+/**
+ * Anúncio de nova funcionalidade — editável pelo admin.
+ */
+export interface FeatureAnnouncementConfig {
+  featureName: string;
+  tagline: string;
+  description: string[];
+  ctaLabel: string;
+  ctaUrl: string;
+  /** Lista de benefícios da nova feature */
+  benefits?: string[];
+  badge?: string;
+}
+
+export function featureAnnouncementTemplate(
+  config: FeatureAnnouncementConfig,
+  userName?: string,
+): string {
+  const { featureName, tagline, description, ctaLabel, ctaUrl, benefits, badge } = config;
+
+  let content = '';
+  if (userName) {
+    content += `<p style="margin:0 0 16px;font-size:15px;color:${MUTED_COLOR};">Olá, <strong style="color:${TEXT_COLOR};">${escapeHtml(userName)}</strong>.</p>`;
+  }
+  if (badge) {
+    content += `<p style="margin:0 0 10px;">
+      <span style="display:inline-block;background-color:${BRAND_COLOR};color:#fff;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;text-transform:uppercase;letter-spacing:.05em;">
+        ${escapeHtml(badge)}
+      </span>
+    </p>`;
+  }
+  content += titleHtml(escapeHtml(featureName));
+  content += `<p style="margin:-8px 0 16px;font-size:17px;color:${MUTED_COLOR};line-height:1.4;">${escapeHtml(tagline)}</p>`;
+  description.forEach(p => { content += paragraph(p); });
+  if (benefits?.length) {
+    const items = benefits.map(b =>
+      `<tr><td style="padding:6px 0;font-size:14px;color:${TEXT_COLOR};">
+        <span style="color:${BRAND_COLOR};font-weight:700;margin-right:8px;">&#8594;</span>${escapeHtml(b)}
+      </td></tr>`
+    ).join('');
+    content += `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:16px 0;"><tbody>${items}</tbody></table>`;
+  }
+  content += ctaButton(safeUrl(ctaUrl) ?? '#', ctaLabel, BRAND_COLOR);
+
+  return wrapContent(content, {
+    preheader: `Novidade no PrecisionAI: ${escapeHtml(featureName)} — ${escapeHtml(tagline)}`.slice(0, 90),
+    accentColor: BRAND_COLOR,
+  });
+}
+
+/**
+ * E-mail de reengajamento — para usuários inativos (editável pelo admin).
+ */
+export interface ReengagementConfig {
+  inactiveDays: number;
+  highlight: string;         // o que melhorou desde que saiu
+  incentive?: string;        // ex: "Ganhe 100 buscas grátis"
+  ctaLabel: string;
+  ctaUrl: string;
+}
+
+export function reengagementTemplate(
+  config: ReengagementConfig,
+  userName?: string,
+): string {
+  const { inactiveDays, highlight, incentive, ctaLabel, ctaUrl } = config;
+  return buildEmail({
+    title: 'Sentimos sua falta no PrecisionAI',
+    preheader: incentive ?? `Volte e veja o que mudou nos últimos ${inactiveDays} dias.`,
+    userName,
+    body: [
+      `Faz ${inactiveDays} dias que você não acessa o PrecisionAI.`,
+      `Enquanto isso, melhoramos bastante: ${escapeHtml(highlight)}`,
+      ...(incentive ? [`<strong>${escapeHtml(incentive)}</strong> — para você que está voltando.`] : []),
+    ],
+    ctaHref: ctaUrl,
+    ctaLabel,
+    accentColor: BRAND_COLOR,
+    footerNote: 'Se não quiser receber e-mails de reengajamento, descadastre-se pelo link abaixo.',
   });
 }

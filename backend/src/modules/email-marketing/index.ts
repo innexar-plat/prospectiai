@@ -1,0 +1,21 @@
+export { type CampaignStats } from './domain/types';
+export {
+  listTemplates,
+  getTemplate,
+  createTemplate,
+  updateTemplate,
+  deleteTemplate,
+  renderTemplatePreview,
+  listCampaigns,
+  getCampaign,
+  createCampaign,
+  updateCampaign,
+  deleteCampaign,
+  cancelCampaign,
+  sendCampaign,
+  resolveAudience,
+  getCampaignRecipients,
+  getEmailMarketingStats,
+  getWeeklyReportConfig,
+  updateWeeklyReportConfig,
+} from './application/email-marketing.service';

@@ -170,7 +170,7 @@ export function AffiliateDetailPage() {
 
       {tab === 'overview' && (
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mb-4">
             {isExternal ? (
               <>
                 <div><label className="text-gray-500">Nome</label><br /><input value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded border border-gray-300 bg-gray-100 px-2 py-1 text-gray-700 text-sm" /></div>
@@ -190,7 +190,7 @@ export function AffiliateDetailPage() {
           <div className="border-t border-gray-200 pt-4 mt-4">
             <h3 className="text-sm font-medium text-gray-500 mb-2">Dados para pagamento</h3>
             {affiliate.payoutType && affiliate.payoutPayload ? (
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div><span className="text-gray-500">Tipo</span><br /><span className="text-gray-700">{affiliate.payoutType === 'PIX' ? 'PIX' : 'Transferência bancária'}</span></div>
                 <div className="col-span-2"><span className="text-gray-500">Chave / Dados</span><br /><span className="text-gray-700 break-all">{affiliate.payoutPayload}</span></div>
               </div>

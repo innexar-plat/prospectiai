@@ -133,8 +133,8 @@ export function SidebarNav({
 
   function renderContent(isNarrow: boolean, showCollapseToggle: boolean) {
     const logoBlock = (
-      <div className={cn('flex items-center gap-2 shrink-0 overflow-hidden', isNarrow ? 'mb-1 justify-center' : 'mb-2 justify-between')}>
-        <Logo height={isNarrow ? 90 : 120} className="shrink-0 max-w-full" />
+      <div className={cn('flex items-center shrink-0 overflow-hidden', isNarrow ? 'mb-1 justify-center py-1' : 'justify-between mb-2')}>
+        <Logo height={isNarrow ? 32 : undefined} className="shrink-0" fillWidth={!isNarrow} />
         {onMobileClose && !isNarrow && (
           <button
             type="button"
@@ -346,7 +346,7 @@ export function SidebarNav({
     );
 
     return (
-      <div className={cn('z-10 relative flex flex-col flex-1 min-h-0', isNarrow ? 'px-2 py-4' : 'p-4')}>
+      <div className={cn('z-10 relative flex flex-col flex-1 min-h-0', isNarrow ? 'px-2 py-4' : 'px-3 pb-4 pt-0')}>
         {logoBlock}
         {navContent}
         {footerBlock}
