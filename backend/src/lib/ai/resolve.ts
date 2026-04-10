@@ -40,13 +40,27 @@ export async function resolveAiForRole(role: AiRole): Promise<{ config: Resolved
 
 /**
  * Single entry point for completion: resolve by role and run.
+ * Falls back to Gemini (env) if primary provider fails with timeout/network error.
  */
 export async function generateCompletionForRole(
     role: AiRole,
     options: CompletionOptions
 ): Promise<CompletionResult> {
-    const { adapter } = await resolveAiForRole(role);
-    return adapter.generateCompletion(options);
+    const { adapter, config } = await resolveAiForRole(role);
+    try {
+        return await adapter.generateCompletion(options);
+    } catch (primaryErr) {
+        const geminiKey = process.env.GEMINI_API_KEY;
+        if (config.provider !== 'GEMINI' && geminiKey) {
+            const msg = primaryErr instanceof Error ? primaryErr.message : String(primaryErr);
+            console.warn(`[AI-Fallback] ${config.provider} failed (${msg}), falling back to Gemini`);
+            const model = DEFAULT_MODEL_BY_ROLE[role];
+            const fallback = createGeminiAdapter(geminiKey, model);
+            const result = await fallback.generateCompletion(options);
+            return result;
+        }
+        throw primaryErr;
+    }
 }
 
 interface DbConfig {

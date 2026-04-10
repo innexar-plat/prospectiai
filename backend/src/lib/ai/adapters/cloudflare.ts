@@ -71,7 +71,7 @@ type CloudflareResponse = {
     usage?: { prompt_tokens?: number; completion_tokens?: number };
 };
 
-const CLOUDFLARE_TIMEOUT_MS = 120000;
+const CLOUDFLARE_TIMEOUT_MS = 60000;
 const CLOUDFLARE_MAX_RETRIES = 1;
 
 function cfSleep(ms: number): Promise<void> {
