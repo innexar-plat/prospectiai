@@ -23,7 +23,7 @@ jest.mock('@/lib/ai', () => ({
             cnpjAnalysis: 'Active company since 2010',
         }),
     }),
-    resolveAiForRole: jest.fn().mockResolvedValue({ config: { provider: 'GEMINI', model: 'gemini-flash', apiKey: 'key' } }),
+    resolveAiForRole: jest.fn().mockResolvedValue({ config: { provider: 'GEMINI', model: 'gemini-flash', apiKey: 'key' }, model: { modelId: 'gemini-mock' } }),
 }));
 
 jest.mock('@/lib/web-search/resolve', () => ({

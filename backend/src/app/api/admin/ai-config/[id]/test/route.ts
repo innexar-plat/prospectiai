@@ -3,10 +3,9 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { isAdmin } from '@/lib/admin';
 import { logAdminAction } from '@/lib/audit';
-import { createGeminiAdapter } from '@/lib/ai/adapters/gemini';
-import { createOpenAIAdapter } from '@/lib/ai/adapters/openai';
-import { createCloudflareAdapter } from '@/lib/ai/adapters/cloudflare';
+import { createLanguageModel } from '@/lib/ai';
 import { decryptApiKey } from '@/lib/ai/encrypt';
+import { generateText } from 'ai';
 
 /**
  * POST /api/admin/ai-config/[id]/test — test this config with a simple completion.
@@ -27,15 +26,14 @@ export async function POST(
             return NextResponse.json({ error: 'No API key configured for this config' }, { status: 400 });
         }
         const apiKey = decryptApiKey(config.apiKeyEncrypted);
-        let adapter: Awaited<ReturnType<typeof createGeminiAdapter>>;
-        if (config.provider === 'GEMINI') {
-            adapter = createGeminiAdapter(apiKey, config.model);
-        } else if (config.provider === 'OPENAI') {
-            adapter = createOpenAIAdapter(apiKey, config.model);
-        } else {
-            adapter = createCloudflareAdapter(apiKey, config.model, config.cloudflareAccountId ?? undefined);
-        }
-        await adapter.generateCompletion({
+        const model = createLanguageModel({
+            provider: config.provider as 'GEMINI' | 'OPENAI' | 'CLOUDFLARE' | 'GROQ' | 'DEEPSEEK' | 'ANTHROPIC',
+            model: config.model,
+            apiKey,
+            accountId: config.cloudflareAccountId ?? undefined,
+        });
+        await generateText({
+            model,
             prompt: 'Respond with exactly: OK',
             maxTokens: 10,
         });

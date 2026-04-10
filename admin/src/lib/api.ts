@@ -149,7 +149,7 @@ export interface AdminAuditLogItem {
 }
 
 export type AiConfigRole = 'lead_analysis' | 'viability';
-export type AiConfigProvider = 'GEMINI' | 'OPENAI' | 'CLOUDFLARE';
+export type AiConfigProvider = 'GEMINI' | 'OPENAI' | 'CLOUDFLARE' | 'GROQ' | 'DEEPSEEK' | 'ANTHROPIC';
 
 export interface AiConfigListItem {
   id: string;

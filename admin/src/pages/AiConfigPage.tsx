@@ -21,6 +21,9 @@ const PROVIDERS: { value: AiConfigProvider; label: string }[] = [
   { value: 'GEMINI', label: 'Gemini' },
   { value: 'OPENAI', label: 'OpenAI' },
   { value: 'CLOUDFLARE', label: 'Cloudflare' },
+  { value: 'GROQ', label: 'Groq' },
+  { value: 'DEEPSEEK', label: 'DeepSeek' },
+  { value: 'ANTHROPIC', label: 'Anthropic' },
 ];
 
 const WEB_SEARCH_PROVIDERS: { value: WebSearchProvider; label: string }[] = [

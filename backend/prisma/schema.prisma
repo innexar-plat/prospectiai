@@ -35,6 +35,9 @@ enum AiConfigProvider {
   GEMINI
   OPENAI
   CLOUDFLARE
+  GROQ
+  DEEPSEEK
+  ANTHROPIC
 }
 
 enum NotificationType {

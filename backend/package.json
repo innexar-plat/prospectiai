@@ -13,6 +13,9 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.61",
+    "@ai-sdk/openai": "^3.0.52",
+    "@ai-sdk/openai-compatible": "^2.0.41",
     "@auth/core": "^0.37.2",
     "@auth/prisma-adapter": "^2.11.1",
     "@google/generative-ai": "^0.24.1",
@@ -20,6 +23,7 @@
     "@prisma/client": "^6.19.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
+    "ai": "^6.0.157",
     "bcryptjs": "^3.0.3",
     "ioredis": "^5.9.3",
     "jest": "^30.2.0",
