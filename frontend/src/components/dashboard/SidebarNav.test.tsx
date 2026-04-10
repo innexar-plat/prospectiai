@@ -36,8 +36,8 @@ vi.mock('lucide-react', async () => {
 
 // Mock Logo component
 vi.mock('@/components/brand/Logo', () => ({
-    Logo: ({ iconSize }: { iconSize: number }) => (
-        <div data-testid="logo" data-iconsize={iconSize}>Logo</div>
+    Logo: ({ height, fillWidth }: { height?: number; fillWidth?: boolean }) => (
+        <div data-testid="logo" data-height={height} data-fillwidth={String(!!fillWidth)}>Logo</div>
     ),
 }));
 
@@ -63,7 +63,7 @@ describe('SidebarNav', () => {
         );
 
         expect(screen.getByTestId('logo')).toBeInTheDocument();
-        expect(screen.getByTestId('logo')).toHaveAttribute('data-iconsize', '24');
+        expect(screen.getByTestId('logo')).toHaveAttribute('data-fillwidth', 'true');
         expect(screen.getByText('Nova Busca')).toBeInTheDocument();
     });
 
@@ -76,7 +76,7 @@ describe('SidebarNav', () => {
         );
 
         expect(screen.getByTestId('logo')).toBeInTheDocument();
-        expect(screen.getByTestId('logo')).toHaveAttribute('data-iconsize', '28');
+        expect(screen.getByTestId('logo')).toHaveAttribute('data-height', '32');
     });
 
     it('shows user information in footer', () => {

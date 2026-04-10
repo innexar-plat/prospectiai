@@ -110,30 +110,12 @@ describe('api', () => {
       await expect(authApi.register({ email: 'a@b.com', password: 'x' })).rejects.toThrow('Bad Gateway');
     });
 
-    it('initiateOAuthSignIn fetches CSRF and submits form', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve({ csrfToken: 'csrf-xyz' }),
-      } as Response);
-      const submitFn = vi.fn();
-      const form = {
-        method: '',
-        action: '',
-        appendChild: vi.fn(),
-        submit: submitFn,
-      };
-      vi.stubGlobal('window', { ...window, location: { ...window.location, origin: 'https://app.example.com' } });
-      vi.stubGlobal('document', {
-        ...document,
-        createElement: vi.fn((tag: string) => (tag === 'form' ? form : { name: '', type: '', value: '', appendChild: vi.fn() })),
-        body: { appendChild: vi.fn() },
-      });
+    it('initiateOAuthSignIn redirects to OAuth URL', async () => {
+      const mockLocation = { ...window.location, origin: 'https://app.example.com', href: '' };
+      vi.stubGlobal('window', { ...window, location: mockLocation });
       await authApi.initiateOAuthSignIn('google', '/dashboard');
-      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/auth/csrf'), expect.any(Object));
-      expect(form.action).toBe('/api/auth/signin/google');
-      expect(form.method).toBe('POST');
-      expect(submitFn).toHaveBeenCalled();
+      expect(mockLocation.href).toContain('/api/oauth/google');
+      expect(mockLocation.href).toContain('callbackUrl=');
       vi.unstubAllGlobals();
     });
 

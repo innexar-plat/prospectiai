@@ -47,7 +47,7 @@ describe('seo-local', () => {
     it('returns city title for type cidade', () => {
       const t = getSeoTitle({ slug: 'x', type: 'cidade', city: 'Praia Grande' });
       expect(t).toContain('Praia Grande');
-      expect(t).toContain('Innexar');
+      expect(t).toContain('PrecisionAI');
     });
 
     it('returns niche and city for type cidade-nicho', () => {
@@ -64,7 +64,7 @@ describe('seo-local', () => {
     it('returns default title when type has no city/neighborhood', () => {
       const t = getSeoTitle({ slug: 'x', type: 'cidade' });
       expect(t).toContain('Geração de Leads B2B');
-      expect(t).toContain('Innexar');
+      expect(t).toContain('PrecisionAI');
     });
   });
 
