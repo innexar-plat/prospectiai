@@ -5,6 +5,7 @@ import {
     buildTaskDescription,
     buildCompanyContext,
     buildLeadAnalysisPrompt,
+    buildLeadReportSectionPrompt,
     buildRfDataBlock,
     buildReviewSignalsText,
     buildOpeningHoursText,
@@ -40,6 +41,43 @@ describe('AI Prompts Builder', () => {
             const result = buildCompanyContext(profile, false);
             expect(result).toContain('TestCo');
             expect(result).toContain('Software');
+        });
+
+        it('includes enriched business fields when provided', () => {
+            const profile: UserBusinessProfile = {
+                companyName: 'Acme',
+                legalName: 'Acme LTDA',
+                tradeName: 'Acme Brasil',
+                cnpj: '12345678000199',
+                primaryCnaeCode: '6201501',
+                primaryCnaeDescription: 'Desenvolvimento de software',
+                companySize: 'ME',
+                foundingDate: '2020-01-10',
+                productService: 'Consultoria comercial',
+                targetAudience: 'PMEs',
+                mainBenefit: 'Acelerar vendas',
+                city: 'Santos',
+                state: 'SP',
+                serviceModel: 'hibrido',
+                averageTicket: 1500,
+                operationRadiusKm: 80,
+                knownCompetitors: 'Concorrente A, Concorrente B',
+            };
+
+            const result = buildCompanyContext(profile, false);
+
+            expect(result).toContain('Razão social');
+            expect(result).toContain('Acme LTDA');
+            expect(result).toContain('Nome fantasia');
+            expect(result).toContain('Acme Brasil');
+            expect(result).toContain('CNPJ');
+            expect(result).toContain('12345678000199');
+            expect(result).toContain('CNAE principal');
+            expect(result).toContain('6201501');
+            expect(result).toContain('Santos, SP');
+            expect(result).toContain('Ticket médio');
+            expect(result).toContain('1500');
+            expect(result).toContain('Concorrentes conhecidos');
         });
     });
 
@@ -153,7 +191,7 @@ describe('AI Prompts Builder', () => {
             expect(result).toContain('https://coffee.com');
             expect(result).toContain('4.5/5');
             expect(result).toContain('"score"');
-            expect(result).toContain('"fullReport"');
+            expect(result).not.toContain('"fullReport"');
         });
 
         it('uses Portuguese labels when isEn is false', () => {
@@ -203,6 +241,34 @@ describe('AI Prompts Builder', () => {
 
             expect(result).toContain('reclameAquiAnalysis');
             expect(result).toContain('cnpjAnalysis');
+        });
+
+        it('builds a segmented report section prompt', () => {
+            const result = buildLeadReportSectionPrompt({
+                business: { placeId: 'p1', name: 'Coffee Shop', rating: 4.5, primaryType: 'cafe' } as BusinessData,
+                isEn: true,
+                companyContext: 'We sell marketing services',
+                taskDescription: 'You are a lead analyst',
+                address: '123 Main St',
+                phone: '+5511999999999',
+                website: 'https://coffee.com',
+                reviewCount: 42,
+                reviewsText: 'Great coffee!',
+                reviewSignalsText: 'No negative signals',
+                openingHoursText: 'Open now',
+                webContext: 'Web intel here',
+                isBusinessPlan: false,
+                conversionContext: 'Conversion data here',
+                rfDataBlock: '',
+                websiteScrapingBlock: '',
+                sectionTitle: 'Executive Summary',
+                sectionInstruction: 'Summarize the opportunity.',
+                coreAnalysisJson: '{"score":90}',
+            });
+
+            expect(result).toContain('CORE ANALYSIS JSON');
+            expect(result).toContain('Executive Summary');
+            expect(result).toContain('Write only the Markdown body');
         });
     });
 });

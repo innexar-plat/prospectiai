@@ -1,10 +1,11 @@
 import { analyzeLead, type BusinessData } from '@/lib/gemini';
 import { prisma } from '@/lib/prisma';
-import { generateCompletionForRole } from '@/lib/ai';
+import { generateCompletionForRole, generateObjectForRole } from '@/lib/ai';
 
 jest.mock('@/lib/ai', () => ({
-    generateCompletionForRole: jest.fn().mockResolvedValue({
-        text: JSON.stringify({
+    generateObjectForRole: jest.fn().mockResolvedValue({
+        text: '{}',
+        object: {
             score: 8,
             scoreLabel: 'Hot',
             summary: 'Good lead',
@@ -17,11 +18,17 @@ jest.mock('@/lib/ai', () => ({
             firstContactMessage: '',
             suggestedWhatsAppMessage: '',
             socialMedia: { instagram: 'mock' },
-            fullReport: 'Report',
             reclameAquiAnalysis: 'No complaints found',
             jusBrasilAnalysis: 'No lawsuits found',
             cnpjAnalysis: 'Active company since 2010',
-        }),
+        },
+        usage: { inputTokens: 20, outputTokens: 40 },
+        provider: 'GEMINI',
+        model: 'gemini-structured',
+    }),
+    generateCompletionForRole: jest.fn().mockResolvedValue({
+        text: 'Detailed markdown section body.',
+        usage: { inputTokens: 10, outputTokens: 30 },
     }),
     resolveAiForRole: jest.fn().mockResolvedValue({ config: { provider: 'GEMINI', model: 'gemini-flash', apiKey: 'key' }, model: { modelId: 'gemini-mock' } }),
 }));
@@ -32,20 +39,69 @@ jest.mock('@/lib/web-search/resolve', () => ({
     ),
 }));
 
+jest.mock('@/lib/notification-service', () => ({
+    createNotification: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('@/lib/lead-intelligence', () => ({
+    getConversionStats: jest.fn().mockResolvedValue(null),
+    buildConversionContext: jest.fn().mockReturnValue('Conversion data: Not available.'),
+    recordLeadEvent: jest.fn(),
+}));
+
 jest.mock('@/lib/prisma', () => ({
     prisma: {
         user: { findUnique: jest.fn(), upsert: jest.fn() },
         lead: { findUnique: jest.fn() },
-        leadAnalysis: { create: jest.fn() }
+        leadAnalysis: { create: jest.fn() },
+        pipelineBrief: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
     }
 }));
+
+const prismaMock = prisma as unknown as {
+    user: { findUnique: jest.Mock; upsert: jest.Mock };
+    lead: { findUnique: jest.Mock };
+    leadAnalysis: { create: jest.Mock };
+    pipelineBrief: { deleteMany: jest.Mock };
+};
 
 describe('Gemini AI Lib', () => {
     beforeEach(() => {
         process.env.GEMINI_API_KEY = 'test-key';
-        prisma.user.findUnique.mockResolvedValue(null);
-        prisma.lead.findUnique.mockResolvedValue({ id: 'lead-1' });
-        prisma.leadAnalysis.create.mockResolvedValue({});
+        delete process.env.ANALYZE_AI_MAX_OUTPUT_TOKENS;
+        delete process.env.ANALYZE_AI_REPORT_SECTION_MAX_OUTPUT_TOKENS;
+        prismaMock.user.findUnique.mockResolvedValue(null);
+        prismaMock.lead.findUnique.mockResolvedValue({ id: 'lead-1' });
+        prismaMock.leadAnalysis.create.mockResolvedValue({});
+        jest.mocked(generateObjectForRole).mockClear();
+        jest.mocked(generateCompletionForRole).mockClear();
+        jest.mocked(generateObjectForRole).mockResolvedValue({
+            text: '{}',
+            object: {
+                score: 8,
+                scoreLabel: 'Hot',
+                summary: 'Good lead',
+                strengths: ['Growth'],
+                weaknesses: ['Tech'],
+                painPoints: [],
+                gaps: [],
+                approach: 'Direct',
+                contactStrategy: 'Email',
+                firstContactMessage: '',
+                suggestedWhatsAppMessage: '',
+                socialMedia: { instagram: 'mock' },
+                reclameAquiAnalysis: 'No complaints found',
+                jusBrasilAnalysis: 'No lawsuits found',
+                cnpjAnalysis: 'Active company since 2010',
+            },
+            usage: { inputTokens: 20, outputTokens: 40 },
+            provider: 'GEMINI',
+            model: 'gemini-structured',
+        });
+        jest.mocked(generateCompletionForRole).mockResolvedValue({
+            text: 'Detailed markdown section body.',
+            usage: { inputTokens: 10, outputTokens: 30 },
+        });
     });
 
     it('should generate analysis for a lead', async () => {
@@ -58,6 +114,7 @@ describe('Gemini AI Lib', () => {
 
         expect(result.analysis.score).toBe(8);
         expect(result.analysis.scoreLabel).toBe('Hot');
+        expect(result.analysis.fullReport).toContain('## Resumo Executivo');
     });
 
     it('should include deep analysis instructions for BUSINESS plan', async () => {
@@ -77,7 +134,7 @@ describe('Gemini AI Lib', () => {
         await analyzeLead(business, profile, 'pt', 'user1', true);
 
         // Verify the prompt sent to AI contains real data instructions (not "simule")
-        const callArgs = jest.mocked(generateCompletionForRole).mock.calls;
+        const callArgs = jest.mocked(generateObjectForRole).mock.calls;
         const lastCall = callArgs[callArgs.length - 1];
         const prompt = lastCall[1].prompt as string;
 
@@ -97,7 +154,7 @@ describe('Gemini AI Lib', () => {
 
         await analyzeLead(business, undefined, 'pt', 'user1', false);
 
-        const callArgs = jest.mocked(generateCompletionForRole).mock.calls;
+        const callArgs = jest.mocked(generateObjectForRole).mock.calls;
         const lastCall = callArgs[callArgs.length - 1];
         const prompt = lastCall[1].prompt as string;
 
@@ -114,7 +171,7 @@ describe('Gemini AI Lib', () => {
 
         await analyzeLead(business, undefined, 'pt', 'user1', true);
 
-        const callArgs = jest.mocked(generateCompletionForRole).mock.calls;
+        const callArgs = jest.mocked(generateObjectForRole).mock.calls;
         const lastCall = callArgs[callArgs.length - 1];
         const prompt = lastCall[1].prompt as string;
 
@@ -124,12 +181,12 @@ describe('Gemini AI Lib', () => {
         expect(prompt).toContain('JusBrasil');
     });
 
-    it('should correctly extract JSON from markdown blocks', async () => {
-        const mockResponse = 'Here is the analysis:\n```json\n{"score": 90, "scoreLabel": "Hot"}\n```\nHope it helps!';
-        jest.mocked(generateCompletionForRole).mockResolvedValueOnce({
-            text: mockResponse,
-            usage: { inputTokens: 10, outputTokens: 20 }
-        });
+    it('falls back to parsed JSON when structured generation fails', async () => {
+        const mockResponse = 'Here is the analysis:\n```json\n{"score": 90, "scoreLabel": "Hot", "summary": "Strong", "strengths": [], "weaknesses": [], "painPoints": [], "gaps": [], "approach": "Direct", "contactStrategy": "Phone", "firstContactMessage": "Hi", "suggestedWhatsAppMessage": "Oi"}\n```\nHope it helps!';
+        jest.mocked(generateObjectForRole).mockRejectedValueOnce(new Error('structured failed'));
+        jest.mocked(generateCompletionForRole)
+            .mockResolvedValueOnce({ text: mockResponse, usage: { inputTokens: 10, outputTokens: 20 } })
+            .mockResolvedValue({ text: 'Detailed markdown section body.', usage: { inputTokens: 5, outputTokens: 15 } });
 
         const business: BusinessData = { placeId: 'p-md', name: 'MD Store' };
         const result = await analyzeLead(business, undefined, 'en');
@@ -142,7 +199,7 @@ describe('Gemini AI Lib', () => {
         const business: BusinessData = { placeId: 'p-en', name: 'EN Store' };
         await analyzeLead(business, undefined, 'en');
 
-        const callArgs = jest.mocked(generateCompletionForRole).mock.calls;
+        const callArgs = jest.mocked(generateObjectForRole).mock.calls;
         const lastCall = callArgs[callArgs.length - 1];
         const prompt = lastCall[1].prompt as string;
 
@@ -154,7 +211,7 @@ describe('Gemini AI Lib', () => {
         const business: BusinessData = { placeId: 'p-pt', name: 'Loja PT' };
         await analyzeLead(business, undefined, 'pt');
 
-        const callArgs = jest.mocked(generateCompletionForRole).mock.calls;
+        const callArgs = jest.mocked(generateObjectForRole).mock.calls;
         const lastCall = callArgs[callArgs.length - 1];
         const prompt = lastCall[1].prompt as string;
 
@@ -163,6 +220,7 @@ describe('Gemini AI Lib', () => {
     });
 
     it('when AI throws returns fallback analysis with translated error message', async () => {
+        jest.mocked(generateObjectForRole).mockRejectedValueOnce(new Error('429 quota exceeded'));
         jest.mocked(generateCompletionForRole).mockRejectedValueOnce(new Error('429 quota exceeded'));
         const business: BusinessData = { placeId: 'p-err', name: 'Err Lead' };
         const result = await analyzeLead(business, undefined, 'pt');
@@ -172,6 +230,7 @@ describe('Gemini AI Lib', () => {
     });
 
     it('when AI throws 401 returns fallback with API key message', async () => {
+        jest.mocked(generateObjectForRole).mockRejectedValueOnce(new Error('401 invalid api key'));
         jest.mocked(generateCompletionForRole).mockRejectedValueOnce(new Error('401 invalid api key'));
         const business: BusinessData = { placeId: 'p-401', name: 'Lead' };
         const result = await analyzeLead(business, undefined, 'pt');
@@ -179,6 +238,7 @@ describe('Gemini AI Lib', () => {
     });
 
     it('when AI throws no ai config returns fallback with config message', async () => {
+        jest.mocked(generateObjectForRole).mockRejectedValueOnce(new Error('no ai config for role'));
         jest.mocked(generateCompletionForRole).mockRejectedValueOnce(new Error('no ai config for role'));
         const business: BusinessData = { placeId: 'p-noconf', name: 'Lead' };
         const result = await analyzeLead(business, undefined, 'pt');
@@ -186,6 +246,7 @@ describe('Gemini AI Lib', () => {
     });
 
     it('when AI throws 403 returns fallback with restriction message', async () => {
+        jest.mocked(generateObjectForRole).mockRejectedValueOnce(new Error('403 restriction'));
         jest.mocked(generateCompletionForRole).mockRejectedValueOnce(new Error('403 restriction'));
         const business: BusinessData = { placeId: 'p-403', name: 'Lead' };
         const result = await analyzeLead(business, undefined, 'pt');
@@ -193,6 +254,7 @@ describe('Gemini AI Lib', () => {
     });
 
     it('when AI throws 500 returns fallback with unavailable message', async () => {
+        jest.mocked(generateObjectForRole).mockRejectedValueOnce(new Error('500 unavailable'));
         jest.mocked(generateCompletionForRole).mockRejectedValueOnce(new Error('500 unavailable'));
         const business: BusinessData = { placeId: 'p-500', name: 'Lead' };
         const result = await analyzeLead(business, undefined, 'pt');
@@ -200,6 +262,7 @@ describe('Gemini AI Lib', () => {
     });
 
     it('when AI throws 404 model returns fallback with model message', async () => {
+        jest.mocked(generateObjectForRole).mockRejectedValueOnce(new Error('404 no longer available'));
         jest.mocked(generateCompletionForRole).mockRejectedValueOnce(new Error('404 no longer available'));
         const business: BusinessData = { placeId: 'p-404', name: 'Lead' };
         const result = await analyzeLead(business, undefined, 'pt');
@@ -207,19 +270,66 @@ describe('Gemini AI Lib', () => {
     });
 
     it('when userProfile not provided but userId provided loads profile from DB', async () => {
-        prisma.user.findUnique.mockResolvedValueOnce({
+        prismaMock.user.findUnique.mockResolvedValueOnce({
             id: 'user-1',
             companyName: 'DB Company',
             productService: 'DB Service',
             targetAudience: 'DB Audience',
             mainBenefit: 'DB Benefit',
+            workspaces: [],
         } as never);
         const business: BusinessData = { placeId: 'p-db', name: 'Lead' };
         await analyzeLead(business, undefined, 'pt', 'user-1');
-        const callArgs = jest.mocked(generateCompletionForRole).mock.calls;
+        const callArgs = jest.mocked(generateObjectForRole).mock.calls;
         const prompt = callArgs[callArgs.length - 1][1].prompt as string;
         expect(prompt).toContain('DB Company');
         expect(prompt).toContain('DB Service');
+    });
+
+    it('loads enriched workspace profile fields into the prompt when available', async () => {
+        prismaMock.user.findUnique.mockResolvedValueOnce({
+            companyName: 'Fallback Company',
+            productService: 'Fallback Service',
+            targetAudience: 'Fallback Audience',
+            mainBenefit: 'Fallback Benefit',
+            workspaces: [
+                {
+                    workspace: {
+                        companyName: 'Workspace Company',
+                        legalName: 'Workspace LTDA',
+                        tradeName: 'Workspace Trade',
+                        cnpj: '12345678000199',
+                        primaryCnaeCode: '6201501',
+                        primaryCnaeDescription: 'Desenvolvimento de software',
+                        companySize: 'ME',
+                        foundingDate: '2020-01-10',
+                        productService: 'Consultoria comercial',
+                        targetAudience: 'PMEs',
+                        mainBenefit: 'Mais eficiência comercial',
+                        city: 'Santos',
+                        state: 'SP',
+                        serviceModel: 'hibrido',
+                        averageTicket: 1200,
+                        operationRadiusKm: 50,
+                        knownCompetitors: 'Concorrente A',
+                    },
+                },
+            ],
+        } as never);
+
+        await analyzeLead({ placeId: 'p-enriched', name: 'Lead Enriquecido' }, undefined, 'pt', 'user-1');
+
+        const callArgs = jest.mocked(generateObjectForRole).mock.calls;
+        const prompt = callArgs[callArgs.length - 1][1].prompt as string;
+
+        expect(prompt).toContain('Workspace Company');
+        expect(prompt).toContain('Workspace LTDA');
+        expect(prompt).toContain('Workspace Trade');
+        expect(prompt).toContain('12345678000199');
+        expect(prompt).toContain('6201501');
+        expect(prompt).toContain('Santos, SP');
+        expect(prompt).toContain('Ticket médio');
+        expect(prompt).toContain('Concorrente A');
     });
 
     it('when business has website prompt includes website note', async () => {
@@ -229,8 +339,27 @@ describe('Gemini AI Lib', () => {
             websiteUri: 'https://example.com',
         };
         await analyzeLead(business, undefined, 'pt');
-        const callArgs = jest.mocked(generateCompletionForRole).mock.calls;
+        const callArgs = jest.mocked(generateObjectForRole).mock.calls;
         const prompt = callArgs[callArgs.length - 1][1].prompt as string;
         expect(prompt).toContain('POSSUI website');
+    });
+
+    it('uses ANALYZE_AI_MAX_OUTPUT_TOKENS when configured', async () => {
+        process.env.ANALYZE_AI_MAX_OUTPUT_TOKENS = '256';
+        const business: BusinessData = { placeId: 'p-tokens', name: 'Low Cost Lead' };
+        await analyzeLead(business, undefined, 'pt');
+
+        const callArgs = jest.mocked(generateObjectForRole).mock.calls;
+        const options = callArgs[callArgs.length - 1][1];
+        expect(options.maxOutputTokens).toBe(256);
+    });
+
+    it('uses ANALYZE_AI_REPORT_SECTION_MAX_OUTPUT_TOKENS when configured', async () => {
+        process.env.ANALYZE_AI_REPORT_SECTION_MAX_OUTPUT_TOKENS = '300';
+        const business: BusinessData = { placeId: 'p-sections', name: 'Segmented Lead' };
+        await analyzeLead(business, undefined, 'pt');
+
+        const reportCalls = jest.mocked(generateCompletionForRole).mock.calls;
+        expect(reportCalls[0][1].maxOutputTokens).toBe(300);
     });
 });

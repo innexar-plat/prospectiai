@@ -6,6 +6,7 @@ import { InstallPrompt } from "@/components/dashboard/InstallPrompt";
 import { CommandPalette, CommandPaletteTrigger } from "@/components/dashboard/CommandPalette";
 import { TeamProgressCard } from "@/components/dashboard/TeamProgressCard";
 import { DashboardTourTrigger } from "@/components/dashboard/DashboardTourTrigger";
+import { ReleaseNotesBanner } from "@/components/dashboard/ReleaseNotesBanner";
 import { authApi, notificationsApi, pushApi, type SessionUser, type NotificationItem } from '@/lib/api';
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -171,6 +172,16 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
     poll(); // initial fetch
     const id = setInterval(poll, 30_000);
     return () => clearInterval(id);
+  }, []);
+
+  // Heartbeat: let backend know user is online (Redis presence key with TTL)
+  useEffect(() => {
+    const ping = () => {
+      fetch('/api/user/heartbeat', { method: 'POST', credentials: 'include' }).catch(() => {});
+    };
+    ping();
+    const hbId = setInterval(ping, 30_000);
+    return () => clearInterval(hbId);
   }, []);
 
   useEffect(() => {
@@ -499,6 +510,8 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
             </button>
           </div>
         )}
+
+        <ReleaseNotesBanner />
 
         {/* Main Content */}
         <main className={cn("flex-1 flex flex-col overflow-y-auto relative min-w-0 text-foreground")} role="main">

@@ -10,6 +10,22 @@ import { prisma } from '@/lib/prisma';
 import { checkMemberLimits, MemberLimitExceededError } from '@/lib/team-credits';
 import { recordUsageEvent } from '@/lib/usage';
 import type { AnalyzeInput } from '@/lib/validations/schemas';
+import { getCached, setCached } from '@/lib/redis';
+
+const DEFAULT_ANALYZE_RESULT_CACHE_TTL_SECONDS = 86400;
+
+function parsePositiveInt(value: string | undefined, fallback: number): number {
+    const parsed = Number.parseInt(value ?? '', 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function getAnalyzeResultCacheTtlSeconds(): number {
+    return parsePositiveInt(process.env.ANALYZE_RESULT_CACHE_TTL_SECONDS, DEFAULT_ANALYZE_RESULT_CACHE_TTL_SECONDS);
+}
+
+function buildAnalyzeResultCacheKey(userId: string, placeId: string): string {
+    return `analyze:result:${userId}:${placeId}`;
+}
 
 export class AnalyzeHttpError extends Error {
     constructor(
@@ -136,22 +152,96 @@ function mapExistingAnalysisToOutput(existingAnalysis: {
 function buildAnalyzeProfile(
     userProfile: AnalyzeInput['userProfile'],
     user: { companyName: string | null; productService: string | null; targetAudience: string | null; mainBenefit: string | null },
-    activeWorkspace: { companyName: string | null; productService: string | null; targetAudience: string | null; mainBenefit: string | null },
+    activeWorkspace: {
+        companyName: string | null;
+        legalName?: string | null;
+        tradeName?: string | null;
+        cnpj?: string | null;
+        primaryCnaeCode?: string | null;
+        primaryCnaeDescription?: string | null;
+        companySize?: string | null;
+        foundingDate?: string | null;
+        productService: string | null;
+        targetAudience: string | null;
+        mainBenefit: string | null;
+        postalCode?: string | null;
+        neighborhood?: string | null;
+        city?: string | null;
+        state?: string | null;
+        websiteUrl?: string | null;
+        linkedInUrl?: string | null;
+        instagramUrl?: string | null;
+        facebookUrl?: string | null;
+        serviceModel?: string | null;
+        averageTicket?: number | null;
+        operationRadiusKm?: number | null;
+        knownCompetitors?: string | null;
+    },
 ): UserBusinessProfile {
-    if (userProfile) {
-        return {
-            companyName: String(userProfile.companyName ?? ''),
-            productService: String(userProfile.productService ?? ''),
-            targetAudience: String(userProfile.targetAudience ?? ''),
-            mainBenefit: String(userProfile.mainBenefit ?? ''),
-        };
-    }
-    return {
+    const profileRecord = userProfile && typeof userProfile === 'object' ? (userProfile as Record<string, unknown>) : null;
+    const getString = (key: string): string | undefined => {
+        const value = profileRecord?.[key];
+        return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+    };
+    const getNumber = (key: string): number | undefined => {
+        const value = profileRecord?.[key];
+        return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+    };
+
+    const fallbackProfile: UserBusinessProfile = {
         companyName: activeWorkspace.companyName ?? user.companyName ?? '',
+        legalName: activeWorkspace.legalName ?? undefined,
+        tradeName: activeWorkspace.tradeName ?? undefined,
+        cnpj: activeWorkspace.cnpj ?? undefined,
+        primaryCnaeCode: activeWorkspace.primaryCnaeCode ?? undefined,
+        primaryCnaeDescription: activeWorkspace.primaryCnaeDescription ?? undefined,
+        companySize: activeWorkspace.companySize ?? undefined,
+        foundingDate: activeWorkspace.foundingDate ?? undefined,
         productService: activeWorkspace.productService ?? user.productService ?? '',
         targetAudience: activeWorkspace.targetAudience ?? user.targetAudience ?? '',
         mainBenefit: activeWorkspace.mainBenefit ?? user.mainBenefit ?? '',
+        postalCode: activeWorkspace.postalCode ?? undefined,
+        neighborhood: activeWorkspace.neighborhood ?? undefined,
+        city: activeWorkspace.city ?? undefined,
+        state: activeWorkspace.state ?? undefined,
+        websiteUrl: activeWorkspace.websiteUrl ?? undefined,
+        linkedInUrl: activeWorkspace.linkedInUrl ?? undefined,
+        instagramUrl: activeWorkspace.instagramUrl ?? undefined,
+        facebookUrl: activeWorkspace.facebookUrl ?? undefined,
+        serviceModel: activeWorkspace.serviceModel ?? undefined,
+        averageTicket: activeWorkspace.averageTicket ?? undefined,
+        operationRadiusKm: activeWorkspace.operationRadiusKm ?? undefined,
+        knownCompetitors: activeWorkspace.knownCompetitors ?? undefined,
     };
+
+    if (userProfile) {
+        return {
+            companyName: getString('companyName') ?? fallbackProfile.companyName,
+            legalName: getString('legalName') ?? fallbackProfile.legalName,
+            tradeName: getString('tradeName') ?? fallbackProfile.tradeName,
+            cnpj: getString('cnpj') ?? fallbackProfile.cnpj,
+            primaryCnaeCode: getString('primaryCnaeCode') ?? fallbackProfile.primaryCnaeCode,
+            primaryCnaeDescription: getString('primaryCnaeDescription') ?? fallbackProfile.primaryCnaeDescription,
+            companySize: getString('companySize') ?? fallbackProfile.companySize,
+            foundingDate: getString('foundingDate') ?? fallbackProfile.foundingDate,
+            productService: getString('productService') ?? fallbackProfile.productService,
+            targetAudience: getString('targetAudience') ?? fallbackProfile.targetAudience,
+            mainBenefit: getString('mainBenefit') ?? fallbackProfile.mainBenefit,
+            postalCode: getString('postalCode') ?? fallbackProfile.postalCode,
+            neighborhood: getString('neighborhood') ?? fallbackProfile.neighborhood,
+            city: getString('city') ?? fallbackProfile.city,
+            state: getString('state') ?? fallbackProfile.state,
+            websiteUrl: getString('websiteUrl') ?? fallbackProfile.websiteUrl,
+            linkedInUrl: getString('linkedInUrl') ?? fallbackProfile.linkedInUrl,
+            instagramUrl: getString('instagramUrl') ?? fallbackProfile.instagramUrl,
+            facebookUrl: getString('facebookUrl') ?? fallbackProfile.facebookUrl,
+            serviceModel: getString('serviceModel') ?? fallbackProfile.serviceModel,
+            averageTicket: getNumber('averageTicket') ?? fallbackProfile.averageTicket,
+            operationRadiusKm: getNumber('operationRadiusKm') ?? fallbackProfile.operationRadiusKm,
+            knownCompetitors: getString('knownCompetitors') ?? fallbackProfile.knownCompetitors,
+        };
+    }
+    return fallbackProfile;
 }
 
 /**
@@ -169,6 +259,9 @@ export async function runAnalyzePreChecks(input: AnalyzeInput, userId: string): 
         const lead = await prisma.lead.findUnique({ where: { id: rawPlaceId }, select: { placeId: true } });
         if (lead?.placeId) placeId = lead.placeId;
     }
+
+    const redisCached = await getCached<AnalyzeOutput>(buildAnalyzeResultCacheKey(userId, placeId));
+    if (redisCached) return { cached: redisCached };
 
     const { activeWorkspace, membership } = await getUserAndWorkspaceOrThrow(userId);
 
@@ -200,7 +293,11 @@ export async function runAnalyzePreChecks(input: AnalyzeInput, userId: string): 
         where: { userId, lead: { placeId } },
         include: { lead: true },
     });
-    if (existingAnalysis) return { cached: mapExistingAnalysisToOutput(existingAnalysis) };
+    if (existingAnalysis) {
+        const mapped = mapExistingAnalysisToOutput(existingAnalysis);
+        await setCached(buildAnalyzeResultCacheKey(userId, placeId), mapped, getAnalyzeResultCacheTtlSeconds());
+        return { cached: mapped };
+    }
 
     if (activeWorkspace.leadsUsed >= activeWorkspace.leadsLimit) {
         throw new AnalyzeHttpError(403, {
@@ -224,6 +321,9 @@ export async function runAnalyze(input: AnalyzeInput, userId: string, onProgress
         if (lead?.placeId) placeId = lead.placeId;
     }
     const businessData = { ...rest, placeId, name: businessName };
+
+    const redisCached = await getCached<AnalyzeOutput>(buildAnalyzeResultCacheKey(userId, placeId));
+    if (redisCached) return redisCached;
 
     const { user, activeWorkspace, membership } = await getUserAndWorkspaceOrThrow(userId);
 
@@ -255,7 +355,11 @@ export async function runAnalyze(input: AnalyzeInput, userId: string, onProgress
         where: { userId, lead: { placeId: businessData.placeId } },
         include: { lead: true },
     });
-    if (existingAnalysis) return mapExistingAnalysisToOutput(existingAnalysis);
+    if (existingAnalysis) {
+        const mapped = mapExistingAnalysisToOutput(existingAnalysis);
+        await setCached(buildAnalyzeResultCacheKey(userId, businessData.placeId), mapped, getAnalyzeResultCacheTtlSeconds());
+        return mapped;
+    }
 
     if (activeWorkspace.leadsUsed >= activeWorkspace.leadsLimit) {
         throw new AnalyzeHttpError(403, {
@@ -315,7 +419,13 @@ export async function runAnalyze(input: AnalyzeInput, userId: string, onProgress
     );
 
     const durationMs = Date.now() - analyzeStart;
-    logger.info('Analyze completed', { provider: result.provider ?? config.provider, durationMs, hasUsage: !!result.usage, placeId: businessData.placeId });
+    logger.info('Analyze completed', {
+        provider: result.provider ?? config.provider,
+        model: result.model ?? config.model,
+        durationMs,
+        hasUsage: !!result.usage,
+        placeId: businessData.placeId,
+    });
 
     if (result.usage) {
         recordUsageEvent({
@@ -325,7 +435,7 @@ export async function runAnalyze(input: AnalyzeInput, userId: string, onProgress
             quantity: 1,
             metadata: {
                 provider: result.provider ?? config.provider,
-                model: config.model,
+                model: result.model ?? config.model,
                 inputTokens: result.usage.inputTokens,
                 outputTokens: result.usage.outputTokens,
             },
@@ -342,5 +452,7 @@ export async function runAnalyze(input: AnalyzeInput, userId: string, onProgress
         data: { workspaceId: activeWorkspace.id },
     });
 
-    return { ...result.analysis, aiProvider: result.provider ?? config.provider } as AnalyzeOutput;
+    const output = { ...result.analysis, aiProvider: result.provider ?? config.provider } as AnalyzeOutput;
+    await setCached(buildAnalyzeResultCacheKey(userId, businessData.placeId), output, getAnalyzeResultCacheTtlSeconds());
+    return output;
 }

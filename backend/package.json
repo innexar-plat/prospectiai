@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev -p 4000",
@@ -10,6 +10,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:e2e": "playwright test",
+    "load:search": "node scripts/load-search.mjs",
+    "load:search:v1": "SEARCH_PATH=/api/v1/search node scripts/load-search.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -27,6 +29,7 @@
     "bcryptjs": "^3.0.3",
     "ioredis": "^5.9.3",
     "jest": "^30.2.0",
+    "jsonrepair": "^3.13.3",
     "lodash": "^4.17.23",
     "mercadopago": "^2.12.0",
     "next": "16.1.6",

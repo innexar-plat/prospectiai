@@ -39,6 +39,10 @@ jest.mock('@/lib/ai', () => ({
 jest.mock('@/lib/gemini');
 jest.mock('@/lib/usage', () => ({ recordUsageEvent: jest.fn() }));
 jest.mock('@/lib/logger', () => ({ logger: { info: jest.fn(), error: jest.fn() } }));
+jest.mock('@/lib/redis', () => ({
+    getCached: jest.fn().mockResolvedValue(null),
+    setCached: jest.fn().mockResolvedValue(undefined),
+}));
 
 const userId = 'u1';
 const workspaceId = 'w1';
@@ -195,6 +199,30 @@ describe('runAnalyze', () => {
         expect(analyzeLead).not.toHaveBeenCalled();
     });
 
+    it('returns Redis cached analysis without hitting DB or AI', async () => {
+        const { getCached } = require('@/lib/redis');
+        getCached.mockResolvedValueOnce({
+            score: 7,
+            scoreLabel: 'Morno',
+            summary: 'From redis',
+            strengths: [],
+            weaknesses: [],
+            painPoints: [],
+            gaps: [],
+            approach: '',
+            contactStrategy: '',
+            firstContactMessage: '',
+            suggestedWhatsAppMessage: '',
+            fullReport: null,
+            socialMedia: {},
+        });
+
+        const result = await runAnalyze(defaultInput(), userId);
+        expect(result.summary).toBe('From redis');
+        expect(prisma.leadAnalysis.findFirst).not.toHaveBeenCalled();
+        expect(analyzeLead).not.toHaveBeenCalled();
+    });
+
     it('maps cached analysis with nulls and non-array painPoints to safe defaults', async () => {
         (prisma.leadAnalysis.findFirst as jest.Mock).mockResolvedValue({
             score: null,
@@ -336,15 +364,125 @@ describe('runAnalyze', () => {
             expect.any(Object),
             {
                 companyName: 'WsCo',
+                legalName: undefined,
+                tradeName: undefined,
+                cnpj: undefined,
+                primaryCnaeCode: undefined,
+                primaryCnaeDescription: undefined,
+                companySize: undefined,
+                foundingDate: undefined,
                 productService: 'WsSvc',
                 targetAudience: 'WsAud',
                 mainBenefit: 'WsBen',
+                postalCode: undefined,
+                neighborhood: undefined,
+                city: undefined,
+                state: undefined,
+                websiteUrl: undefined,
+                linkedInUrl: undefined,
+                instagramUrl: undefined,
+                facebookUrl: undefined,
+                serviceModel: undefined,
+                averageTicket: undefined,
+                operationRadiusKm: undefined,
+                knownCompetitors: undefined,
             },
             'pt',
             userId,
             false,
             expect.any(Object),
             undefined
+        );
+    });
+
+    it('merges partial userProfile with enriched workspace fallback fields', async () => {
+        (prisma.user.findUnique as jest.Mock).mockResolvedValue(
+            defaultUser({
+                companyName: 'UserCo',
+                productService: 'UserSvc',
+                targetAudience: 'UserAudience',
+                mainBenefit: 'UserBenefit',
+                workspaces: [
+                    {
+                        workspace: {
+                            id: workspaceId,
+                            leadsUsed: 0,
+                            leadsLimit: 100,
+                            plan: 'PRO',
+                            companyName: 'WsCo',
+                            legalName: 'Workspace LTDA',
+                            tradeName: 'Workspace',
+                            cnpj: '12345678000199',
+                            primaryCnaeCode: '6201501',
+                            primaryCnaeDescription: 'Desenvolvimento de software',
+                            companySize: 'ME',
+                            foundingDate: '2020-01-10',
+                            productService: 'WsSvc',
+                            targetAudience: 'WsAud',
+                            mainBenefit: 'WsBen',
+                            postalCode: '11000000',
+                            neighborhood: 'Centro',
+                            city: 'Santos',
+                            state: 'SP',
+                            websiteUrl: 'https://workspace.example',
+                            linkedInUrl: 'https://linkedin.com/company/workspace',
+                            instagramUrl: '@workspace',
+                            facebookUrl: 'https://facebook.com/workspace',
+                            serviceModel: 'hibrido',
+                            averageTicket: 750,
+                            operationRadiusKm: 40,
+                            knownCompetitors: 'Concorrente A',
+                        },
+                        dailyLeadsLimit: null,
+                        weeklyLeadsLimit: null,
+                        monthlyLeadsLimit: null,
+                    },
+                ],
+            })
+        );
+
+        await runAnalyze(
+            defaultInput({
+                userProfile: {
+                    companyName: 'Perfil Parcial',
+                    productService: 'Consultoria comercial',
+                },
+            }),
+            userId,
+        );
+
+        expect(analyzeLead).toHaveBeenCalledWith(
+            expect.any(Object),
+            {
+                companyName: 'Perfil Parcial',
+                legalName: 'Workspace LTDA',
+                tradeName: 'Workspace',
+                cnpj: '12345678000199',
+                primaryCnaeCode: '6201501',
+                primaryCnaeDescription: 'Desenvolvimento de software',
+                companySize: 'ME',
+                foundingDate: '2020-01-10',
+                productService: 'Consultoria comercial',
+                targetAudience: 'WsAud',
+                mainBenefit: 'WsBen',
+                postalCode: '11000000',
+                neighborhood: 'Centro',
+                city: 'Santos',
+                state: 'SP',
+                websiteUrl: 'https://workspace.example',
+                linkedInUrl: 'https://linkedin.com/company/workspace',
+                instagramUrl: '@workspace',
+                facebookUrl: 'https://facebook.com/workspace',
+                serviceModel: 'hibrido',
+                averageTicket: 750,
+                operationRadiusKm: 40,
+                knownCompetitors: 'Concorrente A',
+            },
+            'pt',
+            userId,
+            false,
+            expect.any(Object),
+            undefined,
         );
     });
 });
