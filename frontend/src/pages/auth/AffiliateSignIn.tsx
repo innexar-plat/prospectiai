@@ -5,20 +5,28 @@ import { authApi } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { AuthLayout } from "@/components/auth/AuthLayout";
+import { getActiveMarket } from "@/lib/market";
+import { useI18n } from "@/lib/i18n";
 
 const AFFILIATE_CALLBACK = "/dashboard/afiliado";
 
 export default function AffiliateSignInPage() {
+  const { t } = useI18n();
+  const market = getActiveMarket();
+  const benefit3Key =
+    market === "US"
+      ? "page.auth.affiliateSignIn.benefit3.us"
+      : "page.auth.affiliateSignIn.benefit3.br";
   const [searchParams] = useSearchParams();
   const errorParam = searchParams.get("error");
 
   React.useEffect(() => {
     if (errorParam === "CredentialsSignin") {
-      setError("Email ou senha inválidos. Verifique e tente novamente.");
+      setError(t("page.auth.affiliateSignIn.error"));
     } else if (errorParam) {
-      setError("Ocorreu um erro ao entrar. Tente novamente.");
+      setError(t("page.auth.affiliateSignIn.genericError"));
     }
-  }, [errorParam]);
+  }, [errorParam, t]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,7 +47,7 @@ export default function AffiliateSignInPage() {
       });
       return;
     } catch {
-      setError("Email ou senha inválidos. Verifique e tente novamente.");
+      setError(t("page.auth.affiliateSignIn.error"));
     } finally {
       setIsLoading(false);
     }
@@ -49,46 +57,47 @@ export default function AffiliateSignInPage() {
     <AuthLayout
       sideTitle={
         <>
-          Área do <span className="accent-gradient">Afiliado</span>.
+          {t("page.auth.affiliateSignIn.sideTitlePrefix")}{" "}
+          <span className="accent-gradient">{t("page.auth.affiliateSignIn.sideTitleHighlight")}</span>.
         </>
       }
-      sideDescription="Acesse seu painel de afiliados, acompanhe conversões e comissões e gerencie seu link de indicação."
+      sideDescription={t("page.auth.affiliateSignIn.sideDesc")}
       sideElements={
         <div className="space-y-4">
           <div className="flex items-center gap-3 text-muted font-bold text-sm">
             <div className="w-6 h-6 rounded-full bg-emerald-600/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
               <Share2 size={14} />
             </div>
-            <span>Seu link único e comissões por conversão</span>
+            <span>{t("page.auth.affiliateSignIn.benefit1")}</span>
           </div>
           <div className="flex items-center gap-3 text-muted font-bold text-sm">
             <div className="w-6 h-6 rounded-full bg-emerald-600/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
               <Percent size={14} />
             </div>
-            <span>Comissão por assinatura e acompanhamento em tempo real</span>
+            <span>{t("page.auth.affiliateSignIn.benefit2")}</span>
           </div>
           <div className="flex items-center gap-3 text-muted font-bold text-sm">
             <div className="w-6 h-6 rounded-full bg-emerald-600/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
               <Wallet size={14} />
             </div>
-            <span>Saque via PIX ou transferência bancária</span>
+            <span>{t(benefit3Key)}</span>
           </div>
         </div>
       }
-      formTitle="Entrar como afiliado"
-      formSubtitle="Use o mesmo e-mail e senha da sua conta de afiliado."
+      formTitle={t("page.auth.affiliateSignIn.title")}
+      formSubtitle={t("page.auth.affiliateSignIn.subtitle")}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1.5">
           <label className="text-xs font-bold text-muted uppercase tracking-widest ml-1">
-            E-mail
+            {t("auth.email")}
           </label>
           <Input
             required
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="seu@email.com"
+            placeholder={t("page.auth.forgotPassword.emailPlaceholder")}
             icon={<Mail size={18} />}
           />
         </div>
@@ -96,13 +105,13 @@ export default function AffiliateSignInPage() {
         <div className="space-y-1.5">
           <div className="flex justify-between items-center">
             <label className="text-xs font-bold text-muted uppercase tracking-widest ml-1">
-              Senha
+              {t("auth.password")}
             </label>
             <Link
               to="/auth/forgot-password"
               className="text-xs font-bold text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
             >
-              Esqueceu a senha?
+              {t("auth.forgotPassword")}
             </Link>
           </div>
           <Input
@@ -110,7 +119,7 @@ export default function AffiliateSignInPage() {
             type={showPassword ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Sua senha"
+            placeholder={t("auth.passwordPlaceholder")}
             icon={<Lock size={18} />}
             className="pr-12"
           />
@@ -136,14 +145,14 @@ export default function AffiliateSignInPage() {
           className="w-full h-11 text-sm font-black shadow-violet-600/20"
           isLoading={isLoading}
         >
-          Acessar painel de afiliado
+          {t("page.auth.affiliateSignIn.submit")}
         </Button>
       </form>
 
       <div className="my-6 flex items-center gap-4">
         <div className="flex-1 h-px bg-border" />
         <span className="text-[10px] font-black text-muted uppercase tracking-[0.2em]">
-          ou
+          {t("auth.or")}
         </span>
         <div className="flex-1 h-px bg-border" />
       </div>
@@ -194,12 +203,12 @@ export default function AffiliateSignInPage() {
       </div>
 
       <p className="mt-6 text-center text-xs text-muted">
-        Ainda não é afiliado?{" "}
+        {t("page.auth.affiliateSignIn.noAccount")}{" "}
         <Link
           to="/auth/afiliado/cadastro"
           className="text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 font-bold transition-all hover:underline decoration-2 underline-offset-4"
         >
-          Cadastre-se como afiliado
+          {t("page.auth.affiliateSignIn.signUp")}
         </Link>
       </p>
 
@@ -208,7 +217,7 @@ export default function AffiliateSignInPage() {
           to="/auth/signin"
           className="text-muted hover:text-foreground transition-colors"
         >
-          Sou cliente, quero entrar na plataforma
+          {t("page.auth.affiliateSignIn.customerLink")}
         </Link>
       </p>
     </AuthLayout>

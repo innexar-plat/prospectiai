@@ -41,12 +41,17 @@ describe('runMarketReport', () => {
     });
 
     const result = await runMarketReport(
-      { textQuery: 'restaurantes', pageSize: 60 },
+      { textQuery: 'restaurantes', pageSize: 60, city: 'Orlando', state: 'FL', country: 'US' },
       'user-1'
     );
 
     expect(runSearchAllPages).toHaveBeenCalledWith(
-      expect.objectContaining({ textQuery: 'restaurantes', includedType: undefined, city: undefined, state: undefined }),
+      expect.objectContaining({
+        textQuery: 'restaurantes',
+        city: 'Orlando',
+        state: 'FL',
+        country: 'US',
+      }),
       'user-1',
       60
     );

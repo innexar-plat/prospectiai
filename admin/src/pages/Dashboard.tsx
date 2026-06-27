@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { adminApi, type AdminStats, type StatsHistoryResponse } from '@/lib/api';
 import { Sparkline } from '@/components/ui/Sparkline';
+import { MarketComparison } from '@/components/dashboard/MarketComparison';
 
 export function Dashboard() {
   const [stats, setStats] = useState<AdminStats | null>(null);
@@ -42,6 +43,9 @@ export function Dashboard() {
   const mainCards = [
     { label: 'Usuários', value: stats.users, color: 'text-violet-600', sparkColor: '#8B5CF6', key: 'users' as const },
     { label: 'Workspaces', value: stats.workspaces, color: 'text-blue-600', sparkColor: '#2563EB', key: null },
+    { label: 'Em trial', value: stats.trialWorkspaces ?? 0, color: 'text-indigo-600', sparkColor: '#6366F1', key: null },
+    { label: 'Trial expirado', value: stats.trialExpiredWorkspaces ?? 0, color: 'text-amber-600', sparkColor: '#D97706', key: null },
+    { label: 'Pagantes ativos', value: stats.paidWorkspaces ?? 0, color: 'text-emerald-600', sparkColor: '#059669', key: null },
     { label: 'Histórico de buscas', value: stats.searchHistory, color: 'text-emerald-600', sparkColor: '#059669', key: 'searches' as const },
     { label: 'Análises de leads', value: stats.leadAnalyses, color: 'text-amber-600', sparkColor: '#D97706', key: 'analyses' as const },
   ] as const;
@@ -59,6 +63,28 @@ export function Dashboard() {
   return (
     <div>
       <h1 className="text-xl font-bold text-gray-900 mb-6">Dashboard</h1>
+
+      {/* Online users indicator */}
+      {typeof stats.onlineUsers === 'number' && (
+        <div className="mb-6 inline-flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3 shadow-sm">
+          <span className="relative flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+          </span>
+          <span className="text-sm font-medium text-emerald-800">
+            <span className="text-2xl font-bold">{stats.onlineUsers}</span>{' '}
+            {stats.onlineUsers === 1 ? 'usuário online' : 'usuários online'}
+          </span>
+        </div>
+      )}
+
+      {stats.usersByMarket && stats.revenueByMarket && (
+        <MarketComparison
+          usersByMarket={stats.usersByMarket}
+          revenueByMarket={stats.revenueByMarket}
+        />
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {mainCards.map(({ label, value, color, sparkColor, key }) => {
           const sparkData = key ? series.map((d) => d[key]) : [];

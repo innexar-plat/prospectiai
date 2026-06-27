@@ -73,11 +73,11 @@ describe('POST /api/billing/webhook (Stripe)', () => {
     expect(prisma.workspace.update).not.toHaveBeenCalled();
   });
 
-  it('handles checkout.session.completed — updates workspace', async () => {
+  it('handles checkout.session.completed — updates workspace with US leads limit', async () => {
     mockConstructEvent.mockReturnValue({
       id: 'evt_1',
       type: 'checkout.session.completed',
-      data: { object: { metadata: { userId: 'u1', planId: 'PRO' }, subscription: 'sub_1', id: 'cs_1' } },
+      data: { object: { metadata: { userId: 'u1', planId: 'BASIC' }, subscription: 'sub_1', id: 'cs_1' } },
     });
     mockSubscriptionsRetrieve.mockResolvedValue({
       id: 'sub_1', customer: 'cus_1', status: 'active', current_period_end: Math.floor(Date.now() / 1000) + 86400,
@@ -89,8 +89,22 @@ describe('POST /api/billing/webhook (Stripe)', () => {
     const res = await POST(makeReq());
     expect(res.status).toBe(200);
     expect(prisma.workspace.update).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: 'w1' }, data: expect.objectContaining({ plan: 'PRO', subscriptionId: 'sub_1' }) }),
+      expect.objectContaining({
+        where: { id: 'w1' },
+        data: expect.objectContaining({ plan: 'BASIC', subscriptionId: 'sub_1', leadsLimit: 50 }),
+      }),
     );
+  });
+
+  it('returns 400 when planId metadata is invalid', async () => {
+    mockConstructEvent.mockReturnValue({
+      id: 'evt_bad',
+      type: 'checkout.session.completed',
+      data: { object: { metadata: { userId: 'u1', planId: 'INVALID' }, subscription: 'sub_1', id: 'cs_1' } },
+    });
+    const res = await POST(makeReq());
+    expect(res.status).toBe(400);
+    expect(prisma.workspace.update).not.toHaveBeenCalled();
   });
 
   it('handles customer.subscription.deleted — downgrades to FREE', async () => {

@@ -23,10 +23,26 @@ export type PlaceResult = PlaceLike & {
     displayName: { text: string; languageCode?: string };
     formattedAddress?: string;
     googleMapsUri?: string;
+    email?: string;
     rating?: number;
     userRatingCount?: number;
     types?: string[];
     businessStatus?: string;
     primaryType?: string;
     primaryTypeDisplayName?: { text: string };
+    cnpj?: string;
+    companyLegalName?: string;
+    companyTradeName?: string;
+    companyMainCnae?: string;
+    cnpjStatus?: string;
+    recommendedPhone?: string;
+    recommendedEmail?: string;
+    recommendedWebsite?: string;
+    contactsHealthScore?: number;
+    /** All unique phones collected from every source (Google, RF, BrasilAPI, Lead DB). */
+    phones?: string[];
+    /** All unique emails collected from every source. */
+    emails?: string[];
+    /** All unique websites collected from every source. */
+    websites?: string[];
 };

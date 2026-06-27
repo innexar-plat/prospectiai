@@ -34,7 +34,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (to) {
     const amountFormatted = commission.currency === 'BRL' ? `R$ ${(commission.amountCents / 100).toFixed(2)}` : `$${(commission.amountCents / 100).toFixed(2)}`;
     const payoutInfo = 'O valor foi enviado conforme os dados de pagamento cadastrados no painel do afiliado.';
-    sendAffiliateCommissionPaidEmail(to, amountFormatted, payoutInfo).catch(async (e) => {
+    sendAffiliateCommissionPaidEmail(to, amountFormatted, payoutInfo, commission.currency).catch(async (e) => {
       const { logger } = await import('@/lib/logger');
       logger.error('Affiliate commission paid email failed', { commissionId, error: e instanceof Error ? e.message : 'Unknown' });
     });

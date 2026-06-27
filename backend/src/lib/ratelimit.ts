@@ -3,6 +3,18 @@ import { logger } from './logger';
 
 let redis: Redis | null = null;
 
+function shouldFailOpenRateLimit(): boolean {
+    return String(process.env.RATE_LIMIT_FAIL_OPEN ?? '').toLowerCase() === 'true';
+}
+
+function failOpenResponse(limit: number, windowSeconds: number): { success: boolean; remaining: number; reset: number } {
+    return {
+        success: true,
+        remaining: Math.max(0, limit - 1),
+        reset: Date.now() + windowSeconds * 1000,
+    };
+}
+
 function getRedis(): Redis | null {
     if (redis) return redis;
     const url = process.env.REDIS_URL || 'redis://localhost:6379';
@@ -32,7 +44,10 @@ export async function rateLimit(
     try {
         const client = getRedis();
         if (!client) {
-            // Fail-closed: deny requests when Redis is unavailable
+            if (shouldFailOpenRateLimit()) {
+                logger.warn('Redis down, allowing request (fail-open)', { identifier });
+                return failOpenResponse(limit, windowSeconds);
+            }
             logger.warn('Redis down, denying request (fail-closed)', { identifier });
             return { success: false, remaining: 0, reset: Date.now() + windowSeconds * 1000 };
         }
@@ -62,7 +77,12 @@ export async function rateLimit(
             reset: Date.now() + windowSeconds * 1000,
         };
     } catch (error) {
-        // Fail-closed: deny on error
+        if (shouldFailOpenRateLimit()) {
+            logger.warn('Rate limit error, allowing request (fail-open)', {
+                error: error instanceof Error ? error.message : 'Unknown',
+            });
+            return failOpenResponse(limit, windowSeconds);
+        }
         logger.error('Rate limit error (fail-closed)', { error: error instanceof Error ? error.message : 'Unknown' });
         return { success: false, remaining: 0, reset: Date.now() + windowSeconds * 1000 };
     }

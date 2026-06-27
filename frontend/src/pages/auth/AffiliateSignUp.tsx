@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Mail,
@@ -12,13 +12,24 @@ import {
   Zap,
 } from "lucide-react";
 import { authApi } from "@/lib/api";
+import { markPendingFreeSignupConversion } from "@/lib/marketing";
+import { getRealNameValidationMessage, normalizePersonName } from "@/lib/realName";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { AuthLayout } from "@/components/auth/AuthLayout";
+import { getActiveMarket } from "@/lib/market";
+import { captureRefFromUrl, getAffiliateRef } from "@/lib/affiliate-ref";
+import { useI18n } from "@/lib/i18n";
 
 const AFFILIATE_CALLBACK = "/dashboard/afiliado?from=afiliado-cadastro";
 
 export default function AffiliateSignUpPage() {
+  const { t } = useI18n();
+  const market = getActiveMarket();
+  const benefit3TitleKey =
+    market === "US"
+      ? "page.auth.affiliateSignUp.benefit3Title.us"
+      : "page.auth.affiliateSignUp.benefit3Title.br";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,11 +38,22 @@ export default function AffiliateSignUpPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    captureRefFromUrl();
+  }, []);
+
   const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    const normalizedName = normalizePersonName(name);
+    const nameValidationError = getRealNameValidationMessage(normalizedName);
+    if (nameValidationError) {
+      setError(nameValidationError);
+      return;
+    }
+
     if (password !== confirmPassword) {
-      setError("As senhas não coincidem.");
+      setError(t("page.auth.affiliateSignUp.mismatch"));
       return;
     }
 
@@ -39,7 +61,22 @@ export default function AffiliateSignUpPage() {
     setError("");
 
     try {
-      await authApi.register({ email, password, name });
+      const affiliateCode = getAffiliateRef();
+      const result = await authApi.register({
+        email,
+        password,
+        name: normalizedName,
+        ...(affiliateCode && { affiliateCode }),
+      });
+      if (!result.verificationEmailSent) {
+        sessionStorage.setItem(
+          "signup-verification-email-warning",
+          result.verificationEmailError || t("page.auth.affiliateSignUp.verificationEmailWarning")
+        );
+      } else {
+        sessionStorage.removeItem("signup-verification-email-warning");
+      }
+      markPendingFreeSignupConversion();
       await authApi.signIn({
         email,
         password,
@@ -48,7 +85,7 @@ export default function AffiliateSignUpPage() {
       return;
     } catch (err: unknown) {
       setError(
-        err instanceof Error ? err.message : "Erro ao criar conta. Tente novamente."
+        err instanceof Error ? err.message : t("page.auth.affiliateSignUp.error")
       );
     } finally {
       setIsLoading(false);
@@ -59,10 +96,11 @@ export default function AffiliateSignUpPage() {
     <AuthLayout
       sideTitle={
         <>
-          Seja um <span className="accent-gradient">Afiliado</span>.
+          {t("page.auth.affiliateSignUp.sideTitlePrefix")}{" "}
+          <span className="accent-gradient">{t("page.auth.affiliateSignUp.sideTitleHighlight")}</span>.
         </>
       }
-      sideDescription="Cadastre-se no programa de afiliados, receba seu link exclusivo e ganhe comissão por cada conversão. Sem custo para começar."
+      sideDescription={t("page.auth.affiliateSignUp.sideDesc")}
       sideElements={
         <div className="space-y-4 mt-5">
           <div className="flex gap-3">
@@ -71,10 +109,10 @@ export default function AffiliateSignUpPage() {
             </div>
             <div className="min-w-0">
               <h4 className="text-foreground font-bold text-sm mb-0.5">
-                Link único
+                {t("page.auth.affiliateSignUp.benefit1Title")}
               </h4>
               <p className="text-muted text-xs leading-snug">
-                Seu link de indicação e dashboard de conversões.
+                {t("page.auth.affiliateSignUp.benefit1Desc")}
               </p>
             </div>
           </div>
@@ -84,10 +122,10 @@ export default function AffiliateSignUpPage() {
             </div>
             <div className="min-w-0">
               <h4 className="text-foreground font-bold text-sm mb-0.5">
-                Comissão por venda
+                {t("page.auth.affiliateSignUp.benefit2Title")}
               </h4>
               <p className="text-muted text-xs leading-snug">
-                Ganhe quando seus indicados assinarem um plano pago.
+                {t("page.auth.affiliateSignUp.benefit2Desc")}
               </p>
             </div>
           </div>
@@ -97,10 +135,10 @@ export default function AffiliateSignUpPage() {
             </div>
             <div className="min-w-0">
               <h4 className="text-foreground font-bold text-sm mb-0.5">
-                Saque via PIX ou banco
+                {t(benefit3TitleKey)}
               </h4>
               <p className="text-muted text-xs leading-snug">
-                Pagamentos conforme política do programa.
+                {t("page.auth.affiliateSignUp.benefit3Desc")}
               </p>
             </div>
           </div>
@@ -109,65 +147,65 @@ export default function AffiliateSignUpPage() {
               <Zap size={16} />
             </div>
             <p className="text-xs font-bold text-muted">
-              Cadastro gratuito. Aprovação rápida pela equipe.
+              {t("page.auth.affiliateSignUp.freeNote")}
             </p>
           </div>
         </div>
       }
-      formTitle="Cadastro de afiliado"
-      formSubtitle="Crie sua conta e em seguida ative seu cadastro como afiliado no painel."
+      formTitle={t("page.auth.affiliateSignUp.title")}
+      formSubtitle={t("page.auth.affiliateSignUp.subtitle")}
     >
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="space-y-1">
           <label className="text-[10px] font-bold text-muted uppercase tracking-wider ml-1">
-            Nome completo
+            {t("page.auth.affiliateSignUp.name")}
           </label>
           <Input
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Seu nome"
+            placeholder={t("page.auth.affiliateSignUp.namePlaceholder")}
             icon={<UserIcon size={16} />}
           />
         </div>
         <div className="space-y-1">
           <label className="text-[10px] font-bold text-muted uppercase tracking-wider ml-1">
-            E-mail
+            {t("auth.email")}
           </label>
           <Input
             required
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="seu@email.com"
+            placeholder={t("page.auth.forgotPassword.emailPlaceholder")}
             icon={<Mail size={16} />}
           />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1">
             <label className="text-[10px] font-bold text-muted uppercase tracking-wider ml-1">
-              Senha
+              {t("auth.password")}
             </label>
             <Input
               required
               type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Mín. 8 caracteres"
+              placeholder={t("page.auth.affiliateSignUp.passwordMinPlaceholder")}
               minLength={8}
               icon={<Lock size={16} />}
             />
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-bold text-muted uppercase tracking-wider ml-1">
-              Confirmar senha
+              {t("page.auth.affiliateSignUp.confirmPassword")}
             </label>
             <Input
               required
               type={showPassword ? "text" : "password"}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Repita a senha"
+              placeholder={t("page.auth.affiliateSignUp.confirmPlaceholder")}
               icon={<Lock size={16} />}
             />
           </div>
@@ -180,11 +218,11 @@ export default function AffiliateSignUpPage() {
           >
             {showPassword ? (
               <>
-                <EyeOff size={12} /> Ocultar
+                <EyeOff size={12} /> {t("page.auth.affiliateSignUp.hidePassword")}
               </>
             ) : (
               <>
-                <Eye size={12} /> Mostrar senhas
+                <Eye size={12} /> {t("page.auth.affiliateSignUp.showPasswords")}
               </>
             )}
           </button>
@@ -203,14 +241,14 @@ export default function AffiliateSignUpPage() {
           className="w-full h-10 text-sm font-black shadow-violet-600/20"
           isLoading={isLoading}
         >
-          Criar conta e ser afiliado
+          {t("page.auth.affiliateSignUp.submit")}
         </Button>
       </form>
 
       <div className="my-4 flex items-center gap-3">
         <div className="flex-1 h-px bg-border" />
         <span className="text-[10px] font-black text-muted uppercase tracking-wider">
-          ou
+          {t("auth.or")}
         </span>
         <div className="flex-1 h-px bg-border" />
       </div>
@@ -261,31 +299,31 @@ export default function AffiliateSignUpPage() {
       </div>
 
       <p className="mt-4 text-center text-xs text-muted">
-        Já tem conta de afiliado?{" "}
+        {t("page.auth.affiliateSignUp.hasAccount")}{" "}
         <Link
           to="/auth/afiliado/entrar"
           className="text-violet-500 hover:text-violet-600 dark:text-violet-400 font-bold hover:underline"
         >
-          Entrar
+          {t("page.auth.affiliateSignUp.signIn")}
         </Link>
       </p>
 
       <p className="mt-3 text-center text-[10px] text-muted leading-snug">
-        Ao se cadastrar, você concorda com nossos{" "}
+        {t("page.auth.affiliateSignUp.termsPrefix")}{" "}
         <Link
           to="/terms"
           className="underline focus:outline-none focus:ring-2 focus:ring-violet-500 rounded"
         >
-          Termos
+          {t("page.auth.affiliateSignUp.terms")}
         </Link>{" "}
-        e{" "}
+        {t("page.auth.affiliateSignUp.termsAnd")}{" "}
         <Link
           to="/privacy"
           className="underline focus:outline-none focus:ring-2 focus:ring-violet-500 rounded"
         >
-          Privacidade
+          {t("page.auth.affiliateSignUp.privacy")}
         </Link>
-        .
+        {t("page.auth.affiliateSignUp.termsSuffix")}
       </p>
 
       <p className="mt-2 text-center text-[10px] text-muted">
@@ -293,7 +331,7 @@ export default function AffiliateSignUpPage() {
           to="/auth/signup"
           className="text-muted hover:text-foreground transition-colors"
         >
-          Quero apenas criar conta como cliente
+          {t("page.auth.affiliateSignUp.customerLink")}
         </Link>
       </p>
     </AuthLayout>

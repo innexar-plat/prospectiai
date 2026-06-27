@@ -41,7 +41,7 @@ describe('GET /api/admin/ai-config', () => {
         id: 'c1',
         role: 'LEAD_ANALYSIS',
         provider: 'GEMINI',
-        model: 'gemini-flash-latest',
+        model: 'gemini-2.5-flash',
         enabled: true,
         cloudflareAccountId: null,
         createdAt: new Date(),

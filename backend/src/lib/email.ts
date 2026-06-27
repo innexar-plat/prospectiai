@@ -6,9 +6,23 @@
 import { Resend } from 'resend';
 import nodemailer from 'nodemailer';
 import { decryptEmailSecret } from '@/lib/email-config-encrypt';
+import type { Locale } from '@/lib/i18n/locale';
+import {
+  getPasswordResetEmailCopy,
+  getVerificationEmailCopy,
+  getOAuthWelcomeEmailCopy,
+  getTeamInviteEmailCopy,
+  getTeamInviteAccountCreatedCopy,
+  getAffiliateApprovedEmailCopy,
+  getAffiliateConversionEmailCopy,
+  getAffiliateCommissionPaidEmailCopy,
+  getAffiliateCommissionAvailableEmailCopy,
+  localeForAffiliateCurrency,
+} from '@/lib/i18n/messages';
 import {
   passwordResetTemplate,
   verificationTemplate,
+  oauthWelcomeTemplate,
   teamInviteTemplate,
   teamInviteAccountCreatedTemplate,
   affiliateApprovedTemplate,
@@ -18,8 +32,11 @@ import {
 } from '@/lib/email-templates';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
+import { alertWarning } from '@/lib/telegram-alert';
+import { getSiteUrlForMarket } from '@/lib/site-url';
+import { getMarketConfig, type Market } from '@/lib/market';
 
-const SITE_URL = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+const DEFAULT_SITE_URL = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 const ENV_FROM = process.env.EMAIL_FROM ?? 'Precision IA <noreply@precisionia.com.br>';
 
 async function getEmailConfigFromDb(): Promise<{
@@ -40,7 +57,7 @@ async function getEmailConfigFromDb(): Promise<{
 }
 
 function getFromAddress(fromEmail: string | null | undefined): string {
-  if (fromEmail && fromEmail.trim()) return fromEmail.trim();
+  if (fromEmail?.trim()) return fromEmail.trim();
   return ENV_FROM;
 }
 
@@ -112,30 +129,80 @@ async function sendWithDbConfig(
 export async function sendEmail(to: string, subject: string, html: string): Promise<SendResult> {
   const config = await getEmailConfigFromDb();
   const from = getFromAddress(config?.fromEmail);
+  let result: SendResult;
+  let provider = 'none';
+
   const dbResult = await sendWithDbConfig(config, from, to, subject, html);
-  if (dbResult) return dbResult;
-  const envKey = process.env.RESEND_API_KEY?.trim();
-  if (envKey) return sendViaResend(envKey, getFromAddress(undefined), to, subject, html);
-  logger.info('Email skipped (no config)', { to, subject });
-  return { sent: false };
+  if (dbResult) {
+    result = dbResult;
+    provider = config?.provider ?? 'db';
+  } else {
+    const envKey = process.env.RESEND_API_KEY?.trim();
+    if (envKey) {
+      result = await sendViaResend(envKey, getFromAddress(undefined), to, subject, html);
+      provider = 'resend';
+    } else {
+      logger.info('Email skipped (no config)', { to, subject });
+      result = { sent: false };
+    }
+  }
+
+  // Log to EmailSendLog (fire-and-forget)
+  prisma.emailSendLog
+    .create({
+      data: {
+        type: 'TRANSACTIONAL',
+        email: to,
+        subject,
+        status: result.sent ? 'SENT' : 'FAILED',
+        provider,
+        error: result.error ?? null,
+      },
+    })
+    .catch(() => {});
+
+  // Telegram notification on failure
+  if (!result.sent && result.error) {
+    alertWarning('Email falhou', `Destinatário: ${to}`, {
+      subject,
+      provider,
+      error: result.error,
+    }).catch(() => {});
+  }
+
+  return result;
 }
 
 /**
  * Send password reset email with link. Link should point to frontend reset page with token.
  */
-export async function sendPasswordResetEmail(to: string, token: string): Promise<SendResult> {
-  const resetLink = `${SITE_URL.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(token)}`;
-  const html = passwordResetTemplate(resetLink);
-  return sendEmail(to, 'Redefinir sua senha – Precision IA', html);
+export async function sendPasswordResetEmail(
+  to: string,
+  token: string,
+  locale: Locale = 'pt',
+  siteUrl?: string,
+): Promise<SendResult> {
+  const base = (siteUrl ?? DEFAULT_SITE_URL).replace(/\/$/, '');
+  const resetLink = `${base}/reset-password?token=${encodeURIComponent(token)}`;
+  const copy = getPasswordResetEmailCopy(locale);
+  const html = passwordResetTemplate(resetLink, undefined, locale, base);
+  return sendEmail(to, copy.subject, html);
 }
 
 /**
  * Send email verification link (sign-up).
  */
-export async function sendVerificationEmail(to: string, token: string): Promise<SendResult> {
-  const verifyLink = `${SITE_URL.replace(/\/$/, '')}/verify-email?token=${encodeURIComponent(token)}`;
-  const html = verificationTemplate(verifyLink);
-  return sendEmail(to, 'Confirme seu e-mail – Precision IA', html);
+export async function sendVerificationEmail(
+  to: string,
+  token: string,
+  locale: Locale = 'pt',
+  siteUrl?: string,
+): Promise<SendResult> {
+  const base = (siteUrl ?? DEFAULT_SITE_URL).replace(/\/$/, '');
+  const verifyLink = `${base}/verify-email?token=${encodeURIComponent(token)}`;
+  const copy = getVerificationEmailCopy(locale);
+  const html = verificationTemplate(verifyLink, undefined, locale, base);
+  return sendEmail(to, copy.subject, html);
 }
 
 /**
@@ -145,10 +212,14 @@ export async function sendTeamInviteEmail(
   to: string,
   inviterName: string,
   workspaceName: string,
-  acceptInviteUrl: string
+  acceptInviteUrl: string,
+  locale: Locale = 'pt',
+  siteUrl?: string,
 ): Promise<SendResult> {
-  const html = teamInviteTemplate(inviterName, workspaceName, acceptInviteUrl);
-  return sendEmail(to, `Convite para o workspace "${workspaceName}" – Precision IA`, html);
+  const copy = getTeamInviteEmailCopy(locale);
+  const base = siteUrl?.replace(/\/$/, '');
+  const html = teamInviteTemplate(inviterName, workspaceName, acceptInviteUrl, undefined, locale, base);
+  return sendEmail(to, copy.subject(workspaceName), html);
 }
 
 /**
@@ -159,30 +230,86 @@ export async function sendTeamInviteAccountCreatedEmail(
   inviterName: string,
   workspaceName: string,
   setPasswordUrl: string,
+  locale: Locale = 'pt',
+  siteUrl?: string,
 ): Promise<SendResult> {
-  const html = teamInviteAccountCreatedTemplate(inviterName, workspaceName, setPasswordUrl);
-  return sendEmail(to, `Defina sua senha – ${workspaceName} – Precision IA`, html);
+  const copy = getTeamInviteAccountCreatedCopy(locale);
+  const base = siteUrl?.replace(/\/$/, '');
+  const html = teamInviteAccountCreatedTemplate(inviterName, workspaceName, setPasswordUrl, undefined, locale, base);
+  return sendEmail(to, copy.subject(workspaceName), html);
 }
 
-export async function sendAffiliateApprovedEmail(to: string, code: string, loginUrl: string): Promise<SendResult> {
-  const html = affiliateApprovedTemplate(code, loginUrl);
-  return sendEmail(to, 'Sua conta de afiliado foi aprovada – Precision IA', html);
+export async function sendAffiliateApprovedEmail(
+  to: string,
+  code: string,
+  loginUrl: string,
+  market: Market = 'BR',
+): Promise<SendResult> {
+  const locale = getMarketConfig(market).defaultLocale;
+  const siteUrl = getSiteUrlForMarket(market).replace(/\/$/, '');
+  const copy = getAffiliateApprovedEmailCopy(locale);
+  const html = affiliateApprovedTemplate(code, loginUrl, undefined, siteUrl, locale);
+  return sendEmail(to, copy.subject, html);
 }
 
-export async function sendAffiliateConversionEmail(to: string, summary: string, dashboardUrl: string): Promise<SendResult> {
-  const html = affiliateConversionTemplate(summary, '', dashboardUrl);
-  return sendEmail(to, 'Nova conversão no programa de afiliados – Precision IA', html);
+export async function sendAffiliateConversionEmail(
+  to: string,
+  summary: string,
+  dashboardUrl: string,
+  currency = 'BRL',
+): Promise<SendResult> {
+  const market = currency.toUpperCase() === 'USD' ? 'US' : 'BR';
+  const locale = localeForAffiliateCurrency(currency);
+  const siteUrl = getSiteUrlForMarket(market).replace(/\/$/, '');
+  const copy = getAffiliateConversionEmailCopy(locale);
+  const html = affiliateConversionTemplate(summary, '', dashboardUrl, undefined, siteUrl, locale);
+  return sendEmail(to, copy.subject, html);
 }
 
-export async function sendAffiliateCommissionPaidEmail(to: string, amountFormatted: string, payoutInfo: string): Promise<SendResult> {
-  const html = affiliateCommissionPaidTemplate(amountFormatted, payoutInfo);
-  return sendEmail(to, 'Comissão paga – Precision IA', html);
+export async function sendAffiliateCommissionPaidEmail(
+  to: string,
+  amountFormatted: string,
+  payoutInfo: string,
+  currency = 'BRL',
+): Promise<SendResult> {
+  const market = currency.toUpperCase() === 'USD' ? 'US' : 'BR';
+  const locale = localeForAffiliateCurrency(currency);
+  const siteUrl = getSiteUrlForMarket(market).replace(/\/$/, '');
+  const copy = getAffiliateCommissionPaidEmailCopy(locale);
+  const html = affiliateCommissionPaidTemplate(amountFormatted, payoutInfo, undefined, locale, siteUrl);
+  return sendEmail(to, copy.subject, html);
 }
 
 /**
  * Notifica o afiliado que uma ou mais comissões estão disponíveis para saque (após aprovação pelo cron).
  */
-export async function sendAffiliateCommissionAvailableEmail(to: string, dashboardUrl: string): Promise<SendResult> {
-  const html = affiliateCommissionAvailableTemplate('', dashboardUrl);
-  return sendEmail(to, 'Comissão disponível para saque – Precision IA', html);
+export async function sendAffiliateCommissionAvailableEmail(
+  to: string,
+  dashboardUrl: string,
+  currency = 'BRL',
+): Promise<SendResult> {
+  const market = currency.toUpperCase() === 'USD' ? 'US' : 'BR';
+  const locale = localeForAffiliateCurrency(currency);
+  const siteUrl = getSiteUrlForMarket(market).replace(/\/$/, '');
+  const copy = getAffiliateCommissionAvailableEmailCopy(locale);
+  const html = affiliateCommissionAvailableTemplate('', dashboardUrl, undefined, siteUrl, locale);
+  return sendEmail(to, copy.subject, html);
+}
+
+/**
+ * Optional transactional welcome for OAuth sign-up/login (non-verification).
+ */
+export async function sendOAuthWelcomeEmail(
+  to: string,
+  name: string | null | undefined,
+  provider: string,
+  market: Market = 'BR',
+): Promise<SendResult> {
+  const locale = getMarketConfig(market).defaultLocale;
+  const copy = getOAuthWelcomeEmailCopy(locale);
+  const firstName = (name ?? '').trim().split(' ')[0] || copy.defaultName;
+  const siteUrl = getSiteUrlForMarket(market).replace(/\/$/, '');
+  const dashboardUrl = `${siteUrl}/dashboard`;
+  const html = oauthWelcomeTemplate(firstName, provider, dashboardUrl, locale, siteUrl);
+  return sendEmail(to, copy.subject, html);
 }

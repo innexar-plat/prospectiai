@@ -12,6 +12,7 @@ import { PLANS } from '@/lib/billing-config';
 import { stripe } from '@/lib/stripe';
 import { cancelPreApproval } from '@/lib/mercadopago-subscription';
 import { logger } from '@/lib/logger';
+import { notifyPlanDowngradeScheduled } from '@/lib/telegram-business-alerts';
 
 export async function POST() {
     const session = await auth();
@@ -58,6 +59,18 @@ export async function POST() {
                 workspaceId: workspace.id,
                 subscriptionId,
                 effectiveAt,
+            });
+            notifyPlanDowngradeScheduled({
+                userId: session.user.id,
+                userEmail: session.user.email,
+                userName: session.user.name,
+                workspaceId: workspace.id,
+                fromPlan: workspace.plan,
+                toPlan: 'FREE',
+                billingCycle: workspace.billingCycle,
+                provider: 'stripe',
+                subscriptionId,
+                effectiveAt: new Date(effectiveAt).toISOString(),
             });
 
             return NextResponse.json({
@@ -122,6 +135,18 @@ export async function POST() {
                 userId: session.user.id,
                 workspaceId: workspace.id,
                 effectiveAt,
+            });
+            notifyPlanDowngradeScheduled({
+                userId: session.user.id,
+                userEmail: session.user.email,
+                userName: session.user.name,
+                workspaceId: workspace.id,
+                fromPlan: workspace.plan,
+                toPlan: 'FREE',
+                billingCycle: workspace.billingCycle,
+                provider: 'mercadopago',
+                subscriptionId,
+                effectiveAt: new Date(effectiveAt).toISOString(),
             });
 
             return NextResponse.json({

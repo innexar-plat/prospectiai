@@ -55,7 +55,7 @@ describe('POST /api/user/profile', () => {
     prisma.user.update.mockRejectedValue(new Error('DB error'));
     const res = await POST(new Request('http://localhost/api/user/profile', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'Test' }),
+      body: JSON.stringify({ name: 'Maria Silva' }),
     }));
     expect(res.status).toBe(500);
     expect(await res.json()).toMatchObject({ error: 'Internal Server Error' });

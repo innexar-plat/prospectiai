@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { TrendingUp, Lock, Loader2, Search, Target, Globe, AlertTriangle, CheckCircle2, MapPin, DollarSign, Lightbulb, ShieldAlert, Phone, Star, Layers, Zap, MessageSquare } from 'lucide-react';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { Link, useOutletContext, useNavigate } from 'react-router-dom';
@@ -7,20 +7,53 @@ import { viabilityApi } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/contexts/ToastContext';
 import { StatCard, EmptyState } from '@/components/dashboard/shared/DashboardUI';
+import {
+    INTELLIGENCE_CONTENT_CLASS,
+    INTELLIGENCE_STAT_GRID_CLASS,
+    IntelligenceFormCard,
+    IntelligenceErrorBanner,
+    IntelligenceLoadingSkeleton,
+    IntelligenceSectionCard,
+} from '@/components/dashboard/shared/IntelligenceUI';
+import { LocationFields, createDefaultLocationValue, type LocationFieldsValue } from '@/components/dashboard/LocationFields';
+import { useI18n } from '@/lib/i18n';
+import { getActiveMarket } from '@/lib/market';
 
-const UF_OPTIONS = ['', 'AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MG', 'MS', 'MT', 'PA', 'PB', 'PE', 'PI', 'PR', 'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP', 'TO'];
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
-const GO_CONFIG = {
-    GO: { label: '✅ GO — Abrir esse Negócio!', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/15 border-emerald-500/30', glow: 'shadow-emerald-500/25' },
-    CAUTION: { label: '⚡ CAUTION — Analisar Melhor', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/15 border-amber-500/30', glow: 'shadow-amber-500/25' },
-    NO_GO: { label: '🛑 NO GO — Não Recomendado', color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-500/15 border-rose-500/30', glow: 'shadow-rose-500/25' },
-};
+function getVerdictLabel(t: TranslateFn, report: ViabilityReport): string {
+    if (report.verdictKey) {
+        const key = `page.viabilidade.verdict.${report.verdictKey.toLowerCase()}`;
+        const translated = t(key);
+        if (translated !== key) return translated;
+    }
+    return report.verdict;
+}
 
-const OPP_LEVEL_CONFIG = {
-    alta: { label: 'Alta', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' },
-    media: { label: 'Média', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' },
-    baixa: { label: 'Baixa', color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-500/10' },
-};
+function getSaturationLabel(t: TranslateFn, idx: number): { label: string; color: string } {
+    if (idx >= 15) return { label: t('page.viabilidade.saturation.saturated'), color: 'text-rose-600 dark:text-rose-400' };
+    if (idx >= 8) return { label: t('page.viabilidade.saturation.competitive'), color: 'text-amber-600 dark:text-amber-400' };
+    return { label: t('page.viabilidade.saturation.lowCompetition'), color: 'text-emerald-600 dark:text-emerald-400' };
+}
+
+function getGoConfig(t: TranslateFn, key: 'GO' | 'CAUTION' | 'NO_GO') {
+    const styles = {
+        GO: { color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/15 border-emerald-500/30', glow: 'shadow-emerald-500/25' },
+        CAUTION: { color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/15 border-amber-500/30', glow: 'shadow-amber-500/25' },
+        NO_GO: { color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-500/15 border-rose-500/30', glow: 'shadow-rose-500/25' },
+    };
+    const labels = { GO: t('page.viabilidade.go.go'), CAUTION: t('page.viabilidade.go.caution'), NO_GO: t('page.viabilidade.go.noGo') };
+    return { ...styles[key], label: labels[key] };
+}
+
+function getOppLevelConfig(t: TranslateFn, key: 'alta' | 'media' | 'baixa') {
+    const styles = {
+        alta: { color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' },
+        media: { color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' },
+        baixa: { color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-500/10' },
+    };
+    return { ...styles[key], label: t(`page.viabilidade.opp.${key}`) };
+}
 
 function getScoreColor(s: number) {
     if (s >= 8) return 'text-emerald-600 dark:text-emerald-400';
@@ -46,14 +79,21 @@ export default function ViabilidadePage() {
     const { user } = useOutletContext<{ user: SessionUser }>();
     const navigate = useNavigate();
     const { addToast } = useToast();
+    const { t, locale } = useI18n();
 
     const [mode, setMode] = useState<ViabilityMode>('new_business');
     const [businessType, setBusinessType] = useState('');
     const [useProfileForExpand, setUseProfileForExpand] = useState(false);
-    const [city, setCity] = useState('');
-    const [state, setState] = useState('');
+    const [location, setLocation] = useState<LocationFieldsValue>(() => createDefaultLocationValue());
     const [loading, setLoading] = useState(false);
     const [report, setReport] = useState<ViabilityReport | null>(null);
+    const [error, setError] = useState('');
+
+    const numberLocale = useMemo(() => {
+        if (getActiveMarket() === 'US' || locale === 'en') return 'en-US';
+        if (locale === 'es') return 'es-ES';
+        return 'pt-BR';
+    }, [locale]);
 
     const hasAccess = user.plan === 'BUSINESS' || user.plan === 'SCALE';
 
@@ -64,41 +104,56 @@ export default function ViabilidadePage() {
     const effectiveBusinessType = useProfileLabel ? profileBusinessLabel : businessType;
 
     const canSubmit =
-        city.trim().length > 0 &&
+        location.city.trim().length > 0 &&
         (mode === 'my_business' ? !myBusinessProfileEmpty : effectiveBusinessType.trim().length >= 2);
 
-    const handleAnalyze = async (e: React.SyntheticEvent<HTMLFormElement>) => {
-        e.preventDefault();
+    const handleAnalyze = useCallback(async (e?: React.SyntheticEvent<HTMLFormElement>) => {
+        e?.preventDefault();
         if (!canSubmit) return;
         setLoading(true);
         setReport(null);
+        setError('');
         try {
             const payload =
                 mode === 'my_business'
-                    ? { mode: 'my_business' as const, city: city.trim(), state: state || undefined }
-                    : { mode, businessType: effectiveBusinessType.trim(), city: city.trim(), state: state || undefined };
+                    ? {
+                        mode: 'my_business' as const,
+                        city: location.city.trim(),
+                        state: location.state !== 'Todos' ? location.state : undefined,
+                        country: location.country,
+                        locale,
+                    }
+                    : {
+                        mode,
+                        businessType: effectiveBusinessType.trim(),
+                        city: location.city.trim(),
+                        state: location.state !== 'Todos' ? location.state : undefined,
+                        country: location.country,
+                        locale,
+                    };
             const result = await viabilityApi.analyze(payload);
             setReport(result);
             window.dispatchEvent(new Event('refresh-user'));
-            addToast('success', `Análise de viabilidade concluída! Score: ${result.score}/10`);
+            addToast('success', t('page.viabilidade.toast.success', { score: result.score }));
         } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : 'Erro ao analisar viabilidade.';
+            const message = err instanceof Error ? err.message : t('page.viabilidade.toast.error');
+            setError(message);
             addToast('error', message);
         } finally {
             setLoading(false);
         }
-    };
+    }, [canSubmit, mode, location, locale, effectiveBusinessType, addToast, t]);
 
     if (!hasAccess) {
         return (
             <>
-                <HeaderDashboard title="Viabilidade de Negócio" subtitle="Descubra se vale a pena abrir um negócio na região." breadcrumb="Inteligência / Viabilidade" />
-                <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full">
+                <HeaderDashboard compact title={t('page.viabilidade.title')} subtitle={t('page.viabilidade.subtitleLocked')} breadcrumb={t('page.viabilidade.breadcrumb')} />
+                <div className={INTELLIGENCE_CONTENT_CLASS}>
                     <EmptyState
                         icon={Lock}
-                        title="Análise de Viabilidade com IA"
-                        description="Descubra se vale a pena abrir um negócio em determinada cidade ou bairro. A IA analisa concorrentes reais, saturação de mercado e sugere as melhores localizações."
-                        actionLabel="Faça Upgrade para Enterprise"
+                        title={t('page.viabilidade.lockedTitle')}
+                        description={t('page.viabilidade.lockedDesc')}
+                        actionLabel={t('page.viabilidade.upgrade')}
                         onAction={() => navigate('/dashboard/configuracoes')}
                     />
                 </div>
@@ -108,25 +163,24 @@ export default function ViabilidadePage() {
 
     return (
         <>
-            <HeaderDashboard title="Viabilidade de Negócio" subtitle="Analise a viabilidade de abrir um negócio em qualquer região." breadcrumb="Inteligência / Viabilidade" />
-            <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full space-y-6">
+            <HeaderDashboard compact title={t('page.viabilidade.title')} subtitle={t('page.viabilidade.subtitle')} breadcrumb={t('page.viabilidade.breadcrumb')} />
+            <div className={INTELLIGENCE_CONTENT_CLASS}>
 
-                {/* Form */}
-                <div className="rounded-3xl bg-card border border-border p-6 sm:p-8">
+                <IntelligenceFormCard>
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                        <h3 className="text-lg font-bold text-foreground">Devo abrir esse negócio aqui?</h3>
+                        <h3 className="text-lg font-bold text-foreground">{t('page.viabilidade.formTitle')}</h3>
                         <Link to="/dashboard/historico?tab=intelligence&module=VIABILITY" className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium">
-                            Ver histórico
+                            {t('page.viabilidade.viewHistory')}
                         </Link>
                     </div>
-                    <p className="text-xs text-muted mb-4">A IA analisa dados reais de concorrentes, saturação e presença digital para dar um score de viabilidade.</p>
+                    <p className="text-xs text-muted mb-4">{t('page.viabilidade.formDesc')}</p>
 
                     {/* Mode selector */}
                     <div className="flex flex-wrap gap-2 mb-5">
                         {[
-                            { value: 'new_business' as const, label: 'Quero abrir um novo negócio' },
-                            { value: 'expand' as const, label: 'Quero expandir meu negócio' },
-                            { value: 'my_business' as const, label: 'Viabilidade do meu negócio na cidade' },
+                            { value: 'new_business' as const, label: t('page.viabilidade.mode.newBusiness') },
+                            { value: 'expand' as const, label: t('page.viabilidade.mode.expand') },
+                            { value: 'my_business' as const, label: t('page.viabilidade.mode.myBusiness') },
                         ].map((opt) => (
                             <button
                                 key={opt.value}
@@ -144,119 +198,115 @@ export default function ViabilidadePage() {
 
                     {mode === 'my_business' && myBusinessProfileEmpty && (
                         <div className="mb-5 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-sm text-muted">
-                            <p className="font-bold text-foreground mb-1">Complete seu perfil para usar esta análise</p>
-                            <p className="mb-3">Informe empresa e serviço/produto em Configurações ou no onboarding.</p>
+                            <p className="font-bold text-foreground mb-1">{t('page.viabilidade.profileIncompleteTitle')}</p>
+                            <p className="mb-3">{t('page.viabilidade.profileIncompleteDesc')}</p>
                             <Link to="/dashboard/configuracoes" className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold hover:underline">
-                                Ir para Configurações
+                                {t('page.viabilidade.goToSettings')}
                             </Link>
                         </div>
                     )}
 
                     {mode === 'my_business' && !myBusinessProfileEmpty && (
                         <p className="text-sm text-muted mb-4">
-                            Seu negócio: <span className="font-bold text-foreground">{profileBusinessLabel}</span>
+                            {t('page.viabilidade.yourBusiness')} <span className="font-bold text-foreground">{profileBusinessLabel}</span>
                         </p>
                     )}
 
-                    <form onSubmit={handleAnalyze} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <form onSubmit={handleAnalyze} className="space-y-4">
                         {mode !== 'my_business' && (
-                            <>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <input
                                     value={mode === 'expand' && useProfileForExpand ? profileBusinessLabel : businessType}
                                     onChange={(e) => setBusinessType(e.target.value)}
                                     disabled={mode === 'expand' && useProfileForExpand}
-                                    placeholder={mode === 'expand' ? 'Tipo de negócio (ou use dados do perfil)' : 'Tipo de negócio (ex: pizzaria, barbearia, academia)'}
-                                    className="h-12 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:opacity-60 sm:col-span-2"
+                                    placeholder={mode === 'expand' ? t('page.viabilidade.placeholder.expand') : t('page.viabilidade.placeholder.businessType')}
+                                    className="h-12 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:opacity-60"
                                     required
                                 />
                                 {mode === 'expand' && (
-                                    <label className="flex items-center gap-2 h-12 px-4 rounded-xl bg-surface border border-border cursor-pointer sm:col-span-2 lg:col-span-1">
+                                    <label className="flex items-center gap-2 h-12 px-4 rounded-xl bg-surface border border-border cursor-pointer">
                                         <input
                                             type="checkbox"
                                             checked={useProfileForExpand}
                                             onChange={(e) => setUseProfileForExpand(e.target.checked)}
                                             className="rounded border-border text-emerald-500 focus:ring-emerald-500/50"
                                         />
-                                        <span className="text-sm font-medium text-foreground">Usar dados do meu perfil</span>
+                                        <span className="text-sm font-medium text-foreground">{t('page.viabilidade.useProfileData')}</span>
                                     </label>
                                 )}
-                            </>
+                            </div>
                         )}
-                        <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Cidade (ex: Santos, Curitiba)" className="h-12 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-emerald-500/50" required />
-                        <select value={state} onChange={(e) => setState(e.target.value)} className="h-12 bg-surface border border-border rounded-xl px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/50">
-                            <option value="">Estado (UF)</option>
-                            {UF_OPTIONS.filter(Boolean).map((uf) => (<option key={uf} value={uf}>{uf}</option>))}
-                        </select>
-                        <Button type="submit" variant="primary" disabled={loading || !canSubmit} icon={loading ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />} className="h-12 px-6 rounded-xl font-bold whitespace-nowrap bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 shadow-lg shadow-emerald-500/25 border-0 sm:col-span-2 lg:col-span-4">
-                            {loading ? 'Analisando...' : 'Analisar Viabilidade'}
+                        <LocationFields value={location} onChange={(v) => setLocation((prev) => ({ ...prev, ...v }))} disabled={loading} accent="emerald" gridClass="grid-cols-1 sm:grid-cols-3" />
+                        <Button type="submit" variant="primary" disabled={loading || !canSubmit} icon={loading ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />} className="w-full h-12 px-6 rounded-xl font-bold whitespace-nowrap bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 shadow-lg shadow-emerald-500/25 border-0">
+                            {loading ? t('page.viabilidade.analyzing') : t('page.viabilidade.analyze')}
                         </Button>
                     </form>
-                </div>
+                </IntelligenceFormCard>
 
-                {loading && (
-                    <div className="flex flex-col items-center justify-center p-16 gap-4">
-                        <Loader2 size={40} className="animate-spin text-emerald-600 dark:text-emerald-400" />
-                        <p className="text-sm text-muted">Analisando concorrentes, mercado e gerando relatório com IA...</p>
-                        <p className="text-xs text-muted/60">Isso pode levar até 60 segundos</p>
-                    </div>
+                {error && !loading && !report && (
+                    <IntelligenceErrorBanner message={error} onRetry={() => handleAnalyze()} />
                 )}
+
+                {loading && <IntelligenceLoadingSkeleton statCount={4} />}
 
                 {report && !loading && (
                     <>
-                        {/* Go/No-Go Hero */}
                         {report.goNoGo && (
-                            <div className={`rounded-3xl border p-6 text-center shadow-lg ${GO_CONFIG[report.goNoGo]?.bg} ${GO_CONFIG[report.goNoGo]?.glow}`}>
-                                <p className={`text-xl font-black ${GO_CONFIG[report.goNoGo]?.color}`}>{GO_CONFIG[report.goNoGo]?.label}</p>
+                            <div className={`rounded-xl border p-4 text-center ${getGoConfig(t, report.goNoGo)?.bg}`}>
+                                <p className={`text-lg font-black ${getGoConfig(t, report.goNoGo)?.color}`}>{getGoConfig(t, report.goNoGo)?.label}</p>
+                                {report.goNoGo === 'CAUTION' && report.summary && (
+                                    <p className="mt-3 text-sm text-muted leading-relaxed max-w-3xl mx-auto">{report.summary}</p>
+                                )}
                             </div>
                         )}
 
-                        {/* Score Hero */}
-                        <div className="rounded-3xl bg-gradient-to-br from-card to-surface border border-border p-8 flex flex-col md:flex-row items-center gap-8">
+                        <IntelligenceSectionCard className="flex flex-col md:flex-row items-center gap-6">
                             <div className="relative w-36 h-36 shrink-0">
                                 <svg className="w-36 h-36 -rotate-90" viewBox="0 0 100 100">
                                     <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="8" className="text-surface" />
                                     <circle cx="50" cy="50" r="42" fill="none" strokeWidth="8" strokeLinecap="round" strokeDasharray={`${(report.score / 10) * 264} 264`} className={getScoreColor(report.score)} stroke="currentColor" />
                                 </svg>
                                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                    <span className={`text-4xl font-black tabular-nums ${getScoreColor(report.score)}`}>{report.score}</span>
-                                    <span className="text-[10px] text-muted uppercase tracking-wider font-bold">/10</span>
+                                    <span className={`text-4xl font-black tabular-nums ${getScoreColor(report.score)}`}>{report.score.toLocaleString(numberLocale)}</span>
+                                    <span className="text-[10px] text-muted uppercase tracking-wider font-bold">{t('page.viabilidade.scoreOutOf')}</span>
                                 </div>
                             </div>
-                            <div className="flex-1 text-center md:text-left space-y-2">
-                                <div className={`inline-block px-4 py-1.5 rounded-full text-sm font-black bg-gradient-to-r ${getScoreGradient(report.score)} text-white`}>{report.verdict}</div>
-                                <p className="text-sm text-muted leading-relaxed">{report.summary}</p>
+                            <div className="flex-1 text-center md:text-left space-y-3">
+                                <div className={`inline-block px-4 py-1.5 rounded-full text-sm font-black bg-gradient-to-r ${getScoreGradient(report.score)} text-white`}>
+                                    {getVerdictLabel(t, report)}
+                                </div>
+                                {report.goNoGo !== 'CAUTION' && (
+                                    <p className="text-sm text-muted leading-relaxed">{report.summary}</p>
+                                )}
                             </div>
+                        </IntelligenceSectionCard>
+
+                        <div className={INTELLIGENCE_STAT_GRID_CLASS}>
+                            <StatCard compact icon={Target} value={report.competitorDensity.toLocaleString(numberLocale)} label={t('page.viabilidade.stat.competitors')} color="violet" hint={t('page.viabilidade.stat.competitorsHint')} />
+                            <StatCard compact icon={TrendingUp} value={report.saturationIndex.toLocaleString(numberLocale)} label={t('page.viabilidade.stat.saturation')} color="amber" hint={t('page.viabilidade.stat.saturationHint')} sublabel={getSaturationLabel(t, report.saturationIndex).label} sublabelColor={getSaturationLabel(t, report.saturationIndex).color} />
+                            <StatCard compact icon={Globe} value={report.digitalMaturityPercent} label={t('page.viabilidade.stat.digitalMaturity')} color="emerald" suffix="%" hint={t('page.viabilidade.stat.digitalMaturityHint')} />
+                            <StatCard compact icon={Zap} value={report.dailyLeadsTarget.toLocaleString(numberLocale)} label={t('page.viabilidade.stat.leadsPerDay')} color="blue" hint={t('page.viabilidade.stat.leadsPerDayHint')} />
                         </div>
 
-                        {/* KPIs */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                            <StatCard icon={Target} value={report.competitorDensity} label="Concorrentes" color="violet" />
-                            <StatCard icon={TrendingUp} value={report.saturationIndex} label="Saturação" color="amber" />
-                            <StatCard icon={Globe} value={report.digitalMaturityPercent} label="Maturidade Digital" color="emerald" suffix="%" />
-                            <StatCard icon={Zap} value={report.dailyLeadsTarget} label="Leads/Dia" color="blue" />
-                        </div>
-
-                        {/* Playbook: Offer + Ticket */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <div className="rounded-2xl bg-gradient-to-br from-violet-900/20 to-card border border-violet-500/20 p-5">
-                                <h4 className="text-xs font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider mb-2 flex items-center gap-1.5"><Lightbulb size={12} />Oferta Sugerida</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
+                                <h4 className="text-xs font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider mb-2 flex items-center gap-1.5"><Lightbulb size={12} />{t('page.viabilidade.suggestedOffer')}</h4>
                                 <p className="text-sm font-bold text-foreground">{report.suggestedOffer}</p>
                             </div>
-                            <div className="rounded-2xl bg-gradient-to-br from-emerald-900/20 to-card border border-emerald-500/20 p-5">
-                                <h4 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1.5"><DollarSign size={12} />Ticket Sugerido</h4>
+                            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+                                <h4 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1.5"><DollarSign size={12} />{t('page.viabilidade.suggestedTicket')}</h4>
                                 <p className="text-sm font-bold text-foreground">{report.suggestedTicket}</p>
                             </div>
-                            <div className="rounded-2xl bg-gradient-to-br from-blue-900/20 to-card border border-blue-500/20 p-5">
-                                <h4 className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-2 flex items-center gap-1.5"><DollarSign size={12} />Investimento Estimado</h4>
+                            <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4">
+                                <h4 className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-2 flex items-center gap-1.5"><DollarSign size={12} />{t('page.viabilidade.estimatedInvestment')}</h4>
                                 <p className="text-sm font-bold text-foreground">{report.estimatedInvestment}</p>
                             </div>
                         </div>
 
-                        {/* Strengths & Risks */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <div className="rounded-3xl bg-card border border-border p-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <IntelligenceSectionCard>
                                 <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-                                    <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400" /> Pontos Fortes
+                                    <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400" /> {t('page.viabilidade.strengths')}
                                 </h3>
                                 <ul className="space-y-3">
                                     {report.strengths.map((s) => (
@@ -266,10 +316,10 @@ export default function ViabilidadePage() {
                                         </li>
                                     ))}
                                 </ul>
-                            </div>
-                            <div className="rounded-3xl bg-card border border-border p-6">
+                            </IntelligenceSectionCard>
+                            <IntelligenceSectionCard>
                                 <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-                                    <ShieldAlert size={16} className="text-rose-600 dark:text-rose-400" /> Riscos Identificados
+                                    <ShieldAlert size={16} className="text-rose-600 dark:text-rose-400" /> {t('page.viabilidade.risks')}
                                 </h3>
                                 <ul className="space-y-3">
                                     {report.risks.map((r) => (
@@ -279,28 +329,27 @@ export default function ViabilidadePage() {
                                         </li>
                                     ))}
                                 </ul>
-                            </div>
+                            </IntelligenceSectionCard>
                         </div>
 
-                        {/* Segment Breakdown */}
                         {report.segmentBreakdown && report.segmentBreakdown.length > 0 && (
-                            <div className="rounded-3xl bg-card border border-border p-6">
+                            <IntelligenceSectionCard>
                                 <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-                                    <Layers size={16} className="text-violet-600 dark:text-violet-400" /> Oportunidade por Segmento
+                                    <Layers size={16} className="text-violet-600 dark:text-violet-400" /> {t('page.viabilidade.segmentTitle')}
                                 </h3>
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-sm">
                                         <thead>
                                             <tr className="border-b border-border text-left">
-                                                <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-wider">Segmento</th>
-                                                <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-wider text-right">Qtd</th>
-                                                <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-wider text-right">Rating</th>
-                                                <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-wider">Oportunidade</th>
+                                                <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-wider">{t('page.viabilidade.segment')}</th>
+                                                <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-wider text-right">{t('page.viabilidade.qty')}</th>
+                                                <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-wider text-right">{t('page.viabilidade.rating')}</th>
+                                                <th className="py-3 px-4 text-[10px] font-bold text-muted uppercase tracking-wider">{t('page.viabilidade.opportunity')}</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {report.segmentBreakdown.map((seg) => {
-                                                const oppCfg = OPP_LEVEL_CONFIG[seg.opportunityLevel] || OPP_LEVEL_CONFIG.media;
+                                                const oppCfg = getOppLevelConfig(t, seg.opportunityLevel) || getOppLevelConfig(t, 'media');
                                                 return (
                                                     <tr key={seg.segment} className="border-b border-border/30 hover:bg-surface/50 transition-colors">
                                                         <td className="py-3 px-4 font-medium text-foreground capitalize">{seg.segment.replace(/_/g, ' ')}</td>
@@ -315,19 +364,18 @@ export default function ViabilidadePage() {
                                         </tbody>
                                     </table>
                                 </div>
-                            </div>
+                            </IntelligenceSectionCard>
                         )}
 
-                        {/* Top Opportunities with Score */}
                         {report.topOpportunities && report.topOpportunities.length > 0 && (
-                            <div className="rounded-3xl bg-card border border-border p-6">
-                                <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-2 flex items-center gap-2">
-                                    <Target size={16} className="text-amber-600 dark:text-amber-400" /> Top 20 Leads com Score
+                            <IntelligenceSectionCard>
+                                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-2 flex items-center gap-2">
+                                    <Target size={14} className="text-amber-600 dark:text-amber-400" /> {t('page.viabilidade.topLeadsTitle')}
                                 </h3>
-                                <p className="text-xs text-muted mb-4">Leads com maior potencial de conversão neste nicho/região.</p>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[400px] overflow-y-auto pr-2">
+                                <p className="text-xs text-muted mb-3">{t('page.viabilidade.topLeadsDesc')}</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[400px] overflow-y-auto pr-1">
                                     {report.topOpportunities.map((opp) => (
-                                        <div key={opp.id} className="p-4 bg-surface rounded-xl border border-border/50 flex flex-col gap-2 hover:border-emerald-500/30 transition-colors">
+                                        <div key={opp.id} className="p-3 bg-surface rounded-lg border border-border/50 flex flex-col gap-2 hover:border-emerald-500/30 transition-colors">
                                             <div className="flex items-start justify-between gap-2">
                                                 <p className="text-sm font-bold text-foreground truncate flex-1">{opp.name}</p>
                                                 <span className={`shrink-0 text-xs font-black px-2 py-0.5 rounded-full ${getScoreBadgeBarClasses(opp.score).badge}`}>
@@ -338,22 +386,21 @@ export default function ViabilidadePage() {
                                                 <div className={`h-full rounded-full transition-all duration-500 ${getScoreBadgeBarClasses(opp.score).bar}`} style={{ width: `${opp.score}%` }} />
                                             </div>
                                             <div className="flex flex-wrap gap-1.5">
-                                                {opp.scoreFactors?.noWebsite && <span className="inline-flex items-center gap-1 text-[9px] font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded-full"><Globe size={9} />Sem site</span>}
-                                                {opp.scoreFactors?.noPhone && <span className="inline-flex items-center gap-1 text-[9px] font-bold text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded-full"><Phone size={9} />Sem tel</span>}
-                                                {opp.scoreFactors?.fewReviews && <span className="inline-flex items-center gap-1 text-[9px] font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-full"><MessageSquare size={9} />Reviews</span>}
-                                                {opp.scoreFactors?.lowRating && <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-full"><Star size={9} />Rating</span>}
+                                                {opp.scoreFactors?.noWebsite && <span className="inline-flex items-center gap-1 text-[9px] font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded-full"><Globe size={9} />{t('page.concorrencia.badge.noWebsite')}</span>}
+                                                {opp.scoreFactors?.noPhone && <span className="inline-flex items-center gap-1 text-[9px] font-bold text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded-full"><Phone size={9} />{t('page.concorrencia.badge.noPhone')}</span>}
+                                                {opp.scoreFactors?.fewReviews && <span className="inline-flex items-center gap-1 text-[9px] font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-full"><MessageSquare size={9} />{t('page.concorrencia.badge.fewReviews')}</span>}
+                                                {opp.scoreFactors?.lowRating && <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-full"><Star size={9} />{t('page.viabilidade.rating')}</span>}
                                             </div>
                                             {opp.phone && <p className="text-[10px] text-muted flex items-center gap-1"><Phone size={10} />{opp.phone}</p>}
                                         </div>
                                     ))}
                                 </div>
-                            </div>
+                            </IntelligenceSectionCard>
                         )}
 
-                        {/* Recommendations */}
-                        <div className="rounded-3xl bg-card border border-border p-6">
+                        <IntelligenceSectionCard>
                             <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-                                <Lightbulb size={16} className="text-amber-600 dark:text-amber-400" /> Recomendações
+                                <Lightbulb size={16} className="text-amber-600 dark:text-amber-400" /> {t('page.viabilidade.recommendations')}
                             </h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 {report.recommendations.map((rec, i) => (
@@ -363,19 +410,18 @@ export default function ViabilidadePage() {
                                     </div>
                                 ))}
                             </div>
-                        </div>
+                        </IntelligenceSectionCard>
 
-                        {/* Locations */}
-                        <div className="rounded-3xl bg-card border border-border p-6">
+                        <IntelligenceSectionCard>
                             <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
-                                <MapPin size={16} className="text-violet-600 dark:text-violet-400" /> Melhores Localizações
+                                <MapPin size={16} className="text-violet-600 dark:text-violet-400" /> {t('page.viabilidade.bestLocations')}
                             </h3>
                             <div className="flex flex-wrap gap-2">
                                 {report.bestLocations.map((loc) => (
                                     <span key={`loc-${String(loc).slice(0, 80)}`} className="px-3 py-1.5 bg-violet-500/10 border border-violet-500/20 rounded-xl text-sm font-medium text-violet-600 dark:text-violet-400">{loc}</span>
                                 ))}
                             </div>
-                        </div>
+                        </IntelligenceSectionCard>
                     </>
                 )}
             </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Target, Loader2, Trophy, Flame, CreditCard } from 'lucide-react';
 import type { SessionUser } from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -49,6 +50,7 @@ function pct(current: number, goal: number): number {
 }
 
 export function TeamProgressCard({ plan }: { plan: SessionUser['plan'] }) {
+  const { t } = useI18n();
   const [data, setData] = useState<ProgressResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +68,7 @@ export function TeamProgressCard({ plan }: { plan: SessionUser['plan'] }) {
         if (!cancelled) setData(d);
       })
       .catch((e) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Erro ao carregar progresso.');
+        if (!cancelled) setError(e instanceof Error ? e.message : t('common.teamProgress.loadError'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -74,21 +76,21 @@ export function TeamProgressCard({ plan }: { plan: SessionUser['plan'] }) {
     return () => {
       cancelled = true;
     };
-  }, [plan]);
+  }, [plan, t]);
 
   if (plan !== 'SCALE') return null;
   if (loading) {
     return (
       <div className="rounded-3xl bg-card border border-border p-6 flex items-center justify-center gap-3 text-muted">
         <Loader2 size={24} className="animate-spin" />
-        <span>Carregando suas metas...</span>
+        <span>{t('common.teamProgress.loading')}</span>
       </div>
     );
   }
   if (error || !data) {
     return (
       <div className="rounded-3xl bg-card border border-border p-6 text-center text-muted text-sm">
-        {error ?? 'Não foi possível carregar o progresso.'}
+        {error ?? t('common.teamProgress.unavailable')}
       </div>
     );
   }
@@ -101,45 +103,43 @@ export function TeamProgressCard({ plan }: { plan: SessionUser['plan'] }) {
     <div className="rounded-3xl bg-card border border-border overflow-hidden">
       <div className="p-5 border-b border-border">
         <h3 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
-          <Target size={16} className="text-emerald-600 dark:text-emerald-400" /> Suas metas
+          <Target size={16} className="text-emerald-600 dark:text-emerald-400" /> {t('common.teamProgress.title')}
         </h3>
       </div>
       <div className="p-5 space-y-5">
-        {/* Minha cota (uso vs limites) */}
         {hasLimits && usage && (
           <div className="space-y-2 pb-3 border-b border-border/50">
             <p className="text-xs font-medium text-muted uppercase tracking-wider flex items-center gap-2">
-              <CreditCard size={14} className="text-emerald-600 dark:text-emerald-400" /> Minha cota
+              <CreditCard size={14} className="text-emerald-600 dark:text-emerald-400" /> {t('common.teamProgress.quota')}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
               {limits.dailyLeadsLimit != null && (
                 <div className="rounded-lg bg-surface/50 px-3 py-2">
-                  <span className="text-muted">Hoje</span>
+                  <span className="text-muted">{t('common.teamProgress.today')}</span>
                   <p className="font-semibold text-foreground tabular-nums">{usage.today} / {limits.dailyLeadsLimit}</p>
                 </div>
               )}
               {limits.weeklyLeadsLimit != null && (
                 <div className="rounded-lg bg-surface/50 px-3 py-2">
-                  <span className="text-muted">Semana</span>
+                  <span className="text-muted">{t('common.teamProgress.week')}</span>
                   <p className="font-semibold text-foreground tabular-nums">{usage.week} / {limits.weeklyLeadsLimit}</p>
                 </div>
               )}
               {limits.monthlyLeadsLimit != null && (
                 <div className="rounded-lg bg-surface/50 px-3 py-2">
-                  <span className="text-muted">Mês</span>
+                  <span className="text-muted">{t('common.teamProgress.month')}</span>
                   <p className="font-semibold text-foreground tabular-nums">{usage.month} / {limits.monthlyLeadsLimit}</p>
                 </div>
               )}
             </div>
           </div>
         )}
-        {/* Metas do dia com barras */}
         {hasDailyGoals && (
           <div className="space-y-3">
             {goals.dailyLeadsGoal != null && (
               <div>
                 <div className="flex justify-between text-xs mb-1">
-                  <span className="text-muted">Leads hoje</span>
+                  <span className="text-muted">{t('common.teamProgress.leadsToday')}</span>
                   <span className="font-medium text-foreground tabular-nums">
                     {formatGoal(today.searches, goals.dailyLeadsGoal)}
                   </span>
@@ -155,7 +155,7 @@ export function TeamProgressCard({ plan }: { plan: SessionUser['plan'] }) {
             {goals.dailyAnalysesGoal != null && (
               <div>
                 <div className="flex justify-between text-xs mb-1">
-                  <span className="text-muted">Análises hoje</span>
+                  <span className="text-muted">{t('common.teamProgress.analysesToday')}</span>
                   <span className="font-medium text-foreground tabular-nums">
                     {formatGoal(today.analyses, goals.dailyAnalysesGoal)}
                   </span>
@@ -171,31 +171,29 @@ export function TeamProgressCard({ plan }: { plan: SessionUser['plan'] }) {
           </div>
         )}
         {!hasDailyGoals && (
-          <p className="text-sm text-muted">Nenhuma meta diária definida. Peça ao gestor para definir metas na equipe.</p>
+          <p className="text-sm text-muted">{t('common.teamProgress.noDailyGoals')}</p>
         )}
 
-        {/* Streak e ranking */}
         <div className="flex flex-wrap gap-4 pt-2 border-t border-border/50">
           <div className="flex items-center gap-2 text-sm">
             <Flame size={18} className="text-amber-600 dark:text-amber-400" />
-            <span className="text-muted">Sequência:</span>
-            <span className="font-semibold text-foreground tabular-nums">{streak} dia(s)</span>
+            <span className="text-muted">{t('common.teamProgress.streak')}</span>
+            <span className="font-semibold text-foreground tabular-nums">{t('common.teamProgress.streakDays', { count: streak })}</span>
           </div>
           {ranking.total > 0 && (
             <div className="flex items-center gap-2 text-sm">
               <Trophy size={18} className="text-amber-600 dark:text-amber-400" />
-              <span className="text-muted">Você está em</span>
+              <span className="text-muted">{t('common.teamProgress.rankingYou')}</span>
               <span className="font-semibold text-foreground">
-                {ranking.position}º de {ranking.total}
+                {t('common.teamProgress.rankingOf', { position: ranking.position, total: ranking.total })}
               </span>
             </div>
           )}
         </div>
 
-        {/* Top 5 */}
         {ranking.top5.length > 0 && (
           <div className="pt-2">
-            <p className="text-[10px] font-bold text-muted uppercase tracking-wider mb-2">Top 5 do mês (leads)</p>
+            <p className="text-[10px] font-bold text-muted uppercase tracking-wider mb-2">{t('common.teamProgress.top5')}</p>
             <ol className="space-y-1 text-sm">
               {ranking.top5.map((m, i) => (
                 <li key={m.userId} className="flex items-center justify-between">

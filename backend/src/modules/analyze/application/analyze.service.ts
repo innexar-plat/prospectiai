@@ -11,6 +11,8 @@ import { checkMemberLimits, MemberLimitExceededError } from '@/lib/team-credits'
 import { recordUsageEvent } from '@/lib/usage';
 import type { AnalyzeInput } from '@/lib/validations/schemas';
 import { getCached, setCached } from '@/lib/redis';
+import { applyTrialExpiryIfNeeded, assertWorkspaceCanUseProduct } from '@/lib/trial';
+import { normalizeAnalyzeLocale } from '@/lib/i18n/analysis-error-messages';
 
 const DEFAULT_ANALYZE_RESULT_CACHE_TTL_SECONDS = 86400;
 
@@ -64,6 +66,13 @@ export type AnalyzeOutput = {
     reviewTrend?: string;
     suggestedContactTime?: string;
     reviewAnalysis?: string;
+    quickActions?: string[];
+    messageVariants?: {
+        whatsapp?: { short?: string; medium?: string };
+        email?: { short?: string; medium?: string };
+        linkedin?: { short?: string; medium?: string };
+    };
+    keyMetrics?: Array<{ label: string; value: string; hint?: string }>;
 };
 
 async function getUserAndWorkspaceOrThrow(userId: string) {
@@ -265,6 +274,12 @@ export async function runAnalyzePreChecks(input: AnalyzeInput, userId: string): 
 
     const { activeWorkspace, membership } = await getUserAndWorkspaceOrThrow(userId);
 
+    await applyTrialExpiryIfNeeded(activeWorkspace.id);
+    const trialGate = assertWorkspaceCanUseProduct(activeWorkspace);
+    if (!trialGate.ok) {
+        throw new AnalyzeHttpError(403, { error: trialGate.message, code: trialGate.code });
+    }
+
     try {
         await checkMemberLimits(
             prisma,
@@ -326,6 +341,12 @@ export async function runAnalyze(input: AnalyzeInput, userId: string, onProgress
     if (redisCached) return redisCached;
 
     const { user, activeWorkspace, membership } = await getUserAndWorkspaceOrThrow(userId);
+
+    await applyTrialExpiryIfNeeded(activeWorkspace.id);
+    const trialGateRun = assertWorkspaceCanUseProduct(activeWorkspace);
+    if (!trialGateRun.ok) {
+        throw new AnalyzeHttpError(403, { error: trialGateRun.message, code: trialGateRun.code });
+    }
 
     try {
         await checkMemberLimits(
@@ -411,7 +432,7 @@ export async function runAnalyze(input: AnalyzeInput, userId: string, onProgress
     const result = await analyzeLead(
         businessData as BusinessData,
         profile,
-        locale || 'pt',
+        normalizeAnalyzeLocale(locale ?? ''),
         userId,
         isBusinessPlan,
         { workspaceId: activeWorkspace.id, userId },

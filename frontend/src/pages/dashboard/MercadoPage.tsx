@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Lock, Loader2, Search, Globe, TrendingUp, BarChart3, Lightbulb, Target, Star, Layers } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { Lock, Loader2, Search, Globe, TrendingUp, BarChart3, Lightbulb, Target, Star, Layers, Phone, MessageSquare } from 'lucide-react';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { Link, useOutletContext, useNavigate } from 'react-router-dom';
 import type { SessionUser, MarketReport } from '@/lib/api';
@@ -7,59 +7,86 @@ import { searchApi } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/contexts/ToastContext';
 import { StatCard, PresenceBar, EmptyState } from '@/components/dashboard/shared/DashboardUI';
+import {
+    INTELLIGENCE_CONTENT_CLASS,
+    INTELLIGENCE_STAT_GRID_CLASS,
+    IntelligenceFormCard,
+    IntelligenceErrorBanner,
+    IntelligenceLoadingSkeleton,
+    IntelligenceSectionCard,
+    AiInsightsPanel,
+} from '@/components/dashboard/shared/IntelligenceUI';
+import { LocationFields, createDefaultLocationValue, type LocationFieldsValue } from '@/components/dashboard/LocationFields';
+import { useI18n } from '@/lib/i18n';
 
-const UF_OPTIONS = ['', 'AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MG', 'MS', 'MT', 'PA', 'PB', 'PE', 'PI', 'PR', 'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP', 'TO'];
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
-function getSaturationLabel(idx: number): { label: string; color: string; bg: string } {
-    if (idx >= 15) return { label: 'Saturado', color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-500/10' };
-    if (idx >= 8) return { label: 'Competitivo', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
-    return { label: 'Baixa Concorrência', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
+function getSaturationLabel(t: TranslateFn, idx: number): { label: string; color: string; bg: string } {
+    if (idx >= 15) return { label: t('page.mercado.saturation.saturated'), color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-500/10' };
+    if (idx >= 8) return { label: t('page.mercado.saturation.competitive'), color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
+    return { label: t('page.mercado.saturation.lowCompetition'), color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
+}
+
+function getScoreBadgeBarClasses(score: number): { badge: string; bar: string } {
+    if (score >= 60) return { badge: 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400', bar: 'bg-emerald-500' };
+    if (score >= 35) return { badge: 'bg-amber-500/20 text-amber-600 dark:text-amber-400', bar: 'bg-amber-500' };
+    return { badge: 'bg-surface text-muted', bar: 'bg-surface' };
 }
 
 export default function MercadoPage() {
     const { user } = useOutletContext<{ user: SessionUser }>();
     const navigate = useNavigate();
     const { addToast } = useToast();
+    const { t } = useI18n();
 
     const [query, setQuery] = useState('');
-    const [city, setCity] = useState('');
-    const [state, setState] = useState('');
+    const [location, setLocation] = useState<LocationFieldsValue>(() => createDefaultLocationValue());
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState<MarketReport | null>(null);
+    const [error, setError] = useState('');
 
     const hasAccess = user.plan === 'BUSINESS' || user.plan === 'SCALE';
 
-    const handleAnalyze = async (e: React.SyntheticEvent<HTMLFormElement>) => {
-        e.preventDefault();
+    const runAnalyze = useCallback(async () => {
         if (!query.trim()) return;
         setLoading(true);
+        setData(null);
+        setError('');
         try {
             const result = await searchApi.marketReport({
                 textQuery: query.trim(),
-                city: city || undefined,
-                state: state || undefined,
+                city: location.city || undefined,
+                state: location.state !== 'Todos' ? location.state : undefined,
+                country: location.country,
                 pageSize: 60,
             });
             setData(result);
             window.dispatchEvent(new Event('refresh-user'));
-            addToast('success', `Relatório concluído: ${result.totalBusinesses} negócios mapeados.`);
+            addToast('success', t('page.mercado.toast.success', { count: result.totalBusinesses }));
         } catch (err: unknown) {
-            addToast('error', err instanceof Error ? err.message : 'Erro ao gerar relatório de mercado.');
+            const message = err instanceof Error ? err.message : t('page.mercado.toast.error');
+            setError(message);
+            addToast('error', message);
         } finally {
             setLoading(false);
         }
+    }, [query, location, addToast, t]);
+
+    const handleAnalyze = async (e: React.SyntheticEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        await runAnalyze();
     };
 
     if (!hasAccess) {
         return (
             <>
-                <HeaderDashboard title="Inteligência de Mercado" subtitle="Mapeamento completo do mercado local com IA." breadcrumb="Inteligência / Mercado" />
-                <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full">
+                <HeaderDashboard compact title={t('page.mercado.title')} subtitle={t('page.mercado.subtitleLocked')} breadcrumb={t('page.mercado.breadcrumb')} />
+                <div className={INTELLIGENCE_CONTENT_CLASS}>
                     <EmptyState
                         icon={Lock}
-                        title="Inteligência de Mercado"
-                        description="Mapeie segmentos, maturidade digital, saturação e oportunidades em qualquer região. Insights estratégicos gerados por IA."
-                        actionLabel="Upgrade para Business"
+                        title={t('page.mercado.lockedTitle')}
+                        description={t('page.mercado.lockedDesc')}
+                        actionLabel={t('page.mercado.upgrade')}
                         onAction={() => navigate('/dashboard/planos')}
                     />
                 </div>
@@ -69,81 +96,110 @@ export default function MercadoPage() {
 
     return (
         <>
-            <HeaderDashboard title="Inteligência de Mercado" subtitle="Mapeamento completo com segmentação, maturidade digital e insights IA." breadcrumb="Inteligência / Mercado" />
-            <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full space-y-6">
-
-                {/* Search Form */}
-                <div className="rounded-3xl bg-card border border-border p-6 sm:p-8">
+            <HeaderDashboard compact title={t('page.mercado.title')} subtitle={t('page.mercado.subtitle')} breadcrumb={t('page.mercado.breadcrumb')} />
+            <div className={INTELLIGENCE_CONTENT_CLASS}>
+                <IntelligenceFormCard>
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-                        <h3 className="text-lg font-bold text-foreground">Analisar Mercado</h3>
-                        <Link to="/dashboard/historico?tab=intelligence&module=MARKET" className="text-sm text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 font-medium">
-                            Ver histórico
+                        <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">{t('page.mercado.formTitle')}</h3>
+                        <Link to="/dashboard/historico?tab=intelligence&module=MARKET" className="text-xs text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 font-semibold">
+                            {t('page.mercado.viewHistory')}
                         </Link>
                     </div>
-                    <form onSubmit={handleAnalyze} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Ex: restaurantes, academias, clínicas..." className="h-12 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-violet-500/50 sm:col-span-2" required />
-                        <input type="text" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Cidade" className="h-12 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-violet-500/50" />
-                        <select value={state} onChange={(e) => setState(e.target.value)} className="h-12 bg-surface border border-border rounded-xl px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50">
-                            <option value="">Estado (UF)</option>
-                            {UF_OPTIONS.filter(Boolean).map((uf) => (<option key={uf} value={uf}>{uf}</option>))}
-                        </select>
-                        <Button type="submit" variant="primary" disabled={loading || !query.trim()} icon={loading ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />} className="h-12 px-6 rounded-xl font-bold whitespace-nowrap sm:col-span-2 lg:col-span-4">
-                            {loading ? 'Analisando mercado...' : 'Gerar Relatório'}
+                    <form onSubmit={handleAnalyze} className="space-y-4">
+                        <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('page.mercado.placeholder')} className="h-11 w-full bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-violet-500/50" required />
+                        <LocationFields
+                            value={location}
+                            onChange={(v) => setLocation((prev) => ({ ...prev, ...v }))}
+                            disabled={loading}
+                            accent="violet"
+                            gridClass="grid-cols-1 sm:grid-cols-3"
+                        />
+                        <Button type="submit" variant="primary" disabled={loading || !query.trim()} icon={loading ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />} className="h-11 px-6 w-full rounded-xl font-bold whitespace-nowrap">
+                            {loading ? t('page.mercado.analyzing') : t('page.mercado.generate')}
                         </Button>
                     </form>
-                </div>
+                </IntelligenceFormCard>
 
-                {/* Results */}
-                {data && (
+                {error && !loading && !data && (
+                    <IntelligenceErrorBanner message={error} onRetry={runAnalyze} />
+                )}
+
+                {loading && <IntelligenceLoadingSkeleton statCount={4} />}
+
+                {data && !loading && (
                     <>
-                        {/* KPIs */}
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                            <StatCard icon={Layers} label="Negócios Mapeados" value={data.totalBusinesses} color="violet" />
-                            <StatCard icon={BarChart3} label="Segmentos" value={data.segments.length} color="blue" />
-                            <StatCard icon={Star} label="Rating Médio" value={data.avgRating?.toFixed(1) ?? 'N/A'} color="amber" />
+                        <div className={INTELLIGENCE_STAT_GRID_CLASS}>
+                            <StatCard compact icon={Layers} label={t('page.mercado.stat.businesses')} value={data.totalBusinesses} color="violet" />
+                            <StatCard compact icon={BarChart3} label={t('page.mercado.stat.segments')} value={data.segments.length} color="blue" />
+                            <StatCard compact icon={Star} label={t('page.mercado.stat.avgRating')} value={data.avgRating?.toFixed(1) ?? 'N/A'} color="amber" />
                             {(() => {
-                                const sat = getSaturationLabel(data.saturationIndex);
-                                return <StatCard icon={TrendingUp} label="Saturação" value={`${data.saturationIndex} — ${sat.label}`} color="emerald" />;
+                                const sat = getSaturationLabel(t, data.saturationIndex);
+                                return (
+                                    <StatCard
+                                        compact
+                                        icon={TrendingUp}
+                                        label={t('page.mercado.stat.saturation')}
+                                        value={data.saturationIndex}
+                                        color="emerald"
+                                        suffix={` — ${sat.label}`}
+                                    />
+                                );
                             })()}
                         </div>
 
-                        {/* Digital Maturity */}
-                        <div className="rounded-3xl bg-card border border-border p-6">
-                            <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
-                                <Globe size={20} className="text-violet-500" /> Maturidade Digital
+                        {data.aiInsights && (
+                            <AiInsightsPanel
+                                title={t('page.mercado.aiInsights')}
+                                summary={data.aiInsights.executiveSummary}
+                                summaryLabel={t('page.mercado.executiveSummary')}
+                                chips={[
+                                    { label: `${(data.aiInsights.marketTrends ?? []).length} ${t('page.mercado.trends').toLowerCase()}`, tone: 'blue' },
+                                    { label: `${(data.aiInsights.opportunities ?? []).length} ${t('page.mercado.opportunities').toLowerCase()}`, tone: 'emerald' },
+                                    { label: `${(data.aiInsights.recommendations ?? []).length} ${t('page.mercado.recommendations').toLowerCase()}`, tone: 'amber' },
+                                ]}
+                                tabs={[
+                                    { key: 'trends', label: t('page.mercado.trends'), icon: TrendingUp, items: data.aiInsights.marketTrends ?? [], bulletClass: 'text-blue-500' },
+                                    { key: 'opportunities', label: t('page.mercado.opportunities'), icon: Target, items: data.aiInsights.opportunities ?? [], bulletClass: 'text-emerald-500' },
+                                    { key: 'recommendations', label: t('page.mercado.recommendations'), icon: Lightbulb, items: data.aiInsights.recommendations ?? [], bulletClass: 'text-amber-500' },
+                                ]}
+                            />
+                        )}
+
+                        <IntelligenceSectionCard>
+                            <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
+                                <Globe size={14} className="text-violet-600 dark:text-violet-400" /> {t('page.mercado.digitalMaturity')}
                             </h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <PresenceBar label="Com Website" count={data.digitalMaturity.withWebsite} total={data.digitalMaturity.total} color="bg-violet-500" />
-                                <PresenceBar label="Com Telefone" count={data.digitalMaturity.withPhone} total={data.digitalMaturity.total} color="bg-blue-500" />
+                                <PresenceBar label={t('page.mercado.withWebsite')} count={data.digitalMaturity.withWebsite} total={data.digitalMaturity.total} color="bg-violet-500" />
+                                <PresenceBar label={t('page.mercado.withPhone')} count={data.digitalMaturity.withPhone} total={data.digitalMaturity.total} color="bg-blue-500" />
                             </div>
-                            <div className="mt-4 grid grid-cols-2 gap-4 text-center">
-                                <div className="rounded-xl bg-surface p-4">
-                                    <p className="text-2xl font-bold text-violet-600 dark:text-violet-400">{data.digitalMaturity.withWebsitePercent}%</p>
-                                    <p className="text-xs text-muted mt-1">possuem website</p>
+                            <div className="mt-4 grid grid-cols-2 gap-3">
+                                <div className="rounded-lg bg-surface p-3 text-center border border-border/50">
+                                    <p className="text-xl font-black text-violet-600 dark:text-violet-400 tabular-nums">{data.digitalMaturity.withWebsitePercent}%</p>
+                                    <p className="text-[10px] text-muted mt-1 font-semibold uppercase tracking-wider">{t('page.mercado.haveWebsite')}</p>
                                 </div>
-                                <div className="rounded-xl bg-surface p-4">
-                                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{data.digitalMaturity.withPhonePercent}%</p>
-                                    <p className="text-xs text-muted mt-1">possuem telefone</p>
+                                <div className="rounded-lg bg-surface p-3 text-center border border-border/50">
+                                    <p className="text-xl font-black text-blue-600 dark:text-blue-400 tabular-nums">{data.digitalMaturity.withPhonePercent}%</p>
+                                    <p className="text-[10px] text-muted mt-1 font-semibold uppercase tracking-wider">{t('page.mercado.havePhone')}</p>
                                 </div>
                             </div>
-                        </div>
+                        </IntelligenceSectionCard>
 
-                        {/* Segments */}
-                        <div className="rounded-3xl bg-card border border-border p-6">
-                            <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
-                                <Layers size={20} className="text-violet-500" /> Segmentação do Mercado
+                        <IntelligenceSectionCard>
+                            <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
+                                <Layers size={14} className="text-violet-600 dark:text-violet-400" /> {t('page.mercado.segmentation')}
                             </h3>
                             <div className="space-y-2">
                                 {data.segments.slice(0, 12).map((seg) => (
-                                    <div key={seg.type} className="flex items-center justify-between rounded-xl bg-surface px-4 py-3">
+                                    <div key={seg.type} className="flex items-center justify-between rounded-lg bg-surface px-3 py-2.5 border border-border/50">
                                         <div className="flex items-center gap-3 min-w-0">
                                             <span className="text-sm font-medium text-foreground truncate">{seg.type.replace(/_/g, ' ')}</span>
                                             {seg.avgRating != null && (
                                                 <span className="text-xs text-muted flex items-center gap-1"><Star size={12} className="text-amber-500" /> {seg.avgRating}</span>
                                             )}
                                         </div>
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-24 h-1.5 bg-background rounded-full overflow-hidden">
+                                        <div className="flex items-center gap-3 shrink-0">
+                                            <div className="w-20 sm:w-24 h-1.5 bg-background rounded-full overflow-hidden">
                                                 <div className="h-full bg-violet-500 rounded-full" style={{ width: `${Math.min((seg.count / data.totalBusinesses) * 100, 100)}%` }} />
                                             </div>
                                             <span className="text-xs font-semibold text-muted tabular-nums w-8 text-right">{seg.count}</span>
@@ -151,93 +207,53 @@ export default function MercadoPage() {
                                     </div>
                                 ))}
                             </div>
-                        </div>
+                        </IntelligenceSectionCard>
 
-                        {/* Top Opportunities */}
                         {data.topOpportunities.length > 0 && (
-                            <div className="rounded-3xl bg-card border border-border p-6">
-                                <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
-                                    <Target size={20} className="text-emerald-500" /> Top Oportunidades
+                            <IntelligenceSectionCard>
+                                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-2 flex items-center gap-2">
+                                    <Target size={14} className="text-emerald-600 dark:text-emerald-400" /> {t('page.mercado.topOpportunities')}
                                 </h3>
-                                <div className="space-y-2">
-                                    {data.topOpportunities.slice(0, 10).map((opp, i) => (
-                                        <div key={opp.id || i} className="flex items-center justify-between rounded-xl bg-surface px-4 py-3">
-                                            <div className="min-w-0 flex-1">
-                                                <p className="text-sm font-medium text-foreground truncate">{opp.name}</p>
-                                                <p className="text-xs text-muted truncate">{opp.formattedAddress}</p>
-                                            </div>
-                                            <div className="flex items-center gap-3 shrink-0 ml-3">
-                                                {opp.rating != null && (
-                                                    <span className="text-xs text-muted flex items-center gap-1"><Star size={12} className="text-amber-500" /> {opp.rating}</span>
+                                <p className="text-xs text-muted mb-4">{t('page.concorrencia.topOpportunitiesDesc')}</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[480px] overflow-y-auto pr-2">
+                                    {data.topOpportunities.slice(0, 10).map((opp, i) => {
+                                        const scoreClasses = getScoreBadgeBarClasses(opp.score ?? 0);
+                                        return (
+                                            <div key={opp.id || i} className="p-4 bg-surface rounded-xl border border-border/50 flex flex-col gap-2 hover:border-violet-500/30 transition-colors">
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <p className="text-sm font-bold text-foreground truncate flex-1">{opp.name}</p>
+                                                    <span className={`shrink-0 text-xs font-black px-2 py-0.5 rounded-full ${scoreClasses.badge}`}>
+                                                        {opp.score ?? '-'}
+                                                    </span>
+                                                </div>
+                                                {opp.score != null && (
+                                                    <div className="w-full h-1.5 bg-card rounded-full overflow-hidden">
+                                                        <div className={`h-full rounded-full transition-all duration-500 ${scoreClasses.bar}`} style={{ width: `${opp.score}%` }} />
+                                                    </div>
                                                 )}
-                                                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">{opp.score ?? '-'}</span>
+                                                {opp.formattedAddress && (
+                                                    <p className="text-xs text-muted truncate">{opp.formattedAddress}</p>
+                                                )}
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {opp.scoreFactors?.noWebsite && <span className="inline-flex items-center gap-1 text-[9px] font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded-full"><Globe size={9} />{t('page.concorrencia.badge.noWebsite')}</span>}
+                                                    {opp.scoreFactors?.noPhone && <span className="inline-flex items-center gap-1 text-[9px] font-bold text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded-full"><Phone size={9} />{t('page.concorrencia.badge.noPhone')}</span>}
+                                                    {opp.scoreFactors?.fewReviews && <span className="inline-flex items-center gap-1 text-[9px] font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-full"><MessageSquare size={9} />{t('page.concorrencia.badge.fewReviews')}</span>}
+                                                    {opp.scoreFactors?.lowRating && <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-full"><Star size={9} />{t('page.concorrencia.badge.lowRating')}</span>}
+                                                </div>
+                                                <div className="flex flex-wrap items-center gap-3 text-[10px] text-muted">
+                                                    {opp.rating != null && (
+                                                        <span className="flex items-center gap-1"><Star size={10} className="text-amber-500" /> {opp.rating}</span>
+                                                    )}
+                                                    {opp.reviewCount != null && (
+                                                        <span>{opp.reviewCount} {t('page.concorrencia.csv.reviews').toLowerCase()}</span>
+                                                    )}
+                                                    {opp.phone && <span className="flex items-center gap-1"><Phone size={10} />{opp.phone}</span>}
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
-                            </div>
-                        )}
-
-                        {/* AI Insights */}
-                        {data.aiInsights && (
-                            <div className="rounded-3xl bg-card border border-border p-6 space-y-5">
-                                <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                                    <Lightbulb size={20} className="text-amber-500" /> Insights de Mercado (IA)
-                                </h3>
-
-                                {/* Executive Summary */}
-                                <div className="rounded-xl bg-violet-500/5 border border-violet-500/20 p-4">
-                                    <p className="text-sm font-semibold text-violet-600 dark:text-violet-400 mb-2">Resumo Executivo</p>
-                                    <p className="text-sm text-foreground leading-relaxed">{data.aiInsights.executiveSummary}</p>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    {/* Trends */}
-                                    <div className="rounded-xl bg-surface p-4">
-                                        <p className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                                            <TrendingUp size={16} className="text-blue-500" /> Tendências
-                                        </p>
-                                        <ul className="space-y-2">
-                                            {data.aiInsights.marketTrends.map((t, i) => (
-                                                <li key={i} className="text-xs text-muted leading-relaxed flex gap-2">
-                                                    <span className="text-blue-500 mt-0.5 shrink-0">•</span>
-                                                    <span>{t}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-
-                                    {/* Opportunities */}
-                                    <div className="rounded-xl bg-surface p-4">
-                                        <p className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                                            <Target size={16} className="text-emerald-500" /> Oportunidades
-                                        </p>
-                                        <ul className="space-y-2">
-                                            {data.aiInsights.opportunities.map((o, i) => (
-                                                <li key={i} className="text-xs text-muted leading-relaxed flex gap-2">
-                                                    <span className="text-emerald-500 mt-0.5 shrink-0">•</span>
-                                                    <span>{o}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-
-                                    {/* Recommendations */}
-                                    <div className="rounded-xl bg-surface p-4">
-                                        <p className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                                            <Lightbulb size={16} className="text-amber-500" /> Recomendações
-                                        </p>
-                                        <ul className="space-y-2">
-                                            {data.aiInsights.recommendations.map((r, i) => (
-                                                <li key={i} className="text-xs text-muted leading-relaxed flex gap-2">
-                                                    <span className="text-amber-500 mt-0.5 shrink-0">•</span>
-                                                    <span>{r}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
+                            </IntelligenceSectionCard>
                         )}
                     </>
                 )}

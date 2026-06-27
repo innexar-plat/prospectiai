@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { SidebarNav } from './SidebarNav';
+import { getLocaleStorageKey } from '@/lib/locale';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import type { SessionUser } from '@/lib/api';
@@ -34,13 +35,6 @@ vi.mock('lucide-react', async () => {
     };
 });
 
-// Mock Logo component
-vi.mock('@/components/brand/Logo', () => ({
-    Logo: ({ height, fillWidth }: { height?: number; fillWidth?: boolean }) => (
-        <div data-testid="logo" data-height={height} data-fillwidth={String(!!fillWidth)}>Logo</div>
-    ),
-}));
-
 const mockUser = {
     id: 'user-1',
     name: 'Test User',
@@ -52,7 +46,9 @@ const mockUser = {
 
 describe('SidebarNav', () => {
     beforeEach(() => {
+        const locale = localStorage.getItem(getLocaleStorageKey());
         localStorage.clear();
+        if (locale) localStorage.setItem(getLocaleStorageKey(), locale);
     });
 
     it('renders correctly in expanded state', () => {
@@ -62,8 +58,7 @@ describe('SidebarNav', () => {
             </MemoryRouter>
         );
 
-        expect(screen.getByTestId('logo')).toBeInTheDocument();
-        expect(screen.getByTestId('logo')).toHaveAttribute('data-fillwidth', 'true');
+        expect(screen.getByRole('link', { name: /precision/i })).toBeInTheDocument();
         expect(screen.getByText('Nova Busca')).toBeInTheDocument();
     });
 
@@ -75,8 +70,8 @@ describe('SidebarNav', () => {
             </MemoryRouter>
         );
 
-        expect(screen.getByTestId('logo')).toBeInTheDocument();
-        expect(screen.getByTestId('logo')).toHaveAttribute('data-height', '32');
+        expect(screen.getByRole('button', { name: /expandir menu/i })).toBeInTheDocument();
+        expect(screen.queryByText('Nova Busca')).not.toBeInTheDocument();
     });
 
     it('shows user information in footer', () => {
@@ -86,6 +81,22 @@ describe('SidebarNav', () => {
             </MemoryRouter>
         );
 
-        expect(screen.getByText(/Test User/i)).toBeInTheDocument();
+        expect(screen.getByText('Test')).toBeInTheDocument();
+        expect(screen.getByText('10/100')).toBeInTheDocument();
+    });
+
+    it('shows subscribe CTA instead of 0/0 credits on US FREE without plan', () => {
+        vi.stubGlobal('location', { ...window.location, hostname: 'precisionai.innexar.app', protocol: 'https:' });
+        localStorage.setItem(getLocaleStorageKey(), 'en');
+        const usFreeUser = { ...mockUser, leadsUsed: 0, leadsLimit: 0 } as SessionUser;
+
+        render(
+            <MemoryRouter>
+                <SidebarNav user={usFreeUser} onLogout={vi.fn()} />
+            </MemoryRouter>
+        );
+
+        expect(screen.queryByText('0/0')).not.toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /subscribe — 50 credits\/mo/i })).toHaveAttribute('href', '/dashboard/planos');
     });
 });

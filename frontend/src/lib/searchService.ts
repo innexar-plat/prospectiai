@@ -2,9 +2,10 @@
  * Search service: runs search with validation and maps to API.
  */
 
-import { searchApi, rfSearchApi, type Place, type RfCompanyResult } from './api';
+import { searchApi, type Place } from './api';
 import { getPlaceTypeByValue } from './placeTypes';
 import { getCountryQueryLabel } from './locationData';
+import { isMarketFeatureEnabled } from './market';
 
 export interface SearchPayload {
   textQuery?: string;
@@ -35,23 +36,69 @@ export interface SearchResult {
 
 const MIN_QUERY_LENGTH = 3;
 
+export const SEARCH_VALIDATION_KEYS = {
+  QUERY_TOO_SHORT: 'dash.search.validation.queryTooShort',
+  QUERY_TOO_SHORT_US: 'dash.search.validation.queryTooShortUs',
+  NEED_TYPE_OR_TERM: 'dash.search.validation.needTypeOrTerm',
+  NEED_TYPE_OR_TERM_US: 'dash.search.validation.needTypeOrTermUs',
+  ADVANCED_TERM_MIN: 'dash.search.validation.advancedTermMin',
+} as const;
+
+export type SearchTranslateFn = (key: string, options?: Record<string, unknown>) => string;
+
+const VALIDATION_FALLBACKS: Record<string, string> = {
+  [SEARCH_VALIDATION_KEYS.QUERY_TOO_SHORT]:
+    'Informe pelo menos um nicho, CNAE ou termo de pesquisa (mín. 3 caracteres).',
+  [SEARCH_VALIDATION_KEYS.QUERY_TOO_SHORT_US]:
+    'Enter a Google category, niche, or keyword (min. 3 characters).',
+  [SEARCH_VALIDATION_KEYS.NEED_TYPE_OR_TERM]:
+    'Selecione uma categoria/tipo, CNAE ou preencha o termo avançado (mín. 3 caracteres).',
+  [SEARCH_VALIDATION_KEYS.NEED_TYPE_OR_TERM_US]:
+    'Select a category/type or enter a search term (min. 3 characters).',
+  [SEARCH_VALIDATION_KEYS.ADVANCED_TERM_MIN]:
+    'Termo avançado deve ter no mínimo 3 caracteres.',
+};
+
+function resolveValidationMessage(
+  key: string,
+  t?: SearchTranslateFn,
+  options?: Record<string, unknown>,
+): string {
+  if (t) return t(key, options);
+  return VALIDATION_FALLBACKS[key] ?? key;
+}
+
+/** Portuguese-speaking country codes */
+const PT_SPEAKING = new Set(['BR', 'PT']);
+
+/** Convert Google type value to readable English query: car_repair → car repair */
+function typeValueToEnglish(type: string): string {
+  return type.replace(/_/g, ' ');
+}
+
 export function buildTextQuery(payload: SearchPayload): string {
   const parts: string[] = [];
+  const isPortuguese = !payload.countryCode || PT_SPEAKING.has(payload.countryCode);
 
   // 1. Core search intent: advanced term, type label, CNAE description, or niche
   const term = payload.advancedTerm?.trim();
   if (term && term.length >= MIN_QUERY_LENGTH) {
     parts.push(term);
   } else if (payload.includedType) {
-    const typeOption = getPlaceTypeByValue(payload.includedType);
-    parts.push(typeOption ? typeOption.label : 'empresas');
+    if (isPortuguese) {
+      const typeOption = getPlaceTypeByValue(payload.includedType);
+      parts.push(typeOption ? typeOption.label : 'empresas');
+    } else {
+      // Use English type name for non-Portuguese countries (e.g. "pharmacy" not "Farmácia")
+      parts.push(typeValueToEnglish(payload.includedType));
+    }
   } else if (payload.cnaeDescricao?.trim()) {
     // Use CNAE description as search query for Google Places
     parts.push(payload.cnaeDescricao.trim());
   } else if (payload.niches && payload.niches.length > 0) {
     parts.push(payload.niches[0]);
   } else {
-    parts.push('empresas');
+    parts.push(isPortuguese ? 'empresas' : 'businesses');
   }
 
   // 2. Always append location context for better Google Places relevance
@@ -70,23 +117,33 @@ export function buildTextQuery(payload: SearchPayload): string {
   return parts.join(' ');
 }
 
-export function validateSearchPayload(payload: SearchPayload): { ok: true } | { ok: false; message: string } {
-  const hasCnae = !!payload.cnae?.trim() || (payload.cnaes?.length ?? 0) > 0;
+export function validateSearchPayload(
+  payload: SearchPayload,
+  t?: SearchTranslateFn,
+): { ok: true } | { ok: false; message: string; messageKey: string } {
+  const cnaeEnabled = isMarketFeatureEnabled('cnae');
+  const hasCnae = cnaeEnabled && (!!payload.cnae?.trim() || (payload.cnaes?.length ?? 0) > 0);
   const query = buildTextQuery(payload);
   if (query.length < MIN_QUERY_LENGTH && !hasCnae) {
-    return { ok: false, message: 'Informe pelo menos um nicho, CNAE ou termo de pesquisa (mín. 3 caracteres).' };
+    const messageKey = cnaeEnabled
+      ? SEARCH_VALIDATION_KEYS.QUERY_TOO_SHORT
+      : SEARCH_VALIDATION_KEYS.QUERY_TOO_SHORT_US;
+    return { ok: false, messageKey, message: resolveValidationMessage(messageKey, t) };
   }
   const advancedLen = (payload.advancedTerm?.trim() ?? '').length;
   const hasType = !!payload.includedType?.trim();
   const hasNiches = payload.niches.length > 0;
   if (!hasType && !hasNiches && !hasCnae && advancedLen < MIN_QUERY_LENGTH) {
-    return { ok: false, message: 'Selecione uma categoria/tipo, CNAE ou preencha o termo avançado (mín. 3 caracteres).' };
+    const messageKey = cnaeEnabled
+      ? SEARCH_VALIDATION_KEYS.NEED_TYPE_OR_TERM
+      : SEARCH_VALIDATION_KEYS.NEED_TYPE_OR_TERM_US;
+    return { ok: false, messageKey, message: resolveValidationMessage(messageKey, t) };
   }
   return { ok: true };
 }
 
-export async function startSearch(payload: SearchPayload): Promise<SearchResult> {
-  const validation = validateSearchPayload(payload);
+export async function startSearch(payload: SearchPayload, t?: SearchTranslateFn): Promise<SearchResult> {
+  const validation = validateSearchPayload(payload, t);
   if (!validation.ok) throw new Error(validation.message);
 
   const textQuery = buildTextQuery(payload);
@@ -103,93 +160,11 @@ export async function startSearch(payload: SearchPayload): Promise<SearchResult>
     hasPhone: payload.hasPhone && payload.hasPhone !== 'any' ? payload.hasPhone : undefined,
   });
 
-  // If CNAE filter is active (single or multiple), also search Receita Federal data
-  let rfPlaces: Place[] = [];
-  const effectiveCnaes = payload.cnaes?.length ? payload.cnaes : payload.cnae?.trim() ? [payload.cnae.trim()] : [];
-  if (effectiveCnaes.length > 0) {
-    try {
-      const ufCode = payload.state && payload.state !== 'Todos' ? payload.state : undefined;
-      const rfRes = await rfSearchApi.search({
-        cnaes: effectiveCnaes,
-        uf: ufCode,
-        municipio: payload.city?.trim() || undefined,
-        pageSize: 50,
-      });
-      rfPlaces = (rfRes.companies ?? []).map(rfToPlace);
-    } catch {
-      // RF search failed, continue with Google only
-    }
-  }
-
   const res = await googlePromise;
-  // Merge: RF results first (unique by name), then Google results
-  const googlePlaces = res.places ?? [];
-  const merged = mergeResults(rfPlaces, googlePlaces);
 
   return {
-    places: merged,
+    places: res.places ?? [],
     nextPageToken: res.nextPageToken,
     fromCache: (res as { fromCache?: boolean }).fromCache,
   };
-}
-
-/** Convert RF company to Place format for unified display */
-function rfToPlace(rf: RfCompanyResult): Place {
-  const phone = rf.telefone || undefined;
-  const address = [rf.logradouro, rf.numero, rf.bairro, rf.municipio, rf.uf]
-    .filter(Boolean)
-    .join(', ');
-  return {
-    id: `rf_${rf.cnpj}`,
-    displayName: { text: rf.nomeFantasia || rf.razaoSocial, languageCode: 'pt-BR' },
-    formattedAddress: address || undefined,
-    nationalPhoneNumber: phone,
-    websiteUri: undefined,
-    cnpj: rf.cnpj,
-    companyLegalName: rf.razaoSocial,
-    companyTradeName: rf.nomeFantasia || undefined,
-    companyMainCnae: rf.cnaeDescricao || undefined,
-    cnpjStatus: 'ATIVA',
-    rating: undefined,
-    userRatingCount: undefined,
-    types: [],
-    businessStatus: 'OPERATIONAL',
-    opportunityScore: rf.porte === 'DEMAIS' ? 60 : rf.porte === 'EPP' ? 50 : 40,
-    // Extra RF fields
-    rfData: {
-      porte: rf.porte,
-      capitalSocial: rf.capitalSocial,
-      email: rf.email,
-      cep: rf.cep,
-      dataAbertura: rf.dataAbertura,
-      cnaePrincipal: rf.cnaePrincipal,
-      cnaeDescricao: rf.cnaeDescricao,
-    },
-  } as Place;
-}
-
-/** Merge RF and Google results, avoiding duplicates by company name similarity */
-function mergeResults(rfPlaces: Place[], googlePlaces: Place[]): Place[] {
-  const seen = new Set<string>();
-  const result: Place[] = [];
-
-  // Add RF results first (tagged with rf_ prefix in ID)
-  for (const p of rfPlaces) {
-    const name = (p.displayName?.text ?? '').toLowerCase().trim();
-    if (name && !seen.has(name)) {
-      seen.add(name);
-      result.push(p);
-    }
-  }
-
-  // Add Google results that don't match RF names
-  for (const p of googlePlaces) {
-    const name = (p.displayName?.text ?? '').toLowerCase().trim();
-    if (!seen.has(name)) {
-      seen.add(name);
-      result.push(p);
-    }
-  }
-
-  return result;
 }

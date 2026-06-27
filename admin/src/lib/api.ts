@@ -15,16 +15,38 @@ export interface SessionUser {
   role?: PanelRole | null;
 }
 
+export interface MarketRevenueStats {
+  total: number;
+  mrr: number;
+  currency: 'BRL' | 'USD';
+  paidWorkspaces: number;
+}
+
+export interface MarketCountStats {
+  BR: number;
+  US: number;
+  unknown?: number;
+}
+
 export interface AdminStats {
   users: number;
   workspaces: number;
   searchHistory: number;
   leadAnalyses: number;
+  onlineUsers?: number;
+  trialWorkspaces?: number;
+  trialExpiredWorkspaces?: number;
+  paidWorkspaces?: number;
   googlePlacesSearchTotal?: number;
   googlePlacesDetailsTotal?: number;
   serperRequestsTotal?: number;
   aiInputTokensTotal?: number;
   aiOutputTokensTotal?: number;
+  usersByMarket?: MarketCountStats;
+  revenueByMarket?: {
+    BR: MarketRevenueStats;
+    US: MarketRevenueStats;
+  };
 }
 
 export interface StatsHistoryDay {
@@ -91,7 +113,7 @@ export interface ResetPasswordBody {
 }
 
 export interface WorkspaceUpdateBody {
-  plan?: 'FREE' | 'BASIC' | 'PRO' | 'BUSINESS' | 'SCALE';
+  plan?: 'FREE' | 'TRIAL' | 'BASIC' | 'PRO' | 'BUSINESS' | 'SCALE';
   leadsLimit?: number;
 }
 
@@ -114,6 +136,7 @@ export interface AdminWorkspaceListItem {
   leadsLimit: number;
   createdAt: string;
   updatedAt: string;
+  autoProspeccaoEnabled?: boolean;
   _count: { members: number; analyses: number; searchHistory: number };
   usage?: WorkspaceUsage | null;
 }
@@ -164,7 +187,7 @@ export interface AdminAuditLogItem {
 }
 
 export type AiConfigRole = 'lead_analysis' | 'viability';
-export type AiConfigProvider = 'GEMINI' | 'OPENAI' | 'CLOUDFLARE' | 'GROQ' | 'DEEPSEEK' | 'ANTHROPIC';
+export type AiConfigProvider = 'GEMINI' | 'OPENAI' | 'CLOUDFLARE' | 'GROQ' | 'DEEPSEEK' | 'ANTHROPIC' | 'OPENROUTER';
 
 export interface AiConfigListItem {
   id: string;
@@ -194,6 +217,21 @@ export interface AiConfigUpdateBody {
   apiKey?: string;
   cloudflareAccountId?: string | null;
   enabled?: boolean;
+}
+
+export interface AiRuntimeControls {
+  analyzeRateLimitMax: number;
+  analyzeRateLimitWindowSeconds: number;
+  analyzeBulkheadMaxInFlight: number;
+  analyzeBulkheadAcquireTimeoutMs: number;
+  aiModelMaxInFlight: number;
+  analyzeAiMaxOutputTokens: number;
+  aiCircuitBreakerFailureThreshold: number;
+  aiCircuitBreakerOpenMs: number;
+  aiFallbackProvider: 'GEMINI' | 'CLOUDFLARE' | 'OPENROUTER';
+  aiCloudflareModelsLeadAnalysis: string;
+  aiCloudflareModelsViability: string;
+  aiCloudflareModelsCompanyAnalysis: string;
 }
 
 export type WebSearchProvider = 'SERPER' | 'TAVILY';
@@ -249,6 +287,7 @@ export interface AdminListParams {
   limit?: number;
   offset?: number;
   workspaceId?: string;
+  search?: string;
 }
 
 export interface AdminNotificationListItem {
@@ -354,6 +393,7 @@ function buildQuery(params?: AdminListParams): string {
   if (params.limit != null) search.set('limit', String(params.limit));
   if (params.offset != null) search.set('offset', String(params.offset));
   if (params.workspaceId) search.set('workspaceId', params.workspaceId);
+  if (params.search) search.set('search', params.search);
   const q = search.toString();
   return q ? `?${q}` : '';
 }
@@ -408,6 +448,12 @@ export const adminApi = {
       body: JSON.stringify(body),
     }),
 
+  toggleAutoProspeccao: (id: string) =>
+    request<{ data: { id: string; name: string | null; autoProspeccaoEnabled: boolean } }>(
+      `/admin/auto-prospeccao/workspaces/${id}/toggle`,
+      { method: 'POST' },
+    ),
+
   leads: (params?: AdminListParams) =>
     request<AdminListResponse<AdminLeadListItem>>(`/admin/leads${buildQuery(params)}`),
 
@@ -429,6 +475,15 @@ export const adminApi = {
       request<{ ok: boolean }>(`/admin/ai-config/${id}`, { method: 'DELETE' }),
     test: (id: string) =>
       request<{ success: boolean }>(`/admin/ai-config/${id}/test`, { method: 'POST' }),
+  },
+
+  aiRuntime: {
+    get: () => request<{ controls: AiRuntimeControls }>('/admin/ai-config/runtime'),
+    update: (body: Partial<AiRuntimeControls>) =>
+      request<{ controls: AiRuntimeControls }>('/admin/ai-config/runtime', {
+        method: 'PUT',
+        body: JSON.stringify(body),
+      }),
   },
 
   webSearchConfig: {
@@ -560,7 +615,29 @@ export const adminApi = {
     update: (body: Partial<AffiliateSettingsUpdateBody>) =>
       request<AffiliateSettingsPublic>('/admin/affiliate-settings', { method: 'PATCH', body: JSON.stringify(body) }),
   },
+
+  emailLogs: (params?: { limit?: number; offset?: number; type?: string; status?: string; email?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.limit != null) q.set('limit', String(params.limit));
+    if (params?.offset != null) q.set('offset', String(params.offset));
+    if (params?.type) q.set('type', params.type);
+    if (params?.status) q.set('status', params.status);
+    if (params?.email) q.set('email', params.email);
+    const suffix = q.toString() ? `?${q}` : '';
+    return request<{ items: EmailLogItem[]; total: number; limit: number; offset: number }>(`/admin/email-logs${suffix}`);
+  },
 };
+
+export interface EmailLogItem {
+  id: string;
+  type: string;
+  email: string;
+  subject: string;
+  status: string;
+  provider: string | null;
+  error: string | null;
+  createdAt: string;
+}
 
 export interface AffiliateSettingsPublic {
   id: string;
@@ -892,5 +969,189 @@ export const emailMarketingApi = {
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
       }).then(r => r.text()),
+  },
+};
+
+// ─── Auto-Prospecção Admin Types ───────────────────────────────────────────────
+
+export type AutoProspTemplateType =
+  | 'HOT_COLD_INTRO' | 'HOT_FOLLOW_NO_OPEN' | 'HOT_FOLLOW_OPENED' | 'HOT_LAST_ATTEMPT'
+  | 'WARM_WEEK1_EDUCATION' | 'WARM_WEEK2_VALUE' | 'WARM_WEEK3_SOCIAL' | 'WARM_WEEK4_OFFER'
+  | 'CUSTOM';
+
+export interface AutoProspTemplate {
+  id: string;
+  name: string;
+  type: AutoProspTemplateType;
+  subject: string;
+  preheader: string | null;
+  bodyHtml: string;
+  bodyText: string | null;
+  targetCnae: string | null;
+  targetSegment: string | null;
+  isSystem: boolean;
+  workspaceId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AutoProspTemplateListResponse {
+  data: AutoProspTemplate[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
+export interface AutoProspSearchProfile {
+  id: string;
+  name: string;
+  description: string | null;
+  isSystem: boolean;
+  isActive: boolean;
+  priority: number;
+  cnae: string | null;
+  cnaeList: unknown;
+  uf: unknown;
+  porte: unknown;
+  hasEmail: boolean | null;
+  hasPhone: boolean | null;
+  minCapital: number | null;
+  workspaceId: string | null;
+  lastRunAt: string | null;
+  totalFound: number;
+  totalHot: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AutoProspSearchProfileListResponse {
+  data: AutoProspSearchProfile[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
+// ─── Auto-Prospecção Admin API ─────────────────────────────────────────────────
+
+export interface AutoProspConfig {
+  id: string;
+  workspaceId: string;
+  isActive: boolean;
+  scheduleDays: number[];
+  scheduleTimeStart: string;
+  scheduleTimeEnd: string;
+  searchIntervalHours: number;
+  analyzeDelayMinutes: number;
+  maxLeadsPerRun: number;
+  maxEmailsPerDay: number;
+  maxCrmPushPerDay: number;
+  hotScoreMin: number;
+  warmScoreMin: number;
+  crmAutoSend: boolean;
+  crmProvider: string | null;
+  crmOwnerUserId: string | null;
+  emailAutoSend: boolean;
+  emailStepIntervalHours: number;
+  defaultSequenceId: string | null;
+  updatedAt: string;
+}
+
+export interface SenderPoolItem {
+  id: string;
+  workspaceId: string;
+  label: string;
+  provider: string;
+  fromEmail: string;
+  isActive: boolean;
+  dailyLimit: number;
+  sentToday: number;
+  lastUsedAt: string | null;
+  smtpHost: string | null;
+  smtpPort: number | null;
+  smtpUser: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const autoProspeccaoAdminApi = {
+  templates: {
+    list: (params?: { isSystem?: string; type?: string; limit?: number; page?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.isSystem != null) q.set('isSystem', params.isSystem);
+      if (params?.type) q.set('type', params.type);
+      if (params?.limit != null) q.set('limit', String(params.limit));
+      if (params?.page != null) q.set('page', String(params.page));
+      const suffix = q.toString() ? `?${q}` : '';
+      return request<AutoProspTemplateListResponse>(`/admin/auto-prospeccao/templates${suffix}`);
+    },
+    get: (id: string) =>
+      request<{ data: AutoProspTemplate }>(`/admin/auto-prospeccao/templates/${id}`),
+    create: (body: Partial<AutoProspTemplate>) =>
+      request<{ data: AutoProspTemplate }>('/admin/auto-prospeccao/templates', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    update: (id: string, body: Partial<AutoProspTemplate>) =>
+      request<{ data: AutoProspTemplate }>(`/admin/auto-prospeccao/templates/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      }),
+    delete: (id: string) =>
+      request<{ ok: boolean }>(`/admin/auto-prospeccao/templates/${id}`, { method: 'DELETE' }),
+  },
+
+  searchProfiles: {
+    list: (params?: { isSystem?: string; limit?: number; page?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.isSystem != null) q.set('isSystem', params.isSystem);
+      if (params?.limit != null) q.set('limit', String(params.limit));
+      if (params?.page != null) q.set('page', String(params.page));
+      const suffix = q.toString() ? `?${q}` : '';
+      return request<AutoProspSearchProfileListResponse>(`/admin/auto-prospeccao/search-profiles${suffix}`);
+    },
+    get: (id: string) =>
+      request<{ data: AutoProspSearchProfile }>(`/admin/auto-prospeccao/search-profiles/${id}`),
+    create: (body: Partial<AutoProspSearchProfile>) =>
+      request<{ data: AutoProspSearchProfile }>('/admin/auto-prospeccao/search-profiles', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    update: (id: string, body: Partial<AutoProspSearchProfile>) =>
+      request<{ data: AutoProspSearchProfile }>(`/admin/auto-prospeccao/search-profiles/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      }),
+    delete: (id: string) =>
+      request<{ ok: boolean }>(`/admin/auto-prospeccao/search-profiles/${id}`, { method: 'DELETE' }),
+  },
+
+  config: {
+    get: (workspaceId: string) =>
+      request<{ data: AutoProspConfig }>(`/admin/auto-prospeccao/config?workspaceId=${encodeURIComponent(workspaceId)}`),
+    update: (workspaceId: string, body: Partial<AutoProspConfig>) =>
+      request<{ data: AutoProspConfig }>(`/admin/auto-prospeccao/config?workspaceId=${encodeURIComponent(workspaceId)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      }),
+  },
+
+  senderPool: {
+    list: (workspaceId: string) =>
+      request<{ data: SenderPoolItem[] }>(
+        `/admin/auto-prospeccao/sender-pool?workspaceId=${encodeURIComponent(workspaceId)}`,
+      ),
+    create: (body: Record<string, unknown>) =>
+      request<{ data: SenderPoolItem }>('/admin/auto-prospeccao/sender-pool', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    update: (id: string, body: Record<string, unknown>) =>
+      request<{ data: SenderPoolItem }>(`/admin/auto-prospeccao/sender-pool/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      }),
+    delete: (id: string) =>
+      request<{ ok: boolean }>(`/admin/auto-prospeccao/sender-pool/${id}`, { method: 'DELETE' }),
+    test: (id: string, testEmail: string) =>
+      request<{ success: boolean; message: string }>(
+        `/admin/auto-prospeccao/sender-pool/${id}/test`,
+        { method: 'POST', body: JSON.stringify({ testEmail }) },
+      ),
   },
 };

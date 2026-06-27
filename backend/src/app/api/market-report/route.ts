@@ -5,7 +5,9 @@ import { rateLimit } from '@/lib/ratelimit';
 import { getOrCreateRequestId, jsonWithRequestId } from '@/lib/request-id';
 import { marketReportSchema, formatZodError } from '@/lib/validations/schemas';
 import { planHasModule, type ProductPlan } from '@/lib/product-modules';
+import { resolveSearchCountry } from '@/lib/market';
 import { runMarketReport, SearchHttpError } from '@/modules/market';
+import { resolveAiRequestLocale } from '@/lib/i18n/locale';
 
 export async function POST(req: NextRequest) {
   const requestId = getOrCreateRequestId(req);
@@ -42,7 +44,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await runMarketReport(parsed.data, session.user.id);
+    const country = resolveSearchCountry(req, parsed.data.country);
+    const locale = resolveAiRequestLocale(req);
+    const result = await runMarketReport({ ...parsed.data, country }, session.user.id, locale);
     return jsonWithRequestId(result, { requestId });
   } catch (err) {
     if (err instanceof SearchHttpError) {

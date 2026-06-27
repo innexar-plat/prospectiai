@@ -106,7 +106,7 @@ describe('email-templates', () => {
   describe('passwordResetTemplate', () => {
     it('returns reset email with link', () => {
       const out = passwordResetTemplate('/reset?token=abc');
-      expect(out).toContain('Redefinir sua senha');
+      expect(out).toContain('Redefinir senha');
       expect(out).toContain('/reset?token=abc');
       expect(out).toContain('Redefinir senha');
       expect(out).toContain('expira em 1 hora');
@@ -259,6 +259,19 @@ describe('email-templates', () => {
       const out = affiliateApprovedTemplate('<code>', '/x');
       expect(out).toContain('&lt;code&gt;');
     });
+
+
+    it('renders English copy when locale is en', () => {
+      const out = affiliateApprovedTemplate('AFF123', '/login', undefined, 'https://precisionai.innexar.app', 'en');
+      expect(out).toContain('Your affiliate account was approved');
+      expect(out).toContain('Open affiliate dashboard');
+      expect(out).toContain('https://precisionai.innexar.app/r/AFF123');
+    });
+
+    it('uses US siteUrl for affiliate link when provided', () => {
+      const out = affiliateApprovedTemplate('AFF123', '/login', undefined, 'https://precisionai.innexar.app');
+      expect(out).toContain('https://precisionai.innexar.app/r/AFF123');
+    });
   });
 
   describe('affiliateConversionTemplate', () => {
@@ -278,6 +291,13 @@ describe('email-templates', () => {
     it('escapes conversion summary', () => {
       const out = affiliateConversionTemplate('<script>alert(1)</script>', 'R$ 0', '/d');
       expect(out).toContain('&lt;script&gt;alert(1)&lt;&#47;script&gt;');
+    });
+
+    it('preserves absolute US dashboard URL when siteUrl differs from env default', () => {
+      const usDashboard = 'https://precisionai.innexar.app/dashboard/afiliado';
+      const out = affiliateConversionTemplate('Summary', 'R$ 10', usDashboard, undefined, 'https://precisionai.innexar.app');
+      expect(out).toContain(usDashboard);
+      expect(out).not.toContain('URL externa bloqueada');
     });
   });
 });

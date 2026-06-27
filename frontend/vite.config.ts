@@ -52,11 +52,18 @@ export default defineConfig({
     __BUILD_TIME__: JSON.stringify(buildTimestamp),
   },
   build: {
+    emptyOutDir: true,
     rollupOptions: {
       output: {
         manualChunks(id: string) {
           if (id.includes('lucide-react')) return 'icons';
           if (id.includes('node_modules/react-dom')) return 'react-dom';
+          if (id.includes('/lib/i18n/bundles/pt')) return 'i18n-pt';
+          if (id.includes('/lib/i18n/bundles/en')) return 'i18n-en';
+          if (id.includes('/lib/i18n/bundles/es')) return 'i18n-es';
+          if (id.includes('/lib/i18n/pages-messages')) return 'i18n-data';
+          if (id.includes('/lib/i18n/support-messages')) return 'i18n-data';
+          if (id.includes('/lib/i18n/landing-messages')) return 'i18n-data';
         },
       },
     },
@@ -68,7 +75,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    allowedHosts: ['precisionia.com.br', 'localhost'],
+    allowedHosts: ['precisionia.com.br', 'precisionai.innexar.app', 'localhost'],
     proxy: {
       // In dev: proxy /api/* to the Next.js backend (container name for stable DNS)
       '/api': {

@@ -1,7 +1,15 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useId, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronRight, ChevronLeft, X } from 'lucide-react';
 import type { TourStep } from '@/lib/tour-steps';
+import { useI18n } from '@/lib/i18n';
+import { LogoIcon } from '@/components/brand/LogoIcon';
+import {
+  buildHighlightRect,
+  computePopoverLayout,
+  dispatchTourStep,
+  type HighlightRect,
+} from '@/lib/tour-placement';
 
 type Props = {
   sectionId: string;
@@ -10,19 +18,63 @@ type Props = {
   onSkip: () => void;
 };
 
-const PAD = 8;
-const GAP = 12;
+const HIGHLIGHT_PAD = 6;
+const BRAND = '#1047da';
+
+function SpotlightOverlay({ hl, maskId }: { hl: HighlightRect | null; maskId: string }) {
+  if (!hl) {
+    return <div className="absolute inset-0 bg-black/40 transition-opacity duration-300" aria-hidden />;
+  }
+
+  const rx = 10;
+  return (
+    <svg className="absolute inset-0 w-full h-full pointer-events-none" aria-hidden>
+      <defs>
+        <mask id={maskId}>
+          <rect x="0" y="0" width="100%" height="100%" fill="white" />
+          <rect
+            x={hl.left}
+            y={hl.top}
+            width={hl.width}
+            height={hl.height}
+            rx={rx}
+            ry={rx}
+            fill="black"
+          />
+        </mask>
+      </defs>
+      <rect x="0" y="0" width="100%" height="100%" fill="rgba(15, 23, 42, 0.52)" mask={`url(#${maskId})`} />
+      <rect
+        x={hl.left}
+        y={hl.top}
+        width={hl.width}
+        height={hl.height}
+        rx={rx}
+        ry={rx}
+        fill="none"
+        stroke={BRAND}
+        strokeWidth={2}
+        strokeOpacity={0.85}
+        style={{ filter: 'drop-shadow(0 0 12px rgba(16, 71, 218, 0.35))' }}
+      />
+    </svg>
+  );
+}
 
 export function OnboardingTour({ sectionId, steps, onComplete, onSkip }: Props) {
+  const { t } = useI18n();
+  const maskId = useId().replace(/:/g, '');
   const [idx, setIdx] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [tipVisible, setTipVisible] = useState(false);
   const touchRef = useRef<{ x: number; y: number } | null>(null);
+  const scrollYRef = useRef(0);
 
   const step = steps[idx];
   const isFirst = idx === 0;
   const isLast = idx === steps.length - 1;
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+  const isWelcome = !step?.target;
 
   const skip = useCallback(() => onSkip(), [onSkip]);
   const prev = useCallback(() => {
@@ -30,68 +82,105 @@ export function OnboardingTour({ sectionId, steps, onComplete, onSkip }: Props) 
     setIdx((i) => Math.max(0, i - 1));
   }, []);
   const next = useCallback(() => {
-    if (isLast) { onComplete(); return; }
+    if (isLast) {
+      onComplete();
+      return;
+    }
     setTipVisible(false);
     setIdx((i) => i + 1);
   }, [isLast, onComplete]);
 
-  // Swipe support for mobile
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    const t = e.touches[0];
-    touchRef.current = { x: t.clientX, y: t.clientY };
+    const touch = e.touches[0];
+    touchRef.current = { x: touch.clientX, y: touch.clientY };
   }, []);
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    if (!touchRef.current) return;
-    const t = e.changedTouches[0];
-    const dx = t.clientX - touchRef.current.x;
-    const dy = t.clientY - touchRef.current.y;
-    touchRef.current = null;
-    if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) return;
-    if (dx < 0) next(); else prev();
-  }, [next, prev]);
 
-  // Find target, scroll, measure
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      if (!touchRef.current) return;
+      const touch = e.changedTouches[0];
+      const dx = touch.clientX - touchRef.current.x;
+      const dy = touch.clientY - touchRef.current.y;
+      touchRef.current = null;
+      if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) return;
+      if (dx < 0) next();
+      else prev();
+    },
+    [next, prev],
+  );
+
+  useEffect(() => {
+    scrollYRef.current = window.scrollY;
+    const prevOverflow = document.body.style.overflow;
+    const prevPosition = document.body.style.position;
+    const prevTop = document.body.style.top;
+    const prevWidth = document.body.style.width;
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollYRef.current}px`;
+    document.body.style.width = '100%';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.position = prevPosition;
+      document.body.style.top = prevTop;
+      document.body.style.width = prevWidth;
+      window.scrollTo(0, scrollYRef.current);
+    };
+  }, []);
+
+  const measureTarget = useCallback((target: string | null) => {
+    if (!target) {
+      setRect(null);
+      return;
+    }
+    const el = document.querySelector<HTMLElement>(`[data-tour="${target}"]`);
+    setRect(el ? el.getBoundingClientRect() : null);
+  }, []);
+
   useEffect(() => {
     if (!step) return;
 
+    setTipVisible(false);
+    dispatchTourStep(step.target, idx);
+
     if (!step.target) {
       setRect(null);
-      const t = setTimeout(() => setTipVisible(true), 80);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => setTipVisible(true), 80);
+      return () => clearTimeout(timer);
     }
 
     const el = document.querySelector<HTMLElement>(`[data-tour="${step.target}"]`);
     if (!el) {
       setRect(null);
-      const t = setTimeout(() => setTipVisible(true), 80);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => setTipVisible(true), 80);
+      return () => clearTimeout(timer);
     }
 
-    el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    el.scrollIntoView({
+      behavior: 'smooth',
+      block: isMobile ? 'center' : 'nearest',
+      inline: 'nearest',
+    });
 
-    const t = setTimeout(() => {
-      setRect(el.getBoundingClientRect());
+    const timer = setTimeout(() => {
+      measureTarget(step.target);
       setTipVisible(true);
-    }, 350);
-    return () => clearTimeout(t);
-  }, [step, idx]);
+    }, isMobile ? 450 : 350);
 
-  // Update rect on resize / scroll
+    return () => clearTimeout(timer);
+  }, [step, idx, isMobile, measureTarget]);
+
   useEffect(() => {
     if (!step?.target) return;
-    const refresh = () => {
-      const el = document.querySelector<HTMLElement>(`[data-tour="${step.target}"]`);
-      if (el) setRect(el.getBoundingClientRect());
-    };
+    const refresh = () => measureTarget(step.target);
     window.addEventListener('resize', refresh);
     window.addEventListener('scroll', refresh, true);
     return () => {
       window.removeEventListener('resize', refresh);
       window.removeEventListener('scroll', refresh, true);
     };
-  }, [step?.target]);
+  }, [step?.target, measureTarget]);
 
-  // Keyboard
   useEffect(() => {
     const fn = (e: KeyboardEvent) => {
       if (e.key === 'Escape') skip();
@@ -102,192 +191,138 @@ export function OnboardingTour({ sectionId, steps, onComplete, onSkip }: Props) 
     return () => document.removeEventListener('keydown', fn);
   }, [skip, next, prev]);
 
-  if (!step) return null;
-
   const progress = ((idx + 1) / steps.length) * 100;
   const vw = typeof window !== 'undefined' ? window.innerWidth : 1920;
   const vh = typeof window !== 'undefined' ? window.innerHeight : 1080;
+  const tipWidth = isMobile ? Math.min(340, vw - 32) : Math.min(420, vw - 32);
 
-  // When no target, hl collapses to a zero-size point at viewport center
-  // so the 4 overlay rects seamlessly cover everything.
-  const hl = rect
-    ? { left: rect.left - PAD, top: rect.top - PAD, width: rect.width + PAD * 2, height: rect.height + PAD * 2 }
-    : { left: vw / 2, top: vh / 2, width: 0, height: 0 };
+  const hl = useMemo(() => buildHighlightRect(rect, HIGHLIGHT_PAD), [rect]);
 
-  // Tooltip position
-  const tipStyle = (): React.CSSProperties => {
-    const tw = isMobile ? Math.min(320, vw - 24) : Math.min(380, vw * 0.9);
+  const popover = useMemo(
+    () =>
+      computePopoverLayout({
+        hl,
+        preferred: step?.placement,
+        isMobile,
+        vw,
+        vh,
+        tipWidth,
+        targetId: step?.target ?? null,
+      }),
+    [hl, step?.placement, step?.target, isMobile, vw, vh, tipWidth],
+  );
 
-    // No target = centered modal
-    if (!rect) {
-      return { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: tw, maxHeight: vh - 48 };
-    }
-
-    // On mobile, always position below or above the target (no left/right)
-    if (isMobile) {
-      const l = Math.max(12, (vw - tw) / 2);
-      const spaceBelow = vh - (hl.top + hl.height + GAP);
-      const spaceAbove = hl.top - GAP;
-      if (spaceBelow >= 200) {
-        return { position: 'fixed', left: `${l}px`, top: `${hl.top + hl.height + GAP}px`, width: tw, maxHeight: spaceBelow - 12 };
-      }
-      if (spaceAbove >= 200) {
-        return { position: 'fixed', left: `${l}px`, bottom: `${vh - hl.top + GAP}px`, width: tw, maxHeight: spaceAbove - 12 };
-      }
-      // Fallback: center
-      return { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: tw, maxHeight: vh - 48 };
-    }
-
-    const placement = step.placement ?? 'bottom';
-    const cx = hl.left + hl.width / 2;
-    let l = cx - tw / 2;
-    if (l < 12) l = 12;
-    if (l + tw > vw - 12) l = vw - tw - 12;
-
-    const base: React.CSSProperties = { position: 'fixed', left: `${l}px`, width: tw };
-
-    switch (placement) {
-      case 'top':
-        return { ...base, bottom: `${vh - hl.top + GAP}px` };
-      case 'right': {
-        let rl = hl.left + hl.width + GAP;
-        if (rl + tw > vw - 12) rl = Math.max(12, cx - tw / 2);
-        return { ...base, top: `${Math.max(12, hl.top)}px`, left: `${Math.min(rl, vw - tw - 12)}px` };
-      }
-      case 'left': {
-        let ll = hl.left - tw - GAP;
-        if (ll < 12) ll = Math.max(12, cx - tw / 2);
-        return { ...base, top: `${Math.max(12, hl.top)}px`, left: `${Math.max(12, ll)}px` };
-      }
-      case 'bottom':
-      default:
-        return { ...base, top: `${hl.top + hl.height + GAP}px` };
-    }
-  };
+  if (!step) return null;
 
   const overlay = (
     <div
       className="fixed inset-0"
       style={{ zIndex: 99999 }}
       aria-live="polite"
-      aria-label={`Tour passo ${idx + 1} de ${steps.length}`}
+      aria-label={t('common.tour.stepAria', { current: idx + 1, total: steps.length })}
       data-tour-overlay={sectionId}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Invisible click-blocker — prevents interaction with the page behind */}
-      <div className="absolute inset-0" />
+      <SpotlightOverlay hl={hl} maskId={maskId} />
 
-      {/* 4-rect overlay: each rect is one side of the frame around the highlight hole.
-          When highlight transitions between positions the rects animate smoothly. */}
-      <div className="absolute left-0 right-0 top-0 bg-black/65 pointer-events-none transition-all duration-300 ease-out"
-        style={{ height: Math.max(0, hl.top) }} />
-      <div className="absolute left-0 right-0 bg-black/65 pointer-events-none transition-all duration-300 ease-out"
-        style={{ top: Math.max(0, hl.top + hl.height), bottom: 0 }} />
-      <div className="absolute left-0 bg-black/65 pointer-events-none transition-all duration-300 ease-out"
-        style={{ top: Math.max(0, hl.top), height: Math.max(0, hl.height), width: Math.max(0, hl.left) }} />
-      <div className="absolute bg-black/65 pointer-events-none transition-all duration-300 ease-out"
-        style={{ top: Math.max(0, hl.top), height: Math.max(0, hl.height), left: Math.max(0, hl.left + hl.width), right: 0 }} />
-
-      {/* Highlight border glow (only when a real target is visible) */}
-      {rect && (
-        <div
-          className="absolute rounded-xl border-2 border-violet-400/70 pointer-events-none transition-all duration-300 ease-out"
-          style={{
-            left: hl.left, top: hl.top, width: hl.width, height: hl.height,
-            boxShadow: '0 0 20px rgba(139,92,246,0.3), inset 0 0 20px rgba(139,92,246,0.05)',
-          }}
-        />
-      )}
-
-      {/* Tooltip */}
       <div
-        className="rounded-2xl border border-violet-500/30 bg-card shadow-2xl shadow-violet-500/10"
+        className="rounded-2xl border border-[#1047da]/15 bg-card text-foreground shadow-[0_24px_64px_-12px_rgba(15,23,42,0.35)] overflow-hidden"
         style={{
-          ...tipStyle(),
+          ...popover.style,
           pointerEvents: tipVisible ? 'auto' : 'none',
           opacity: tipVisible ? 1 : 0,
-          transition: 'opacity 0.25s ease-out',
+          transition: 'opacity 0.22s ease-out, top 0.28s ease-out, left 0.28s ease-out',
         }}
         role="dialog"
         aria-modal="true"
       >
-        {/* Progress bar */}
-        <div className="h-1 bg-surface rounded-t-2xl overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-violet-500 to-cyan-500 transition-all duration-500"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
+        {popover.showArrow && hl && (
+          <span style={popover.arrowStyle} aria-hidden />
+        )}
 
-        <div className="p-4 sm:p-5 space-y-2.5 sm:space-y-3 overflow-y-auto" style={{ maxHeight: 'inherit' }}>
-          {/* Header */}
+        {isWelcome && (
+          <div
+            className="px-5 pt-5 pb-4 border-b border-border/60 bg-gradient-to-br from-[#1047da]/10 via-[#1047da]/5 to-transparent"
+            aria-hidden
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-[#1047da]/10 flex items-center justify-center ring-1 ring-[#1047da]/20">
+                <LogoIcon size={28} />
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#1047da]">
+                  {t('common.tour.brandTag')}
+                </p>
+                <p className="text-xs text-muted">{t('common.tour.welcomeHint')}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="px-5 pt-4 pb-5 space-y-3 overflow-y-auto" style={{ maxHeight: 'inherit' }}>
           <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-2">
-              {step.icon && <span className="text-lg sm:text-xl" aria-hidden>{step.icon}</span>}
-              <span className="text-[10px] sm:text-[11px] font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wider">
-                {idx + 1} de {steps.length}
-              </span>
+            <div className="space-y-2 min-w-0 flex-1">
+              <p className="text-xs font-medium text-muted">
+                {t('common.tour.stepOf', { current: idx + 1, total: steps.length })}
+              </p>
+              <div className="h-1 rounded-full bg-border/80 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-[#1047da] transition-all duration-500 ease-out"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
             </div>
             <button
               type="button"
               onClick={skip}
-              className="p-2 -mr-2 -mt-1 rounded-lg text-muted hover:text-foreground hover:bg-surface transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-              aria-label="Fechar tour"
+              className="shrink-0 p-2 -mr-1 -mt-1 rounded-lg text-muted hover:text-foreground hover:bg-surface transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center"
+              aria-label={t('common.tour.closeAria')}
             >
               <X size={18} />
             </button>
           </div>
 
-          <h3 className="text-base sm:text-lg font-black text-foreground leading-tight">{step.title}</h3>
-          <p className="text-[13px] sm:text-sm text-muted leading-relaxed">{step.body}</p>
-
-          {/* Step dots */}
-          <div className="flex gap-2 pt-1 justify-center" aria-hidden>
-            {steps.map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => { setTipVisible(false); setIdx(i); }}
-                className={`rounded-full transition-all min-h-[28px] min-w-[28px] flex items-center justify-center ${
-                  i === idx ? '' : ''
-                }`}
-              >
-                <span className={`block rounded-full transition-all ${
-                  i === idx ? 'w-6 h-2 bg-violet-500' : i < idx ? 'w-2 h-2 bg-violet-500/40' : 'w-2 h-2 bg-muted/30'
-                }`} />
-              </button>
-            ))}
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold text-foreground leading-snug tracking-tight flex items-center gap-2">
+              {step.icon && (
+                <span className="text-xl leading-none" aria-hidden>
+                  {step.icon}
+                </span>
+              )}
+              {step.title}
+            </h3>
+            <p className="text-sm text-muted leading-relaxed">{step.body}</p>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center justify-between gap-2 pt-1">
-            <div>
+          <div className="flex items-center justify-between gap-3 pt-2">
+            <div className="min-w-0">
               {!isFirst ? (
                 <button
                   type="button"
                   onClick={prev}
-                  className="inline-flex items-center gap-1 px-3 py-2.5 rounded-xl text-sm font-medium text-muted hover:text-foreground hover:bg-surface transition-colors min-h-[44px]"
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-border bg-surface text-sm font-semibold text-foreground hover:bg-card hover:border-[#1047da]/25 transition-colors min-h-[44px]"
                 >
-                  <ChevronLeft size={16} /> Anterior
+                  <ChevronLeft size={16} aria-hidden />
+                  {t('common.previous')}
                 </button>
               ) : (
                 <button
                   type="button"
                   onClick={skip}
-                  className="text-xs font-medium text-muted/70 hover:text-foreground transition-colors min-h-[44px] px-2"
+                  className="px-3 py-2.5 text-sm font-medium text-muted hover:text-foreground transition-colors min-h-[44px]"
                 >
-                  Pular tour
+                  {t('common.tour.skip')}
                 </button>
               )}
             </div>
             <button
               type="button"
               onClick={next}
-              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-bold transition-colors shadow-lg shadow-violet-600/20 min-h-[44px]"
+              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#1047da] hover:bg-[#0d3bb8] text-white text-sm font-semibold transition-colors shadow-[0_4px_14px_rgba(16,71,218,0.28)] min-h-[44px]"
             >
-              {isLast ? '✓ Concluir' : 'Próximo'}
-              {!isLast && <ChevronRight size={16} />}
+              {isLast ? t('common.tour.complete') : t('common.next')}
+              {!isLast && <ChevronRight size={16} aria-hidden />}
             </button>
           </div>
         </div>

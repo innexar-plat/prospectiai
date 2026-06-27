@@ -1,18 +1,109 @@
 import { NavLink, useLocation, Link } from 'react-router-dom';
-import { Search, Clock, Target, BarChart3, LogOut, Swords, TrendingUp, Users, LayoutDashboard, HelpCircle, ChevronDown, X, Lock, Building2, PanelLeftClose, PanelLeft, Plug, Sparkles, Layers, Crosshair } from 'lucide-react';
+import { Search, Clock, Target, BarChart3, LogOut, Swords, TrendingUp, Users, LayoutDashboard, HelpCircle, ChevronDown, X, Lock, Building2, PanelLeftClose, PanelLeft, Plug, Sparkles, Layers, Crosshair, Bot, CreditCard } from 'lucide-react';
+import { Logo } from '@/components/brand/Logo';
+import { LogoIcon } from '@/components/brand/LogoIcon';
 import { cn } from '@/lib/utils';
 import type { SessionUser } from '@/lib/api';
 import { getPlanDisplayName } from '@/lib/billing-config';
+import { isMarketFeatureEnabled, needsSubscription, US_STARTER_CREDITS } from '@/lib/market';
+import { formatCreditUsage } from '@/lib/credits-display';
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Logo } from '@/components/brand/Logo';
 import { APP_VERSION } from '@/lib/version';
+import { useI18n } from '@/lib/i18n';
+
+type SidebarItem = {
+  to: string;
+  end: boolean;
+  icon: typeof Search;
+  labelKey: string;
+  badge?: 'PRO' | 'BIZ' | 'SCALE';
+};
+
+type SidebarSection = {
+  id: string;
+  titleKey: string;
+  collapsible?: boolean;
+  items: SidebarItem[];
+};
+
+const SIDEBAR_SECTIONS: SidebarSection[] = [
+  {
+    id: 'prospection',
+    titleKey: 'dash.section.prospection',
+    items: [
+      { to: '/dashboard', end: true, icon: Search, labelKey: 'dash.nav.newSearch' },
+      { to: '/dashboard/historico', end: false, icon: Clock, labelKey: 'dash.nav.history' },
+      { to: '/dashboard/leads', end: false, icon: Target, labelKey: 'dash.nav.savedLeads' },
+    ],
+  },
+  {
+    id: 'intelligence',
+    titleKey: 'dash.section.intelligence',
+    collapsible: true,
+    items: [
+      { to: '/dashboard/concorrencia', end: false, icon: Swords, labelKey: 'dash.nav.competition', badge: 'PRO' },
+      { to: '/dashboard/pipeline', end: false, icon: Crosshair, labelKey: 'dash.nav.pipeline', badge: 'PRO' },
+      { to: '/dashboard/mercado', end: false, icon: TrendingUp, labelKey: 'dash.nav.marketIntel', badge: 'BIZ' },
+      { to: '/dashboard/relatorios', end: false, icon: BarChart3, labelKey: 'dash.nav.reports', badge: 'BIZ' },
+      { to: '/dashboard/minha-empresa', end: false, icon: Building2, labelKey: 'dash.nav.myCompany', badge: 'BIZ' },
+      { to: '/dashboard/viabilidade', end: false, icon: Layers, labelKey: 'dash.nav.viability', badge: 'SCALE' },
+    ],
+  },
+  {
+    id: 'team',
+    titleKey: 'dash.section.team',
+    items: [
+      { to: '/dashboard/equipe', end: false, icon: Users, labelKey: 'dash.nav.myTeam', badge: 'SCALE' },
+      { to: '/dashboard/equipe/dashboard', end: true, icon: LayoutDashboard, labelKey: 'dash.nav.teamDashboard', badge: 'SCALE' },
+    ],
+  },
+  {
+    id: 'auto-prospeccao',
+    titleKey: 'dash.section.autoProspeccao',
+    collapsible: true,
+    items: [
+      { to: '/dashboard/auto-prospeccao', end: true, icon: Bot, labelKey: 'dash.nav.autoOverview' },
+      { to: '/dashboard/auto-prospeccao/leads', end: false, icon: Target, labelKey: 'dash.nav.autoLeads' },
+      { to: '/dashboard/auto-prospeccao/perfis', end: false, icon: Search, labelKey: 'dash.nav.autoProfiles' },
+      { to: '/dashboard/auto-prospeccao/historico', end: false, icon: Clock, labelKey: 'dash.nav.autoHistory' },
+    ],
+  },
+  {
+    id: 'affiliates',
+    titleKey: 'dash.section.affiliates',
+    collapsible: true,
+    items: [
+      { to: '/dashboard/afiliado', end: true, icon: Users, labelKey: 'dash.nav.affiliateOverview' },
+      { to: '/dashboard/afiliado/dicas', end: false, icon: HelpCircle, labelKey: 'dash.nav.affiliateTips' },
+      { to: '/dashboard/afiliado/conversoes', end: false, icon: TrendingUp, labelKey: 'dash.nav.affiliateConversions' },
+      { to: '/dashboard/afiliado/comissoes', end: false, icon: BarChart3, labelKey: 'dash.nav.affiliateCommissions' },
+      { to: '/dashboard/afiliado/materiais', end: false, icon: Layers, labelKey: 'dash.nav.affiliateMaterials' },
+      { to: '/dashboard/afiliado/pagamento', end: false, icon: Clock, labelKey: 'dash.nav.affiliatePayment' },
+    ],
+  },
+  {
+    id: 'account',
+    titleKey: 'dash.section.account',
+    items: [
+      { to: '/dashboard/planos', end: false, icon: CreditCard, labelKey: 'dash.nav.plans' },
+    ],
+  },
+  {
+    id: 'support',
+    titleKey: 'dash.section.support',
+    items: [
+      { to: '/dashboard/integracoes', end: false, icon: Plug, labelKey: 'dash.nav.integrations' },
+      { to: '/dashboard/suporte', end: false, icon: HelpCircle, labelKey: 'dash.nav.help' },
+    ],
+  },
+];
 
 const SIDEBAR_COLLAPSED_KEY = 'prospector_sidebar_collapsed';
 const SIDEBAR_WIDTH_EXPANDED = 224;
 const SIDEBAR_WIDTH_COLLAPSED = 72;
 
-const PLAN_ORDER: string[] = ['FREE', 'BASIC', 'PRO', 'BUSINESS', 'SCALE'];
+const PLAN_ORDER: string[] = ['FREE', 'TRIAL', 'BASIC', 'PRO', 'BUSINESS', 'SCALE'];
 const BADGE_TO_PLAN_NAME: Record<string, string> = {
   PRO: 'Growth',
   BIZ: 'Business',
@@ -25,57 +116,6 @@ function hasPlanAccess(userPlan: string | undefined, requiredBadge: 'PRO' | 'BIZ
   const requiredIdx = PLAN_ORDER.indexOf(requiredPlan);
   return userIdx >= 0 && requiredIdx >= 0 && userIdx >= requiredIdx;
 }
-
-type SidebarItem = {
-  to: string;
-  end: boolean;
-  icon: typeof Search;
-  label: string;
-  badge?: 'PRO' | 'BIZ' | 'SCALE';
-};
-
-type SidebarSection = {
-  title: string;
-  collapsible?: boolean;
-  items: SidebarItem[];
-};
-
-const SIDEBAR_SECTIONS: SidebarSection[] = [
-  {
-    title: 'Prospecção',
-    items: [
-      { to: '/dashboard', end: true, icon: Search, label: 'Nova Busca' },
-      { to: '/dashboard/historico', end: false, icon: Clock, label: 'Histórico' },
-      { to: '/dashboard/leads', end: false, icon: Target, label: 'Leads Salvos' },
-    ],
-  },
-  {
-    title: 'Inteligência',
-    collapsible: true,
-    items: [
-      { to: '/dashboard/concorrencia', end: false, icon: Swords, label: 'Concorrência', badge: 'PRO' },
-      { to: '/dashboard/pipeline', end: false, icon: Crosshair, label: 'Pipeline IA', badge: 'PRO' },
-      { to: '/dashboard/mercado', end: false, icon: TrendingUp, label: 'Intel. Mercado', badge: 'BIZ' },
-      { to: '/dashboard/relatorios', end: false, icon: BarChart3, label: 'Relatórios', badge: 'BIZ' },
-      { to: '/dashboard/minha-empresa', end: false, icon: Building2, label: 'Análise minha empresa', badge: 'BIZ' },
-      { to: '/dashboard/viabilidade', end: false, icon: Layers, label: 'Viabilidade', badge: 'SCALE' },
-    ],
-  },
-  {
-    title: 'Equipe',
-    items: [
-      { to: '/dashboard/equipe', end: false, icon: Users, label: 'Minha Equipe', badge: 'SCALE' },
-      { to: '/dashboard/equipe/dashboard', end: true, icon: LayoutDashboard, label: 'Dashboard da equipe', badge: 'SCALE' },
-    ],
-  },
-  {
-    title: 'Suporte',
-    items: [
-      { to: '/dashboard/integracoes', end: false, icon: Plug, label: 'Integrações' },
-      { to: '/dashboard/suporte', end: false, icon: HelpCircle, label: 'Ajuda e Suporte' },
-    ],
-  },
-];
 
 function getStoredSidebarCollapsed(): boolean {
   if (typeof window === 'undefined') return false;
@@ -99,14 +139,15 @@ export function SidebarNav({
   mobileOpen?: boolean;
   onMobileClose?: () => void;
 }) {
+  const { t, locale } = useI18n();
   const [sectionCollapsed, setSectionCollapsed] = useState<Record<string, boolean>>({});
   const [sidebarCollapsed, setSidebarCollapsed] = useState(getStoredSidebarCollapsed);
   const [upgradeModal, setUpgradeModal] = useState<{ planName: string; feature: string } | null>(null);
   const location = useLocation();
   const prevPathnameRef = useRef(location.pathname);
 
-  const toggleSection = (title: string) =>
-    setSectionCollapsed((prev) => ({ ...prev, [title]: !prev[title] }));
+  const toggleSection = (id: string) =>
+    setSectionCollapsed((prev) => ({ ...prev, [id]: !prev[id] }));
 
   const toggleSidebarCollapsed = () => {
     setSidebarCollapsed((prev) => {
@@ -132,47 +173,86 @@ export function SidebarNav({
   }, [upgradeModal]);
 
   function renderContent(isNarrow: boolean, showCollapseToggle: boolean) {
+    const displayName = user.name?.trim() || user.email?.split('@')[0] || t('dash.greeting.defaultUser');
+    const shortName = displayName.split(/\s+/)[0] || displayName;
+    const numberLocale = locale === 'pt' ? 'pt-BR' : locale === 'es' ? 'es' : 'en-US';
+    const creditUsage = formatCreditUsage(user, numberLocale);
+    const usedCreditsLabel = `${creditUsage.usedLabel}/${creditUsage.limitLabel}`;
+    const userNeedsSubscription = needsSubscription(user);
+    const upgradeCtaLabel = userNeedsSubscription
+      ? t('dash.credits.subscribeCta', { count: US_STARTER_CREDITS })
+      : t('dash.upgrade.cta');
+
     const logoBlock = (
-      <div className={cn('flex items-center shrink-0 overflow-hidden', isNarrow ? 'mb-1 justify-center py-1' : 'justify-between mb-2')}>
-        <Logo height={isNarrow ? 32 : undefined} className="shrink-0" fillWidth={!isNarrow} />
-        {onMobileClose && !isNarrow && (
-          <button
-            type="button"
-            onClick={onMobileClose}
-            className="md:hidden p-2 -mr-2 rounded-lg text-muted hover:text-foreground hover:bg-surface transition-colors"
-            aria-label="Fechar menu"
-          >
-            <X size={20} />
-          </button>
-        )}
+      <div className={cn('flex items-center shrink-0', isNarrow ? 'justify-between py-1.5' : 'justify-between py-1 mb-1')}>
+        <Link to="/dashboard" className="flex items-center gap-2 group min-w-0" aria-label="Precision">
+          {isNarrow ? (
+            <LogoIcon size={28} />
+          ) : (
+            <>
+              <Logo height={32} className="max-w-[9.5rem]" />
+              <span className="text-[10px] text-muted/45 leading-none select-none">v{APP_VERSION}</span>
+            </>
+          )}
+        </Link>
+        <div className="flex items-center gap-1">
+          {showCollapseToggle && (
+            <button
+              type="button"
+              onClick={toggleSidebarCollapsed}
+              className="p-1.5 rounded-lg text-muted/60 hover:text-foreground hover:bg-surface transition-colors"
+              aria-label={isNarrow ? t('dash.sidebar.expand') : t('dash.sidebar.collapse')}
+              title={isNarrow ? t('dash.sidebar.expand') : t('dash.sidebar.collapse')}
+            >
+              {isNarrow ? <PanelLeft size={16} /> : <PanelLeftClose size={16} />}
+            </button>
+          )}
+          {onMobileClose && !isNarrow && (
+            <button
+              type="button"
+              onClick={onMobileClose}
+              className="md:hidden p-2 -mr-2 rounded-lg text-muted hover:text-foreground hover:bg-surface transition-colors"
+              aria-label={t('dash.sidebar.close')}
+            >
+              <X size={20} />
+            </button>
+          )}
+        </div>
       </div>
     );
 
     const itemClass = (active: boolean) =>
       cn(
-        'w-full flex items-center rounded-lg transition-colors text-[13px] border border-transparent',
+        'group relative w-full flex items-center rounded-xl transition-all duration-200 text-[13px] border',
         active
-          ? 'bg-violet-600/10 text-violet-500 border-violet-500/20'
-          : 'text-muted hover:text-foreground hover:bg-surface'
+          ? 'bg-gradient-to-r from-violet-600/15 to-indigo-600/10 text-violet-600 dark:text-violet-300 border-violet-500/25 shadow-sm shadow-violet-500/10'
+          : 'text-muted border-transparent hover:text-foreground hover:bg-surface/80 hover:border-border/60 hover:shadow-sm'
       );
 
     const navContent = (
-      <nav className="flex-1 space-y-5 overflow-y-auto scrollbar-thin" aria-label="Navegação do dashboard" data-tour="sidebar-nav">
-        {SIDEBAR_SECTIONS.map((section) => {
-          const isSecCollapsed = sectionCollapsed[section.title];
+      <nav className="flex-1 space-y-4 overflow-y-auto scrollbar-thin" aria-label={t('dash.sidebar.navAria')} data-tour="sidebar-nav">
+        {SIDEBAR_SECTIONS.filter((section) => {
+          if (section.id === 'auto-prospeccao') {
+            return isMarketFeatureEnabled('autoProspeccao') && !!user.autoProspeccaoEnabled;
+          }
+          return true;
+        }).map((section, sectionIndex) => {
+          const isSecCollapsed = sectionCollapsed[section.id];
+          const sectionTitle = t(section.titleKey);
           return (
-            <div key={section.title}>
+            <div key={section.id}>
               {!isNarrow && (
                 <button
                   type="button"
-                  onClick={() => section.collapsible && toggleSection(section.title)}
+                  onClick={() => section.collapsible && toggleSection(section.id)}
                   className={cn(
-                    'w-full flex items-center justify-between px-3 py-1 mb-1.5',
+                    'w-full flex items-center justify-between px-3 pb-1 mb-1.5',
+                    sectionIndex > 0 ? 'pt-5' : 'pt-1',
                     section.collapsible ? 'cursor-pointer hover:opacity-80' : 'cursor-default'
                   )}
                 >
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted select-none">
-                    {section.title}
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted/70 select-none">
+                    {sectionTitle}
                   </span>
                   {section.collapsible && (
                     <ChevronDown
@@ -184,7 +264,8 @@ export function SidebarNav({
               )}
               {(!isNarrow && !isSecCollapsed) || isNarrow ? (
                 <div className={cn('space-y-0.5', isNarrow && 'space-y-1')}>
-                  {section.items.map(({ to, end, icon: Icon, label, badge }) => {
+                  {section.items.map(({ to, end, icon: Icon, labelKey, badge }) => {
+                    const label = t(labelKey);
                     const locked = badge && !hasPlanAccess(user.plan, badge);
                     const planName = badge ? BADGE_TO_PLAN_NAME[badge] : '';
                     const linkContent = (
@@ -197,6 +278,7 @@ export function SidebarNav({
                     );
                     const tourId = to === '/dashboard/historico' ? 'sidebar-historico'
                       : to === '/dashboard/leads' ? 'sidebar-leads'
+                      : to === '/dashboard/planos' ? 'sidebar-planos'
                       : to === '/dashboard/integracoes' ? 'sidebar-integracoes'
                       : to === '/dashboard/concorrencia' ? 'sidebar-inteligencia'
                       : to === '/dashboard/equipe' ? 'sidebar-equipe'
@@ -229,16 +311,12 @@ export function SidebarNav({
                         className={({ isActive }) =>
                           cn(
                             itemClass(isActive),
-                            isNarrow ? 'justify-center p-3 min-h-[44px]' : 'justify-between px-3 py-2 min-h-[38px]'
+                            isNarrow ? 'justify-center p-3 min-h-[44px]' : 'justify-between px-3 py-2.5 min-h-[40px]',
+                            isActive && !isNarrow && 'before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-0.5 before:rounded-full before:bg-gradient-to-b before:from-violet-500 before:to-indigo-500'
                           )
                         }
                       >
-                        {({ isActive }) => (
-                          <>
-                            {linkContent}
-                            {!isNarrow && isActive && <span className="w-1 h-1 rounded-full bg-violet-500 shrink-0" aria-hidden />}
-                          </>
-                        )}
+                        {() => linkContent}
                       </NavLink>
                     );
                   })}
@@ -251,102 +329,56 @@ export function SidebarNav({
     );
 
     const footerBlock = (
-      <div className={cn('mt-auto pt-3 border-t border-border/50', isNarrow ? 'space-y-2' : 'space-y-3')}>
-        <div className={cn('rounded-lg bg-surface border border-border', isNarrow ? 'px-2 py-2' : 'px-3 py-2')}>
-          {isNarrow ? (
-            <div className="h-1.5 w-full bg-background rounded-full overflow-hidden" title={`Créditos ${user.leadsUsed}/${user.leadsLimit}`}>
-              <div
-                className="h-full bg-violet-600 rounded-full transition-all"
-                style={{ width: `${user.leadsLimit > 0 ? (user.leadsUsed / user.leadsLimit) * 100 : 0}%` }}
-                role="progressbar"
-                aria-valuenow={user.leadsUsed}
-                aria-valuemin={0}
-                aria-valuemax={user.leadsLimit}
-              />
-            </div>
-          ) : (
-            <>
-              <div className="flex justify-between items-center text-[10px] font-semibold uppercase tracking-wider text-muted">
-                <span>Créditos</span>
-                <span className="text-violet-500 tabular-nums">{user.leadsUsed}/{user.leadsLimit}</span>
-              </div>
-              <div className="h-1 w-full bg-background rounded-full overflow-hidden mt-1.5">
-                <div
-                  className="h-full bg-violet-600 rounded-full transition-all"
-                  style={{ width: `${user.leadsLimit > 0 ? (user.leadsUsed / user.leadsLimit) * 100 : 0}%` }}
-                  role="progressbar"
-                  aria-valuenow={user.leadsUsed}
-                  aria-valuemin={0}
-                  aria-valuemax={user.leadsLimit}
-                />
-              </div>
-            </>
-          )}
-        </div>
-        {user.plan !== 'SCALE' && (
-          <Link
-            to="/dashboard/planos"
-            data-tour="sidebar-upgrade"
-            title={isNarrow ? 'Fazer upgrade' : undefined}
-            className={cn(
-              'flex items-center rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold transition-all hover:opacity-90 shadow-md shadow-violet-600/20',
-              isNarrow ? 'justify-center p-2.5' : 'gap-2 px-3 py-2 text-xs'
-            )}
-          >
-            <Sparkles size={isNarrow ? 18 : 14} className="shrink-0" />
-            {!isNarrow && <span>Fazer upgrade</span>}
-          </Link>
-        )}
-        <div className={cn('flex rounded-lg border border-transparent hover:bg-surface/50 transition-colors', isNarrow ? 'justify-center p-2 gap-0' : 'items-center gap-2.5 px-2 py-2')}>
-          <div className="w-8 h-8 rounded-full bg-violet-600/20 flex items-center justify-center font-semibold text-xs text-violet-600 dark:text-violet-400 shrink-0" title={isNarrow ? `${user.name || 'Usuário'} · ${getPlanDisplayName(user.plan)}` : undefined}>
-            {user.name?.[0] || user.email?.[0] || 'U'}
+      <div className={cn('mt-auto border-t border-border/50', isNarrow ? 'pt-2' : 'pt-2')}>
+        <div className={cn('flex items-center rounded-xl transition-colors', isNarrow ? 'justify-center p-1.5' : 'gap-2 px-2.5 py-2 hover:bg-surface/60')}>
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500/20 to-indigo-500/20 flex items-center justify-center font-bold text-[11px] text-violet-500 shrink-0 ring-1 ring-violet-500/10" title={isNarrow ? `${displayName} · ${getPlanDisplayName(user.plan)}` : undefined}>
+            {displayName[0]?.toUpperCase() || 'U'}
           </div>
           {!isNarrow && (
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold truncate text-foreground">{user.name || 'Usuário'}</p>
-              <p className="text-[10px] text-muted truncate">{getPlanDisplayName(user.plan)}</p>
-            </div>
+            <>
+              <p className="text-xs font-semibold truncate text-foreground leading-none max-w-[88px]">{shortName}</p>
+              {!userNeedsSubscription && (
+                <span className="inline-flex items-center rounded-full border border-violet-500/25 bg-violet-500/10 px-2 py-0.5 text-[10px] font-bold text-violet-500 tabular-nums">
+                  {usedCreditsLabel}
+                </span>
+              )}
+            </>
           )}
           <button
             type="button"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onLogout(); }}
-            className="shrink-0 p-2 text-muted hover:text-red-500 hover:bg-red-500/10 transition-colors rounded focus:outline-none focus:ring-2 focus:ring-red-500/50"
-            aria-label="Sair da conta"
-            title="Sair"
+            className="ml-auto shrink-0 p-1.5 text-muted/50 hover:text-red-500 hover:bg-red-500/10 transition-colors rounded-lg"
+            aria-label={t('dash.logout')}
+            title={t('dash.logout')}
           >
-            <LogOut size={16} />
+            <LogOut size={14} />
           </button>
         </div>
-        {showCollapseToggle && (isNarrow ? (
-          <button
-            type="button"
-            onClick={toggleSidebarCollapsed}
-            className="w-full flex items-center justify-center p-2.5 rounded-lg text-muted hover:text-foreground hover:bg-surface transition-colors"
-            aria-label="Expandir menu"
-            title="Expandir menu"
-          >
-            <PanelLeft size={20} />
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={toggleSidebarCollapsed}
-            className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-muted hover:text-foreground hover:bg-surface transition-colors text-xs font-medium"
-            aria-label="Recolher menu"
-            title="Recolher menu"
-          >
-            <PanelLeftClose size={18} />
-            <span>Recolher menu</span>
-          </button>
-        ))}
-        {!isNarrow && (
-          <p className="text-[10px] text-muted/40 text-center pt-1 select-none">v{APP_VERSION}</p>
+
+        {/* Upgrade CTA */}
+        {user.plan !== 'SCALE' && (
+          <div className={cn('px-2.5', isNarrow && 'px-1.5')}>
+            <Link
+              to="/dashboard/planos"
+              data-tour="sidebar-upgrade"
+              title={isNarrow ? upgradeCtaLabel : undefined}
+              className={cn(
+                'flex items-center rounded-xl bg-gradient-to-r from-violet-600 via-violet-600 to-indigo-600 text-white font-semibold transition-all duration-300',
+                'hover:shadow-lg hover:shadow-violet-600/30 hover:-translate-y-0.5 hover:from-violet-500 hover:to-indigo-500',
+                'ring-1 ring-white/10',
+                isNarrow ? 'justify-center p-2.5' : 'gap-2 px-3 py-2.5 text-xs'
+              )}
+            >
+              <Sparkles size={isNarrow ? 16 : 13} className="shrink-0" />
+              {!isNarrow && <span>{upgradeCtaLabel}</span>}
+            </Link>
+          </div>
         )}
       </div>
     );
 
     return (
-      <div className={cn('z-10 relative flex flex-col flex-1 min-h-0', isNarrow ? 'px-2 py-4' : 'px-3 pb-4 pt-0')}>
+      <div className={cn('z-10 relative flex flex-col flex-1 min-h-0', isNarrow ? 'px-2 py-3' : 'px-3 pb-3 pt-3')}>
         {logoBlock}
         {navContent}
         {footerBlock}
@@ -357,13 +389,15 @@ export function SidebarNav({
   return (
     <>
       <aside
-        className="bg-card border-r border-border flex flex-col relative overflow-hidden hidden md:flex transition-[min-width] duration-200"
+        className="relative hidden md:flex flex-col overflow-hidden transition-[min-width] duration-300 ease-out border-r border-violet-500/10 bg-gradient-to-b from-card via-card to-card/95 backdrop-blur-xl shadow-[inset_-1px_0_0_0_rgba(139,92,246,0.06)]"
         style={{
           width: sidebarCollapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED,
           minWidth: sidebarCollapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED,
         }}
         aria-label="Menu principal"
       >
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-violet-600/[0.07] to-transparent" aria-hidden />
+        <div className="pointer-events-none absolute -left-20 top-1/4 h-40 w-40 rounded-full bg-violet-600/[0.04] blur-3xl" aria-hidden />
         {renderContent(sidebarCollapsed, true)}
       </aside>
       {mobileOpen && onMobileClose && typeof document !== 'undefined' && createPortal(
@@ -378,7 +412,7 @@ export function SidebarNav({
             role="presentation"
           />
           <aside
-            className="fixed left-0 top-0 bottom-0 w-64 max-w-[85vw] bg-card border-r border-border flex flex-col shadow-xl md:hidden animate-in slide-in-from-left-2 duration-200"
+            className="fixed left-0 top-0 bottom-0 w-64 max-w-[85vw] flex flex-col border-r border-violet-500/15 bg-gradient-to-b from-card via-card to-card/98 backdrop-blur-xl shadow-2xl shadow-violet-900/10 md:hidden animate-in slide-in-from-left-2 duration-200"
             style={{ zIndex: 9999 }}
             aria-label="Menu principal"
           >
@@ -403,10 +437,10 @@ export function SidebarNav({
           />
           <div className="relative rounded-xl border border-border bg-card p-6 shadow-xl max-w-sm w-full">
             <h2 id="upgrade-modal-title" className="text-lg font-semibold text-foreground mb-1">
-              Recurso disponível no plano {upgradeModal.planName}
+              {t('dash.upgrade.title', { plan: upgradeModal.planName })}
             </h2>
             <p className="text-sm text-muted mb-4">
-              &quot;{upgradeModal.feature}&quot; faz parte do plano {upgradeModal.planName}. Faça upgrade para acessar.
+              {t('dash.upgrade.desc', { feature: upgradeModal.feature, plan: upgradeModal.planName })}
             </p>
             <div className="flex gap-2">
               <button
@@ -414,14 +448,14 @@ export function SidebarNav({
                 onClick={() => setUpgradeModal(null)}
                 className="flex-1 px-3 py-2 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-surface transition-colors"
               >
-                Fechar
+                {t('dash.upgrade.close')}
               </button>
               <Link
                 to="/dashboard/planos"
                 onClick={() => setUpgradeModal(null)}
                 className="flex-1 px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium text-center transition-colors"
               >
-                Ver planos
+                {t('dash.upgrade.viewPlans')}
               </Link>
             </div>
           </div>

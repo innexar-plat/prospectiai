@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getStatesByCountry, getCountryLabel, BR_STATES, US_STATES, COUNTRIES } from './locationData';
+import { getStatesByCountry, getCountryLabel, normalizeCountryCode, getStateLabel, getSearchCountries, BR_STATES, US_STATES, COUNTRIES } from './locationData';
 
 describe('locationData', () => {
   describe('getStatesByCountry', () => {
@@ -9,17 +9,43 @@ describe('locationData', () => {
 
     it('returns US_STATES for US', () => {
       const states = getStatesByCountry('US');
-      expect(states[0]).toBe('Todos');
+      expect(states[0]).toEqual({ value: 'Todos', label: 'All states' });
       expect(states).toHaveLength(52);
-      expect(states).toContain('CA');
-      expect(states).toContain('NY');
-      expect(states).toContain('TX');
-      expect(states).toContain('DC');
+      expect(states).toEqual(expect.arrayContaining([
+        expect.objectContaining({ value: 'CA' }),
+        expect.objectContaining({ value: 'NY' }),
+        expect.objectContaining({ value: 'TX' }),
+        expect.objectContaining({ value: 'DC' }),
+      ]));
       expect(states).toEqual(US_STATES);
     });
 
-    it('returns ["Todos"] for other countries', () => {
-      expect(getStatesByCountry('AR')).toEqual(['Todos']);
+    it('returns mapped states for non-BR countries', () => {
+      const arStates = getStatesByCountry('AR');
+      expect(arStates[0]).toEqual({ value: 'Todos', label: 'Todas las provincias' });
+      expect(arStates.length).toBeGreaterThan(1);
+    });
+  });
+
+  describe('normalizeCountryCode', () => {
+    it('uppercases valid ISO codes', () => {
+      expect(normalizeCountryCode('us')).toBe('US');
+      expect(normalizeCountryCode(' br ')).toBe('BR');
+    });
+
+    it('maps common US aliases', () => {
+      expect(normalizeCountryCode('usa')).toBe('US');
+      expect(normalizeCountryCode('United States')).toBe('US');
+    });
+  });
+
+  describe('getStateLabel', () => {
+    it('returns UF abbreviation for BR states', () => {
+      expect(getStateLabel('BR', 'SP')).toBe('SP');
+    });
+
+    it('returns full name for US states', () => {
+      expect(getStateLabel('US', 'FL')).toBe('Florida');
     });
   });
 
@@ -41,9 +67,21 @@ describe('locationData', () => {
     });
 
     it('BR_STATES includes Todos and UFs', () => {
-      expect(BR_STATES[0]).toBe('Todos');
-      expect(BR_STATES).toContain('SP');
-      expect(BR_STATES).toContain('RJ');
+      expect(BR_STATES[0]).toEqual({ value: 'Todos', label: 'Todos os estados' });
+      expect(BR_STATES).toEqual(expect.arrayContaining([
+        expect.objectContaining({ value: 'SP' }),
+        expect.objectContaining({ value: 'RJ' }),
+      ]));
+    });
+  });
+
+  describe('getSearchCountries', () => {
+    it('returns all countries in BR market', () => {
+      expect(getSearchCountries('BR')).toEqual(COUNTRIES);
+    });
+
+    it('returns only US in US market', () => {
+      expect(getSearchCountries('US')).toEqual([COUNTRIES.find((c) => c.value === 'US')]);
     });
   });
 });

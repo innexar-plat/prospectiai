@@ -1,11 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { approveCommissionsByAvailableAt } from '@/lib/affiliate';
+import { approveCommissionsByAvailableAt, buildAffiliateDashboardUrl } from '@/lib/affiliate';
 import { sendAffiliateCommissionAvailableEmail } from '@/lib/email';
 import { logger } from '@/lib/logger';
-
-const AFFILIATE_DASHBOARD_PATH = '/dashboard/afiliado';
-const APP_BASE = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
 /**
  * Cron: aprova comissões cujo availableAt já passou (PENDING -> APPROVED).
@@ -28,25 +25,26 @@ export async function GET(req: Request) {
       where: { status: 'PENDING', availableAt: { lte: now } },
       select: {
         affiliateId: true,
+        currency: true,
         affiliate: {
           select: { email: true, user: { select: { email: true } } },
         },
       },
     });
-    const affiliateEmails = new Map<string, string>();
+    const affiliateEmails = new Map<string, { email: string; currency: string }>();
     for (const row of toApprove) {
       const email = row.affiliate.email ?? row.affiliate.user?.email ?? null;
       if (email && !affiliateEmails.has(row.affiliateId)) {
-        affiliateEmails.set(row.affiliateId, email);
+        affiliateEmails.set(row.affiliateId, { email, currency: row.currency ?? 'BRL' });
       }
     }
 
     const count = await approveCommissionsByAvailableAt();
     logger.info('Affiliate approve commissions cron completed', { count });
 
-    const dashboardUrl = `${APP_BASE.replace(/\/$/, '')}${AFFILIATE_DASHBOARD_PATH}`;
-    for (const email of affiliateEmails.values()) {
-      sendAffiliateCommissionAvailableEmail(email, dashboardUrl).catch((e) => {
+    for (const { email, currency } of affiliateEmails.values()) {
+      const dashboardUrl = buildAffiliateDashboardUrl(currency);
+      sendAffiliateCommissionAvailableEmail(email, dashboardUrl, currency).catch((e) => {
         logger.error('Affiliate commission available email failed', { email, error: e instanceof Error ? e.message : 'Unknown' });
       });
     }

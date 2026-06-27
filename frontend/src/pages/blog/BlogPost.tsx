@@ -2,9 +2,10 @@ import React, { useEffect, useRef } from 'react';
 import { Link, useParams, Navigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Calendar, Clock, Tag } from 'lucide-react';
 import { Logo } from '@/components/brand/Logo';
+import LegalFooterLinks from '@/components/legal/LegalFooterLinks';
 import { BLOG_POSTS, getBlogPostBySlug } from './blogData';
-
-const BASE_URL = 'https://precisionia.com.br';
+import { getActiveMarket } from '@/lib/market';
+import { getAppOrigin } from '@/lib/site-url';
 
 function setMeta(nameOrProperty: string, content: string, isProperty = false) {
   const attr = isProperty ? 'property' : 'name';
@@ -28,13 +29,13 @@ const ARTICLE_CONTENT: Record<string, React.ReactNode> = {
       <p>Antes de sair buscando empresas, defina quem é seu <strong>cliente ideal</strong>. Considere: setor de atuação, faixa de faturamento, número de funcionários, região geográfica e maturidade digital. Quanto mais específico, mais qualificados serão seus leads.</p>
 
       <h2>2. Use Ferramentas de Prospecção com IA</h2>
-      <p>Plataformas como o <strong>PrecisionAI</strong> permitem buscar empresas por nicho e região em segundos. A IA analisa cada empresa e atribui um <em>Score de Potencial</em> — priorizando quem tem mais chance de comprar.</p>
+      <p>Plataformas como o <strong>Precision</strong> permitem buscar empresas por nicho e região em segundos. A IA analisa cada empresa e atribui um <em>Score de Potencial</em> — priorizando quem tem mais chance de comprar.</p>
 
       <h2>3. Busque por Nicho e Região</h2>
       <p>Em vez de comprar listas genéricas, busque empresas pelo nicho exato (ex: &quot;clínicas odontológicas&quot;) e pela região onde você atua. Isso garante relevância e proximidade — dois fatores que aumentam a taxa de resposta.</p>
 
       <h2>4. Analise a Presença Digital</h2>
-      <p>Empresas com site, Google Meu Negócio e redes sociais ativas tendem a investir mais em crescimento. Use isso como critério de qualificação. O PrecisionAI já verifica automaticamente a presença digital de cada lead.</p>
+      <p>Empresas com site, Google Meu Negócio e redes sociais ativas tendem a investir mais em crescimento. Use isso como critério de qualificação. O Precision já verifica automaticamente a presença digital de cada lead.</p>
 
       <h2>5. Filtre por Dados de Contato</h2>
       <p>Não adianta encontrar empresas sem telefone ou email. Filtre por leads que tenham dados de contato verificados — isso é crucial para prospecção ativa por telefone, email ou WhatsApp.</p>
@@ -47,7 +48,7 @@ const ARTICLE_CONTENT: Record<string, React.ReactNode> = {
 
       <div className="bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/30 rounded-2xl p-6 my-8">
         <p className="font-bold text-violet-700 dark:text-violet-400 mb-2">Comece agora — é grátis</p>
-        <p className="text-sm">O PrecisionAI oferece 10 créditos grátis para você testar a plataforma. Busque empresas por nicho e região, analise com IA e envie para seu CRM.</p>
+        <p className="text-sm">O Precision oferece 10 créditos grátis para você testar a plataforma. Busque empresas por nicho e região, analise com IA e envie para seu CRM.</p>
       </div>
     </article>
   ),
@@ -60,7 +61,7 @@ const ARTICLE_CONTENT: Record<string, React.ReactNode> = {
       <p>Prospecção ativa (outbound) gera resultados rápidos. Marketing de conteúdo (inbound) gera leads a longo prazo. As melhores equipes combinam as duas estratégias.</p>
 
       <h2>2. Cold Call Inteligente</h2>
-      <p>Cold call não morreu — mudou. Pesquise sobre a empresa antes de ligar. Use dados do PrecisionAI para personalizar o script: mencione o nicho, a região e um desafio comum do setor.</p>
+      <p>Cold call não morreu — mudou. Pesquise sobre a empresa antes de ligar. Use dados do Precision para personalizar o script: mencione o nicho, a região e um desafio comum do setor.</p>
 
       <h2>3. Email de Prospecção</h2>
       <p>Emails frios funcionam quando são curtos, personalizados e oferecem valor. Não venda no primeiro email — ofereça um insight relevante sobre o mercado do prospect.</p>
@@ -75,7 +76,7 @@ const ARTICLE_CONTENT: Record<string, React.ReactNode> = {
       <p>Budget (orçamento), Authority (decisor), Need (necessidade), Timeline (urgência). Qualifique cedo para não perder tempo com leads que não vão fechar.</p>
 
       <h2>7. Use IA para Qualificação</h2>
-      <p>O <strong>Score IA do PrecisionAI</strong> analisa sinais públicos para classificar leads como quente, morno ou frio — antes mesmo do primeiro contato.</p>
+      <p>O <strong>Score IA do Precision</strong> analisa sinais públicos para classificar leads como quente, morno ou frio — antes mesmo do primeiro contato.</p>
 
       <h2>8. Acompanhe Métricas</h2>
       <p>Taxa de resposta, taxa de agendamento, taxa de conversão. Meça cada etapa do funil para identificar gargalos e melhorar continuamente.</p>
@@ -108,7 +109,7 @@ const ARTICLE_CONTENT: Record<string, React.ReactNode> = {
       <p>80% das vendas precisam de 5+ follow-ups. A maioria dos vendedores desiste no 2º. Tenha um sistema de follow-up consistente — é onde a venda realmente acontece.</p>
 
       <h2>Use Dados para Personalizar</h2>
-      <p>Com ferramentas como o <strong>PrecisionAI</strong>, você chega à reunião sabendo o nicho, região, presença digital e potencial do lead. Isso muda o nível da conversa.</p>
+      <p>Com ferramentas como o <strong>Precision</strong>, você chega à reunião sabendo o nicho, região, presença digital e potencial do lead. Isso muda o nível da conversa.</p>
     </article>
   ),
 
@@ -128,7 +129,7 @@ const ARTICLE_CONTENT: Record<string, React.ReactNode> = {
       </ul>
       <h3>Outbound (Prospecção Ativa)</h3>
       <ul>
-        <li>Busca de empresas por nicho e região (PrecisionAI)</li>
+        <li>Busca de empresas por nicho e região (Precision)</li>
         <li>Cold email e cold call personalizados</li>
         <li>Social selling no LinkedIn</li>
       </ul>
@@ -137,7 +138,7 @@ const ARTICLE_CONTENT: Record<string, React.ReactNode> = {
       <p>CPL (custo por lead), taxa de qualificação, velocity (velocidade do funil), taxa de conversão MQL→SQL→Cliente. Acompanhe semanalmente.</p>
 
       <h2>Ferramentas Essenciais</h2>
-      <p>PrecisionAI para busca e qualificação, CRM (RD Station, Agendor) para gestão, ferramenta de email para cadências automatizadas.</p>
+      <p>Precision para busca e qualificação, CRM (RD Station, Agendor) para gestão, ferramenta de email para cadências automatizadas.</p>
     </article>
   ),
 
@@ -145,7 +146,7 @@ const ARTICLE_CONTENT: Record<string, React.ReactNode> = {
     <article className="prose prose-lg dark:prose-invert max-w-none">
       <p className="lead">Escolher a <strong>ferramenta de prospecção comercial</strong> certa pode dobrar a produtividade da sua equipe de vendas. Comparamos as principais opções do mercado brasileiro.</p>
 
-      <h2>1. PrecisionAI</h2>
+      <h2>1. Precision</h2>
       <p><strong>Melhor para:</strong> busca de empresas por nicho e região com IA.</p>
       <p>Score de potencial, análise de concorrência, integração com RD Station e Agendor. Plano gratuito com 10 créditos/mês. A partir de R$129/mês.</p>
 
@@ -163,11 +164,11 @@ const ARTICLE_CONTENT: Record<string, React.ReactNode> = {
 
       <h2>5. RD Station CRM</h2>
       <p><strong>Melhor para:</strong> gestão de funil e pipeline de vendas.</p>
-      <p>Gratuito para equipes pequenas. Integra com RD Marketing e PrecisionAI.</p>
+      <p>Gratuito para equipes pequenas. Integra com RD Marketing e Precision.</p>
 
       <h2>6. Agendor</h2>
       <p><strong>Melhor para:</strong> CRM simples para PMEs brasileiras.</p>
-      <p>Interface intuitiva, app mobile, relatórios. Integração nativa com PrecisionAI.</p>
+      <p>Interface intuitiva, app mobile, relatórios. Integração nativa com Precision.</p>
 
       <h2>7. HubSpot</h2>
       <p><strong>Melhor para:</strong> operações maiores que precisam de CRM + Marketing.</p>
@@ -175,7 +176,7 @@ const ARTICLE_CONTENT: Record<string, React.ReactNode> = {
 
       <div className="bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/30 rounded-2xl p-6 my-8">
         <p className="font-bold text-violet-700 dark:text-violet-400 mb-2">Dica: combine ferramentas</p>
-        <p className="text-sm">Use PrecisionAI para encontrar e qualificar leads + CRM para gerenciar o funil. Essa combinação cobre todo o ciclo de prospecção.</p>
+        <p className="text-sm">Use Precision para encontrar e qualificar leads + CRM para gerenciar o funil. Essa combinação cobre todo o ciclo de prospecção.</p>
       </div>
     </article>
   ),
@@ -227,25 +228,33 @@ export default function BlogPost() {
   const post = slug ? getBlogPostBySlug(slug) : undefined;
   const defaultTitleRef = useRef(document.title);
 
+  const isUsMarket = getActiveMarket() === 'US';
+
   useEffect(() => {
+    if (isUsMarket) return;
+    const defaultTitle = defaultTitleRef.current;
     if (!post) return;
+    const baseUrl = getAppOrigin();
     document.title = post.metaTitle;
     setMeta('description', post.metaDescription);
     setMeta('keywords', post.keywords.join(', '));
     setMeta('og:title', post.metaTitle, true);
     setMeta('og:description', post.metaDescription, true);
-    setMeta('og:url', `${BASE_URL}/blog/${post.slug}`, true);
+    setMeta('og:url', `${baseUrl}/blog/${post.slug}`, true);
     setMeta('og:type', 'article', true);
     setMeta('article:published_time', post.date, true);
     setMeta('twitter:title', post.metaTitle, true);
     setMeta('twitter:description', post.metaDescription, true);
-    setCanonical(`${BASE_URL}/blog/${post.slug}`);
+    setCanonical(`${baseUrl}/blog/${post.slug}`);
 
-    return () => { document.title = defaultTitleRef.current; };
+    return () => { document.title = defaultTitle; };
   }, [post]);
+
+  if (isUsMarket) return <Navigate to="/" replace />;
 
   if (!post) return <Navigate to="/blog" replace />;
 
+  const baseUrl = getAppOrigin();
   const content = ARTICLE_CONTENT[post.slug];
   const relatedPosts = BLOG_POSTS.filter((p) => p.slug !== post.slug).slice(0, 3);
 
@@ -253,7 +262,7 @@ export default function BlogPost() {
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-border">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
-          <Link to="/" className="inline-flex items-center shrink-0"><Logo height={168} /></Link>
+          <Link to="/" className="inline-flex items-center shrink-0"><Logo height={40} /></Link>
           <div className="flex items-center gap-3">
             <Link to="/blog" className="text-sm font-bold text-violet-500">Blog</Link>
             <Link to="/auth/signup" className="inline-flex items-center gap-2 h-9 px-5 rounded-full bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold transition-colors">
@@ -307,11 +316,10 @@ export default function BlogPost() {
 
       <footer className="border-t border-border bg-card">
         <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <Link to="/" className="inline-flex items-center shrink-0"><Logo height={120} /></Link>
+          <Link to="/" className="inline-flex items-center shrink-0"><Logo height={36} /></Link>
           <div className="flex items-center gap-4 text-xs text-muted">
             <Link to="/blog" className="hover:text-foreground transition-colors font-bold">Blog</Link>
-            <Link to="/privacy" className="hover:text-foreground transition-colors">Privacidade</Link>
-            <Link to="/terms" className="hover:text-foreground transition-colors">Termos</Link>
+            <LegalFooterLinks />
           </div>
         </div>
       </footer>
@@ -326,9 +334,9 @@ export default function BlogPost() {
             headline: post.title,
             description: post.metaDescription,
             datePublished: post.date,
-            author: { '@type': 'Organization', name: 'PrecisionAI' },
-            publisher: { '@type': 'Organization', name: 'PrecisionAI', url: BASE_URL },
-            mainEntityOfPage: `${BASE_URL}/blog/${post.slug}`,
+            author: { '@type': 'Organization', name: 'Precision' },
+            publisher: { '@type': 'Organization', name: 'Precision', url: baseUrl },
+            mainEntityOfPage: `${baseUrl}/blog/${post.slug}`,
             keywords: post.keywords.join(', '),
           }),
         }}

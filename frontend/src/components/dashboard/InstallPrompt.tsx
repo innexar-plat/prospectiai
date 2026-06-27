@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Download, X, Smartphone } from 'lucide-react';
+import { useI18n } from '@/lib/i18n';
+import { getMarketConfig } from '@/lib/market';
 
 interface BeforeInstallPromptEvent extends Event {
     prompt: () => Promise<void>;
@@ -13,6 +15,8 @@ function FloatingBanner({ children }: { children: React.ReactNode }) {
 }
 
 export function InstallPrompt() {
+    const { t } = useI18n();
+    const appName = getMarketConfig().appName;
     const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
     const [isIOS, setIsIOS] = useState(false);
     const [showBanner, setShowBanner] = useState(false);
@@ -67,6 +71,10 @@ export function InstallPrompt() {
         localStorage.setItem('pwa-install-dismissed', '1');
     };
 
+    const installTitle = t('common.install.title', { appName });
+    const iosShare = t('common.install.iosShare');
+    const iosAddHome = t('common.install.iosAddHome');
+
     // Already installed or dismissed
     if (dismissed || (!deferredPrompt && !isIOS)) return null;
 
@@ -76,8 +84,8 @@ export function InstallPrompt() {
             type="button"
             onClick={deferredPrompt ? handleInstall : () => setShowBanner(true)}
             className="p-2 rounded-lg text-muted hover:text-foreground hover:bg-surface transition-colors"
-            title="Instalar App"
-            aria-label="Instalar aplicativo"
+            title={t('common.install.titleAttr')}
+            aria-label={t('common.install.aria')}
         >
             <Download size={16} />
         </button>
@@ -96,13 +104,13 @@ export function InstallPrompt() {
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className="flex justify-between items-start">
-                                    <h3 className="text-sm font-bold text-foreground">Instalar PrecisionAI</h3>
-                                    <button type="button" onClick={handleDismiss} className="text-muted hover:text-foreground -mt-1 -mr-1 p-1" aria-label="Fechar">
+                                    <h3 className="text-sm font-bold text-foreground">{installTitle}</h3>
+                                    <button type="button" onClick={handleDismiss} className="text-muted hover:text-foreground -mt-1 -mr-1 p-1" aria-label={t('common.install.closeAria')}>
                                         <X size={14} />
                                     </button>
                                 </div>
                                 <p className="text-xs text-muted leading-relaxed mt-1">
-                                    Toque em <strong className="text-foreground">Compartilhar</strong> (⬆️) e depois em <strong className="text-foreground">"Adicionar à Tela de Início"</strong>.
+                                    {t('common.install.iosHint', { share: iosShare, addHome: iosAddHome })}
                                 </p>
                             </div>
                         </div>
@@ -125,20 +133,20 @@ export function InstallPrompt() {
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className="flex justify-between items-start">
-                                    <h3 className="text-sm font-bold text-foreground">Instalar PrecisionAI</h3>
-                                    <button type="button" onClick={handleDismiss} className="text-muted hover:text-foreground -mt-1 -mr-1 p-1" aria-label="Fechar">
+                                    <h3 className="text-sm font-bold text-foreground">{installTitle}</h3>
+                                    <button type="button" onClick={handleDismiss} className="text-muted hover:text-foreground -mt-1 -mr-1 p-1" aria-label={t('common.install.closeAria')}>
                                         <X size={14} />
                                     </button>
                                 </div>
                                 <p className="text-xs text-muted leading-relaxed mt-1 mb-2">
-                                    Acesse mais rápido direto da sua tela inicial.
+                                    {t('common.install.desc')}
                                 </p>
                                 <button
                                     type="button"
                                     onClick={handleInstall}
                                     className="w-full py-2 px-4 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold transition-colors"
                                 >
-                                    Instalar agora
+                                    {t('common.install.cta')}
                                 </button>
                             </div>
                         </div>

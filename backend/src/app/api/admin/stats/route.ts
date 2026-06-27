@@ -3,13 +3,16 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { isAdmin } from '@/lib/admin';
 import { logAdminAction } from '@/lib/audit';
+import { countOnlineUsers } from '@/lib/redis';
+import { TRIAL_EXPIRED_STATUS, TRIAL_STATUS } from '@/lib/trial';
+import { getAdminMarketStats } from '@/lib/admin-market-stats';
 
 export async function GET() {
     const session = await auth();
     if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!isAdmin(session)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     try {
-        const [users, workspaces, searchHistory, leadAnalyses, usageAgg] = await Promise.all([
+        const [users, workspaces, searchHistory, leadAnalyses, usageAgg, onlineUsers, trialWorkspaces, trialExpiredWorkspaces, paidWorkspaces, marketStats] = await Promise.all([
             prisma.user.count(),
             prisma.workspace.count(),
             prisma.searchHistory.count(),
@@ -18,6 +21,16 @@ export async function GET() {
                 by: ['type'],
                 _sum: { quantity: true },
             }),
+            countOnlineUsers(),
+            prisma.workspace.count({ where: { plan: 'TRIAL', subscriptionStatus: TRIAL_STATUS } }),
+            prisma.workspace.count({ where: { plan: 'TRIAL', subscriptionStatus: TRIAL_EXPIRED_STATUS } }),
+            prisma.workspace.count({
+                where: {
+                    plan: { in: ['BASIC', 'PRO', 'BUSINESS', 'SCALE'] },
+                    subscriptionStatus: 'active',
+                },
+            }),
+            getAdminMarketStats(),
         ]);
 
         const byType = Object.fromEntries(usageAgg.map((r) => [r.type, r._sum.quantity ?? 0]));
@@ -40,11 +53,17 @@ export async function GET() {
             workspaces,
             searchHistory,
             leadAnalyses,
+            onlineUsers,
+            trialWorkspaces,
+            trialExpiredWorkspaces,
+            paidWorkspaces,
             googlePlacesSearchTotal,
             googlePlacesDetailsTotal,
             serperRequestsTotal,
             aiInputTokensTotal,
             aiOutputTokensTotal,
+            usersByMarket: marketStats.usersByMarket,
+            revenueByMarket: marketStats.revenueByMarket,
         };
         logAdminAction(session, 'admin.stats', { details: payload }).catch(() => {});
         return NextResponse.json(payload);

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Sparkles, SlidersHorizontal, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/Input';
+import { useI18n } from '@/lib/i18n';
 
 const PRESET_NICHES = ['SaaS', 'Tecnologia', 'Vendas', 'Marketing', 'E-commerce', 'Serviços'] as const;
 
@@ -26,6 +27,7 @@ export function SearchParamsIntelligenceCard({
   disabled,
   advancedTermError,
 }: SearchParamsIntelligenceCardProps) {
+  const { t } = useI18n();
   const [addOpen, setAddOpen] = useState(false);
   const [newNiche, setNewNiche] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -70,14 +72,14 @@ export function SearchParamsIntelligenceCard({
               <Sparkles size={24} aria-hidden />
             </div>
             <div>
-              <h2 className="font-black text-xl text-foreground">Inteligência</h2>
-              <p className="text-xs text-muted font-bold uppercase tracking-widest mt-0.5">Nicho e Termos</p>
+              <h2 className="font-black text-xl text-foreground">{t('page.search.intelligence.title')}</h2>
+              <p className="text-xs text-muted font-bold uppercase tracking-widest mt-0.5">{t('page.search.intelligence.subtitle')}</p>
             </div>
           </div>
           <button
             type="button"
             className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted hover:text-foreground transition-colors rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500/50"
-            aria-label="Filtros de inteligência"
+            aria-label={t('page.search.intelligence.filtersAria')}
           >
             <SlidersHorizontal size={20} />
           </button>
@@ -87,7 +89,7 @@ export function SearchParamsIntelligenceCard({
           {/* Nicho / Segmento */}
           <div>
             <label id="niche-label" className="text-[10px] font-black text-muted uppercase tracking-[0.2em] ml-1 block mb-2">
-              Nicho / Segmento
+              {t('page.search.intelligence.nicheLabel')}
             </label>
             <div className="flex flex-wrap gap-2">
               {PRESET_NICHES.map((tag) => (
@@ -120,7 +122,7 @@ export function SearchParamsIntelligenceCard({
                       type="button"
                       onClick={() => removeNiche(tag)}
                       disabled={disabled}
-                      aria-label={`Remover ${tag}`}
+                      aria-label={t('page.search.intelligence.removeNiche', { tag })}
                       className="p-0.5 rounded-md hover:bg-violet-500/30 focus:outline-none focus:ring-2 focus:ring-violet-500/50 min-w-[24px] min-h-[24px] flex items-center justify-center"
                     >
                       <X size={14} />
@@ -138,9 +140,9 @@ export function SearchParamsIntelligenceCard({
                       if (e.key === 'Enter') addNiche();
                       if (e.key === 'Escape') setAddOpen(false);
                     }}
-                    placeholder="Novo nicho"
+                    placeholder={t('page.search.intelligence.newNichePlaceholder')}
                     className="h-10 w-28 rounded-xl border border-border bg-surface px-3 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-violet-500/50"
-                    aria-label="Nome do novo nicho"
+                    aria-label={t('page.search.intelligence.newNicheAria')}
                   />
                   <button
                     type="button"
@@ -154,7 +156,7 @@ export function SearchParamsIntelligenceCard({
                     onClick={() => { setAddOpen(false); setNewNiche(''); }}
                     className="min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold text-muted hover:bg-surface"
                   >
-                    Cancelar
+                    {t('common.cancel')}
                   </button>
                 </span>
               ) : (
@@ -164,7 +166,7 @@ export function SearchParamsIntelligenceCard({
                   disabled={disabled}
                   className="min-h-[44px] px-4 py-2 bg-violet-600/10 border border-violet-500/20 rounded-xl text-xs font-black text-violet-600 dark:text-violet-400 hover:bg-violet-600/20 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                 >
-                  + Adicionar
+                  {t('page.search.intelligence.add')}
                 </button>
               )}
             </div>
@@ -173,11 +175,11 @@ export function SearchParamsIntelligenceCard({
           {/* Termo avançado */}
           <div>
             <label htmlFor="advanced-term" className="text-[10px] font-black text-muted uppercase tracking-[0.2em] ml-1 block mb-2">
-              Termo de Pesquisa Avançada
+              {t('page.search.intelligence.advancedTerm')}
             </label>
             <Input
               id="advanced-term"
-              placeholder="Ex: Empresas de logística em São Paulo com foco em e-commerce..."
+              placeholder={t('page.search.intelligence.advancedPlaceholder')}
               value={value.advancedTerm}
               onChange={(e) => onChange({ advancedTerm: e.target.value })}
               disabled={disabled}

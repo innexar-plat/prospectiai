@@ -4,6 +4,7 @@ import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { useOutletContext } from 'react-router-dom';
 import type { SessionUser } from '@/lib/api';
 import { useToast } from '@/contexts/ToastContext';
+import { useI18n } from '@/lib/i18n';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -49,6 +50,7 @@ async function request<T>(path: string, opts?: RequestInit): Promise<T> {
 export default function EquipeDashboardPage() {
   const { user } = useOutletContext<{ user: SessionUser }>();
   const { addToast } = useToast();
+  const { t } = useI18n();
 
   const [dashboardData, setDashboardData] = useState<{
     members: DashboardMember[];
@@ -73,10 +75,10 @@ export default function EquipeDashboardPage() {
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          const msg = err instanceof Error ? err.message : 'Falha ao carregar dashboard da equipe.';
+          const msg = err instanceof Error ? err.message : t('page.equipeDashboard.loadError');
           setError(msg);
           if (msg.includes('403') || msg.includes('Only admins')) {
-            addToast('error', 'Acesso restrito a gestores (OWNER/ADMIN).');
+            addToast('error', t('page.equipeDashboard.toast.accessDenied'));
           } else {
             addToast('error', msg);
           }
@@ -88,19 +90,19 @@ export default function EquipeDashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [hasAccess, addToast]);
+  }, [hasAccess, addToast, t]);
 
   if (!hasAccess) {
     return (
       <>
         <HeaderDashboard
-          title="Dashboard da equipe"
-          subtitle="Recurso disponível no plano Enterprise."
-          breadcrumb="Dashboard / Equipe / Dashboard"
+          title={t('page.equipeDashboard.title')}
+          subtitle={t('page.equipeDashboard.subtitleLocked')}
+          breadcrumb={t('page.equipeDashboard.breadcrumb')}
         />
         <div className="p-6 sm:p-8 max-w-6xl mx-auto">
           <div className="rounded-3xl bg-card border border-border p-12 text-center text-muted">
-            Faça upgrade para o plano Enterprise para acessar o dashboard da equipe.
+            {t('page.equipeDashboard.upgrade')}
           </div>
         </div>
       </>
@@ -110,9 +112,9 @@ export default function EquipeDashboardPage() {
   return (
     <>
       <HeaderDashboard
-        title="Dashboard da equipe"
-        subtitle="Meta vs realizado e resumo do time."
-        breadcrumb="Dashboard / Equipe / Dashboard"
+        title={t('page.equipeDashboard.title')}
+        subtitle={t('page.equipeDashboard.subtitle')}
+        breadcrumb={t('page.equipeDashboard.breadcrumb')}
       />
       <div className="p-6 sm:p-8 max-w-6xl mx-auto space-y-6">
         {(() => {
@@ -120,13 +122,13 @@ export default function EquipeDashboardPage() {
             return (
               <div className="flex items-center justify-center p-12 text-muted gap-3">
                 <Loader2 size={24} className="animate-spin" />
-                <span>Carregando dashboard...</span>
+                <span>{t('page.equipeDashboard.loading')}</span>
               </div>
             );
           }
           if (error) {
             const errorMessage = error.includes('403') || error.includes('Only admins')
-              ? 'Acesso restrito a gestores (OWNER/ADMIN).'
+              ? t('page.equipeDashboard.toast.accessDenied')
               : error;
             return (
               <div className="rounded-3xl bg-card border border-border p-8 text-center text-muted">
@@ -137,7 +139,7 @@ export default function EquipeDashboardPage() {
           if (!dashboardData) {
             return (
               <div className="rounded-3xl bg-card border border-border p-8 text-center text-muted">
-                Nenhum dado do dashboard.
+                {t('page.equipeDashboard.noData')}
               </div>
             );
           }
@@ -145,19 +147,19 @@ export default function EquipeDashboardPage() {
           <>
             <div className="rounded-3xl bg-card border border-border p-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
-                <p className="text-xs text-muted uppercase tracking-wider">Leads hoje</p>
+                <p className="text-xs text-muted uppercase tracking-wider">{t('page.equipe.todayLeads')}</p>
                 <p className="text-2xl font-bold text-foreground tabular-nums">{dashboardData.totals.todayLeads}</p>
               </div>
               <div>
-                <p className="text-xs text-muted uppercase tracking-wider">Análises hoje</p>
+                <p className="text-xs text-muted uppercase tracking-wider">{t('page.equipe.todayAnalyses')}</p>
                 <p className="text-2xl font-bold text-violet-600 dark:text-violet-400 tabular-nums">{dashboardData.totals.todayAnalyses}</p>
               </div>
               <div>
-                <p className="text-xs text-muted uppercase tracking-wider">Leads no mês</p>
+                <p className="text-xs text-muted uppercase tracking-wider">{t('page.equipe.monthLeads')}</p>
                 <p className="text-2xl font-bold text-foreground tabular-nums">{dashboardData.totals.monthLeads}</p>
               </div>
               <div>
-                <p className="text-xs text-muted uppercase tracking-wider">Abaixo da meta</p>
+                <p className="text-xs text-muted uppercase tracking-wider">{t('page.equipe.belowGoal')}</p>
                 <p className="text-2xl font-bold tabular-nums">
                   {dashboardData.totals.belowGoalCount > 0 ? (
                     <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
@@ -171,18 +173,18 @@ export default function EquipeDashboardPage() {
             </div>
             <div className="rounded-3xl bg-card border border-border overflow-hidden">
               <div className="p-5 border-b border-border">
-                <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Meta vs Realizado</h3>
+                <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">{t('page.equipe.goalVsActual')}</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border text-left">
-                      <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">Membro</th>
-                      <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase text-right">Hoje (L/A)</th>
-                      <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">Meta vs Dia</th>
-                      <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">Uso vs Limite</th>
-                      <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">Conversões mês</th>
-                      <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase w-20">Alerta</th>
+                      <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">{t('page.equipe.col.member')}</th>
+                      <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase text-right">{t('page.equipe.col.todayLa')}</th>
+                      <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">{t('page.equipe.col.goalVsDay')}</th>
+                      <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">{t('page.equipe.col.usageVsLimit')}</th>
+                      <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">{t('page.equipe.col.monthConversions')}</th>
+                      <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase w-20">{t('page.equipe.col.alert')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -245,7 +247,7 @@ export default function EquipeDashboardPage() {
                           <td className="py-3 px-5">
                             {m.belowGoal ? (
                               <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                                <AlertCircle size={14} /> Abaixo
+                                <AlertCircle size={14} /> {t('page.equipe.belowGoalShort')}
                               </span>
                             ) : (
                               <span className="text-muted">—</span>

@@ -47,7 +47,7 @@ export async function PATCH(req: NextRequest) {
     if (to) {
       const amountFormatted = c.currency === 'BRL' ? `R$ ${(c.amountCents / 100).toFixed(2)}` : `$${(c.amountCents / 100).toFixed(2)}`;
       const payoutInfo = 'O valor foi enviado conforme os dados de pagamento cadastrados no painel do afiliado.';
-      sendAffiliateCommissionPaidEmail(to, amountFormatted, payoutInfo).catch((e) => {
+      sendAffiliateCommissionPaidEmail(to, amountFormatted, payoutInfo, c.currency).catch((e) => {
         logger.error('Affiliate commission paid email failed', { commissionId: c.id, error: e instanceof Error ? e.message : 'Unknown' });
       });
     }

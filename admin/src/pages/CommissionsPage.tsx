@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { adminApi, type AdminCommissionListItem } from '@/lib/api';
+import { useConfirm } from '@/lib/useConfirm';
 
 const PAGE_SIZE = 20;
 
@@ -37,6 +38,8 @@ export function CommissionsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkProofUrl, setBulkProofUrl] = useState('');
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const { confirm, ConfirmDialog } = useConfirm();
 
   const fetchCommissions = useCallback(() => {
     setLoading(true);
@@ -52,12 +55,27 @@ export function CommissionsPage() {
     fetchCommissions();
   }, [fetchCommissions]);
 
+  const showToast = (type: 'success' | 'error', message: string) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 5000);
+  };
+
   const handleMarkPaid = async (affiliateId: string, commissionId: string) => {
     if (payingId) return;
+    const ok = await confirm({
+      title: 'Marcar como pago',
+      message: 'Confirmar que esta comissão foi paga ao afiliado?',
+      confirmLabel: 'Marcar como pago',
+      variant: 'primary',
+    });
+    if (!ok) return;
     setPayingId(commissionId);
     try {
       await adminApi.markCommissionPaid(affiliateId, commissionId);
       fetchCommissions();
+      showToast('success', 'Comissão marcada como paga.');
+    } catch (err) {
+      showToast('error', err instanceof Error ? err.message : 'Erro ao marcar como pago.');
     } finally {
       setPayingId(null);
     }
@@ -87,12 +105,22 @@ export function CommissionsPage() {
   const handleBulkPay = async () => {
     const ids = Array.from(selectedIds).filter((id) => items.some((c) => c.id === id && c.status === 'APPROVED'));
     if (ids.length === 0) return;
+    const ok = await confirm({
+      title: 'Pagamento em lote',
+      message: `Marcar ${ids.length} comissão(ões) como paga(s)?`,
+      confirmLabel: 'Confirmar pagamento',
+      variant: 'primary',
+    });
+    if (!ok) return;
     setBulkSubmitting(true);
     try {
       await adminApi.markCommissionsPaidBulk(ids, bulkProofUrl.trim() || undefined);
       setSelectedIds(new Set());
       setBulkProofUrl('');
       fetchCommissions();
+      showToast('success', `${ids.length} comissão(ões) marcada(s) como paga(s).`);
+    } catch (err) {
+      showToast('error', err instanceof Error ? err.message : 'Erro ao marcar comissões como pagas.');
     } finally {
       setBulkSubmitting(false);
     }
@@ -100,7 +128,13 @@ export function CommissionsPage() {
 
   return (
     <div>
+      {ConfirmDialog}
       <h1 className="text-xl font-semibold text-gray-900 mb-6">Comissões</h1>
+      {toast && (
+        <div className={`mb-4 rounded-lg px-4 py-3 text-sm ${toast.type === 'success' ? 'bg-emerald-50 border border-emerald-300 text-emerald-700' : 'bg-red-50 border border-red-300 text-red-700'}`}>
+          {toast.message}
+        </div>
+      )}
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setOffset(0); }} className="rounded border border-gray-300 bg-gray-100 text-gray-700 px-3 py-2 text-sm">
           <option value="">Todos status</option>
@@ -149,14 +183,20 @@ export function CommissionsPage() {
             </tr>
           </thead>
           <tbody>
-            {items.map((c) => (
+            {items.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                  Nenhuma comissão encontrada.
+                </td>
+              </tr>
+            ) : items.map((c) => (
               <tr key={c.id} className="border-b border-gray-200">
                 <td className="px-4 py-3">
                   {c.status === 'APPROVED' && (
                     <input type="checkbox" checked={selectedIds.has(c.id)} onChange={() => toggleSelection(c.id)} className="rounded border-gray-300" />
                   )}
                 </td>
-                <td className="px-4 py-3"><Link to={`/affiliates/${c.affiliateId}`} className="text-violet-600 font-mono">{c.affiliateCode}</Link></td>
+                <td className="px-4 py-3"><Link to={`../affiliates/${c.affiliateId}`} className="text-violet-600 font-mono">{c.affiliateCode}</Link></td>
                 <td className="px-4 py-3">{c.currency === 'BRL' ? 'R$' : '$'} {(c.amountCents / 100).toFixed(2)}</td>
                 <td className="px-4 py-3">{c.status}</td>
                 <td className="px-4 py-3 text-gray-500">{new Date(c.availableAt).toLocaleDateString('pt-BR')}</td>

@@ -1,7 +1,52 @@
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { getConversionStats } from '@/lib/lead-intelligence';
+import { classifyRouteError } from '@/lib/api-route-errors';
+import { MARKET, getRequestMarket } from '@/lib/market';
+import type { ProductPlan } from '@/lib/product-modules';
+
+const PRO_PLUS_PLANS: ProductPlan[] = ['PRO', 'BUSINESS', 'SCALE'];
+
+type BriefStats = {
+    totalActive: number;
+    hotLeads: number;
+    avgCloseProbability: number;
+    pipelineValue: number;
+    conversionRate: number | null;
+    avgDealValue: number | null;
+    avgCycleDays: number | null;
+    totalConverted: number;
+    totalLost: number;
+    topLostReasons: { reason: string; count: number }[];
+};
+
+function emptyBriefStats(): BriefStats {
+    return {
+        totalActive: 0,
+        hotLeads: 0,
+        avgCloseProbability: 0,
+        pipelineValue: 0,
+        conversionRate: null,
+        avgDealValue: null,
+        avgCycleDays: null,
+        totalConverted: 0,
+        totalLost: 0,
+        topLostReasons: [],
+    };
+}
+
+function normalizeCachedBrief(cached: {
+    recommendations: unknown;
+    stats: unknown;
+}): { recommendations: unknown[]; stats: BriefStats } {
+    const stats = cached.stats as BriefStats | null | undefined;
+    return {
+        recommendations: Array.isArray(cached.recommendations) ? cached.recommendations : [],
+        stats: stats && typeof stats === 'object' ? stats : emptyBriefStats(),
+    };
+}
 
 /**
  * GET /api/pipeline/daily-brief
@@ -13,45 +58,58 @@ import { getConversionStats } from '@/lib/lead-intelligence';
  *
  * Cached per workspace per day via PipelineBrief table.
  */
-export async function GET() {
+export async function GET(req?: NextRequest) {
     try {
-        const session = await auth();
+        let session;
+        try {
+            session = await auth();
+        } catch (authErr) {
+            const { logger } = await import('@/lib/logger');
+            logger.error('Pipeline daily-brief auth error', {
+                error: authErr instanceof Error ? authErr.message : 'Unknown',
+            });
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         if (!session?.user?.id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const userId = session.user.id;
 
-        // Find user's workspace
-        const membership = await prisma.workspaceMember.findFirst({
-            where: { userId },
-            select: { workspaceId: true, workspace: { select: { plan: true } } },
-        });
-        const workspaceId = membership?.workspaceId;
-        const plan = membership?.workspace?.plan || 'FREE';
+        const [membership, user] = await Promise.all([
+            prisma.workspaceMember.findFirst({
+                where: { userId },
+                select: { workspaceId: true, workspace: { select: { plan: true } } },
+            }),
+            prisma.user.findUnique({
+                where: { id: userId },
+                select: { plan: true },
+            }),
+        ]);
 
-        // Check plan access (PRO+)
-        if (!['PRO', 'BUSINESS', 'SCALE'].includes(plan)) {
+        const workspaceId = membership?.workspaceId;
+        const plan = (membership?.workspace?.plan ?? user?.plan ?? 'FREE') as ProductPlan;
+
+        if (!PRO_PLUS_PLANS.includes(plan)) {
             return NextResponse.json({ error: 'Pipeline intelligence is available for PRO+ plans' }, { status: 403 });
         }
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        // Check cache
         if (workspaceId) {
             const cached = await prisma.pipelineBrief.findUnique({
                 where: { workspaceId_briefDate: { workspaceId, briefDate: today } },
+                select: { recommendations: true, stats: true },
             });
             if (cached) {
-                return NextResponse.json(cached);
+                return NextResponse.json(normalizeCachedBrief(cached));
             }
         }
 
-        // Build fresh brief
         const where = workspaceId ? { workspaceId } : { userId };
 
-        // Get active leads (not CONVERTED/LOST) with close probability
         const activeLeads = await prisma.leadAnalysis.findMany({
             where: { ...where, status: { in: ['NEW', 'CONTACTED'] } },
             select: {
@@ -74,14 +132,12 @@ export async function GET() {
             take: 100,
         });
 
-        // Get conversion stats
         const stats = await getConversionStats(userId, workspaceId || undefined);
 
-        // Build recommendations
         const recommendations = activeLeads
+            .filter((lead) => lead.lead != null)
             .slice(0, 10)
             .map((lead, i) => {
-                // Determine reason for recommendation
                 const reasons: string[] = [];
                 if (lead.closeProbability && lead.closeProbability >= 70) reasons.push('Alta probabilidade de fechamento');
                 if (lead.status === 'CONTACTED' && lead.contactedAt) {
@@ -113,7 +169,6 @@ export async function GET() {
                 };
             });
 
-        // Compute funnel stats
         const hotLeads = activeLeads.filter((l) => (l.closeProbability ?? 0) >= 60).length;
         const pipelineValue = activeLeads.reduce((acc, l) => acc + (l.estimatedDealValue ?? 0), 0);
         const avgCloseProbability = activeLeads.length > 0
@@ -136,7 +191,6 @@ export async function GET() {
             },
         };
 
-        // Cache the brief
         if (workspaceId) {
             await prisma.pipelineBrief.upsert({
                 where: { workspaceId_briefDate: { workspaceId, briefDate: today } },
@@ -157,7 +211,12 @@ export async function GET() {
         return NextResponse.json(briefData);
     } catch (error) {
         const { logger } = await import('@/lib/logger');
-        logger.error('Pipeline daily-brief error', { error: error instanceof Error ? error.message : 'Unknown' });
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        const market = req ? getRequestMarket(req) : MARKET;
+        const classified = classifyRouteError(error, 'Internal Server Error', market);
+        logger.error('Pipeline daily-brief error', {
+            error: error instanceof Error ? error.message : 'Unknown',
+            status: classified.status,
+        });
+        return NextResponse.json({ error: classified.message }, { status: classified.status });
     }
 }

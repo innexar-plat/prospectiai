@@ -7,8 +7,8 @@ import { sendTeamInviteEmail } from '@/lib/email';
 import { logger } from '@/lib/logger';
 import { rateLimit } from '@/lib/ratelimit';
 import { PLANS, type PlanType } from '@/lib/billing-config';
-
-const SITE_URL = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+import { getSiteUrlFromRequest } from '@/lib/site-url';
+import { getRequestLocale } from '@/lib/i18n/locale';
 
 async function getInviteContext(sessionUserId: string, email: string) {
     const currentUser = await prisma.user.findUnique({
@@ -68,7 +68,8 @@ export async function POST(req: NextRequest) {
         }
 
         const token = crypto.randomBytes(32).toString('hex');
-        const baseUrl = SITE_URL.replace(/\/$/, '');
+        const baseUrl = getSiteUrlFromRequest(req).replace(/\/$/, '');
+        const locale = getRequestLocale(req);
         const acceptInviteUrl = `${baseUrl}/accept-invite?token=${encodeURIComponent(token)}`;
 
         const invitation = await prisma.workspaceInvitation.upsert({
@@ -89,7 +90,7 @@ export async function POST(req: NextRequest) {
             },
         });
 
-        sendTeamInviteEmail(email, inviterName, workspaceName, acceptInviteUrl)
+        sendTeamInviteEmail(email, inviterName, workspaceName, acceptInviteUrl, locale, baseUrl)
             .then((result) => {
                 if (!result.sent) {
                     logger.warn('Team invite email not sent', { email, reason: result.error ?? 'no config' });

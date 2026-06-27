@@ -12,6 +12,9 @@
  */
 
 import { prisma } from './prisma';
+import { logger } from './logger';
+
+const RELATIONS_QUERY_TIMEOUT_MS = 2500;
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -282,6 +285,9 @@ async function findSharedEmail(
     excludeCnpj: string,
     limit: number = 5,
 ): Promise<RelatedCompany[]> {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !normalizedEmail.includes('@')) return [];
+
     const rows = await prisma.$queryRawUnsafe<Array<{
         cnpj: string; razaoSocial: string; nomeFantasia: string | null;
         cnaePrincipal: string | null; municipio: string | null; uf: string | null;
@@ -291,10 +297,10 @@ async function findSharedEmail(
         `SELECT cnpj, "razaoSocial", "nomeFantasia", "cnaePrincipal", municipio, uf,
                 ddd, telefone, email, "capitalSocial", porte
          FROM "RfCompany"
-         WHERE LOWER(email) = LOWER($1)
+                 WHERE email = $1
            AND cnpj != $2
          LIMIT $3`,
-        email, excludeCnpj, limit,
+                normalizedEmail, excludeCnpj, limit,
     );
     return rows.map(r => ({
         cnpj: r.cnpj,
@@ -310,6 +316,29 @@ async function findSharedEmail(
         relation: 'shared_email' as RelationType,
         relevance: 95,
     }));
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T | null> {
+    return new Promise((resolve) => {
+        const timer = setTimeout(() => {
+            logger.warn('Smart relations query timeout', { label, timeoutMs });
+            resolve(null);
+        }, timeoutMs);
+
+        promise
+            .then((value) => {
+                clearTimeout(timer);
+                resolve(value);
+            })
+            .catch((err) => {
+                clearTimeout(timer);
+                logger.warn('Smart relations query failed', {
+                    label,
+                    error: err instanceof Error ? err.message : 'Unknown',
+                });
+                resolve(null);
+            });
+    });
 }
 
 /**
@@ -411,49 +440,83 @@ export async function getSmartRelations(
     if (rfCompany?.cnaePrincipal && rfCompany?.municipio && rfCompany?.uf) {
         // Same CNAE + same city
         queries.push(
-            findSameSectorSameCity(rfCompany.cnaePrincipal, rfCompany.municipio, rfCompany.uf, lead.cnpj!, 10)
-                .then(r => sameSector.push(...r))
+            withTimeout(
+                findSameSectorSameCity(rfCompany.cnaePrincipal, rfCompany.municipio, rfCompany.uf, rfCompany.cnpj, 10),
+                RELATIONS_QUERY_TIMEOUT_MS,
+                'same_sector_same_city',
+            ).then((r) => {
+                if (r) sameSector.push(...r);
+            })
         );
         // Same CNAE + same state (different city)
         queries.push(
-            findSameSector(rfCompany.cnaePrincipal, rfCompany.uf, lead.cnpj!, rfCompany.municipio, 10)
-                .then(r => sameSector.push(...r))
+            withTimeout(
+                findSameSector(rfCompany.cnaePrincipal, rfCompany.uf, rfCompany.cnpj, rfCompany.municipio, 10),
+                RELATIONS_QUERY_TIMEOUT_MS,
+                'same_sector_state',
+            ).then((r) => {
+                if (r) sameSector.push(...r);
+            })
         );
     }
 
     if (rfCompany?.municipio && rfCompany?.uf && rfCompany?.bairro) {
         // Same neighbourhood
         queries.push(
-            findSameNeighbourhood(rfCompany.municipio, rfCompany.uf, rfCompany.bairro.toUpperCase(), lead.cnpj!, 10)
-                .then(r => sameRegion.push(...r))
+            withTimeout(
+                findSameNeighbourhood(rfCompany.municipio, rfCompany.uf, rfCompany.bairro.toUpperCase(), rfCompany.cnpj, 10),
+                RELATIONS_QUERY_TIMEOUT_MS,
+                'same_neighbourhood',
+            ).then((r) => {
+                if (r) sameRegion.push(...r);
+            })
         );
     }
 
     if (rfCompany?.ddd && rfCompany?.telefone) {
         // Shared phone
         queries.push(
-            findSharedPhone(rfCompany.ddd, rfCompany.telefone, lead.cnpj!, 5)
-                .then(r => contactNetwork.push(...r))
+            withTimeout(
+                findSharedPhone(rfCompany.ddd, rfCompany.telefone, rfCompany.cnpj, 5),
+                RELATIONS_QUERY_TIMEOUT_MS,
+                'shared_phone',
+            ).then((r) => {
+                if (r) contactNetwork.push(...r);
+            })
         );
     }
 
     if (rfCompany?.email) {
         // Shared email
         queries.push(
-            findSharedEmail(rfCompany.email, lead.cnpj!, 5)
-                .then(r => contactNetwork.push(...r))
+            withTimeout(
+                findSharedEmail(rfCompany.email, rfCompany.cnpj, 5),
+                RELATIONS_QUERY_TIMEOUT_MS,
+                'shared_email',
+            ).then((r) => {
+                if (r) contactNetwork.push(...r);
+            })
         );
     }
 
     if (lead.companyMainCnae) {
         // User's other leads in same sector
         queries.push(
-            findSameSectorLeads(lead.companyMainCnae, placeId, userId, 5)
-                .then(r => userLeads.push(...r))
+            withTimeout(
+                findSameSectorLeads(lead.companyMainCnae, placeId, userId, 5),
+                RELATIONS_QUERY_TIMEOUT_MS,
+                'same_sector_leads',
+            ).then((r) => {
+                if (r) userLeads.push(...r);
+            })
         );
     }
 
-    await Promise.all(queries);
+    const settled = await Promise.allSettled(queries);
+    const rejectedCount = settled.filter((q) => q.status === 'rejected').length;
+    if (rejectedCount > 0) {
+        logger.warn('Smart relations: partial query failures', { placeId, rejectedCount, userId });
+    }
 
     // 4. Deduplicate by CNPJ
     const seen = new Set<string>();

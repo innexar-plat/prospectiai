@@ -5,7 +5,9 @@ import { Payment } from 'mercadopago';
 import { prisma } from '@/lib/prisma';
 import type { Plan } from '@prisma/client';
 import { PLANS, PlanType } from '@/lib/billing-config';
+import { getMarketLeadsLimit } from '@/lib/market';
 import { processPaymentSchema, formatZodError } from '@/lib/validations/schemas';
+import { notifyPaymentCreated } from '@/lib/telegram-business-alerts';
 
 async function applyApprovedPayment(userId: string, planId: string, interval: string): Promise<void> {
     const plan = PLANS[planId as PlanType];
@@ -19,7 +21,7 @@ async function applyApprovedPayment(userId: string, planId: string, interval: st
         where: { id: workspaceId },
         data: {
             plan: planId as Plan,
-            leadsLimit: plan.leadsLimit,
+            leadsLimit: getMarketLeadsLimit(planId as PlanType),
             leadsUsed: 0,
             subscriptionStatus: 'active',
             currentPeriodEnd: new Date(Date.now() + (interval === 'annual' ? 365 : 30) * 24 * 60 * 60 * 1000),
@@ -72,6 +74,17 @@ export async function POST(req: Request) {
         // Log the response status for debugging
         const { logger } = await import('@/lib/logger');
         logger.info('Mercado Pago Payment Created', { paymentId: paymentResponse.id, status: paymentResponse.status });
+        notifyPaymentCreated({
+            userId: session.user.id,
+            userEmail: session.user.email,
+            toPlan: planId,
+            billingCycle: interval,
+            provider: 'mercadopago',
+            amount: transaction_amount,
+            currency: 'BRL',
+            paymentId: paymentResponse.id != null ? String(paymentResponse.id) : undefined,
+            status: paymentResponse.status,
+        });
 
         if (paymentResponse.status === 'approved') {
             await applyApprovedPayment(session.user.id, planId, interval);

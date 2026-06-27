@@ -215,7 +215,9 @@ describe('POST /api/team', () => {
       'new@x.com',
       'Alice',
       'My Workspace',
-      expect.stringMatching(/\/accept-invite\?token=/)
+      expect.stringMatching(/\/accept-invite\?token=/),
+      'pt',
+      'https://precisionia.com.br',
     );
     const json = await res.json();
     expect(json.ok).toBe(true);
@@ -309,7 +311,9 @@ describe('POST /api/team', () => {
       'new@x.com',
       'Alice',
       'My Workspace',
-      expect.stringMatching(/\/reset-password\?token=/)
+      expect.stringMatching(/\/reset-password\?token=/),
+      'pt',
+      'https://precisionia.com.br',
     );
     expect(sendTeamInviteEmail).not.toHaveBeenCalled();
   });

@@ -2,9 +2,15 @@ import { registerSchema, searchSchema, formatZodError } from '@/lib/validations/
 
 describe('Validations', () => {
     it('registerSchema parses valid input', () => {
-        const r = registerSchema.safeParse({ email: 'a@b.com', password: 'password123' });
+        const r = registerSchema.safeParse({ email: 'a@b.com', password: 'password123', name: 'Maria de Souza' });
         expect(r.success).toBe(true);
         if (r.success) expect(r.data.email).toBe('a@b.com');
+    });
+
+    it('registerSchema fails on fake nickname-style names', () => {
+        const r = registerSchema.safeParse({ email: 'a@b.com', password: 'password123', name: '46jhon_zx' });
+        expect(r.success).toBe(false);
+        if (!r.success) expect(formatZodError(r)).toMatch(/nome e sobrenome reais/i);
     });
 
     it('registerSchema fails on short password', () => {

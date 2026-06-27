@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { auth } from '@/auth';
+import { getApiSession } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { getOrCreateRequestId, jsonWithRequestId } from '@/lib/request-id';
 
@@ -7,13 +7,14 @@ import { getOrCreateRequestId, jsonWithRequestId } from '@/lib/request-id';
 export async function GET(req: NextRequest) {
   const requestId = getOrCreateRequestId(req);
   try {
-    const session = await auth();
+    const session = await getApiSession();
     if (!session?.user?.id) {
       return jsonWithRequestId({ error: 'Unauthorized' }, { status: 401, requestId });
     }
     const unreadOnly = req.nextUrl.searchParams.get('unreadOnly') === 'true';
     const limitParam = req.nextUrl.searchParams.get('limit');
-    const limit = Math.min(parseInt(limitParam ?? '20', 10) || 20, 100);
+    const parsedLimit = Number.parseInt(limitParam ?? '20', 10);
+    const limit = Math.max(1, Math.min(Number.isFinite(parsedLimit) ? parsedLimit : 20, 100));
     const where = { userId: session.user.id, ...(unreadOnly ? { readAt: null } : {}) };
     const [items, unreadCount] = await Promise.all([
       prisma.notification.findMany({

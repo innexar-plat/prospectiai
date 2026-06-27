@@ -11,6 +11,15 @@ function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Exponential backoff with bounded jitter to avoid synchronized retries.
+ */
+export function computeBackoffDelayMs(attempt: number, initialBackoffMs: number): number {
+    const base = initialBackoffMs * Math.pow(2, attempt);
+    const jitterFactor = 0.75 + Math.random() * 0.5; // 75%..125%
+    return Math.max(1, Math.round(base * jitterFactor));
+}
+
 export interface FetchWithRetryOptions {
     timeoutMs?: number;
     maxRetries?: number;
@@ -53,7 +62,7 @@ export async function fetchWithRetry(
             clearTimeout(timeoutId);
             lastRes = res;
             if (attempt < maxRetries && retryStatuses(res.status)) {
-                const backoff = initialBackoffMs * Math.pow(2, attempt);
+                const backoff = computeBackoffDelayMs(attempt, initialBackoffMs);
                 await sleep(backoff);
                 continue;
             }
@@ -62,7 +71,7 @@ export async function fetchWithRetry(
             clearTimeout(timeoutId);
             lastErr = err instanceof Error ? err : new Error(String(err));
             if (attempt < maxRetries) {
-                const backoff = initialBackoffMs * Math.pow(2, attempt);
+                const backoff = computeBackoffDelayMs(attempt, initialBackoffMs);
                 await sleep(backoff);
                 continue;
             }

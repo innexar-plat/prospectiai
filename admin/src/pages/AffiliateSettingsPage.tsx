@@ -5,6 +5,7 @@ import { Save } from 'lucide-react';
 export function AffiliateSettingsPage() {
   const [config, setConfig] = useState<AffiliateSettingsPublic | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [form, setForm] = useState<AffiliateSettingsUpdateBody>({
@@ -18,6 +19,7 @@ export function AffiliateSettingsPage() {
 
   const loadConfig = () => {
     setLoading(true);
+    setLoadError(null);
     adminApi.affiliateSettings
       .get()
       .then((data) => {
@@ -31,7 +33,10 @@ export function AffiliateSettingsPage() {
           allowSelfSignup: data.allowSelfSignup,
         });
       })
-      .catch(() => setConfig(null))
+      .catch((err) => {
+        setConfig(null);
+        setLoadError(err instanceof Error ? err.message : 'Erro ao carregar configurações.');
+      })
       .finally(() => setLoading(false));
   };
 
@@ -63,6 +68,15 @@ export function AffiliateSettingsPage() {
       <div>
         <h1 className="text-xl font-semibold text-gray-900 mb-6">Configurações de Afiliados</h1>
         <div className="h-64 rounded-xl bg-gray-200 animate-pulse" />
+      </div>
+    );
+  }
+
+  if (loadError && !config) {
+    return (
+      <div>
+        <h1 className="text-xl font-semibold text-gray-900 mb-6">Configurações de Afiliados</h1>
+        <div className="rounded-lg bg-red-50 border border-red-300 text-red-600 px-4 py-3">{loadError}</div>
       </div>
     );
   }

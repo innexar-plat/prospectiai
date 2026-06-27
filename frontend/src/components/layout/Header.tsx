@@ -1,11 +1,12 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { LogIn, Download, Menu, X, Sun, Moon } from 'lucide-react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Logo } from '@/components/brand/Logo';
 import type { SessionUser } from '@/lib/api';
+import { isTrialEnabled } from '@/lib/market';
 
 export type TFunction = (key: string, options?: Record<string, unknown>) => string;
 
@@ -16,7 +17,8 @@ export type HeaderNavProps = {
     variant: 'desktop' | 'mobile';
 };
 
-function HeaderNavLinks({ locale, onPlansClick, onCloseMenu, variant }: HeaderNavProps) {
+function HeaderNavLinks({ locale, onPlansClick, onCloseMenu, variant, t }: HeaderNavProps & { t?: TFunction }) {
+    const pricingLabel = t?.('nav.pricing') ?? (locale === 'pt' ? 'Preços' : locale === 'es' ? 'Precios' : 'Pricing');
     const linkClass = variant === 'desktop'
         ? 'px-3 py-2 rounded-xl text-sm font-semibold text-muted hover:text-foreground hover:bg-surface transition-colors'
         : 'py-3 px-4 rounded-xl font-semibold text-foreground hover:bg-surface transition-colors';
@@ -25,15 +27,20 @@ function HeaderNavLinks({ locale, onPlansClick, onCloseMenu, variant }: HeaderNa
     return (
         <Wrapper className={wrapperClass} aria-label="Navegação principal">
             {variant === 'mobile' && <span className="text-[10px] font-black tracking-widest text-muted uppercase mb-2">Menu</span>}
+            <Link to={`/${locale === 'pt' ? 'pt' : locale === 'es' ? 'es' : 'en'}/pricing`} onClick={onCloseMenu} className={linkClass}>
+                {pricingLabel}
+            </Link>
             <button type="button" onClick={() => { onPlansClick(); onCloseMenu?.(); }} className={variant === 'desktop' ? linkClass : 'text-left ' + linkClass}>
-                {locale === 'pt' ? 'Planos' : 'Plans'}
+                {isTrialEnabled()
+                    ? (locale === 'pt' ? 'Começar trial' : locale === 'es' ? 'Empezar trial' : 'Start trial')
+                    : (t?.('pricing.ctaSubscribe') ?? (locale === 'pt' ? 'Assinar agora' : locale === 'es' ? 'Suscribirse' : 'Subscribe now'))}
             </button>
             <Link to="/blog" onClick={onCloseMenu} className={linkClass}>Blog</Link>
             <Link to="/auth/afiliado/cadastro" onClick={onCloseMenu} className={linkClass}>
                 {locale === 'pt' ? 'Seja um afiliado' : 'Become an affiliate'}
             </Link>
-            <Link to="/privacy" onClick={onCloseMenu} className={linkClass}>{locale === 'pt' ? 'Privacidade' : 'Privacy'}</Link>
-            <Link to="/terms" onClick={onCloseMenu} className={linkClass}>{locale === 'pt' ? 'Termos' : 'Terms'}</Link>
+            <Link to="/privacy" onClick={onCloseMenu} className={linkClass}>{t?.('footer.privacy') ?? 'Privacy'}</Link>
+            <Link to="/terms" onClick={onCloseMenu} className={linkClass}>{t?.('footer.terms') ?? 'Terms'}</Link>
         </Wrapper>
     );
 }
@@ -71,7 +78,7 @@ function HeaderDesktopNav({
 }) {
     return (
         <>
-            <HeaderNavLinks locale={locale} onPlansClick={onPlansClick} variant="desktop" />
+            <HeaderNavLinks locale={locale} onPlansClick={onPlansClick} variant="desktop" t={t} />
             <div className="flex items-center gap-2 md:gap-3 ml-auto">
                 <button type="button" onClick={toggleTheme} className="p-2 rounded-xl text-muted hover:text-foreground hover:bg-surface transition-colors" aria-label={theme === 'light' ? 'Ativar tema escuro' : 'Ativar tema claro'}>
                     {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
@@ -79,6 +86,7 @@ function HeaderDesktopNav({
                 <div className="hidden sm:flex items-center gap-0.5 p-1 bg-surface rounded-xl border border-border">
                     <button onClick={() => onLanguageSwitch('pt')} className={`text-[10px] font-bold px-3 py-1.5 rounded-lg transition-all ${locale === 'pt' ? 'bg-violet-600 text-white shadow-lg' : 'text-muted hover:text-foreground hover:bg-surface'}`}>PT</button>
                     <button onClick={() => onLanguageSwitch('en')} className={`text-[10px] font-bold px-3 py-1.5 rounded-lg transition-all ${locale === 'en' ? 'bg-violet-600 text-white shadow-lg' : 'text-muted hover:text-foreground hover:bg-surface'}`}>EN</button>
+                    <button onClick={() => onLanguageSwitch('es')} className={`text-[10px] font-bold px-3 py-1.5 rounded-lg transition-all ${locale === 'es' ? 'bg-violet-600 text-white shadow-lg' : 'text-muted hover:text-foreground hover:bg-surface'}`}>ES</button>
                 </div>
                 <div className="flex items-center gap-2">
                     {resultsLength > 0 && (
@@ -129,12 +137,13 @@ function HeaderMobileNav({
         <div className="fixed inset-0 z-[99999] md:hidden" style={{ isolation: 'isolate' }}>
             <div className="absolute inset-0 bg-black/50 touch-manipulation" onClick={onCloseMenu} onTouchEnd={(e) => { e.preventDefault(); onCloseMenu(); }} aria-hidden role="presentation" />
             <div className="absolute left-4 right-4 top-[calc(68px+max(0.25rem,env(safe-area-inset-top))+0.5rem)] max-h-[calc(100vh-6rem)] overflow-y-auto animate-in slide-in-from-top-2 duration-200 rounded-3xl shadow-2xl border border-border bg-card backdrop-blur-2xl p-6 flex flex-col gap-6" role="dialog" aria-label="Menu">
-                <HeaderNavLinks locale={locale} onPlansClick={onPlansClick} onCloseMenu={onCloseMenu} variant="mobile" />
+                <HeaderNavLinks locale={locale} onPlansClick={onPlansClick} onCloseMenu={onCloseMenu} variant="mobile" t={t} />
                 <div className="flex flex-col gap-2">
                     <span className="text-[10px] font-black tracking-widest text-muted uppercase">Idioma</span>
                     <div className="flex gap-2">
-                        <button onClick={() => { onLanguageSwitch('pt'); onCloseMenu(); }} className={`flex-1 py-3 rounded-xl font-bold text-sm ${locale === 'pt' ? 'bg-violet-600 text-white' : 'bg-surface text-muted'}`}>Português</button>
-                        <button onClick={() => { onLanguageSwitch('en'); onCloseMenu(); }} className={`flex-1 py-3 rounded-xl font-bold text-sm ${locale === 'en' ? 'bg-violet-600 text-white' : 'bg-surface text-muted'}`}>English</button>
+                        <button onClick={() => { onLanguageSwitch('pt'); onCloseMenu(); }} className={`flex-1 py-3 rounded-xl font-bold text-sm ${locale === 'pt' ? 'bg-violet-600 text-white' : 'bg-surface text-muted'}`}>PT</button>
+                        <button onClick={() => { onLanguageSwitch('en'); onCloseMenu(); }} className={`flex-1 py-3 rounded-xl font-bold text-sm ${locale === 'en' ? 'bg-violet-600 text-white' : 'bg-surface text-muted'}`}>EN</button>
+                        <button onClick={() => { onLanguageSwitch('es'); onCloseMenu(); }} className={`flex-1 py-3 rounded-xl font-bold text-sm ${locale === 'es' ? 'bg-violet-600 text-white' : 'bg-surface text-muted'}`}>ES</button>
                     </div>
                 </div>
                 {resultsLength > 0 && (
@@ -201,9 +210,9 @@ export default function Header({
                     type="button"
                     onClick={() => navigate('/')}
                     className="flex items-center shrink-0 min-w-0 focus:outline-none focus:ring-2 focus:ring-violet-500 rounded-lg"
-                    aria-label="Precision IA - Ir para início"
+                    aria-label="Precision - Ir para início"
                 >
-                    <Logo height={168} className="h-36 sm:h-48" priority />
+                    <Logo height={32} className="h-8 w-auto max-w-[min(100%,11rem)] sm:h-9" priority />
                 </button>
 
                 <div className="flex items-center gap-1 lg:gap-2 ml-5 flex-1 min-w-0">

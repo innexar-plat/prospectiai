@@ -15,51 +15,60 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '@/contexts/ToastContext';
 import { LoadingState, EmptyState } from '@/components/dashboard/shared/DashboardUI';
 import { formatDate } from '@/lib/date-utils';
+import { useI18n } from '@/lib/i18n';
 
 type TabId = 'buscas' | 'lead' | 'intelligence';
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
-const MODULE_LABELS: Record<string, string> = {
-  VIABILITY: 'Viabilidade',
-  COMPETITORS: 'Concorrência',
-  MARKET: 'Mercado',
-  MY_COMPANY: 'Análise da minha empresa',
+const MODULE_KEYS: Record<string, string> = {
+  VIABILITY: 'page.historico.module.viability',
+  COMPETITORS: 'page.historico.module.competitors',
+  MARKET: 'page.historico.module.market',
+  MY_COMPANY: 'page.historico.module.myCompany',
 };
 
-function getHistoricoSubtitle(activeTab: TabId, searchTotal: number, intelTotal: number): string {
-  if (activeTab === 'buscas' && searchTotal) return `Suas buscas anteriores(${searchTotal} registros).`;
-  if (activeTab === 'lead') return 'Relatórios de análise de lead.';
-  if (activeTab === 'intelligence' && intelTotal !== 0) return `Relatórios de inteligência(${intelTotal}).`;
-  return 'Buscas, relatórios de lead e relatórios de inteligência.';
+function getModuleLabel(t: TranslateFn, key: string): string {
+  const messageKey = MODULE_KEYS[key];
+  return messageKey ? t(messageKey) : key;
+}
+
+function getHistoricoSubtitle(t: TranslateFn, activeTab: TabId, searchTotal: number, intelTotal: number): string {
+  if (activeTab === 'buscas' && searchTotal) return t('page.historico.subtitleSearches', { count: searchTotal });
+  if (activeTab === 'lead') return t('page.historico.subtitleLead');
+  if (activeTab === 'intelligence' && intelTotal !== 0) return t('page.historico.subtitleIntel', { count: intelTotal });
+  return t('page.historico.subtitleDefault');
 }
 
 function HistoricoSearchDetail({
   item,
   onBack,
   onNavigate,
-  formatDate,
+  formatDateFn,
+  t,
 }: {
   item: SearchHistoryItem & { resultsData?: Place[] };
   onBack: () => void;
   onNavigate: (path: string) => void;
-  formatDate: (iso: string) => string;
+  formatDateFn: (iso: string) => string;
+  t: TranslateFn;
 }) {
   const places = item.resultsData ?? [];
   return (
     <>
       <HeaderDashboard
         title={item.textQuery}
-        subtitle={`Resultados da busca em ${formatDate(item.createdAt)} — ${item.resultsCount} resultados`}
-        breadcrumb="Prospecção Ativa / Histórico / Detalhes"
+        subtitle={t('page.historico.detail.subtitle', { date: formatDateFn(item.createdAt), count: item.resultsCount })}
+        breadcrumb={t('page.historico.detail.breadcrumb')}
       />
       <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full">
         <Button variant="ghost" onClick={onBack} className="mb-4 inline-flex items-center gap-2 text-sm text-muted hover:text-foreground">
-          <ArrowLeft size={16} /> Voltar ao histórico
+          <ArrowLeft size={16} /> {t('page.historico.back')}
         </Button>
         <EmptyState
           icon={Search}
-          title="Resultados não disponíveis"
-          description="Os resultados desta busca não foram armazenados."
-          actionLabel="Realizar nova busca"
+          title={t('page.historico.detail.noResults')}
+          description={t('page.historico.detail.noResultsDesc')}
+          actionLabel={t('page.historico.detail.newSearch')}
           onAction={() => onNavigate('/dashboard')}
         />
         <div className="space-y-3">
@@ -92,7 +101,7 @@ function HistoricoSearchDetail({
                       )}
                       {website && (
                         <a href={website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300">
-                          <Globe size={12} /> Website
+                          <Globe size={12} /> {t('page.historico.website')}
                         </a>
                       )}
                     </div>
@@ -111,35 +120,37 @@ function HistoricoIntelDetail({
   item,
   onBack,
   onFavorite,
-  formatDate,
+  formatDateFn,
+  t,
 }: {
   item: IntelligenceReportItem & { resultsData?: unknown };
   onBack: () => void;
   onFavorite: (e: React.MouseEvent) => void;
-  formatDate: (iso: string) => string;
+  formatDateFn: (iso: string) => string;
+  t: TranslateFn;
 }) {
   const rd = item.resultsData as Record<string, unknown> | undefined;
-  const moduleLabel = MODULE_LABELS[item.module] || item.module;
+  const moduleLabel = getModuleLabel(t, item.module);
   const cityPart = item.inputCity ? ' · ' + item.inputCity : '';
-  const subtitle = item.inputQuery + cityPart + ' — ' + formatDate(item.createdAt);
+  const subtitle = item.inputQuery + cityPart + ' — ' + formatDateFn(item.createdAt);
   return (
     <>
       <HeaderDashboard
-        title={'Relatório — ' + moduleLabel}
+        title={t('page.historico.intel.reportTitle', { module: moduleLabel })}
         subtitle={subtitle}
-        breadcrumb="Prospecção Ativa / Histórico / Relatório de inteligência"
+        breadcrumb={t('page.historico.intel.breadcrumb')}
       />
       <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full">
         <div className="flex items-center gap-3 mb-4">
           <Button variant="ghost" onClick={onBack} className="inline-flex items-center gap-2 text-sm text-muted hover:text-foreground">
-            <ArrowLeft size={16} /> Voltar ao histórico
+            <ArrowLeft size={16} /> {t('page.historico.back')}
           </Button>
           <button
             type="button"
             onClick={onFavorite}
             className="p-2 rounded-lg border border-border hover:bg-violet-500/10 text-amber-600 dark:text-amber-400"
-            title={item.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
-            aria-label={item.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
+            title={item.isFavorite ? t('common.unfavorite') : t('common.favorite')}
+            aria-label={item.isFavorite ? t('common.unfavorite') : t('common.favorite')}
           >
             <Star size={18} className={item.isFavorite ? 'fill-current' : ''} />
           </button>
@@ -149,37 +160,37 @@ function HistoricoIntelDetail({
             <div className="prose prose-invert max-w-none text-sm">
               {item.module === 'VIABILITY' && 'score' in rd && (
                 <div className="space-y-2">
-                  <p><strong>Score:</strong> {String(rd.score)}/10</p>
-                  {'verdict' in rd && <p><strong>Veredito:</strong> {String(rd.verdict)}</p>}
+                  <p><strong>{t('page.historico.intel.score')}</strong> {String(rd.score)}/10</p>
+                  {'verdict' in rd && <p><strong>{t('page.historico.intel.verdict')}</strong> {String(rd.verdict)}</p>}
                   {'summary' in rd && <p className="text-muted">{String(rd.summary)}</p>}
                 </div>
               )}
               {item.module === 'COMPETITORS' && 'totalCount' in rd && (
                 <div className="space-y-2">
-                  <p><strong>Concorrentes mapeados:</strong> {String(rd.totalCount)}</p>
-                  {'avgRating' in rd && <p><strong>Rating médio:</strong> {String(rd.avgRating)}</p>}
+                  <p><strong>{t('page.historico.intel.competitorsMapped')}</strong> {String(rd.totalCount)}</p>
+                  {'avgRating' in rd && <p><strong>{t('page.historico.intel.avgRating')}</strong> {String(rd.avgRating)}</p>}
                 </div>
               )}
               {item.module === 'MARKET' && 'totalBusinesses' in rd && (
                 <div className="space-y-2">
-                  <p><strong>Total de negócios:</strong> {String(rd.totalBusinesses)}</p>
+                  <p><strong>{t('page.historico.intel.totalBusinesses')}</strong> {String(rd.totalBusinesses)}</p>
                 </div>
               )}
               {item.module === 'MY_COMPANY' && ('summary' in rd || (typeof rd.socialNetworks === 'object' && rd.socialNetworks && 'presence' in rd.socialNetworks)) && (
                 <div className="space-y-2">
                   {'summary' in rd && <p className="text-muted">{String(rd.summary)}</p>}
                   {typeof rd.socialNetworks === 'object' && rd.socialNetworks && 'presence' in rd.socialNetworks && (
-                    <p className="text-muted"><strong>Redes sociais:</strong> {String((rd.socialNetworks as Record<string, unknown>).presence ?? '')}</p>
+                    <p className="text-muted"><strong>{t('page.historico.intel.socialNetworks')}</strong> {String((rd.socialNetworks as Record<string, unknown>).presence ?? '')}</p>
                   )}
                 </div>
               )}
               {(!('score' in rd && item.module === 'VIABILITY') && !('totalCount' in rd && item.module === 'COMPETITORS') && !('totalBusinesses' in rd && item.module === 'MARKET') && !(item.module === 'MY_COMPANY' && 'summary' in rd)) && (
-                <p className="text-muted">Relatório salvo em {formatDate(item.createdAt)}. Dados completos disponíveis na geração do relatório.</p>
+                <p className="text-muted">{t('page.historico.intel.reportSavedFull', { date: formatDateFn(item.createdAt) })}</p>
               )}
             </div>
           )}
           {(!rd || typeof rd !== 'object') && (
-            <p className="text-muted">Relatório salvo em {formatDate(item.createdAt)}.</p>
+            <p className="text-muted">{t('page.historico.intel.reportSaved', { date: formatDateFn(item.createdAt) })}</p>
           )}
         </div>
       </div>
@@ -188,6 +199,7 @@ function HistoricoIntelDetail({
 }
 
 export default function HistoricoPage() {
+  const { t } = useI18n();
   const [searchParams, setSearchParams] = useSearchParams();
   const tabFromUrl = (searchParams.get('tab') as TabId) || 'buscas';
   const moduleFromUrl = searchParams.get('module') || '';
@@ -231,13 +243,13 @@ export default function HistoricoPage() {
         }
       })
       .catch(() => {
-        if (!cancelled) addToast('error', 'Falha ao carregar o histórico.');
+        if (!cancelled) addToast('error', t('page.historico.toast.loadError'));
       })
       .finally(() => {
         if (!cancelled) setSearchLoading(false);
       });
     return () => { cancelled = true; };
-  }, [addToast]);
+  }, [addToast, t]);
 
   useEffect(() => {
     if (activeTab !== 'lead') return;
@@ -248,13 +260,13 @@ export default function HistoricoPage() {
         if (!cancelled) setLeadItems(data);
       })
       .catch(() => {
-        if (!cancelled) addToast('error', 'Falha ao carregar relatórios de lead.');
+        if (!cancelled) addToast('error', t('page.historico.toast.leadLoadError'));
       })
       .finally(() => {
         if (!cancelled) setLeadLoading(false);
       });
     return () => { cancelled = true; };
-  }, [activeTab, addToast]);
+  }, [activeTab, addToast, t]);
 
   useEffect(() => {
     if (activeTab !== 'intelligence') return;
@@ -272,21 +284,21 @@ export default function HistoricoPage() {
         }
       })
       .catch(() => {
-        if (!cancelled) addToast('error', 'Falha ao carregar relatórios de inteligência.');
+        if (!cancelled) addToast('error', t('page.historico.toast.intelLoadError'));
       })
       .finally(() => {
         if (!cancelled) setIntelLoading(false);
       });
     return () => { cancelled = true; };
-  }, [activeTab, intelModule, intelFavoriteOnly, addToast]);
+  }, [activeTab, intelModule, intelFavoriteOnly, addToast, t]);
 
 
-  const setTab = (t: TabId) => {
-    setActiveTab(t);
+  const setTab = (tabId: TabId) => {
+    setActiveTab(tabId);
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
-      next.set('tab', t);
-      if (t !== 'intelligence') next.delete('module');
+      next.set('tab', tabId);
+      if (tabId !== 'intelligence') next.delete('module');
       return next;
     });
   };
@@ -302,7 +314,7 @@ export default function HistoricoPage() {
       const detail = await searchApi.historyDetail(item.id);
       setSelectedSearchItem(detail);
     } catch {
-      addToast('error', 'Falha ao carregar os resultados desta busca.');
+      addToast('error', t('page.historico.toast.searchDetailError'));
     } finally {
       setLoadingDetail(false);
     }
@@ -314,7 +326,7 @@ export default function HistoricoPage() {
       const detail = await intelligenceApi.detail(item.id);
       setSelectedIntelItem(detail);
     } catch {
-      addToast('error', 'Falha ao carregar o relatório.');
+      addToast('error', t('page.historico.toast.reportError'));
     } finally {
       setLoadingDetail(false);
     }
@@ -328,7 +340,7 @@ export default function HistoricoPage() {
       await leadsApi.toggleFavorite(item.id, next);
       setLeadItems((prev) => prev.map((r) => (r.id === item.id ? { ...r, isFavorite: next } : r)));
     } catch {
-      addToast('error', 'Falha ao atualizar favorito.');
+      addToast('error', t('page.historico.toast.favoriteError'));
     }
   };
 
@@ -341,7 +353,7 @@ export default function HistoricoPage() {
       setIntelItems((prev) => prev.map((r) => (r.id === item.id ? { ...r, isFavorite: next } : r)));
       if (selectedIntelItem?.id === item.id) setSelectedIntelItem((s) => (s ? { ...s, isFavorite: next } : null));
     } catch {
-      addToast('error', 'Falha ao atualizar favorito.');
+      addToast('error', t('page.historico.toast.favoriteError'));
     }
   };
 
@@ -351,7 +363,8 @@ export default function HistoricoPage() {
         item={selectedSearchItem}
         onBack={() => setSelectedSearchItem(null)}
         onNavigate={(path) => navigate(path)}
-        formatDate={formatDate}
+        formatDateFn={formatDate}
+        t={t}
       />
     );
   }
@@ -362,23 +375,24 @@ export default function HistoricoPage() {
         item={selectedIntelItem}
         onBack={() => setSelectedIntelItem(null)}
         onFavorite={(e) => handleIntelFavorite(selectedIntelItem, e)}
-        formatDate={formatDate}
+        formatDateFn={formatDate}
+        t={t}
       />
     );
   }
 
   const tabs = [
-    { id: 'buscas' as const, label: 'Buscas', icon: Search },
-    { id: 'lead' as const, label: 'Relatórios de lead', icon: User },
-    { id: 'intelligence' as const, label: 'Relatórios de inteligência', icon: FileText },
+    { id: 'buscas' as const, label: t('page.historico.tab.searches'), icon: Search },
+    { id: 'lead' as const, label: t('page.historico.tab.lead'), icon: User },
+    { id: 'intelligence' as const, label: t('page.historico.tab.intelligence'), icon: FileText },
   ];
 
   return (
     <>
       <HeaderDashboard
-        title="Histórico"
-        subtitle={getHistoricoSubtitle(activeTab, searchTotal, intelTotal)}
-        breadcrumb="Prospecção Ativa / Histórico"
+        title={t('page.historico.title')}
+        subtitle={getHistoricoSubtitle(t, activeTab, searchTotal, intelTotal)}
+        breadcrumb={t('page.historico.breadcrumb')}
       />
       <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full">
         <div className="flex flex-wrap gap-2 mb-6 border-b border-border pb-4">
@@ -402,7 +416,7 @@ export default function HistoricoPage() {
           <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
             <div className="bg-card border border-border rounded-2xl p-6 flex items-center gap-3 shadow-xl">
               <Loader2 size={24} className="animate-spin text-violet-600 dark:text-violet-400" />
-              <span className="text-foreground font-medium">Carregando...</span>
+              <span className="text-foreground font-medium">{t('page.historico.loading')}</span>
             </div>
           </div>
         )}
@@ -410,13 +424,13 @@ export default function HistoricoPage() {
         {activeTab === 'buscas' && (
           <>
             {(() => {
-              if (searchLoading) return <LoadingState message="Carregando histórico..." />;
+              if (searchLoading) return <LoadingState message={t('page.historico.loadingHistory')} />;
               if (searchItems.length === 0) return (
                 <EmptyState
                   icon={Clock}
-                  title="Nenhuma busca no histórico"
-                  description="Suas buscas aparecerão aqui conforme você usa a plataforma."
-                  actionLabel="Realizar uma busca"
+                  title={t('page.historico.emptySearches')}
+                  description={t('page.historico.emptySearchesDesc')}
+                  actionLabel={t('common.doSearch')}
                   onAction={() => navigate('/dashboard')}
                 />
               );
@@ -440,13 +454,13 @@ export default function HistoricoPage() {
                             <p className="text-sm font-bold text-foreground truncate">{item.textQuery}</p>
                             {idx === 0 && (
                               <span className="text-[10px] font-semibold uppercase tracking-wider bg-violet-500/20 text-violet-700 dark:text-violet-300 px-2 py-0.5 rounded-full">
-                                Mais recente
+                                {t('page.historico.mostRecent')}
                               </span>
                             )}
                           </div>
                           <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted">
                             <span className="inline-flex items-center gap-1"><CalendarDays size={12} /> {formatDate(item.createdAt)}</span>
-                            <span>{item.resultsCount} resultados</span>
+                            <span>{t('page.historico.resultsCount', { count: item.resultsCount })}</span>
                             {(item.city || item.country) && (
                               <span className="inline-flex items-center gap-1">
                                 <MapPin size={12} />
@@ -464,7 +478,6 @@ export default function HistoricoPage() {
                           icon={<RotateCw size={14} />}
                           onClick={(e) => {
                             e.stopPropagation();
-                            // Navigate to search page with pre-filled params from this history item
                             const params = new URLSearchParams();
                             params.set('q', item.textQuery);
                             if (item.city) params.set('city', item.city);
@@ -475,7 +488,7 @@ export default function HistoricoPage() {
                             navigate(`/dashboard?${params.toString()}`);
                           }}
                         >
-                          Rebuscar
+                          {t('page.historico.research')}
                         </Button>
                         <ChevronRight size={20} className="text-muted group-hover:text-violet-600 dark:text-violet-400 transition-colors hidden sm:block" />
                       </div>
@@ -497,20 +510,20 @@ export default function HistoricoPage() {
                   onChange={(e) => setLeadFavoriteOnly(e.target.checked)}
                   className="rounded border-border bg-surface text-violet-500 focus:ring-violet-500/50"
                 />
-                <span className="text-sm text-muted">Só favoritos</span>
+                <span className="text-sm text-muted">{t('common.favoritesOnly')}</span>
               </label>
             </div>
             {(() => {
               if (leadLoading) {
-                return <LoadingState message="Carregando relatórios de lead..." />;
+                return <LoadingState message={t('page.historico.loadingLeadReports')} />;
               }
               if (leadFiltered.length === 0) {
                 return (
                   <EmptyState
                     icon={User}
-                    title={leadFavoriteOnly ? 'Nenhum relatório de lead favorito' : 'Nenhum relatório de lead'}
-                    description={leadFavoriteOnly ? 'Marque leads como favoritos na listagem para filtrar aqui.' : 'Os relatórios de análise de lead aparecerão aqui.'}
-                    actionLabel={leadFavoriteOnly ? 'Ver todos' : undefined}
+                    title={leadFavoriteOnly ? t('page.historico.emptyLeadFav') : t('page.historico.emptyLead')}
+                    description={leadFavoriteOnly ? t('page.historico.emptyLeadFavDesc') : t('page.historico.emptyLeadDesc')}
+                    actionLabel={leadFavoriteOnly ? t('common.seeAll') : undefined}
                     onAction={leadFavoriteOnly ? () => setLeadFavoriteOnly(false) : undefined}
                   />
                 );
@@ -533,7 +546,7 @@ export default function HistoricoPage() {
                             <p className="text-sm font-bold text-foreground truncate">{leadData?.name ?? '—'}</p>
                             <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted">
                               <span className="inline-flex items-center gap-1"><CalendarDays size={12} /> {formatDate(item.createdAt)}</span>
-                              {item.score != null && <span>Score: {item.score}</span>}
+                              {item.score != null && <span>{t('page.historico.leadScore', { score: item.score })}</span>}
                             </div>
                           </div>
                         </div>
@@ -542,8 +555,8 @@ export default function HistoricoPage() {
                             type="button"
                             onClick={(e) => handleLeadFavorite(item, e)}
                             className="p-2 rounded-lg border border-border hover:bg-violet-500/10 text-amber-600 dark:text-amber-400"
-                            title={item.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
-                            aria-label={item.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
+                            title={item.isFavorite ? t('common.unfavorite') : t('common.favorite')}
+                            aria-label={item.isFavorite ? t('common.unfavorite') : t('common.favorite')}
                           >
                             <Star size={18} className={item.isFavorite ? 'fill-current' : ''} />
                           </button>
@@ -553,7 +566,7 @@ export default function HistoricoPage() {
                             className="text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300"
                             onClick={() => placeId && navigate(`/dashboard/lead/${placeId}`)}
                           >
-                            Abrir relatório
+                            {t('page.historico.openReport')}
                           </Button>
                         </div>
                       </div>
@@ -573,11 +586,11 @@ export default function HistoricoPage() {
                 onChange={(e) => setIntelModule(e.target.value)}
                 className="h-9 px-3 rounded-lg border border-border bg-surface text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50"
               >
-                <option value="">Todos os módulos</option>
-                <option value="VIABILITY">Viabilidade</option>
-                <option value="COMPETITORS">Concorrência</option>
-                <option value="MARKET">Mercado</option>
-                <option value="MY_COMPANY">Análise da minha empresa</option>
+                <option value="">{t('page.historico.allModules')}</option>
+                <option value="VIABILITY">{getModuleLabel(t, 'VIABILITY')}</option>
+                <option value="COMPETITORS">{getModuleLabel(t, 'COMPETITORS')}</option>
+                <option value="MARKET">{getModuleLabel(t, 'MARKET')}</option>
+                <option value="MY_COMPANY">{getModuleLabel(t, 'MY_COMPANY')}</option>
               </select>
               <label className="inline-flex items-center gap-2 cursor-pointer">
                 <input
@@ -586,20 +599,20 @@ export default function HistoricoPage() {
                   onChange={(e) => setIntelFavoriteOnly(e.target.checked)}
                   className="rounded border-border bg-surface text-violet-500 focus:ring-violet-500/50"
                 />
-                <span className="text-sm text-muted">Só favoritos</span>
+                <span className="text-sm text-muted">{t('common.favoritesOnly')}</span>
               </label>
             </div>
             {(() => {
               if (intelLoading) {
-                return <LoadingState message="Carregando relatórios de inteligência..." />;
+                return <LoadingState message={t('page.historico.loadingIntelReports')} />;
               }
               if (intelItems.length === 0) {
                 return (
                   <EmptyState
                     icon={BarChart3}
-                    title={intelFavoriteOnly ? 'Nenhum relatório de inteligência favorito' : 'Nenhum relatório de inteligência'}
-                    description="Gere relatórios em Viabilidade, Concorrência ou Mercado para ver o histórico aqui."
-                    actionLabel={intelFavoriteOnly ? 'Ver todos' : undefined}
+                    title={intelFavoriteOnly ? t('page.historico.emptyIntelFav') : t('page.historico.emptyIntel')}
+                    description={t('page.historico.emptyIntelDesc')}
+                    actionLabel={intelFavoriteOnly ? t('common.seeAll') : undefined}
                     onAction={intelFavoriteOnly ? () => setIntelFavoriteOnly(false) : undefined}
                   />
                 );
@@ -621,7 +634,7 @@ export default function HistoricoPage() {
                           </p>
                           <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted">
                             <span className="inline-flex items-center gap-1"><CalendarDays size={12} /> {formatDate(item.createdAt)}</span>
-                            <span>{MODULE_LABELS[item.module] || item.module}</span>
+                            <span>{getModuleLabel(t, item.module)}</span>
                           </div>
                         </div>
                       </div>
@@ -630,8 +643,8 @@ export default function HistoricoPage() {
                           type="button"
                           onClick={(e) => handleIntelFavorite(item, e)}
                           className="p-2 rounded-lg border border-border hover:bg-violet-500/10 text-amber-600 dark:text-amber-400"
-                          title={item.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
-                          aria-label={item.isFavorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
+                          title={item.isFavorite ? t('common.unfavorite') : t('common.favorite')}
+                          aria-label={item.isFavorite ? t('common.unfavorite') : t('common.favorite')}
                         >
                           <Star size={18} className={item.isFavorite ? 'fill-current' : ''} />
                         </button>
@@ -641,7 +654,7 @@ export default function HistoricoPage() {
                           className="text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300"
                           onClick={() => handleIntelItemClick(item)}
                         >
-                          Abrir
+                          {t('page.historico.open')}
                         </Button>
                       </div>
                     </div>

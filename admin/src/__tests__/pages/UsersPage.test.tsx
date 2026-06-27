@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { UsersPage } from '@/pages/UsersPage';
 
@@ -54,5 +54,33 @@ describe('UsersPage', () => {
       </MemoryRouter>
     );
     await screen.findByText('Network error', {}, { timeout: 3000 });
+  });
+
+  it('passes search param to adminApi.users after debounce', async () => {
+    mockUsers.mockResolvedValue({
+      items: [],
+      total: 0,
+      limit: 20,
+      offset: 0,
+    });
+    render(
+      <MemoryRouter>
+        <Routes>
+          <Route path="/" element={<UsersPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await screen.findByPlaceholderText(/buscar por nome ou email/i);
+    fireEvent.change(screen.getByPlaceholderText(/buscar por nome ou email/i), {
+      target: { value: 'john@x.com' },
+    });
+    await waitFor(
+      () => {
+        expect(mockUsers).toHaveBeenCalledWith(
+          expect.objectContaining({ search: 'john@x.com', limit: 20, offset: 0 }),
+        );
+      },
+      { timeout: 2000 },
+    );
   });
 });

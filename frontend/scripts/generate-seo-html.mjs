@@ -10,7 +10,15 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const DIST = path.join(ROOT, 'dist');
-const BASE_URL = 'https://precisionia.com.br';
+const BASE_URL =
+  process.env.VITE_MARKET === 'US'
+    ? 'https://precisionai.innexar.app'
+    : 'https://precisionia.com.br';
+
+if (process.env.VITE_MARKET === 'US') {
+  console.log('Skipping BR-only per-route SEO HTML for US market build.');
+  process.exit(0);
+}
 
 function escapeHtml(s) {
   return String(s)
@@ -35,6 +43,18 @@ function getIndexableRoutes() {
     campinas: 'Campinas',
   };
   const routes = [
+    {
+      path: '',
+      title: 'Precision IA - Busca B2B e prospeccao com IA',
+      description:
+        'Encontre e analise empresas por nicho e regiao com IA. Gestao de leads, exportacao e integracoes com CRM.',
+    },
+    {
+      path: 'mapa-do-site',
+      title: 'Mapa do Site | PrecisionAI',
+      description:
+        'Mapa do site da PrecisionAI com links para blog, integracoes e paginas locais de prospeccao B2B.',
+    },
     {
       path: 'privacy',
       title: 'Política de Privacidade | PrecisionAI',
@@ -118,6 +138,30 @@ function getIndexableRoutes() {
   return routes;
 }
 
+function writeSitemap(routes) {
+  const date = new Date().toISOString().slice(0, 10);
+  const lines = [];
+  lines.push('<?xml version="1.0" encoding="UTF-8"?>');
+  lines.push('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">');
+
+  for (const r of routes) {
+    const pathPart = r.path ? `/${r.path}` : '/';
+    const loc = `${BASE_URL}${pathPart}`;
+    const priority = r.path === '' ? '1.0' : r.path.startsWith('blog/') ? '0.9' : '0.8';
+    const changefreq = r.path.startsWith('blog') ? 'weekly' : 'monthly';
+    lines.push('  <url>');
+    lines.push(`    <loc>${loc}</loc>`);
+    lines.push(`    <lastmod>${date}</lastmod>`);
+    lines.push(`    <changefreq>${changefreq}</changefreq>`);
+    lines.push(`    <priority>${priority}</priority>`);
+    lines.push('  </url>');
+  }
+
+  lines.push('</urlset>');
+  writeFileSync(path.join(DIST, 'sitemap.xml'), `${lines.join('\n')}\n`);
+  console.log('Gerado:', path.join(DIST, 'sitemap.xml'));
+}
+
 function replaceMeta(html, { url, title, description }) {
   const safeTitle = escapeHtml(title);
   const safeDesc = escapeHtml(description);
@@ -170,6 +214,7 @@ function main() {
 
   const routes = getIndexableRoutes();
   for (const r of routes) {
+    if (!r.path) continue;
     const url = `${BASE_URL}/${r.path}`;
     const html = replaceMeta(indexHtml, {
       url,
@@ -181,6 +226,7 @@ function main() {
     writeFileSync(outPath, html);
     console.log('Gerado:', outPath);
   }
+  writeSitemap(routes);
   console.log('Total:', routes.length, 'páginas');
 }
 

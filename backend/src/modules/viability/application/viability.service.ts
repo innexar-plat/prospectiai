@@ -5,14 +5,26 @@
  */
 
 import { generateCompletionForRole, resolveAiForRole } from '@/lib/ai';
+import { extractJsonFromLlm } from '@/lib/ai/parse-json';
 import { getWebContextForRole } from '@/lib/web-search/resolve';
 import { runCompetitorAnalysis } from '@/modules/competitors';
 import { runMarketReport } from '@/modules/market';
 import { recordUsageEvent } from '@/lib/usage';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { getWorkspaceIdForUser } from '@/lib/workspace';
+import { normalizeAnalyzeLocale } from '@/lib/i18n/analysis-error-messages';
+import {
+    buildViabilityAnalysisPrompt,
+    buildViabilityFallbackReport,
+    buildViabilityTextQuery,
+    reviewsCountLabel,
+    viabilityDefaultOffer,
+    viabilityDefaultTicket,
+    viabilityNotEstimated,
+} from '@/lib/ai/prompts/intelligence';
 import type { ScoredPlace } from '@/modules/scoring';
-import type { ViabilityInput, ViabilityReport, SegmentBreakdown, ViabilityMode } from '../domain/types';
+import type { ViabilityInput, ViabilityReport, SegmentBreakdown } from '../domain/types';
 
 type PromptContext = {
     businessType: string;
@@ -34,81 +46,6 @@ type PromptContext = {
     avgScore: number;
 };
 
-function buildViabilityPrompt(
-    mode: ViabilityMode,
-    input: ViabilityInput,
-    context: PromptContext,
-    webContext: string | undefined
-): string {
-    const statePart = input.state ? `, ${input.state}` : '';
-    const cityState = `${input.city}${statePart}`;
-
-    const modeInstructions: Record<ViabilityMode, string> = {
-        new_business: `Análise de viabilidade para **abrir um novo negócio** do tipo "${input.businessType}" em ${cityState}.
-Inclua: oportunidade de mercado, saturação, melhor modelo de negócio, investimento inicial sugerido, locais recomendados.
-Para suggestedOffer/suggestedTicket: sugira modelo de negócio e faixa de investimento adequados para quem vai abrir esse negócio na região.`,
-        expand: `Análise de viabilidade para **expandir o negócio / abrir filial** do tipo "${input.businessType}" em ${cityState}.
-Inclua: atratividade da região para expansão, concorrência, riscos e recomendações para abertura de filial.
-Para suggestedOffer/suggestedTicket: adapte ao contexto de expansão/filial (custos, ticket sugerido na nova cidade).`,
-        my_business: `Análise de viabilidade **do negócio do usuário** (${input.businessType}) na cidade ${cityState}.
-Use os dados de mercado para avaliar se a cidade é viável para esse negócio específico.
-Para suggestedOffer/suggestedTicket: recomendações para o negócio do usuário atuar nessa cidade.`,
-    };
-
-    const intro = modeInstructions[mode];
-
-    const basePrompt = `Você é um consultor de negócios especializado em análise de viabilidade local no Brasil.
-${intro}
-
-DADOS DO MERCADO LOCAL:
-- Total de concorrentes mapeados: ${context.totalCompetitors}
-- Rating médio: ${context.avgRating ?? 'N/A'}
-- Top 3 por avaliação: ${context.top3ByRating || 'N/A'}
-- Top 3 por volume de reviews: ${context.top3ByReviews || 'N/A'}
-- Com website: ${context.withWebsite} / Sem website: ${context.withoutWebsite}
-- Com telefone: ${context.withPhone} / Sem telefone: ${context.withoutPhone}
-- Oportunidades (sem presença digital): ${context.opportunitiesCount}
-- Top leads com score de oportunidade: ${context.topScoredCount} (score médio: ${context.avgScore}/100)
-- Segmentos encontrados: ${context.segments || 'N/A'}
-- Maturidade digital da região: ${context.digitalMaturityPercent}%
-- Índice de saturação: ${context.saturationIndex}
-
-Responda EXCLUSIVAMENTE em JSON válido, sem markdown, sem backticks:
-{
-  "score": <número 0-10, onde 10 = altamente viável>,
-  "verdict": "<uma frase curta: Altamente Viável / Viável com Ressalvas / Moderado / Arriscado / Não Recomendado>",
-  "goNoGo": "<GO | CAUTION | NO_GO>",
-  "summary": "<parágrafo de 3-4 frases explicando a viabilidade geral com dados concretos>",
-  "strengths": ["<ponto forte 1>", "<ponto forte 2>", "<ponto forte 3>"],
-  "risks": ["<risco 1>", "<risco 2>", "<risco 3>"],
-  "recommendations": ["<recomendação 1>", "<recomendação 2>", "<recomendação 3>", "<recomendação 4>"],
-  "estimatedInvestment": "<faixa estimada de investimento inicial para esse tipo de negócio nessa região>",
-  "bestLocations": ["<sugestão de bairro/região 1>", "<sugestão 2>"],
-  "dailyLeadsTarget": <número inteiro: quantos leads por dia prospectar nesse nicho>,
-  "suggestedOffer": "<oferta sugerida conforme o contexto do modo de análise>",
-  "suggestedTicket": "<ticket mensal sugerido conforme o contexto>"
-}
-
-REGRAS CRÍTICAS:
-- Baseie-se APENAS nos dados fornecidos acima
-- score deve refletir a realidade: se há muitos concorrentes com alta avaliação, o score deve ser menor
-- goNoGo: GO se score >= 7, CAUTION se 4-6, NO_GO se < 4
-- dailyLeadsTarget: base no total de oportunidades e um ritmo realista
-- suggestedTicket: baseado no nicho e na região
-- Seja realista e honesto, não superestime a viabilidade
-`;
-    const webSuffix = webContext ? '\n\n' + webContext + '\n\n' : '';
-    return basePrompt + webSuffix;
-}
-
-async function getViabilityWorkspaceId(userId: string): Promise<string | undefined> {
-    const user = await prisma.user.findFirst({
-        where: { id: userId },
-        include: { workspaces: { include: { workspace: true }, take: 1 } },
-    });
-    return user?.workspaces?.length ? user.workspaces[0].workspace.id : undefined;
-}
-
 function buildSegmentBreakdownWithOpportunity(marketData: { segments: Array<{ type: string; count: number; avgRating: number | null }>; digitalMaturity: { total: number; withWebsite: number } }): SegmentBreakdown[] {
     const digitalWeakPct = marketData.digitalMaturity.total > 0
         ? Math.round(((marketData.digitalMaturity.total - marketData.digitalMaturity.withWebsite) / marketData.digitalMaturity.total) * 100)
@@ -124,9 +61,11 @@ function buildSegmentBreakdownWithOpportunity(marketData: { segments: Array<{ ty
 function parseViabilityAiReport(
     rawText: string,
     city: string,
+    locale: string,
 ): {
     score: number;
     verdict: string;
+    verdictKey?: 'HIGHLY_VIABLE' | 'VIABLE_WITH_CAVEATS' | 'MODERATE' | 'RISKY' | 'NOT_RECOMMENDED';
     goNoGo: string;
     summary: string;
     strengths: string[];
@@ -138,32 +77,25 @@ function parseViabilityAiReport(
     suggestedOffer: string;
     suggestedTicket: string;
 } {
+    const verdictKeys = ['HIGHLY_VIABLE', 'VIABLE_WITH_CAVEATS', 'MODERATE', 'RISKY', 'NOT_RECOMMENDED'] as const;
     try {
-        const cleaned = rawText.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
-        return JSON.parse(cleaned);
+        const parsed = extractJsonFromLlm(rawText) as { verdictKey?: string };
+        const verdictKey = verdictKeys.includes(parsed.verdictKey as typeof verdictKeys[number])
+            ? (parsed.verdictKey as typeof verdictKeys[number])
+            : undefined;
+        return { ...parsed, verdictKey } as ReturnType<typeof parseViabilityAiReport>;
     } catch {
-        return {
-            score: 5,
-            verdict: 'Análise parcial',
-            goNoGo: 'CAUTION',
-            summary: 'Não foi possível gerar análise completa. Tente novamente.',
-            strengths: ['Dados de mercado coletados com sucesso'],
-            risks: ['Análise de IA incompleta'],
-            recommendations: ['Tente novamente com termos mais específicos'],
-            estimatedInvestment: 'Não estimado',
-            bestLocations: [city],
-            dailyLeadsTarget: 5,
-            suggestedOffer: 'Pacote Website + SEO Local',
-            suggestedTicket: 'Consultar valores',
-        };
+        return buildViabilityFallbackReport(locale, city) as ReturnType<typeof parseViabilityAiReport>;
     }
 }
 
 function buildViabilityContext(
     input: ViabilityInput,
+    locale: string,
     competitorData: { totalCount: number; rankingByRating: Array<{ name: string; rating: number }>; rankingByReviews: Array<{ name: string; reviewCount: number }>; digitalPresence: { withWebsite: number; withoutWebsite: number; withPhone: number; withoutPhone: number }; opportunities: unknown[]; topOpportunities: Array<{ score: number }> },
     marketData: { segments: Array<{ type: string; count: number; avgRating: number | null }>; digitalMaturity: { withWebsitePercent: number }; saturationIndex: number; avgRating: number | null },
 ): PromptContext {
+    const reviewsLabel = reviewsCountLabel(locale);
     const avgScore = competitorData.topOpportunities.length > 0
         ? Math.round(competitorData.topOpportunities.reduce((a, b) => a + b.score, 0) / competitorData.topOpportunities.length)
         : 0;
@@ -173,7 +105,7 @@ function buildViabilityContext(
         state: input.state,
         totalCompetitors: competitorData.totalCount,
         top3ByRating: competitorData.rankingByRating.slice(0, 3).map((c) => `${c.name} (${c.rating}★)`).join(', '),
-        top3ByReviews: competitorData.rankingByReviews.slice(0, 3).map((c) => `${c.name} (${c.reviewCount} avaliações)`).join(', '),
+        top3ByReviews: competitorData.rankingByReviews.slice(0, 3).map((c) => `${c.name} (${c.reviewCount} ${reviewsLabel})`).join(', '),
         withWebsite: competitorData.digitalPresence.withWebsite,
         withoutWebsite: competitorData.digitalPresence.withoutWebsite,
         withPhone: competitorData.digitalPresence.withPhone,
@@ -190,35 +122,60 @@ function buildViabilityContext(
 
 export async function runViabilityAnalysis(
     input: ViabilityInput,
-    userId: string
+    userId: string,
+    locale = 'pt',
 ): Promise<ViabilityReport> {
-    const statePart = input.state ? ', ' + input.state : '';
-    const textQuery = input.businessType + ' em ' + input.city + statePart;
+    const resolvedLocale = normalizeAnalyzeLocale(input.locale ?? locale);
+    const textQuery = buildViabilityTextQuery(resolvedLocale, input.businessType, input.city, input.state);
+    const country = input.country?.trim() || undefined;
 
-    const workspaceId = await getViabilityWorkspaceId(userId);
+    const workspaceId = await getWorkspaceIdForUser(userId);
 
-    const webQueries = [
-        textQuery,
-        `notícias ${input.businessType} ${input.city}`,
-        `tendências ${input.businessType} ${input.city}`,
-    ].filter(Boolean);
+    const webQueries = resolvedLocale === 'en'
+        ? [
+            textQuery,
+            `news ${input.businessType} ${input.city}`,
+            `trends ${input.businessType} ${input.city}`,
+            input.businessContext?.primaryCnaeDescription ? `${input.businessContext.primaryCnaeDescription} ${input.city}` : '',
+        ].filter(Boolean)
+        : resolvedLocale === 'es'
+            ? [
+                textQuery,
+                `noticias ${input.businessType} ${input.city}`,
+                `tendencias ${input.businessType} ${input.city}`,
+                input.businessContext?.primaryCnaeDescription ? `${input.businessContext.primaryCnaeDescription} ${input.city}` : '',
+            ].filter(Boolean)
+            : [
+                textQuery,
+                `notícias ${input.businessType} ${input.city}`,
+                `tendências ${input.businessType} ${input.city}`,
+                input.businessContext?.primaryCnaeDescription ? `${input.businessContext.primaryCnaeDescription} ${input.city}` : '',
+            ].filter(Boolean);
     const webContext = await getWebContextForRole('viability', webQueries, workspaceId ? { workspaceId, userId } : undefined);
 
+    const searchParams = {
+        textQuery,
+        pageSize: 60,
+        city: input.city,
+        state: input.state,
+        country,
+    };
+
     const [competitorData, marketData] = await Promise.all([
-        runCompetitorAnalysis({ textQuery, pageSize: 60 }, userId),
-        runMarketReport({ textQuery, pageSize: 60 }, userId),
+        runCompetitorAnalysis(searchParams, userId, resolvedLocale),
+        runMarketReport(searchParams, userId, resolvedLocale),
     ]);
 
     const segmentBreakdown = buildSegmentBreakdownWithOpportunity(marketData);
-    const context = buildViabilityContext(input, competitorData, marketData);
+    const context = buildViabilityContext(input, resolvedLocale, competitorData, marketData);
 
-    const prompt = buildViabilityPrompt(input.mode, input, context, webContext);
+    const prompt = buildViabilityAnalysisPrompt(resolvedLocale, input.mode, input, context, webContext || undefined);
 
     const { config } = await resolveAiForRole('viability');
     const result = await generateCompletionForRole('viability', {
         prompt,
         jsonMode: true,
-        maxTokens: 4096,
+        maxOutputTokens: 4096,
     });
 
     if (workspaceId && result.usage) {
@@ -236,26 +193,28 @@ export async function runViabilityAnalysis(
         });
     }
 
-    const aiReport = parseViabilityAiReport(result.text, input.city);
-    const viabilityResult = buildViabilityReportResult(aiReport, competitorData, marketData, segmentBreakdown);
+    const aiReport = parseViabilityAiReport(result.text, input.city, resolvedLocale);
+    const viabilityResult = buildViabilityReportResult(aiReport, competitorData, marketData, segmentBreakdown, resolvedLocale);
 
     if (workspaceId) {
-        persistViabilityReport(workspaceId, userId, input, viabilityResult);
+        await persistViabilityReport(workspaceId, userId, input, viabilityResult);
     }
 
     return viabilityResult;
 }
 
 function buildViabilityReportResult(
-    aiReport: { score: number; verdict: string; goNoGo: string; summary: string; strengths: string[]; risks: string[]; recommendations: string[]; estimatedInvestment: string; bestLocations: string[]; dailyLeadsTarget: number; suggestedOffer: string; suggestedTicket: string },
+    aiReport: { score: number; verdict: string; verdictKey?: ViabilityReport['verdictKey']; goNoGo: string; summary: string; strengths: string[]; risks: string[]; recommendations: string[]; estimatedInvestment: string; bestLocations: string[]; dailyLeadsTarget: number; suggestedOffer: string; suggestedTicket: string },
     competitorData: { totalCount: number; topOpportunities: ScoredPlace[] },
     marketData: { saturationIndex: number; digitalMaturity: { withWebsitePercent: number } },
     segmentBreakdown: SegmentBreakdown[],
+    locale: string,
 ): ViabilityReport {
     const goNoGo = (['GO', 'CAUTION', 'NO_GO'].includes(aiReport.goNoGo) ? aiReport.goNoGo : 'CAUTION') as 'GO' | 'CAUTION' | 'NO_GO';
     return {
         score: Math.min(10, Math.max(0, aiReport.score)),
         verdict: aiReport.verdict,
+        verdictKey: aiReport.verdictKey,
         goNoGo,
         summary: aiReport.summary,
         competitorDensity: competitorData.totalCount,
@@ -264,23 +223,28 @@ function buildViabilityReportResult(
         strengths: aiReport.strengths || [],
         risks: aiReport.risks || [],
         recommendations: aiReport.recommendations || [],
-        estimatedInvestment: aiReport.estimatedInvestment || 'Não estimado',
+        estimatedInvestment: aiReport.estimatedInvestment || viabilityNotEstimated(locale),
         bestLocations: aiReport.bestLocations || [],
         segmentBreakdown,
         dailyLeadsTarget: aiReport.dailyLeadsTarget || 5,
-        suggestedOffer: aiReport.suggestedOffer || 'Pacote Website + SEO Local',
-        suggestedTicket: aiReport.suggestedTicket || 'Consultar valores',
+        suggestedOffer: aiReport.suggestedOffer || viabilityDefaultOffer(locale),
+        suggestedTicket: aiReport.suggestedTicket || viabilityDefaultTicket(locale),
         topOpportunities: competitorData.topOpportunities.slice(0, 20),
     };
 }
 
-function persistViabilityReport(workspaceId: string, userId: string, input: ViabilityInput, viabilityResult: ViabilityReport): void {
-    prisma.intelligenceReport.create({
+async function persistViabilityReport(workspaceId: string, userId: string, input: ViabilityInput, viabilityResult: ViabilityReport): Promise<void> {
+    await prisma.intelligenceReport.create({
         data: {
             workspaceId,
             userId,
             module: 'VIABILITY',
-            inputQuery: `${input.businessType} em ${input.city}`,
+            inputQuery: buildViabilityTextQuery(
+                normalizeAnalyzeLocale(input.locale ?? 'pt'),
+                input.businessType,
+                input.city,
+                input.state,
+            ),
             inputCity: input.city,
             inputState: input.state,
             resultsData: JSON.parse(JSON.stringify(viabilityResult)),

@@ -2,6 +2,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useEffect, useState, useCallback } from 'react';
 import { adminApi, type AdminAffiliateDetail } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { useConfirm } from '@/lib/useConfirm';
 
 type TabId = 'overview' | 'referrals' | 'commissions';
 
@@ -26,6 +27,13 @@ export function AffiliateDetailPage() {
   const [payingCommissionId, setPayingCommissionId] = useState<string | null>(null);
   const [proofUrlForPay, setProofUrlForPay] = useState('');
   const [copiedLink, setCopiedLink] = useState(false);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const { confirm, ConfirmDialog } = useConfirm();
+
+  const showToast = (type: 'success' | 'error', message: string) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 5000);
+  };
 
   const isExternal = affiliate?.userId == null;
 
@@ -53,11 +61,21 @@ export function AffiliateDetailPage() {
 
   const handleMarkCommissionPaid = async (commissionId: string, paymentProofUrl?: string) => {
     if (!id || payingCommissionId) return;
+    const ok = await confirm({
+      title: 'Marcar como pago',
+      message: 'Confirmar que esta comissão foi paga ao afiliado?',
+      confirmLabel: 'Marcar como pago',
+      variant: 'primary',
+    });
+    if (!ok) return;
     setPayingCommissionId(commissionId);
     try {
       await adminApi.markCommissionPaid(id, commissionId, paymentProofUrl ?? undefined);
       refetchAffiliate();
       setProofUrlForPay('');
+      showToast('success', 'Comissão marcada como paga.');
+    } catch (err) {
+      showToast('error', err instanceof Error ? err.message : 'Erro ao marcar como pago.');
     } finally {
       setPayingCommissionId(null);
     }
@@ -114,16 +132,18 @@ export function AffiliateDetailPage() {
       setEmail(a.email ?? '');
       setDocument((a as { document?: string }).document ?? '');
       setNotes((a as { notes?: string }).notes ?? '');
-    } catch {
+      showToast('success', 'Afiliado atualizado com sucesso.');
+    } catch (err) {
+      showToast('error', err instanceof Error ? err.message : 'Erro ao salvar.');
+    } finally {
       setSaving(false);
     }
-    setSaving(false);
   };
 
   if (loading || !affiliate) {
     return (
       <div>
-        <Link to="/affiliates" className="text-sm text-gray-500 hover:text-gray-900 mb-4 inline-block">← Afiliados</Link>
+        <Link to=".." className="text-sm text-gray-500 hover:text-gray-900 mb-4 inline-block">← Afiliados</Link>
         {error ? <div className="rounded-lg bg-red-50 text-red-600 px-4 py-3">{error}</div> : <div className="h-64 rounded-xl bg-gray-200 animate-pulse" />}
       </div>
     );
@@ -137,7 +157,13 @@ export function AffiliateDetailPage() {
 
   return (
     <div>
-      <Link to="/affiliates" className="text-sm text-gray-500 hover:text-gray-900 mb-4 inline-block">← Afiliados</Link>
+      {ConfirmDialog}
+      <Link to=".." className="text-sm text-gray-500 hover:text-gray-900 mb-4 inline-block">← Afiliados</Link>
+      {toast && (
+        <div className={`mb-4 rounded-lg px-4 py-3 text-sm ${toast.type === 'success' ? 'bg-emerald-50 border border-emerald-300 text-emerald-700' : 'bg-red-50 border border-red-300 text-red-700'}`}>
+          {toast.message}
+        </div>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
         <h1 className="text-xl font-semibold text-gray-900">Afiliado: {affiliate.code}</h1>
         <button
@@ -219,7 +245,13 @@ export function AffiliateDetailPage() {
             <table className="w-full text-sm">
               <thead><tr className="border-b border-gray-200 text-gray-500 text-left"><th className="px-4 py-3 font-medium">Data</th><th className="px-4 py-3 font-medium">Convertido</th><th className="px-4 py-3 font-medium">Valor</th></tr></thead>
               <tbody>
-                {(affiliate.referrals ?? []).map((r) => (
+                {(affiliate.referrals ?? []).length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="px-4 py-8 text-center text-gray-500">
+                      Nenhum referral encontrado.
+                    </td>
+                  </tr>
+                ) : (affiliate.referrals ?? []).map((r) => (
                   <tr key={r.id} className="border-b border-gray-200"><td className="px-4 py-3 text-gray-600">{new Date(r.signupAt).toLocaleDateString('pt-BR')}</td><td className="px-4 py-3">{r.convertedAt ? 'Sim' : 'Não'}</td><td className="px-4 py-3">{r.valueCents != null ? `R$ ${(r.valueCents / 100).toFixed(2)}` : '—'}</td></tr>
                 ))}
               </tbody>
@@ -235,7 +267,13 @@ export function AffiliateDetailPage() {
             <table className="w-full text-sm">
               <thead><tr className="border-b border-gray-200 text-gray-500 text-left"><th className="px-4 py-3 font-medium">Valor</th><th className="px-4 py-3 font-medium">Status</th><th className="px-4 py-3 font-medium">Criada</th><th className="px-4 py-3 font-medium">Pago em</th><th className="px-4 py-3 font-medium">Comprovante</th><th className="px-4 py-3 font-medium">Ação</th></tr></thead>
               <tbody>
-                {(affiliate.commissions ?? []).map((c) => (
+                {(affiliate.commissions ?? []).length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                      Nenhuma comissão encontrada.
+                    </td>
+                  </tr>
+                ) : (affiliate.commissions ?? []).map((c) => (
                   <tr key={c.id} className="border-b border-gray-200">
                     <td className="px-4 py-3 font-medium">{c.currency === 'BRL' ? 'R$' : '$'} {(c.amountCents / 100).toFixed(2)}</td>
                     <td className="px-4 py-3">{c.status}</td>

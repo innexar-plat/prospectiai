@@ -1,15 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getApiSession } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { leadStatusSchema, formatZodError } from '@/lib/validations/schemas';
 import { recordLeadEvent } from '@/lib/lead-intelligence';
+
+async function findLeadAnalysisForUser(analysisId: string, userId: string) {
+    const userWithWorkspace = await prisma.user.findUnique({
+        where: { id: userId },
+        include: { workspaces: { take: 1 } },
+    });
+    const workspaceId = userWithWorkspace?.workspaces[0]?.workspaceId;
+    const where = workspaceId
+        ? { id: analysisId, workspaceId }
+        : { id: analysisId, userId };
+    return prisma.leadAnalysis.findFirst({
+        where,
+        include: { lead: true },
+    });
+}
+
+/** GET /api/leads/[id] — single LeadAnalysis with included lead (workspace-scoped when applicable). */
+export async function GET(
+    _req: NextRequest,
+    { params }: { params: Promise<{ id: string }> },
+) {
+    try {
+        const session = await getApiSession();
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { id } = await params;
+        if (!id?.trim()) {
+            return NextResponse.json({ error: 'Missing id parameter' }, { status: 400 });
+        }
+
+        const analysis = await findLeadAnalysisForUser(id, session.user.id);
+        if (!analysis) {
+            return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
+        }
+
+        return NextResponse.json(analysis);
+    } catch (error) {
+        const { logger } = await import('@/lib/logger');
+        logger.error('Error fetching lead', { error: error instanceof Error ? error.message : 'Unknown' });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    }
+}
 
 export async function PATCH(
     req: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const session = await auth();
+        const session = await getApiSession();
         if (!session?.user?.id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }

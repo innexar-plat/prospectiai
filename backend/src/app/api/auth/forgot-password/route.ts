@@ -4,6 +4,8 @@ import crypto from "crypto"
 import { rateLimit } from "@/lib/ratelimit"
 import { forgotSchema, formatZodError } from "@/lib/validations/schemas"
 import { sendPasswordResetEmail } from "@/lib/email"
+import { getRequestLocale } from '@/lib/i18n/locale'
+import { getSiteUrlFromRequest } from '@/lib/site-url'
 
 export async function POST(req: Request) {
     try {
@@ -43,7 +45,7 @@ export async function POST(req: Request) {
             }
         })
 
-        const { sent } = await sendPasswordResetEmail(user.email!, token);
+        const { sent } = await sendPasswordResetEmail(user.email!, token, getRequestLocale(req), getSiteUrlFromRequest(req));
         const { logger } = await import('@/lib/logger');
         if (!sent && process.env.NODE_ENV === 'development') logger.info('Password reset link generated (email not sent)', { hasToken: !!token });
 

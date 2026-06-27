@@ -7,23 +7,46 @@ import { runSearch, SearchHttpError } from '@/modules/search';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
+function getClientIp(req: NextRequest): string {
+    const forwardedFor = req.headers.get('x-forwarded-for');
+    if (!forwardedFor) return '127.0.0.1';
+    const firstIp = forwardedFor.split(',')[0]?.trim();
+    return firstIp || '127.0.0.1';
+}
+
+function parseEnvInt(name: string, fallback: number): number {
+    const value = Number.parseInt(process.env[name] ?? '', 10);
+    return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
 export async function POST(req: NextRequest) {
     const requestId = getOrCreateRequestId(req);
     try {
-        const ip = req.headers.get('x-forwarded-for') || '127.0.0.1';
-        const { success } = await rateLimit(`search:${ip}`, 30, 60);
+        const session = await auth();
+        const ip = getClientIp(req);
+        const isAuthenticated = Boolean(session?.user?.id);
+        const rateLimitMax = isAuthenticated
+            ? parseEnvInt('SEARCH_RATE_LIMIT_AUTH_MAX', parseEnvInt('SEARCH_RATE_LIMIT_MAX', 240))
+            : parseEnvInt('SEARCH_RATE_LIMIT_ANON_MAX', 30);
+        const rateLimitWindowSeconds = parseEnvInt('SEARCH_RATE_LIMIT_WINDOW_SECONDS', 60);
+        const workspaceHint = req.headers.get('x-workspace-id')?.trim() || 'default';
+        const userHint = session?.user?.id?.trim() || req.headers.get('x-user-id')?.trim() || 'anonymous';
+        const rateId = `search:${workspaceHint}:${userHint}:${ip}`;
+        const { success } = await rateLimit(rateId, rateLimitMax, rateLimitWindowSeconds);
         if (!success) {
             return jsonWithRequestId({ error: 'Too many requests. Try again later.' }, { status: 429, requestId });
         }
 
-        const body = await req.json();
+        const body = await req.json().catch(() => null);
+        if (body === null) {
+            return jsonWithRequestId({ error: 'Invalid JSON body' }, { status: 400, requestId });
+        }
         const parsed = searchSchema.safeParse(body);
         if (!parsed.success) {
             logger.info('Search API: validation failed', { requestId, errors: z.flattenError(parsed.error) });
             return jsonWithRequestId({ error: formatZodError(parsed) }, { status: 400, requestId });
         }
 
-        const session = await auth();
         if (!session?.user?.id) {
             logger.info('Search API: unauthenticated', { requestId });
             return jsonWithRequestId({ error: 'Unauthorized' }, { status: 401, requestId });

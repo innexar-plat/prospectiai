@@ -4,6 +4,8 @@ import {
   authApi,
   searchApi,
   userApi,
+  __resetAuthRedirectForTests,
+  buildApiHeaders,
   plansApi,
   workspaceProfileApi,
   onboardingApi,
@@ -25,10 +27,79 @@ describe('api', () => {
   beforeEach(() => {
     mockFetch = createMockFetch();
     vi.stubGlobal('fetch', mockFetch);
+    __resetAuthRedirectForTests();
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    document.cookie = 'prospector-market=;path=/;max-age=0';
+  });
+
+  describe('buildApiHeaders', () => {
+    it('sends X-Prospector-Market and X-Locale from active market (US hostname)', () => {
+      vi.stubGlobal('location', {
+        ...window.location,
+        hostname: 'precisionai.innexar.app',
+        origin: 'https://precisionai.innexar.app',
+        protocol: 'https:',
+      });
+      localStorage.setItem('prospector-locale-us', 'en');
+      expect(buildApiHeaders()).toEqual({ 'X-Prospector-Market': 'US', 'X-Locale': 'en' });
+    });
+
+    it('sends X-Locale pt when user chose Portuguese on US hostname', () => {
+      vi.stubGlobal('location', {
+        ...window.location,
+        hostname: 'precisionai.innexar.app',
+        origin: 'https://precisionai.innexar.app',
+        protocol: 'https:',
+      });
+      localStorage.setItem('prospector-locale-us', 'pt');
+      expect(buildApiHeaders()).toEqual({ 'X-Prospector-Market': 'US', 'X-Locale': 'pt' });
+    });
+
+    it('sends X-Locale es when user chose Spanish on US hostname', () => {
+      vi.stubGlobal('location', {
+        ...window.location,
+        hostname: 'precisionai.innexar.app',
+        origin: 'https://precisionai.innexar.app',
+        protocol: 'https:',
+      });
+      localStorage.setItem('prospector-locale-us', 'es');
+      expect(buildApiHeaders()).toEqual({ 'X-Prospector-Market': 'US', 'X-Locale': 'es' });
+    });
+
+    it('sends X-Prospector-Market from active market (BR hostname)', () => {
+      vi.stubGlobal('location', {
+        ...window.location,
+        hostname: 'precisionia.com.br',
+        origin: 'https://precisionia.com.br',
+        protocol: 'https:',
+      });
+      localStorage.setItem('prospector-locale-br', 'pt');
+      expect(buildApiHeaders()).toEqual({ 'X-Prospector-Market': 'BR', 'X-Locale': 'pt' });
+    });
+
+    it('includes market header on API requests', async () => {
+      vi.stubGlobal('location', {
+        ...window.location,
+        hostname: 'precisionai.innexar.app',
+        origin: 'https://precisionai.innexar.app',
+        protocol: 'https:',
+      });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ user: null }),
+      } as Response);
+      await authApi.session();
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/auth/session'),
+        expect.objectContaining({
+          headers: expect.objectContaining({ 'X-Prospector-Market': 'US' }),
+        }),
+      );
+    });
   });
 
   describe('authApi', () => {
@@ -139,6 +210,40 @@ describe('api', () => {
       vi.unstubAllGlobals();
     });
 
+    it('signIn strips cross-domain callbackUrl to current origin', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ csrfToken: 'tok' }),
+      } as Response);
+      const fields: Record<string, string> = {};
+      const form = {
+        method: '',
+        action: '',
+        appendChild: vi.fn((input: { name: string; value: string }) => {
+          fields[input.name] = input.value;
+        }),
+        submit: vi.fn(),
+      };
+      vi.stubGlobal('window', {
+        ...window,
+        location: { ...window.location, origin: 'https://precisionai.innexar.app' },
+      });
+      vi.stubGlobal('document', {
+        ...document,
+        createElement: vi.fn((tag: string) => (tag === 'form' ? form : { name: '', type: '', value: '', appendChild: vi.fn() })),
+        body: { appendChild: vi.fn() },
+      });
+      await authApi.signIn({
+        email: 'u@x.com',
+        password: 'secret',
+        callbackUrl: 'https://precisionia.com.br/dashboard',
+      });
+      expect(fields.callbackUrl).toBe('https://precisionai.innexar.app/dashboard');
+      expect(fields.callbackUrl).not.toContain('precisionia.com.br');
+      vi.unstubAllGlobals();
+    });
+
     it('signIn fetches CSRF and submits credentials form with callbackUrl', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -185,6 +290,80 @@ describe('api', () => {
           body: expect.stringContaining('AFF01'),
         })
       );
+    });
+
+    it('does not redirect on 401 for auth endpoints such as register', async () => {
+      const replace = vi.fn();
+      vi.stubGlobal('window', {
+        ...window,
+        location: {
+          ...window.location,
+          pathname: '/auth/signup',
+          search: '',
+          hash: '',
+          replace,
+        },
+      });
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        statusText: 'Unauthorized',
+        json: () => Promise.resolve({ error: 'Unauthorized' }),
+      } as Response);
+
+      await expect(authApi.register({ email: 'x@y.com', password: 'secret' })).rejects.toThrow('Unauthorized');
+      expect(replace).not.toHaveBeenCalled();
+      vi.unstubAllGlobals();
+    });
+  });
+
+  describe('global 401 redirect', () => {
+    it('redirects to signin with callbackUrl for protected API calls', async () => {
+      const replace = vi.fn();
+      vi.stubGlobal('window', {
+        ...window,
+        location: {
+          ...window.location,
+          pathname: '/dashboard/leads',
+          search: '?tab=all',
+          hash: '#top',
+          replace,
+        },
+      });
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        statusText: 'Unauthorized',
+        json: () => Promise.resolve({ error: 'Unauthorized' }),
+      } as Response);
+
+      await expect(userApi.me()).rejects.toThrow('Unauthorized');
+      expect(replace).toHaveBeenCalledWith('/auth/signin?callbackUrl=%2Fdashboard%2Fleads%3Ftab%3Dall%23top');
+      vi.unstubAllGlobals();
+    });
+
+    it('does not redirect when already in auth routes', async () => {
+      const replace = vi.fn();
+      vi.stubGlobal('window', {
+        ...window,
+        location: {
+          ...window.location,
+          pathname: '/auth/signin',
+          search: '',
+          hash: '',
+          replace,
+        },
+      });
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        statusText: 'Unauthorized',
+        json: () => Promise.resolve({ error: 'Unauthorized' }),
+      } as Response);
+
+      await expect(userApi.me()).rejects.toThrow('Unauthorized');
+      expect(replace).not.toHaveBeenCalled();
+      vi.unstubAllGlobals();
     });
   });
 
@@ -261,15 +440,26 @@ describe('api', () => {
       expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/analyze'), expect.objectContaining({ method: 'POST' }));
     });
 
-    it('marketReport sends POST', async () => {
+    it('marketReport sends POST with country when provided', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: () => Promise.resolve({ totalCount: 100 }),
+        json: () => Promise.resolve({ totalBusinesses: 100 }),
       } as Response);
-      const data = await searchApi.marketReport({ textQuery: 'restaurants', pageSize: 10 });
-      expect(data).toEqual({ totalCount: 100 });
-      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/market-report'), expect.objectContaining({ method: 'POST' }));
+      await searchApi.marketReport({ textQuery: 'restaurants', pageSize: 10, city: 'Orlando', state: 'FL', country: 'United States' });
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/market-report'),
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            textQuery: 'restaurants',
+            pageSize: 10,
+            city: 'Orlando',
+            state: 'FL',
+            country: 'United States',
+          }),
+        }),
+      );
     });
   });
 
@@ -338,15 +528,33 @@ describe('api', () => {
         json: () =>
           Promise.resolve({
             companyName: 'Co',
+            legalName: null,
+            tradeName: null,
+            cnpj: null,
+            primaryCnaeCode: null,
+            primaryCnaeDescription: null,
+            companySize: null,
+            foundingDate: null,
             productService: 'X',
             targetAudience: null,
             mainBenefit: null,
             address: null,
+            postalCode: null,
+            street: null,
+            number: null,
+            complement: null,
+            neighborhood: null,
+            city: null,
+            state: null,
             linkedInUrl: null,
             instagramUrl: null,
             facebookUrl: null,
             websiteUrl: null,
             logoUrl: null,
+            serviceModel: null,
+            averageTicket: null,
+            operationRadiusKm: null,
+            knownCompetitors: null,
           }),
       } as Response);
       const data = await workspaceProfileApi.get();
@@ -357,10 +565,21 @@ describe('api', () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: () => Promise.resolve({ companyName: 'Updated', productService: null, targetAudience: null, mainBenefit: null, address: null, linkedInUrl: null, instagramUrl: null, facebookUrl: null, websiteUrl: null, logoUrl: null }),
+        json: () => Promise.resolve({ companyName: 'Updated', legalName: null, tradeName: null, cnpj: null, primaryCnaeCode: null, primaryCnaeDescription: null, companySize: null, foundingDate: null, productService: null, targetAudience: null, mainBenefit: null, address: null, postalCode: null, street: null, number: null, complement: null, neighborhood: null, city: null, state: null, linkedInUrl: null, instagramUrl: null, facebookUrl: null, websiteUrl: null, logoUrl: null, serviceModel: null, averageTicket: null, operationRadiusKm: null, knownCompetitors: null }),
       } as Response);
       const data = await workspaceProfileApi.update({ companyName: 'Updated' });
       expect(data.companyName).toBe('Updated');
+    });
+
+    it('lookupCnpj returns enrichment data', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ cnpj: '12345678000199', legalName: 'Acme LTDA', tradeName: 'Acme', primaryCnaeCode: '6201501', primaryCnaeDescription: 'Software', companySize: 'ME', foundingDate: '2020-01-01', postalCode: '11000000', street: 'Rua Teste', number: '123', neighborhood: 'Centro', city: 'Santos', state: 'SP', address: 'Rua Teste, 123, Centro, Santos, SP' }),
+      } as Response);
+      const data = await workspaceProfileApi.lookupCnpj('12.345.678/0001-99');
+      expect(data.legalName).toBe('Acme LTDA');
+      expect(data.city).toBe('Santos');
     });
   });
 

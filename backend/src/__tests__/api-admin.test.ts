@@ -27,6 +27,21 @@ jest.mock('@/lib/prisma', () => ({
     },
 }));
 jest.mock('@/lib/logger', () => ({ logger: { info: jest.fn(), error: jest.fn() } }));
+jest.mock('@/lib/admin-market-stats', () => ({
+    getAdminMarketStats: jest.fn().mockResolvedValue({
+        usersByMarket: { BR: 8, US: 2, unknown: 0 },
+        revenueByMarket: {
+            BR: { total: 500, mrr: 297, currency: 'BRL', paidWorkspaces: 1 },
+            US: { total: 49, mrr: 49, currency: 'USD', paidWorkspaces: 1 },
+        },
+    }),
+}));
+jest.mock('@/lib/redis', () => ({
+    countOnlineUsers: jest.fn().mockResolvedValue(3),
+    acquireRedisLock: jest.fn().mockResolvedValue(true),
+    releaseRedisLock: jest.fn().mockResolvedValue(undefined),
+    waitForCached: jest.fn().mockResolvedValue(null),
+}));
 
 describe('Admin API', () => {
     it('GET /api/admin/stats returns 401 when unauthenticated', async () => {
@@ -56,6 +71,9 @@ describe('Admin API', () => {
         expect(data.workspaces).toBe(8);
         expect(data.searchHistory).toBe(100);
         expect(data.leadAnalyses).toBe(50);
+        expect(data.onlineUsers).toBe(3);
+        expect(data.usersByMarket).toEqual({ BR: 8, US: 2, unknown: 0 });
+        expect(data.revenueByMarket.BR.mrr).toBe(297);
     });
 
     it('GET /api/admin/users returns 403 when not admin', async () => {
@@ -70,7 +88,7 @@ describe('Admin API', () => {
         jest.mocked(auth).mockResolvedValue({ user: { id: 'u1', email: 'admin@test.com' }, expires: '' });
         jest.mocked(isAdmin).mockReturnValue(true);
         prisma.user.findMany.mockResolvedValue([
-            { id: 'u1', name: 'A', email: 'a@b.com', plan: 'FREE', onboardingCompletedAt: null, createdAt: new Date(), _count: { workspaces: 1, analyses: 0, searchHistory: 0 } },
+            { id: 'u1', name: 'A', email: 'a@b.com', plan: 'FREE', disabledAt: null, onboardingCompletedAt: null, createdAt: new Date(), _count: { workspaces: 1, analyses: 0, searchHistory: 0 } },
         ] as never);
         prisma.user.count.mockResolvedValue(1);
         const req = new NextRequest('http://localhost/api/admin/users');
@@ -81,6 +99,26 @@ describe('Admin API', () => {
         expect(data.total).toBe(1);
         expect(data.limit).toBe(20);
         expect(data.offset).toBe(0);
+    });
+
+    it('GET /api/admin/users filters by search when provided', async () => {
+        jest.mocked(auth).mockResolvedValue({ user: { id: 'u1', email: 'admin@test.com' }, expires: '' });
+        jest.mocked(isAdmin).mockReturnValue(true);
+        prisma.user.findMany.mockResolvedValue([] as never);
+        prisma.user.count.mockResolvedValue(0);
+        const req = new NextRequest('http://localhost/api/admin/users?search=john');
+        const res = await getUsers(req);
+        expect(res.status).toBe(200);
+        expect(prisma.user.findMany).toHaveBeenCalledWith(
+            expect.objectContaining({
+                where: {
+                    OR: [
+                        { name: { contains: 'john', mode: 'insensitive' } },
+                        { email: { contains: 'john', mode: 'insensitive' } },
+                    ],
+                },
+            }),
+        );
     });
 
     it('GET /api/admin/stats returns 500 when prisma throws', async () => {

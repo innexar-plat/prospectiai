@@ -9,6 +9,12 @@ import {
     buildRfDataBlock,
     buildReviewSignalsText,
     buildOpeningHoursText,
+    expandProductService,
+    formatLeadNiche,
+    extractLeadLocation,
+    buildGapsRequirement,
+    buildIndustryGuardrails,
+    buildSellerServicesBlock,
 } from '@/lib/ai/prompts/builder';
 import type { BusinessData, UserBusinessProfile } from '@/lib/ai/prompts/analyze-types';
 
@@ -22,6 +28,76 @@ describe('AI Prompts Builder', () => {
         it('returns Portuguese task description', () => {
             const result = buildTaskDescription(false);
             expect(result).toContain('relatório estratégico');
+        });
+    });
+
+    describe('expandProductService', () => {
+        it('expands only on exact industry keyword match', () => {
+            expect(expandProductService('imobiliaria', false)).toContain('Imobiliária');
+            expect(expandProductService('CRM para barbearias', false)).toBe('CRM para barbearias');
+            expect(expandProductService('software for barber shops', true)).toBe('software for barber shops');
+        });
+
+        it('uses English expansions when isEn is true', () => {
+            expect(expandProductService('real estate', true)).toContain('Real estate');
+        });
+    });
+
+    describe('formatLeadNiche', () => {
+        it('formats snake_case niche codes', () => {
+            expect(formatLeadNiche('barber_shop')).toBe('Barber Shop');
+        });
+    });
+
+    describe('extractLeadLocation', () => {
+        it('extracts city and state from address', () => {
+            expect(extractLeadLocation('123 Main St, Miami, FL')).toBe('Miami, FL');
+        });
+    });
+
+    describe('buildGapsRequirement', () => {
+        it('references seller offering and forbids wrong industries', () => {
+            const profile: UserBusinessProfile = {
+                companyName: 'BarberPro',
+                productService: 'Barbershop booking software',
+                targetAudience: 'Barbershops',
+                mainBenefit: 'More appointments',
+            };
+            const result = buildGapsRequirement(profile, true);
+            expect(result).toContain('BarberPro');
+            expect(result).toContain('Barbershop booking software');
+            expect(result).not.toContain('imobiliária');
+        });
+    });
+
+    describe('buildIndustryGuardrails', () => {
+        it('forbids imobiliária when seller is not real estate', () => {
+            const profile: UserBusinessProfile = {
+                companyName: 'BarberPro',
+                productService: 'Barbershop SaaS',
+                targetAudience: 'Barbers',
+                mainBenefit: 'Growth',
+            };
+            const result = buildIndustryGuardrails(profile, true);
+            expect(result).toContain('NEVER mention real estate');
+            expect(result).not.toContain('Se você é imobiliária');
+        });
+    });
+
+    describe('buildSellerServicesBlock', () => {
+        it('includes Minha Empresa seller services', () => {
+            const profile: UserBusinessProfile = {
+                companyName: 'BarberPro',
+                productService: 'Booking software for barbers',
+                targetAudience: 'US barbershops',
+                mainBenefit: 'Fill chairs',
+                city: 'Miami',
+                state: 'FL',
+            };
+            const result = buildSellerServicesBlock(profile, true);
+            expect(result).toContain('SELLER COMPANY PROFILE');
+            expect(result).toContain('Booking software for barbers');
+            expect(result).toContain('Miami, FL');
         });
     });
 
@@ -165,11 +241,18 @@ describe('AI Prompts Builder', () => {
 
     describe('buildLeadAnalysisPrompt', () => {
         it('builds a complete prompt with all sections', () => {
+            const sellerProfile: UserBusinessProfile = {
+                companyName: 'BarberPro',
+                productService: 'Barbershop booking software',
+                targetAudience: 'Barbershops',
+                mainBenefit: 'More bookings',
+            };
             const result = buildLeadAnalysisPrompt({
                 business: { placeId: 'p1', name: 'Coffee Shop', rating: 4.5, primaryType: 'cafe' } as BusinessData,
                 isEn: true,
                 companyContext: 'We sell marketing services',
                 taskDescription: 'You are a lead analyst',
+                sellerProfile,
                 address: '123 Main St',
                 phone: '+5511999999999',
                 website: 'https://coffee.com',
@@ -192,6 +275,51 @@ describe('AI Prompts Builder', () => {
             expect(result).toContain('4.5/5');
             expect(result).toContain('"score"');
             expect(result).not.toContain('"fullReport"');
+            expect(result).toContain('messageVariants');
+            expect(result).toContain('quickActions');
+            expect(result).toContain('keyMetrics');
+            expect(result).not.toContain('Se você é imobiliária');
+        });
+
+        it('includes lead niche and location for barber_shop leads', () => {
+            const sellerProfile: UserBusinessProfile = {
+                companyName: 'BarberPro',
+                productService: 'Barbershop management software',
+                targetAudience: 'US barbershops',
+                mainBenefit: 'More clients',
+            };
+            const result = buildLeadAnalysisPrompt({
+                business: {
+                    placeId: 'p-barber',
+                    name: 'Classic Cuts',
+                    primaryType: 'barber_shop',
+                    rating: 4.8,
+                } as BusinessData,
+                isEn: true,
+                companyContext: buildCompanyContext(sellerProfile, true),
+                taskDescription: buildTaskDescription(true),
+                sellerProfile,
+                address: '500 Ocean Dr, Miami Beach, FL',
+                phone: '+13055550100',
+                website: '',
+                reviewCount: 120,
+                reviewsText: 'Great fades',
+                reviewSignalsText: 'No negative signals',
+                openingHoursText: 'Open now',
+                webContext: '',
+                isBusinessPlan: false,
+                conversionContext: '',
+                rfDataBlock: '',
+                websiteScrapingBlock: '',
+            });
+
+            expect(result).toContain('LEAD NICHE & LOCATION');
+            expect(result).toContain('barber_shop');
+            expect(result).toContain('Barber Shop');
+            expect(result).toContain('Miami Beach, FL');
+            expect(result).toContain('Barbershop management software');
+            expect(result).not.toContain('Se você é imobiliária');
+            expect(result).not.toContain('busque necessidades de espaço/imóvel');
         });
 
         it('uses Portuguese labels when isEn is false', () => {

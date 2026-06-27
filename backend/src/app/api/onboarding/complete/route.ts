@@ -3,6 +3,7 @@ import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { onboardingCompleteSchema, formatZodError } from "@/lib/validations/schemas"
 import { logger } from "@/lib/logger"
+import { buildTrialWorkspaceData } from "@/lib/trial"
 
 async function ensureWorkspaceMembership(userId: string) {
     let membership = await prisma.workspaceMember.findFirst({
@@ -20,7 +21,7 @@ async function ensureWorkspaceMembership(userId: string) {
             : "Meu Workspace";
         await prisma.$transaction(async (tx) => {
             const workspace = await tx.workspace.create({
-                data: { name: workspaceName, plan: "FREE", leadsLimit: 10, leadsUsed: 0 },
+                data: buildTrialWorkspaceData(workspaceName),
             });
             await tx.workspaceMember.create({
                 data: { userId, workspaceId: workspace.id, role: "OWNER" },

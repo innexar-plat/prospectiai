@@ -1,5 +1,9 @@
-import { describe, it, expect } from 'vitest';
-import { PLANS, getPlanDisplayName, type PlanType } from './billing-config';
+import { describe, it, expect, vi } from 'vitest';
+import { PLANS, getPlanDisplayName, getNextUpgradePlan, type PlanType } from './billing-config';
+
+vi.mock('./market', () => ({
+    resolveMarketLeadsLimit: (_key: string, defaultLimit: number) => defaultLimit,
+}));
 
 describe('billing-config', () => {
     describe('getPlanDisplayName', () => {
@@ -29,9 +33,16 @@ describe('billing-config', () => {
         });
 
         it('FREE has zero price and low leads limit', () => {
-            expect(PLANS.FREE.leadsLimit).toBe(5);
+            expect(PLANS.FREE.leadsLimit).toBe(10);
             expect(PLANS.FREE.monthly.price_brl).toBe(0);
             expect(PLANS.FREE.annual.price_brl).toBe(0);
+        });
+    });
+
+    describe('getNextUpgradePlan', () => {
+        it('returns BASIC after TRIAL with market-aware credits', () => {
+            const next = getNextUpgradePlan('TRIAL');
+            expect(next).toMatchObject({ key: 'BASIC', name: 'Starter' });
         });
     });
 });

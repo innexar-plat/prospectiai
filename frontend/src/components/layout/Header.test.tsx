@@ -15,10 +15,10 @@ describe('Header', () => {
     t: (key: string) => key,
   };
 
-  it('renders logo and Planos link', () => {
+  it('renders logo and pricing link', () => {
     renderWithProviders(<Header {...defaultProps} />);
-    expect(screen.getByRole('button', { name: /Precision IA/ })).toBeInTheDocument();
-    expect(screen.getByText('Planos')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Precision/ })).toBeInTheDocument();
+    expect(screen.getByText('nav.pricing')).toBeInTheDocument();
   });
 
   it('renders Entrar when session is null', () => {

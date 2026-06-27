@@ -124,7 +124,14 @@ describe('POST /api/team/invite/resend', () => {
         data: expect.objectContaining({ token: expect.any(String), lastSentAt: expect.any(Date) }),
       })
     );
-    expect(sendTeamInviteEmail).toHaveBeenCalledWith('b@x.com', 'Alice', 'My WS', expect.stringMatching(/\/accept-invite\?token=/));
+    expect(sendTeamInviteEmail).toHaveBeenCalledWith(
+      'b@x.com',
+      'Alice',
+      'My WS',
+      expect.stringMatching(/\/accept-invite\?token=/),
+      'pt',
+      expect.any(String),
+    );
   });
 
   it('returns 500 when findUnique or update throws', async () => {

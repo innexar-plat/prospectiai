@@ -191,7 +191,11 @@ export function UserDetailPage() {
     setActionError(null);
     supportApi
       .activate(id)
-      .then(refetch)
+      .then(() => {
+        refetch();
+        setToast({ type: 'success', message: 'Conta ativada com sucesso.' });
+        setTimeout(() => setToast(null), 5000);
+      })
       .catch((err) => setActionError(err instanceof Error ? err.message : 'Erro ao ativar'))
       .finally(() => setActionLoading(false));
   };
@@ -204,7 +208,11 @@ export function UserDetailPage() {
     setDeactivateReason('');
     supportApi
       .deactivate(id, reason ? { reason } : undefined)
-      .then(refetch)
+      .then(() => {
+        refetch();
+        setToast({ type: 'success', message: 'Conta desativada com sucesso.' });
+        setTimeout(() => setToast(null), 5000);
+      })
       .catch((err) => setActionError(err instanceof Error ? err.message : 'Erro ao desativar'))
       .finally(() => setActionLoading(false));
   };

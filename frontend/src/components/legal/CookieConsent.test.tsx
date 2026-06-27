@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { renderWithProviders } from '@/test/test-utils';
 import CookieConsent from './CookieConsent';
 
@@ -19,7 +19,7 @@ describe('CookieConsent', () => {
   it('hides when accept clicked', async () => {
     renderWithProviders(<CookieConsent t={t} />);
     const buttons = await screen.findAllByRole('button', { name: 'cookie.accept' });
-    buttons[0].click();
+    fireEvent.click(buttons[0]);
     expect(localStorage.getItem('prospector_cookie_consent')).toBe('accepted');
   });
 });

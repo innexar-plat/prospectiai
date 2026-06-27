@@ -389,6 +389,31 @@ Login e callbacks são tratados por **NextAuth** em `/api/auth/[...nextauth]`. N
 
 ---
 
+### POST /api/user/change-password
+
+**Autenticado.** Altera a senha do usuário. Rate-limited: 5 tentativas por hora (por usuário + IP).
+
+**Body (JSON)**
+
+| Campo | Tipo | Obrigatório | Regras |
+|-------|------|-------------|--------|
+| currentPassword | string | sim | Senha atual |
+| newPassword | string | sim | Mínimo 8, máximo 128 caracteres. Deve ser diferente da atual |
+
+**Respostas**
+
+| Status | Body |
+|--------|------|
+| 200 | `{ "message": "Senha alterada com sucesso." }` |
+| 400 | `{ "error": "..." }` — validação, senha incorreta, mesma senha, conta OAuth |
+| 401 | `{ "error": "Unauthorized" }` |
+| 429 | `{ "error": "Muitas tentativas. Tente novamente mais tarde." }` |
+| 500 | `{ "error": "Erro interno" }` |
+
+> Contas que usam login social (Google/GitHub) não possuem senha e recebem erro 400.
+
+---
+
 ## 4. Onboarding
 
 ### POST /api/onboarding/complete
@@ -445,6 +470,15 @@ Login e callbacks são tratados por **NextAuth** em `/api/auth/[...nextauth]`. N
 | 404 | `{ "error": "Workspace not found" }` |
 | 429 | `{ "error": "Too many requests" }` (rate limit por IP) |
 | 500 | `{ "error": "<message>" }` |
+
+Campos de Contact Intelligence no `places[]` quando houver snapshot no banco:
+
+- `recommendedPhone`
+- `recommendedEmail`
+- `recommendedWebsite`
+- `contactsHealthScore` (0-100)
+
+O backend tambem aplica fallback no retorno para priorizar `recommendedPhone`/`recommendedWebsite` quando disponiveis.
 
 ---
 
@@ -616,6 +650,49 @@ Login e callbacks são tratados por **NextAuth** em `/api/auth/[...nextauth]`. N
 
 ---
 
+### GET /api/leads/[id]/contact-intelligence
+
+**Autenticado.** Retorna consolidacao de contatos do lead (id do lead ou placeId).
+
+**Resposta 200**
+
+```json
+{
+  "data": {
+    "leadId": "...",
+    "placeId": "...",
+    "contactsHealthScore": 82,
+    "riskFlags": ["shared_with_many_cnpjs"],
+    "recommendedContacts": {
+      "phone": { "id": "...", "valueRaw": "+55...", "effectiveScore": 88 },
+      "email": { "id": "...", "valueRaw": "contato@empresa.com", "effectiveScore": 91 },
+      "website": { "id": "...", "valueRaw": "https://empresa.com", "effectiveScore": 84 }
+    },
+    "alternatives": []
+  }
+}
+```
+
+---
+
+### PATCH /api/leads/[id]/contact-intelligence/primary
+
+**Autenticado.** Define override manual do contato primario por tipo.
+
+**Body (JSON)**
+
+| Campo | Tipo | Obrigatorio | Descricao |
+|-------|------|-------------|-----------|
+| contactId | string | Sim | ID do contato a virar primario no tipo dele. |
+| reason | string | Nao | Motivo da troca manual (auditavel). |
+
+Notas:
+
+- A acao e auditada em `AuditLog` com `action = "lead.contact-intelligence.primary.override"`.
+- Mantido endpoint legado `PATCH /api/leads/[id]/contact-intelligence` para compatibilidade.
+
+---
+
 ## 8. Details
 
 ### GET /api/details?placeId=...
@@ -632,7 +709,7 @@ Login e callbacks são tratados por **NextAuth** em `/api/auth/[...nextauth]`. N
 
 | Status | Body |
 |--------|------|
-| 200 | Objeto de detalhes do lugar; pode incluir `fromCache: true`. |
+| 200 | Objeto de detalhes do lugar; pode incluir `fromCache: true` e, quando disponivel no snapshot, `recommendedPhone`, `recommendedEmail`, `recommendedWebsite`, `contactsHealthScore`. |
 | 400 | `{ "error": "placeId is required" }` |
 | 500 | `{ "error": "<message>" }` |
 
@@ -759,6 +836,46 @@ Todas as rotas abaixo exigem **sessão autenticada** e que o e-mail do usuário 
 | GET | /api/admin/workspaces/[id] | Workspace por id com members |
 | GET | /api/admin/search-history | Histórico de buscas (query: limit, offset, workspaceId opcional) |
 | GET | /api/admin/leads | Análises de leads (query: limit, offset, workspaceId opcional) |
+| GET | /api/admin/email-logs | Logs de envio de e-mail (query: limit, offset, type, status, email) |
+
+### GET /api/admin/email-logs
+
+**Admin.** Lista logs de envio de e-mail com paginação e filtros.
+
+**Query params**
+
+| Param | Tipo | Padrão | Descrição |
+|-------|------|--------|-----------|
+| limit | integer | 50 | Máximo 100 |
+| offset | integer | 0 | |
+| type | string | — | `TRANSACTIONAL`, `CAMPAIGN`, `WEEKLY_REPORT`, `SYSTEM` |
+| status | string | — | `SENT`, `FAILED`, `PENDING`, `BOUNCED` |
+| email | string | — | Filtro parcial case-insensitive no destinatário |
+
+**Resposta 200**
+
+```json
+{
+  "items": [
+    {
+      "id": "uuid",
+      "type": "TRANSACTIONAL",
+      "email": "user@example.com",
+      "subject": "Verificação de e-mail",
+      "status": "SENT",
+      "provider": "resend",
+      "providerMessageId": "msg_xxx",
+      "error": null,
+      "campaignId": null,
+      "userId": "uuid",
+      "createdAt": "2026-04-10T10:00:00.000Z"
+    }
+  ],
+  "total": 150,
+  "limit": 50,
+  "offset": 0
+}
+```
 
 **Respostas comuns:** 401 Unauthorized, 403 Forbidden, 500 Internal server error.
 

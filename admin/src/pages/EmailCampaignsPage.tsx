@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   emailMarketingApi,
@@ -59,7 +59,7 @@ export function EmailCampaignsPage() {
   const [editScheduledAt, setEditScheduledAt] = useState('');
   const [editSaving, setEditSaving] = useState(false);
 
-  const load = () => {
+  const load = useCallback(() => {
     setLoading(true);
     emailMarketingApi.campaigns
       .list({ status: filterStatus || undefined, limit: 50 })
@@ -69,9 +69,9 @@ export function EmailCampaignsPage() {
       })
       .catch(() => setToast({ type: 'error', message: 'Erro ao carregar campanhas.' }))
       .finally(() => setLoading(false));
-  };
+  }, [filterStatus]);
 
-  useEffect(() => { load(); }, [filterStatus]);
+  useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
     if (showModal && templates.length === 0) {
@@ -80,9 +80,9 @@ export function EmailCampaignsPage() {
         if (res.items.length > 0 && !formTemplateId) setFormTemplateId(res.items[0].id);
       });
     }
-  }, [showModal]);
+  }, [showModal, templates.length, formTemplateId]);
 
-  const fetchAudienceCount = async () => {
+  const fetchAudienceCount = useCallback(async () => {
     setLoadingCount(true);
     try {
       const { count } = await emailMarketingApi.audienceCount(formAudience);
@@ -92,11 +92,11 @@ export function EmailCampaignsPage() {
     } finally {
       setLoadingCount(false);
     }
-  };
+  }, [formAudience]);
 
   useEffect(() => {
     if (showModal) fetchAudienceCount();
-  }, [formAudience]);
+  }, [showModal, fetchAudienceCount]);
 
   const handleCreate = async () => {
     if (!formName.trim() || !formTemplateId) {
@@ -286,7 +286,7 @@ export function EmailCampaignsPage() {
                       </button>
                     )}
                     {c.status === 'SENT' && (
-                      <button onClick={() => navigate(`/email-campaigns/${c.id}`)} className="p-2 rounded-lg hover:bg-violet-50 text-gray-400 hover:text-violet-600" title="Ver detalhes">
+                      <button onClick={() => navigate(`${c.id}`)} className="p-2 rounded-lg hover:bg-violet-50 text-gray-400 hover:text-violet-600" title="Ver detalhes">
                         <Eye className="w-4 h-4" />
                       </button>
                     )}

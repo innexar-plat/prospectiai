@@ -1,9 +1,53 @@
 /**
- * Centralized API service for the Precision IA frontend.
+ * Centralized API service for the Precision frontend.
  * All requests use relative /api paths — Nginx proxies them to the Next.js backend.
  */
 
+import { getLogMessage, getAnalyzeStepLabel, type LogMessageKey } from '@/lib/i18n/log-messages';
+import type { SupportedLocale } from '@/lib/locale';
+import { detectLocale } from '@/lib/locale';
+import { getActiveMarket } from '@/lib/market';
+import { assertMarketHostname } from '@/lib/site-url';
+
 const BASE = '/api';
+let authRedirectInProgress = false;
+
+export function buildApiHeaders(localeOverride?: SupportedLocale): Record<string, string> {
+    const locale = localeOverride ?? detectLocale();
+    return {
+        'X-Prospector-Market': getActiveMarket(),
+        'X-Locale': locale,
+    };
+}
+
+function shouldSkipUnauthorizedRedirect(path: string): boolean {
+    return path.startsWith('/auth/register')
+        || path.startsWith('/auth/forgot-password')
+        || path.startsWith('/auth/reset-password')
+        || path.startsWith('/auth/resend-verification')
+        || path.startsWith('/auth/verify-email')
+        || path.startsWith('/auth/csrf')
+        || path.startsWith('/auth/callback');
+}
+
+function handleUnauthorized(path: string): void {
+    const win = globalThis.window;
+    if (!win) return;
+    if (authRedirectInProgress) return;
+    if (shouldSkipUnauthorizedRedirect(path)) return;
+
+    const pathname = win.location.pathname || '';
+    if (pathname.startsWith('/auth/')) return;
+
+    authRedirectInProgress = true;
+    const callbackUrl = `${pathname}${win.location.search || ''}${win.location.hash || ''}` || '/dashboard';
+    const target = `/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+    win.location.replace(target);
+}
+
+export function __resetAuthRedirectForTests(): void {
+    authRedirectInProgress = false;
+}
 
 /** Simple exponential-backoff retry for fetch requests. Retries on 5xx and network errors. */
 async function requestWithRetry<T>(path: string, options: RequestInit = {}, maxRetries = 2): Promise<T> {
@@ -14,6 +58,7 @@ async function requestWithRetry<T>(path: string, options: RequestInit = {}, maxR
                 credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
+                    ...buildApiHeaders(),
                     ...options.headers,
                 },
                 ...options,
@@ -24,6 +69,9 @@ async function requestWithRetry<T>(path: string, options: RequestInit = {}, maxR
                 continue;
             }
             if (!res.ok) {
+                if (res.status === 401) {
+                    handleUnauthorized(path);
+                }
                 const err = await res.json().catch(() => ({ error: res.statusText }));
                 throw new Error(err.error || `HTTP ${res.status}`);
             }
@@ -44,12 +92,16 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
         credentials: 'include', // send auth cookies
         headers: {
             'Content-Type': 'application/json',
+            ...buildApiHeaders(),
             ...options.headers,
         },
         ...options,
     });
 
     if (!res.ok) {
+        if (res.status === 401) {
+            handleUnauthorized(path);
+        }
         const err = await res.json().catch(() => ({ error: res.statusText }));
         throw new Error(err.error || `HTTP ${res.status}`);
     }
@@ -65,16 +117,69 @@ export interface AnalyzeStreamCallbacks {
     onError: (error: string) => void;
 }
 
-const STEP_LABELS: Record<AnalyzeProgressStep, string> = {
-    profile: 'Carregando perfil do negócio...',
-    web_search: 'Buscando inteligência web (Reclame Aqui, CNPJ, JusBrasil)...',
-    conversion: 'Analisando seu histórico de conversão...',
-    prompt: 'Construindo prompt estratégico...',
-    ai_call: 'IA analisando o lead...',
-    parsing: 'Processando resposta da IA...',
-    saving: 'Salvando análise...',
-    done: 'Análise concluída!',
+export interface AnalyzeStreamOptions {
+    locale?: SupportedLocale;
+    t?: (key: string, options?: Record<string, unknown>) => string;
+}
+
+function resolveLogMessage(
+    options: AnalyzeStreamOptions | undefined,
+    key: LogMessageKey,
+): string {
+    if (options?.t) {
+        const translated = options.t(key);
+        if (translated !== key) return translated;
+    }
+    return getLogMessage(key, options?.locale ?? 'pt');
+}
+
+function resolveAnalyzeJobError(
+    options: AnalyzeStreamOptions | undefined,
+    job: { error?: string; errorCode?: string },
+): string {
+    if (job.errorCode === 'ANALYSIS_STALE') {
+        return resolveLogMessage(options, 'log.analyze.error.stale');
+    }
+    const lower = (job.error ?? '').toLowerCase();
+    if (lower.includes('timed out') || lower.includes('interrupted')) {
+        return resolveLogMessage(options, 'log.analyze.error.stale');
+    }
+    if (job.error) return job.error;
+    return resolveLogMessage(options, 'log.analyze.error.failed');
+}
+
+type AnalyzeJobStatusResponse = {
+    status: string;
+    step?: AnalyzeProgressStep;
+    result?: Analysis;
+    error?: string;
+    errorCode?: string;
 };
+
+class AnalyzeStatusHttpError extends Error {
+    httpStatus: number;
+
+    constructor(message: string, httpStatus: number) {
+        super(message);
+        this.httpStatus = httpStatus;
+    }
+}
+
+async function fetchAnalyzeJobStatus(jobId: string): Promise<AnalyzeJobStatusResponse> {
+    const res = await fetch(`${BASE}/analyze/status?jobId=${jobId}`, {
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await res.json().catch(() => ({})) as AnalyzeJobStatusResponse & { error?: string };
+
+    if (res.status === 404) {
+        return { status: 'not_found', error: data.error };
+    }
+    if (!res.ok) {
+        throw new AnalyzeStatusHttpError(data.error || `HTTP ${res.status}`, res.status);
+    }
+    return data;
+}
 
 /**
  * Analyze with async fire-and-poll pattern.
@@ -85,70 +190,94 @@ const STEP_LABELS: Record<AnalyzeProgressStep, string> = {
 export function analyzeStream(
     body: Record<string, unknown>,
     callbacks: AnalyzeStreamCallbacks,
+    options?: AnalyzeStreamOptions,
 ): { abort: () => void } {
     let aborted = false;
     let pollTimer: ReturnType<typeof setTimeout> | null = null;
+    const locale = options?.locale ?? 'pt';
+    const stepLabel = (step: AnalyzeProgressStep) => {
+        if (options?.t) {
+            const translated = options.t(`log.analyze.step.${step}`);
+            if (translated !== `log.analyze.step.${step}`) return translated;
+        }
+        return getAnalyzeStepLabel(step, locale);
+    };
 
     (async () => {
         try {
             // 1. Fire the job
             const { jobId, ...immediate } = await request<{ jobId?: string; score?: number }>('/analyze', {
                 method: 'POST',
-                body: JSON.stringify(body),
+                body: JSON.stringify({
+                    ...body,
+                    locale: (body.locale as string | undefined) ?? options?.locale ?? detectLocale(),
+                }),
             });
 
             // If backend returned a cached result directly (no jobId), finish immediately
             if (!jobId) {
-                callbacks.onProgress('done', STEP_LABELS.done);
+                callbacks.onProgress('done', stepLabel('done'));
                 callbacks.onResult(immediate as unknown as Analysis);
                 return;
             }
 
-            callbacks.onProgress('profile', STEP_LABELS.profile);
+            callbacks.onProgress('profile', stepLabel('profile'));
 
-            // 2. Poll for status
+            // 2. Poll for status (15 min max — matches backend ANALYZE_JOB_TTL_SECONDS default)
             const POLL_INTERVAL = 2000;
-            const MAX_POLLS = 90; // 3 min max
+            const MAX_POLLS = 450;
+            const MAX_CONSECUTIVE_ERRORS = 5;
             let polls = 0;
+            let consecutiveErrors = 0;
 
             const poll = async () => {
                 if (aborted) return;
                 polls++;
 
                 try {
-                    const job = await request<{
-                        status: string;
-                        step?: AnalyzeProgressStep;
-                        result?: Analysis;
-                        error?: string;
-                    }>(`/analyze/status?jobId=${jobId}`);
+                    const job = await fetchAnalyzeJobStatus(jobId);
 
                     if (aborted) return;
+                    consecutiveErrors = 0;
+
+                    if (job.status === 'not_found') {
+                        callbacks.onError(job.error || resolveLogMessage(options, 'log.analyze.error.jobNotFound'));
+                        return;
+                    }
 
                     if (job.status === 'processing') {
                         if (job.step) {
-                            callbacks.onProgress(job.step, STEP_LABELS[job.step] || job.step);
+                            callbacks.onProgress(job.step, stepLabel(job.step));
                         }
                         if (polls < MAX_POLLS) {
                             pollTimer = setTimeout(poll, POLL_INTERVAL);
                         } else {
-                            callbacks.onError('Tempo limite excedido. Tente novamente.');
+                            callbacks.onError(resolveLogMessage(options, 'log.analyze.error.timeout'));
                         }
                     } else if (job.status === 'done' && job.result) {
-                        callbacks.onProgress('done', STEP_LABELS.done);
+                        callbacks.onProgress('done', stepLabel('done'));
                         callbacks.onResult(job.result);
                     } else if (job.status === 'error') {
-                        callbacks.onError(job.error || 'Erro ao analisar');
+                        callbacks.onError(resolveAnalyzeJobError(options, job));
                     } else {
-                        callbacks.onError('Job não encontrado ou expirado.');
+                        callbacks.onError(resolveLogMessage(options, 'log.analyze.error.jobNotFound'));
                     }
                 } catch (err) {
                     if (aborted) return;
+                    consecutiveErrors++;
+                    const httpStatus = err instanceof AnalyzeStatusHttpError ? err.httpStatus : undefined;
+                    const isTransient = httpStatus === 502 || httpStatus === 503 || httpStatus === 520 || httpStatus === undefined;
+
+                    if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS && isTransient) {
+                        callbacks.onError(resolveLogMessage(options, 'log.analyze.error.serviceUnavailable'));
+                        return;
+                    }
+
                     // Transient poll error — retry unless max reached
                     if (polls < MAX_POLLS) {
                         pollTimer = setTimeout(poll, POLL_INTERVAL);
                     } else {
-                        callbacks.onError(err instanceof Error ? err.message : 'Erro ao verificar status');
+                        callbacks.onError(err instanceof Error ? err.message : resolveLogMessage(options, 'log.analyze.error.statusCheck'));
                     }
                 }
             };
@@ -156,7 +285,7 @@ export function analyzeStream(
             pollTimer = setTimeout(poll, POLL_INTERVAL);
         } catch (err) {
             if (aborted) return;
-            callbacks.onError(err instanceof Error ? err.message : 'Erro ao iniciar análise');
+            callbacks.onError(err instanceof Error ? err.message : resolveLogMessage(options, 'log.analyze.error.startFailed'));
         }
     })();
 
@@ -194,13 +323,39 @@ function createAndSubmitForm(action: string, fields: Record<string, string>): vo
     form.submit();
 }
 
+function normalizeCallbackPath(callbackUrl?: string, fallbackPath = '/dashboard'): string {
+    const win = globalThis.window;
+    const origin = win?.location?.origin;
+
+    let path = fallbackPath;
+    if (callbackUrl?.startsWith('/')) {
+        path = callbackUrl;
+    } else if (callbackUrl) {
+        try {
+            const parsed = new URL(callbackUrl);
+            if (origin && parsed.origin === origin) {
+                return assertMarketHostname(callbackUrl);
+            }
+            path = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+            if (!path.startsWith('/')) path = fallbackPath;
+        } catch {
+            path = fallbackPath;
+        }
+    }
+
+    if (origin) {
+        return assertMarketHostname(`${origin}${path}`);
+    }
+    return assertMarketHostname(path);
+}
+
 export const authApi = {
     /** Get current logged-in user (null if not authenticated) */
     session: () => request<{ user: SessionUser | null }>('/auth/session'),
 
     /** Register a new user with email + password. affiliateCode opcional (?ref=). */
     register: (data: { email: string; password: string; name?: string; affiliateCode?: string }) =>
-        request<{ message: string; id: string }>('/auth/register', {
+        request<{ message: string; id: string; requiresOnboarding: boolean; verificationEmailSent: boolean; verificationEmailError?: string | null }>('/auth/register', {
             method: 'POST',
             body: JSON.stringify(data),
         }),
@@ -208,16 +363,7 @@ export const authApi = {
     /** Sign in with email/password (uses NextAuth credentials + CSRF) */
     signIn: async (data: { email: string; password: string; callbackUrl?: string }) => {
         const csrfToken = await getCsrfToken();
-        const origin = typeof window !== 'undefined' ? window.location.origin : '';
-        const baseOrigin = origin.replace(/\/$/, '');
-        let pathPart: string;
-        if (data.callbackUrl?.startsWith('/')) pathPart = data.callbackUrl;
-        else if (data.callbackUrl) pathPart = `/${data.callbackUrl}`;
-        else pathPart = '';
-        let callbackUrl: string;
-        if (data.callbackUrl && data.callbackUrl.startsWith('http')) callbackUrl = data.callbackUrl;
-        else if (data.callbackUrl) callbackUrl = `${baseOrigin}${pathPart}`;
-        else callbackUrl = `${origin}/dashboard`;
+        const callbackUrl = normalizeCallbackPath(data.callbackUrl, '/dashboard');
 
         createAndSubmitForm(`${BASE}/auth/callback/credentials`, {
             csrfToken,
@@ -233,10 +379,7 @@ export const authApi = {
      * signIn(), avoiding a form POST that Chrome Enhanced Protection may flag.
      */
     initiateOAuthSignIn: async (provider: 'google' | 'github', callbackPath = '/dashboard') => {
-        const origin = typeof window !== 'undefined' ? window.location.origin : '';
-        const baseOrigin = origin.replace(/\/$/, '');
-        const pathSegment = callbackPath.startsWith('/') ? callbackPath : `/${callbackPath}`;
-        const callbackUrl = origin === '' ? '' : `${baseOrigin}${pathSegment}`;
+        const callbackUrl = normalizeCallbackPath(callbackPath, '/dashboard');
         window.location.href = `${BASE}/oauth/${provider}?callbackUrl=${encodeURIComponent(callbackUrl)}`;
     },
 
@@ -289,10 +432,10 @@ export const searchApi = {
         country?: string;
         radiusKm?: number;
     }) =>
-        request<{ places: Place[]; nextPageToken?: string }>('/search', {
+        requestWithRetry<{ places: Place[]; nextPageToken?: string }>('/search', {
             method: 'POST',
             body: JSON.stringify(params),
-        }),
+        }, 2),
 
     details: (placeId: string) =>
         requestWithRetry<PlaceDetail>(`/details?placeId=${placeId}`, {}, 3),
@@ -345,7 +488,7 @@ export const searchApi = {
         return request<{ cities: string[] }>(`/location/cities?${qs.toString()}`);
     },
 
-    marketReport: (params: { textQuery: string; includedType?: string; pageSize?: number; city?: string; state?: string }) =>
+    marketReport: (params: { textQuery: string; includedType?: string; pageSize?: number; city?: string; state?: string; country?: string }) =>
         request<MarketReport>('/market-report', {
             method: 'POST',
             body: JSON.stringify(params),
@@ -360,8 +503,34 @@ export interface PlanFromApi {
     leadsLimit: number;
     priceMonthlyBrl: number;
     priceAnnualBrl: number;
+    priceMonthlyUsd?: number;
+    priceAnnualUsd?: number;
+    currency?: 'BRL' | 'USD';
     modules: string[];
+    promo?: StarterPromoInfo;
 }
+
+export type StarterPromoInfo = {
+    id: string;
+    planId: string;
+    planKey: string;
+    priceMonthlyBrl: number;
+    regularPriceMonthlyBrl: number;
+    months: number;
+    eligible: boolean;
+};
+
+export type PromoValidateResponse = {
+    eligible: boolean;
+    promo: StarterPromoInfo;
+    planKey: string;
+    priceMonthlyBrl: number;
+    regularPriceMonthlyBrl: number;
+    months: number;
+    checkoutPlanId: string;
+    error?: string;
+    reason?: string;
+};
 
 export const plansApi = {
     list: () => request<PlanFromApi[]>('/plans'),
@@ -381,11 +550,19 @@ export const billingApi = {
         scheduleAtPeriodEnd?: boolean;
         /** Código do afiliado (do cookie ref). */
         affiliateCode?: string;
+        promoCode?: string;
+        promoToken?: string;
     }) =>
         request<CheckoutResponse>('/billing/checkout', {
             method: 'POST',
             body: JSON.stringify(data),
         }),
+    validatePromo: (params: { promo?: string; token?: string }) => {
+        const qs = new URLSearchParams();
+        if (params.promo) qs.set('promo', params.promo);
+        if (params.token) qs.set('token', params.token);
+        return request<PromoValidateResponse>(`/billing/promo/validate?${qs.toString()}`);
+    },
     cancelSubscription: () =>
         request<{ ok: boolean; message: string; pendingPlanId?: string | null; pendingPlanEffectiveAt?: string | null }>('/billing/cancel-subscription', {
             method: 'POST',
@@ -441,7 +618,7 @@ export const affiliateApi = {
 // ─── Competitors ─────────────────────────────────────────────────────────────
 
 export const competitorApi = {
-    analyze: (params: { textQuery: string; includedType?: string; pageSize?: number; city?: string; state?: string; radiusKm?: number }) =>
+    analyze: (params: { textQuery: string; includedType?: string; pageSize?: number; city?: string; state?: string; country?: string; radiusKm?: number }) =>
         request<CompetitorAnalysisResult>('/competitors', {
             method: 'POST',
             body: JSON.stringify(params),
@@ -458,6 +635,8 @@ export interface ViabilityAnalyzeParams {
     businessType?: string;
     city: string;
     state?: string;
+    country?: string;
+    locale?: string;
 }
 
 export const viabilityApi = {
@@ -499,8 +678,19 @@ export interface CompanyAnalysisReport {
 export interface CompanyAnalysisParams {
     useProfile?: boolean;
     companyName?: string;
+    legalName?: string;
+    tradeName?: string;
+    cnpj?: string;
     city?: string;
     state?: string;
+    country?: string;
+    locale?: SupportedLocale;
+    postalCode?: string;
+    neighborhood?: string;
+    primaryCnaeCode?: string;
+    primaryCnaeDescription?: string;
+    companySize?: string;
+    foundingDate?: string;
     productService?: string;
     targetAudience?: string;
     mainBenefit?: string;
@@ -509,14 +699,18 @@ export interface CompanyAnalysisParams {
     linkedInUrl?: string;
     instagramUrl?: string;
     facebookUrl?: string;
+    serviceModel?: string;
+    averageTicket?: number;
+    operationRadiusKm?: number;
+    knownCompetitors?: string;
 }
 
 export const companyAnalysisApi = {
     run: (body?: CompanyAnalysisParams) =>
-        request<CompanyAnalysisReport>('/company-analysis', {
+        requestWithRetry<CompanyAnalysisReport>('/company-analysis', {
             method: 'POST',
             body: JSON.stringify(body ?? {}),
-        }),
+        }, 3),
 };
 
 // ─── Intelligence ────────────────────────────────────────────────────────────
@@ -626,6 +820,9 @@ export interface LeadAnalysisListItem {
     status?: 'NEW' | 'CONTACTED' | 'CONVERTED' | 'LOST';
     score?: number;
     summary?: string;
+    painPoints?: string[];
+    approach?: string;
+    firstContactMessage?: string;
     isFavorite?: boolean;
     suggestedWhatsAppMessage?: string;
     closeProbability?: number;
@@ -734,19 +931,56 @@ export const userApi = {
     me: () => request<{ user: SessionUser | null; workspaceProfile?: WorkspaceProfile | null }>('/user/me'),
     updateProfile: (data: UserProfileUpdate) =>
         request<UserProfileResponse>('/user/profile', { method: 'POST', body: JSON.stringify(data) }),
+    changePassword: (data: { currentPassword: string; newPassword: string }) =>
+        request<{ message: string }>('/user/change-password', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 export interface WorkspaceProfile {
     companyName: string | null;
+    legalName: string | null;
+    tradeName: string | null;
+    cnpj: string | null;
+    primaryCnaeCode: string | null;
+    primaryCnaeDescription: string | null;
+    companySize: string | null;
+    foundingDate: string | null;
     productService: string | null;
     targetAudience: string | null;
     mainBenefit: string | null;
     address: string | null;
+    postalCode: string | null;
+    street: string | null;
+    number: string | null;
+    complement: string | null;
+    neighborhood: string | null;
+    city: string | null;
+    state: string | null;
     linkedInUrl: string | null;
     instagramUrl: string | null;
     facebookUrl: string | null;
     websiteUrl: string | null;
     logoUrl: string | null;
+    serviceModel: string | null;
+    averageTicket: number | null;
+    operationRadiusKm: number | null;
+    knownCompetitors: string | null;
+}
+
+export interface WorkspaceProfileCnpjLookup {
+    cnpj: string;
+    legalName: string | null;
+    tradeName: string | null;
+    primaryCnaeCode: string | null;
+    primaryCnaeDescription: string | null;
+    companySize: string | null;
+    foundingDate: string | null;
+    postalCode: string | null;
+    street: string | null;
+    number: string | null;
+    neighborhood: string | null;
+    city: string | null;
+    state: string | null;
+    address: string | null;
 }
 
 export const workspaceProfileApi = {
@@ -756,6 +990,8 @@ export const workspaceProfileApi = {
             method: 'PATCH',
             body: JSON.stringify(data),
         }),
+    lookupCnpj: (cnpj: string) =>
+        request<WorkspaceProfileCnpjLookup>(`/workspace/current/profile/cnpj?cnpj=${encodeURIComponent(cnpj)}`),
 };
 
 // ─── Onboarding ─────────────────────────────────────────────────────────────
@@ -775,13 +1011,31 @@ export interface SessionUser {
     name?: string | null;
     email?: string | null;
     image?: string | null;
-    plan: 'FREE' | 'BASIC' | 'PRO' | 'BUSINESS' | 'SCALE';
+    plan: 'FREE' | 'TRIAL' | 'BASIC' | 'PRO' | 'BUSINESS' | 'SCALE';
     leadsUsed: number;
     leadsLimit: number;
     companyName?: string | null;
+    legalName?: string | null;
+    tradeName?: string | null;
+    cnpj?: string | null;
+    primaryCnaeCode?: string | null;
+    primaryCnaeDescription?: string | null;
+    companySize?: string | null;
+    foundingDate?: string | null;
     productService?: string | null;
     targetAudience?: string | null;
     mainBenefit?: string | null;
+    postalCode?: string | null;
+    street?: string | null;
+    number?: string | null;
+    complement?: string | null;
+    neighborhood?: string | null;
+    city?: string | null;
+    state?: string | null;
+    serviceModel?: string | null;
+    averageTicket?: number | null;
+    operationRadiusKm?: number | null;
+    knownCompetitors?: string | null;
     /** Personal profile */
     phone?: string | null;
     address?: string | null;
@@ -803,6 +1057,14 @@ export interface SessionUser {
     pendingPlanId?: string | null;
     pendingPlanEffectiveAt?: string | null;
     notifyByEmail?: boolean;
+    /** True if the auto-prospecção module is enabled for this workspace */
+    autoProspeccaoEnabled?: boolean;
+    /** Trial state (plan TRIAL) */
+    isTrialing?: boolean;
+    trialExpired?: boolean;
+    trialDaysRemaining?: number | null;
+    starterPromoEligible?: boolean;
+    starterPromo?: StarterPromoInfo | null;
 }
 
 /** Payload for POST /api/user/profile (personal profile only) */
@@ -833,6 +1095,7 @@ export interface Place {
     internationalPhoneNumber?: string;
     websiteUri?: string;
     website?: string;
+    email?: string;
     rating?: number;
     userRatingCount?: number;
     types?: string[];
@@ -844,6 +1107,12 @@ export interface Place {
     companyTradeName?: string;
     companyMainCnae?: string;
     cnpjStatus?: string;
+    /** All unique phones collected from every source (Google, RF, BrasilAPI, Lead DB). */
+    phones?: string[];
+    /** All unique emails collected from every source. */
+    emails?: string[];
+    /** All unique websites collected from every source. */
+    websites?: string[];
     currentOpeningHours?: {
         openNow?: boolean;
         weekdayDescriptions?: string[];
@@ -1014,6 +1283,7 @@ export interface SegmentBreakdown {
 export interface ViabilityReport {
     score: number;
     verdict: string;
+    verdictKey?: 'HIGHLY_VIABLE' | 'VIABLE_WITH_CAVEATS' | 'MODERATE' | 'RISKY' | 'NOT_RECOMMENDED';
     goNoGo: 'GO' | 'CAUTION' | 'NO_GO';
     summary: string;
     competitorDensity: number;
@@ -1317,4 +1587,194 @@ export interface SmartRelationsResult {
 export const smartRelationsApi = {
     get: (leadId: string) =>
         request<{ data: SmartRelationsResult }>(`/leads/${encodeURIComponent(leadId)}/relations`),
+};
+
+/* ------------------------------------------------------------------ */
+/*  Auto-Prospecção                                                     */
+/* ------------------------------------------------------------------ */
+
+export interface AutoProspStats {
+    totalLeads: number;
+    leadsHot: number;
+    leadsWarm: number;
+    leadsCold: number;
+    leadsConverted: number;
+    emailsSent: number;
+    crmPushed: number;
+    lastRunAt: string | null;
+    nextRunAt: string | null;
+    isActive: boolean;
+    runsLast7d: number;
+}
+
+export interface AutoProspLead {
+    id: string;
+    cnpj: string;
+    razaoSocial: string;
+    nomeFantasia: string | null;
+    email: string | null;
+    telefone: string | null;
+    ddd: string | null;
+    cnaePrincipal: string | null;
+    uf: string | null;
+    municipio: string | null;
+    porte: string | null;
+    score: number | null;
+    status: string;
+    aiAnalysisSummary: string | null;
+    crmPushedAt: string | null;
+    crmProvider: string | null;
+    createdAt: string;
+    emailEvents: Array<{
+        id: string;
+        step: number;
+        subject: string;
+        sentAt: string | null;
+        openedAt: string | null;
+        clickedAt: string | null;
+    }>;
+}
+
+export interface AutoProspRun {
+    id: string;
+    workspaceId: string;
+    triggeredBy: string;
+    status: string;
+    leadsFound: number;
+    leadsAnalyzed: number;
+    leadsHot: number;
+    leadsWarm: number;
+    leadsCold: number;
+    emailsQueued: number;
+    crmPushed: number;
+    startedAt: string;
+    completedAt: string | null;
+    errorLog: string | null;
+    searchProfile: { id: string; name: string } | null;
+}
+
+export interface AutoProspProfile {
+    id: string;
+    name: string;
+    description: string | null;
+    isSystem: boolean;
+    isActive: boolean;
+    cnae: string | null;
+    cnaeList: string[] | null;
+    uf: string[] | null;
+    porte: string[] | null;
+    hasEmail: boolean | null;
+    totalFound: number;
+    totalHot: number;
+    lastRunAt: string | null;
+    nextRunAt: string | null;
+}
+
+export interface AutoProspConfig {
+    id: string;
+    isActive: boolean;
+    scheduleDays: number[];
+    scheduleTimeStart: string;
+    scheduleTimeEnd: string;
+    maxLeadsPerRun: number;
+    maxEmailsPerDay: number;
+    maxCrmPushPerDay: number;
+    hotScoreMin: number;
+    warmScoreMin: number;
+    crmAutoSend: boolean;
+    crmProvider: string | null;
+    emailAutoSend: boolean;
+}
+
+interface PaginatedResponse<T> {
+    items: T[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
+export const autoProspApi = {
+    getStats: () =>
+        request<{ data: AutoProspStats }>('/auto-prospeccao/stats'),
+
+    getConfig: () =>
+        request<{ data: AutoProspConfig }>('/auto-prospeccao/config'),
+
+    updateConfig: (data: Partial<AutoProspConfig>) =>
+        request<{ data: AutoProspConfig }>('/auto-prospeccao/config', {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        }),
+
+    trigger: () =>
+        request<{ data: { runId: string; status: string } }>('/auto-prospeccao/trigger', {
+            method: 'POST',
+        }),
+
+    triggerDryRun: () =>
+        request<{ data: {
+            dryRun: true;
+            totalWouldFind: number;
+            profiles: Array<{ profileId: string; profileName: string; wouldFind: number; dedupSkip: number }>;
+        } }>('/auto-prospeccao/trigger', {
+            method: 'POST',
+            body: JSON.stringify({ dryRun: true }),
+        }),
+
+    listLeads: (params: {
+        page?: number;
+        limit?: number;
+        status?: string;
+        uf?: string;
+        minScore?: number;
+        maxScore?: number;
+    }) => {
+        const qs = new URLSearchParams();
+        if (params.page) qs.set('page', String(params.page));
+        if (params.limit) qs.set('limit', String(params.limit));
+        if (params.status) qs.set('status', params.status);
+        if (params.uf) qs.set('uf', params.uf);
+        if (params.minScore !== undefined) qs.set('minScore', String(params.minScore));
+        if (params.maxScore !== undefined) qs.set('maxScore', String(params.maxScore));
+        return request<PaginatedResponse<AutoProspLead>>(`/auto-prospeccao/leads?${qs.toString()}`);
+    },
+
+    getLead: (id: string) =>
+        request<{ data: AutoProspLead }>(`/auto-prospeccao/leads/${id}`),
+
+    pushLeadToCrm: (id: string) =>
+        request<{ data: { crmId: string | null; provider: string } }>(`/auto-prospeccao/leads/${id}/push-crm`, {
+            method: 'POST',
+        }),
+
+    discardLead: (id: string) =>
+        request<void>(`/auto-prospeccao/leads/${id}/discard`, { method: 'POST' }),
+
+    listRuns: (page = 1, limit = 20) =>
+        request<PaginatedResponse<AutoProspRun>>(`/auto-prospeccao/runs?page=${page}&limit=${limit}`),
+
+    getRun: (id: string) =>
+        request<{ data: AutoProspRun }>(`/auto-prospeccao/runs/${id}`),
+
+    listProfiles: () =>
+        request<{ data: { system: AutoProspProfile[]; workspace: AutoProspProfile[] } }>('/auto-prospeccao/profiles'),
+
+    createProfile: (data: Partial<AutoProspProfile>) =>
+        request<{ data: AutoProspProfile }>('/auto-prospeccao/profiles', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        }),
+
+    updateProfile: (id: string, data: Partial<AutoProspProfile>) =>
+        request<{ data: AutoProspProfile }>(`/auto-prospeccao/profiles/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        }),
+
+    deleteProfile: (id: string) =>
+        request<void>(`/auto-prospeccao/profiles/${id}`, { method: 'DELETE' }),
+
+    toggleProfile: (id: string) =>
+        request<{ data: AutoProspProfile }>(`/auto-prospeccao/profiles/${id}/toggle`, { method: 'POST' }),
 };

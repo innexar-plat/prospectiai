@@ -1,11 +1,13 @@
 import { useParams, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { adminApi, type AdminWorkspaceDetail, type WorkspaceUpdateBody } from '@/lib/api';
+import { useConfirm } from '@/lib/useConfirm';
 
-const PLAN_OPTIONS: Array<WorkspaceUpdateBody['plan']> = ['FREE', 'BASIC', 'PRO', 'BUSINESS', 'SCALE'];
+const PLAN_OPTIONS: Array<WorkspaceUpdateBody['plan']> = ['FREE', 'TRIAL', 'BASIC', 'PRO', 'BUSINESS', 'SCALE'];
 
 const PLAN_DEFAULT_LEADS: Record<string, number> = {
-  FREE: 5,
+  FREE: 10,
+  TRIAL: 50,
   BASIC: 100,
   PRO: 400,
   BUSINESS: 1200,
@@ -23,6 +25,7 @@ export function WorkspaceDetailPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const { confirm, ConfirmDialog } = useConfirm();
 
   useEffect(() => {
     if (!id) return;
@@ -33,6 +36,39 @@ export function WorkspaceDetailPage() {
       .catch((err) => setError(err instanceof Error ? err.message : 'Erro ao carregar'))
       .finally(() => setLoading(false));
   }, [id]);
+
+  const [autoProspLoading, setAutoProspLoading] = useState(false);
+
+  const handleToggleAutoProspeccao = async () => {
+    if (!id || !workspace) return;
+    const enabling = !workspace.autoProspeccaoEnabled;
+    const ok = await confirm({
+      title: enabling ? 'Ativar Auto-Prospecção' : 'Desativar Auto-Prospecção',
+      message: enabling
+        ? 'Ativar o módulo de Auto-Prospecção para este workspace?'
+        : 'Desativar o módulo de Auto-Prospecção para este workspace?',
+      confirmLabel: enabling ? 'Ativar' : 'Desativar',
+      variant: enabling ? 'primary' : 'danger',
+    });
+    if (!ok) return;
+    setAutoProspLoading(true);
+    setActionError(null);
+    adminApi
+      .toggleAutoProspeccao(id)
+      .then((res) => {
+        setWorkspace((prev) =>
+          prev ? { ...prev, autoProspeccaoEnabled: res.data.autoProspeccaoEnabled } : prev,
+        );
+        setToast(
+          res.data.autoProspeccaoEnabled
+            ? 'Auto-Prospecção ativada para este workspace.'
+            : 'Auto-Prospecção desativada para este workspace.',
+        );
+        setTimeout(() => setToast(null), 5000);
+      })
+      .catch((err) => setActionError(err instanceof Error ? err.message : 'Erro ao alterar módulo'))
+      .finally(() => setAutoProspLoading(false));
+  };
 
   const openPlanModal = () => {
     if (workspace) {
@@ -96,6 +132,7 @@ export function WorkspaceDetailPage() {
 
   return (
     <div>
+      {ConfirmDialog}
       <Link to=".." className="text-sm text-violet-600 hover:text-violet-700 mb-4 inline-block">
         ← Workspaces
       </Link>
@@ -103,14 +140,32 @@ export function WorkspaceDetailPage() {
         <h1 className="text-xl font-semibold text-gray-900">
           {workspace.name ?? workspace.id}
         </h1>
-        <button
-          type="button"
-          disabled={actionLoading}
-          onClick={openPlanModal}
-          className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-600 disabled:opacity-50"
-        >
-          Alterar plano
-        </button>
+        <div className="flex gap-2 flex-wrap">
+          <button
+            type="button"
+            disabled={autoProspLoading}
+            onClick={handleToggleAutoProspeccao}
+            className={`px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors ${
+              workspace.autoProspeccaoEnabled
+                ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-300'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300'
+            }`}
+          >
+            {autoProspLoading
+              ? 'Aguarde...'
+              : workspace.autoProspeccaoEnabled
+              ? '🤖 Auto-Prospecção: ON'
+              : '🤖 Auto-Prospecção: OFF'}
+          </button>
+          <button
+            type="button"
+            disabled={actionLoading}
+            onClick={openPlanModal}
+            className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50"
+          >
+            Alterar plano
+          </button>
+        </div>
       </div>
       {toast && (
         <div className="mb-4 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-600 px-4 py-3 text-sm">
@@ -143,6 +198,12 @@ export function WorkspaceDetailPage() {
           <div>
             <p className="text-gray-500">Criado em</p>
             <p className="text-gray-900">{new Date(workspace.createdAt).toLocaleString('pt-BR')}</p>
+          </div>
+          <div>
+            <p className="text-gray-500">Auto-Prospecção</p>
+            <p className={workspace.autoProspeccaoEnabled ? 'text-emerald-600 font-semibold' : 'text-gray-400'}>
+              {workspace.autoProspeccaoEnabled ? 'Habilitada ✓' : 'Desabilitada'}
+            </p>
           </div>
         </div>
         {workspace.usage && (

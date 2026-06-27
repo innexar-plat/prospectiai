@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchWithRetry } from '@/lib/fetch-http';
 import { getCached, setCached } from '@/lib/redis';
+import { getUsCitySuggestions } from '@/lib/us-city-suggestions';
 
 const IBGE_BASE = 'https://servicodados.ibge.gov.br/api/v1/localidades';
 const CITY_CACHE_TTL_SECONDS = 60 * 60 * 24; // 24h
@@ -40,6 +41,15 @@ export async function GET(req: NextRequest) {
 
         if (!state) {
             return NextResponse.json({ error: 'state is required' }, { status: 400 });
+        }
+
+        if (country === 'US') {
+            const minQueryLen = 2;
+            if (q.length < minQueryLen) {
+                return NextResponse.json({ cities: [] });
+            }
+            const cities = await getUsCitySuggestions(state, q);
+            return NextResponse.json({ cities });
         }
 
         if (country !== 'BR') {

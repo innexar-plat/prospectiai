@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma';
 import * as googlePlaces from '@/lib/google-places';
 import * as redis from '@/lib/redis';
 import * as geocode from '@/lib/geocode';
+import * as searchHistoryQueue from '@/lib/search-history-queue';
+import * as serper from '@/lib/web-search/serper';
 
 jest.mock('@/lib/prisma', () => ({
     prisma: {
@@ -19,6 +21,9 @@ jest.mock('@/lib/prisma', () => ({
         },
         lead: {
             findMany: jest.fn(),
+        },
+        webSearchConfig: {
+            findUnique: jest.fn(),
         },
         searchHistory: {
             create: jest.fn(),
@@ -45,10 +50,28 @@ jest.mock('@/lib/google-places', () => ({
 jest.mock('@/lib/redis', () => ({
     getCached: jest.fn(),
     setCached: jest.fn().mockResolvedValue(undefined),
+    acquireRedisLock: jest.fn().mockResolvedValue(true),
+    releaseRedisLock: jest.fn().mockResolvedValue(undefined),
+    waitForCached: jest.fn().mockResolvedValue(null),
 }));
 
 jest.mock('@/lib/geocode', () => ({
     geocodeAddress: jest.fn(),
+}));
+
+jest.mock('@/lib/web-search/serper', () => ({
+    searchSerper: jest.fn(),
+}));
+
+jest.mock('@/lib/search-history-queue', () => ({
+    enqueueSearchHistoryWrite: jest.fn(),
+    getSearchHistoryQueueStats: jest.fn(() => ({
+        queueLength: 0,
+        activeWorkers: 0,
+        concurrency: 1,
+        maxQueueSize: 1000,
+        droppedTasks: 0,
+    })),
 }));
 
 jest.mock('@/lib/logger', () => ({
@@ -79,11 +102,15 @@ describe('SearchService', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        process.env.SEARCH_SERPER_API_KEY = 'test-serper-key';
+        process.env.SEARCH_SITE_ENRICH_ENABLED = 'true';
+        process.env.SEARCH_SITE_ENRICH_MAX_PLACES = '8';
         (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
         (prisma.lead.findMany as jest.Mock).mockResolvedValue([]);
         (prisma.searchHistory.create as jest.Mock).mockResolvedValue({});
         (prisma.workspace.update as jest.Mock).mockResolvedValue({});
         (googlePlaces.textSearch as jest.Mock).mockResolvedValue({ places: [] });
+        (serper.searchSerper as jest.Mock).mockResolvedValue([]);
     });
 
     it('should throw 403 if onboarding is not completed', async () => {
@@ -124,7 +151,7 @@ describe('SearchService', () => {
         const result = await runSearch({ textQuery: 'test' } as any, mockUserId);
         expect(result.fromCache).toBe(true);
         expect(result.places).toHaveLength(10);
-        expect(prisma.searchHistory.create).toHaveBeenCalled();
+        expect(searchHistoryQueue.enqueueSearchHistoryWrite).toHaveBeenCalled();
     });
 
     it('should return from local DB if enough results available', async () => {
@@ -134,7 +161,12 @@ describe('SearchService', () => {
             name: `Lead ${i}`,
             address: 'Address',
             website: 'https://example.com',
+            recommendedWebsite: 'https://recomendado.com',
             phone: '+5511999999999',
+            recommendedPhone: '+5511888888888',
+            email: 'fallback@empresa.com',
+            recommendedEmail: 'contato@empresa.com',
+            contactsHealthScore: 85,
             rating: 4.5,
             reviewCount: 10,
             types: ['restaurant'],
@@ -146,6 +178,15 @@ describe('SearchService', () => {
         const result = await runSearch({ textQuery: 'test', pageSize: 12 } as any, mockUserId);
         expect(result.fromLocalDb).toBe(true);
         expect(result.places).toHaveLength(12);
+        expect(result.places?.[0]).toMatchObject({
+            nationalPhoneNumber: '+5511888888888',
+            websiteUri: 'https://recomendado.com',
+            email: 'contato@empresa.com',
+            recommendedPhone: '+5511888888888',
+            recommendedEmail: 'contato@empresa.com',
+            recommendedWebsite: 'https://recomendado.com',
+            contactsHealthScore: 85,
+        });
     });
 
     it('should skip local DB when fewer than 5 leads returned', async () => {
@@ -179,6 +220,47 @@ describe('SearchService', () => {
         expect(prisma.workspace.update).toHaveBeenCalled();
     });
 
+    it('should NOT call Serper during search (moved to lead analysis)', async () => {
+        (redis.getCached as jest.Mock).mockResolvedValue(null);
+        (prisma.lead.findMany as jest.Mock).mockResolvedValue([]);
+        (googlePlaces.textSearch as jest.Mock).mockResolvedValue({
+            places: [{ id: 'g1', displayName: { text: 'Acme Marketing' }, formattedAddress: 'Rua A, 123, Sao Paulo' }],
+        });
+
+        const result = await runSearch({ textQuery: 'acme marketing sp', country: 'Brasil' } as any, mockUserId);
+
+        expect(serper.searchSerper).not.toHaveBeenCalled();
+        // Place should still be returned (without Serper enrichment)
+        expect(result.places?.[0]?.id).toBe('g1');
+    });
+
+    it('should coalesce concurrent identical runSearch requests', async () => {
+        (redis.getCached as jest.Mock).mockResolvedValue(null);
+        (prisma.lead.findMany as jest.Mock).mockResolvedValue([]);
+
+        let resolveSearch: ((value: { places: Array<{ id: string; displayName: { text: string } }> }) => void) | undefined;
+        (googlePlaces.textSearch as jest.Mock).mockImplementation(
+            () =>
+                new Promise((resolve) => {
+                    resolveSearch = resolve as typeof resolveSearch;
+                })
+        );
+
+        const p1 = runSearch({ textQuery: 'same-query' } as any, mockUserId);
+        const p2 = runSearch({ textQuery: 'same-query' } as any, mockUserId);
+
+        await new Promise((resolve) => setImmediate(resolve));
+
+        expect(googlePlaces.textSearch).toHaveBeenCalledTimes(1);
+        resolveSearch!({ places: [{ id: 'g-coalesce', displayName: { text: 'Coalesced Place' } }] });
+
+        const [r1, r2] = await Promise.all([p1, p2]);
+        expect(r1.places).toHaveLength(1);
+        expect(r2.places).toHaveLength(1);
+        expect(r1.places?.[0].id).toBe('g-coalesce');
+        expect(r2.places?.[0].id).toBe('g-coalesce');
+    });
+
     it('should write results to cache after Google Places API call', async () => {
         (redis.getCached as jest.Mock).mockResolvedValue(null);
         (prisma.lead.findMany as jest.Mock).mockResolvedValue([]);
@@ -187,8 +269,8 @@ describe('SearchService', () => {
 
         await runSearch({ textQuery: 'cacheable' } as any, mockUserId);
         expect(redis.setCached).toHaveBeenCalled();
-        const setCachedCall = (redis.setCached as jest.Mock).mock.calls[0];
-        expect(setCachedCall[0]).toContain('search:cacheable');
+        const cacheKeys = (redis.setCached as jest.Mock).mock.calls.map((call) => call[0]);
+        expect(cacheKeys.some((key: string) => key.includes('search:cacheable'))).toBe(true);
     });
 
     it('should filter out places without website when hasWebsite is yes', async () => {
@@ -202,7 +284,7 @@ describe('SearchService', () => {
         });
         const result = await runSearch({ textQuery: 'x', hasWebsite: 'yes', hasPhone: 'yes' } as any, mockUserId);
         expect(result.places).toHaveLength(1);
-        expect(result.places[0]).toMatchObject({ id: 'g1' });
+        expect(result.places![0]).toMatchObject({ id: 'g1' });
     });
 
     it('should filter out places with website when hasWebsite is no', async () => {
@@ -216,7 +298,7 @@ describe('SearchService', () => {
         });
         const result = await runSearch({ textQuery: 'x', hasWebsite: 'no' } as any, mockUserId);
         expect(result.places).toHaveLength(1);
-        expect(result.places[0]).toMatchObject({ id: 'g1' });
+        expect(result.places![0]).toMatchObject({ id: 'g1' });
     });
 
     it('should apply locationBias when city is provided and geocode succeeds', async () => {
@@ -304,7 +386,32 @@ describe('SearchService', () => {
             const result = await runSearchAllPages({ textQuery: 'all' } as any, mockUserId, 10);
             expect(result.places).toHaveLength(1);
             expect(googlePlaces.textSearchAllPages).toHaveBeenCalled();
-            expect(prisma.$transaction).toHaveBeenCalled(); // via persistUnifiedSearchResult
+            expect(prisma.workspace.update).toHaveBeenCalled();
+            expect(searchHistoryQueue.enqueueSearchHistoryWrite).toHaveBeenCalled();
+        });
+
+        it('should coalesce concurrent identical runSearchAllPages requests', async () => {
+            let resolveSearchAllPages: ((value: { places: Array<{ id: string; displayName: { text: string } }> }) => void) | undefined;
+            (googlePlaces.textSearchAllPages as jest.Mock).mockImplementation(
+                () =>
+                    new Promise((resolve) => {
+                        resolveSearchAllPages = resolve as typeof resolveSearchAllPages;
+                    })
+            );
+
+            const p1 = runSearchAllPages({ textQuery: 'all-coalesce' } as any, mockUserId, 20);
+            const p2 = runSearchAllPages({ textQuery: 'all-coalesce' } as any, mockUserId, 20);
+
+            await new Promise((resolve) => setImmediate(resolve));
+
+            expect(googlePlaces.textSearchAllPages).toHaveBeenCalledTimes(1);
+            resolveSearchAllPages!({ places: [{ id: 'ap-coalesce', displayName: { text: 'All Coalesced Place' } }] });
+
+            const [r1, r2] = await Promise.all([p1, p2]);
+            expect(r1.places).toHaveLength(1);
+            expect(r2.places).toHaveLength(1);
+            expect(r1.places?.[0].id).toBe('ap-coalesce');
+            expect(r2.places?.[0].id).toBe('ap-coalesce');
         });
 
         it('should apply locationBias when city is provided', async () => {

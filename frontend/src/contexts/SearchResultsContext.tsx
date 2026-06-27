@@ -12,6 +12,7 @@ export interface LastSearchParams {
   includedType?: string;
   city?: string;
   state?: string;
+  country?: string;
   radiusKm?: number;
   hasWebsite?: string;
   hasPhone?: string;

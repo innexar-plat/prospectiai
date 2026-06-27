@@ -5,8 +5,19 @@ import { isAdmin } from '@/lib/admin';
 import { logAdminAction } from '@/lib/audit';
 import { aiConfigCreateSchema, formatZodError } from '@/lib/validations/schemas';
 import { encryptApiKey } from '@/lib/ai/encrypt';
+import { compareProviderPriority } from '@/lib/ai/provider-priority';
 
-const ROLE_TO_PRISMA = { lead_analysis: 'LEAD_ANALYSIS' as const, viability: 'VIABILITY' as const };
+const ROLE_TO_PRISMA = {
+    lead_analysis: 'LEAD_ANALYSIS' as const,
+    viability: 'VIABILITY' as const,
+    company_analysis: 'COMPANY_ANALYSIS' as const,
+};
+
+function fromPrismaRole(role: 'LEAD_ANALYSIS' | 'VIABILITY' | 'COMPANY_ANALYSIS'): 'lead_analysis' | 'viability' | 'company_analysis' {
+    if (role === 'LEAD_ANALYSIS') return 'lead_analysis';
+    if (role === 'VIABILITY') return 'viability';
+    return 'company_analysis';
+}
 
 export async function GET() {
     const session = await auth();
@@ -27,9 +38,14 @@ export async function GET() {
                 apiKeyEncrypted: true,
             },
         });
+        configs.sort((a, b) => {
+            const roleOrder = a.role.localeCompare(b.role);
+            if (roleOrder !== 0) return roleOrder;
+            return compareProviderPriority(a, b);
+        });
         const items = configs.map((c) => ({
             id: c.id,
-            role: c.role === 'LEAD_ANALYSIS' ? 'lead_analysis' : 'viability',
+            role: fromPrismaRole(c.role),
             provider: c.provider,
             model: c.model,
             enabled: c.enabled,
@@ -76,7 +92,7 @@ export async function POST(req: NextRequest) {
         }).catch(() => {});
         return NextResponse.json({
             id: created.id,
-            role: created.role === 'LEAD_ANALYSIS' ? 'lead_analysis' : 'viability',
+            role: fromPrismaRole(created.role),
             provider: created.provider,
             model: created.model,
             enabled: created.enabled,

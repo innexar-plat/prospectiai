@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { analyzeLead, type BusinessData, type UserBusinessProfile } from '@/lib/gemini';
 import { getOrCreateRequestId, jsonWithRequestId } from '@/lib/request-id';
 import { v1AnalyzeSchema, formatZodError } from '@/lib/validations/schemas';
+import { resolveAiRequestLocale } from '@/lib/i18n/locale';
 
 export async function POST(req: NextRequest) {
     const requestId = getOrCreateRequestId(req);
@@ -12,8 +13,9 @@ export async function POST(req: NextRequest) {
             return jsonWithRequestId({ error: formatZodError(parsed) }, { status: 400, requestId });
         }
         const { userProfile, locale, userId, ...businessData } = parsed.data;
+        const resolvedLocale = resolveAiRequestLocale(req, locale);
 
-        const result = await analyzeLead(businessData as BusinessData, userProfile as UserBusinessProfile | undefined, locale || 'pt', userId);
+        const result = await analyzeLead(businessData as BusinessData, userProfile as UserBusinessProfile | undefined, resolvedLocale, userId);
 
         return jsonWithRequestId(result.analysis, { requestId });
     } catch (error) {

@@ -88,7 +88,9 @@ describe('POST /api/team/invite', () => {
       'new@x.com',
       'Alice',
       'My Workspace',
-      expect.stringMatching(/\/accept-invite\?token=/)
+      expect.stringMatching(/\/accept-invite\?token=/),
+      'pt',
+      expect.any(String),
     );
     const data = await res.json();
     expect(data.ok).toBe(true);

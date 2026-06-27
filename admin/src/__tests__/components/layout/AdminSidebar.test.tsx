@@ -11,7 +11,7 @@ describe('AdminSidebar', () => {
       </MemoryRouter>
     );
     expect(screen.getByText('Painel Admin')).toBeInTheDocument();
-    expect(screen.getByText('Precision IA')).toBeInTheDocument();
+    expect(screen.getByText('Precision')).toBeInTheDocument();
   });
 
   it('renders nav sections', () => {

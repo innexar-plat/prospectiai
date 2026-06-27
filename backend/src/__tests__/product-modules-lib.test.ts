@@ -17,9 +17,9 @@ describe('product-modules lib', () => {
     expect(mods).toContain('ACAO_COMERCIAL');
     expect(mods).toContain('ANALISE_CONCORRENCIA');
   });
-  it('getModulesForPlan unknown falls back to FREE', () => {
+  it('getModulesForPlan unknown falls back to TRIAL', () => {
     const mods = getModulesForPlan('UNKNOWN_PLAN');
-    expect(mods).toEqual(PLAN_MODULES.FREE);
+    expect(mods).toEqual(PLAN_MODULES.TRIAL);
   });
   it('planHasModule FREE has MAPEAMENTO', () => {
     expect(planHasModule('FREE', 'MAPEAMENTO')).toBe(true);

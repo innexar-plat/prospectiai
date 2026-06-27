@@ -27,7 +27,7 @@ export async function POST(
         }
         const apiKey = decryptApiKey(config.apiKeyEncrypted);
         const model = createLanguageModel({
-            provider: config.provider as 'GEMINI' | 'OPENAI' | 'CLOUDFLARE' | 'GROQ' | 'DEEPSEEK' | 'ANTHROPIC',
+            provider: config.provider as 'GEMINI' | 'OPENAI' | 'CLOUDFLARE' | 'GROQ' | 'DEEPSEEK' | 'ANTHROPIC' | 'OPENROUTER',
             model: config.model,
             apiKey,
             accountId: config.cloudflareAccountId ?? undefined,
@@ -35,7 +35,7 @@ export async function POST(
         await generateText({
             model,
             prompt: 'Respond with exactly: OK',
-            maxTokens: 10,
+            maxOutputTokens: 10,
         });
         logAdminAction(session, 'admin.ai-config.test', { resource: 'ai-config', resourceId: id }).catch(() => {});
         return NextResponse.json({ success: true });

@@ -10,6 +10,7 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { stripe } from '@/lib/stripe';
 import { logger } from '@/lib/logger';
+import { notifyPlanDowngradeCancelled } from '@/lib/telegram-business-alerts';
 
 export async function POST() {
     const session = await auth();
@@ -83,6 +84,15 @@ export async function POST() {
             userId: session.user.id,
             workspaceId: workspace.id,
             cancelledPlan: workspace.pendingPlanId,
+        });
+        notifyPlanDowngradeCancelled({
+            userId: session.user.id,
+            userEmail: session.user.email,
+            userName: session.user.name,
+            workspaceId: workspace.id,
+            fromPlan: workspace.plan,
+            toPlan: workspace.pendingPlanId,
+            provider: isStripe ? 'stripe' : 'mercadopago',
         });
 
         return NextResponse.json({

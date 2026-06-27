@@ -4,7 +4,13 @@ import { auth } from '@/auth';
 
 jest.mock('@/auth', () => ({ auth: jest.fn() }));
 jest.mock('@/lib/ratelimit', () => ({ rateLimit: jest.fn(() => Promise.resolve({ success: true })) }));
-jest.mock('@/lib/redis', () => ({ setCached: jest.fn().mockResolvedValue(undefined), getCached: jest.fn() }));
+jest.mock('@/lib/redis', () => ({
+    setCached: jest.fn().mockResolvedValue(undefined),
+    getCached: jest.fn(),
+    acquireRedisLock: jest.fn().mockResolvedValue(true),
+    releaseRedisLock: jest.fn().mockResolvedValue(undefined),
+    waitForCached: jest.fn().mockResolvedValue(null),
+}));
 
 const mockRunAnalyzePreChecks = jest.fn();
 const mockRunAnalyze = jest.fn();
@@ -135,5 +141,17 @@ describe('POST /api/analyze API Cost Shield', () => {
         expect(res.status).toBe(401);
         const json = await res.json();
         expect(json.error).toBe('Unauthorized');
+    });
+
+    it('should return 400 when body is invalid JSON', async () => {
+        jest.mocked(auth).mockResolvedValue({ user: { id: 'u1' } });
+        const req = new NextRequest('http://localhost/api/analyze', {
+            method: 'POST',
+            body: '{invalid',
+        });
+        const res = await POST(req);
+        expect(res.status).toBe(400);
+        const json = await res.json();
+        expect(json.error).toBe('Invalid JSON body');
     });
 });

@@ -39,9 +39,9 @@ function truncate(text: string, max: number): string {
     return text.slice(0, max - 20) + '\n\n… (truncado)';
 }
 
-function escapeMarkdown(text: string): string {
-    // Escape special chars for MarkdownV2
-    return text.replace(/([_*\[\]()~`>#+\-=|{}.!\\])/g, '\\$1');
+/** Escape dynamic text for Telegram HTML parse_mode (&, <, > only). */
+export function escapeHtml(text: string): string {
+    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 export type AlertLevel = 'critical' | 'warning' | 'info' | 'success';
@@ -87,20 +87,20 @@ export async function sendTelegramAlert(opts: AlertOptions): Promise<boolean> {
     const label = LEVEL_LABEL[opts.level];
     const timestamp = new Date().toISOString().replace('T', ' ').replace(/\.\d+Z$/, ' UTC');
 
-    let text = `${emoji} *${escapeMarkdown(label)}* — ${escapeMarkdown(opts.title)}\n\n`;
-    text += `${escapeMarkdown(opts.message)}\n`;
+    let text = `${emoji} <b>${escapeHtml(label)}</b> — ${escapeHtml(opts.title)}\n\n`;
+    text += `${escapeHtml(opts.message)}\n`;
 
     if (opts.meta && Object.keys(opts.meta).length > 0) {
         text += '\n';
         for (const [key, value] of Object.entries(opts.meta)) {
             if (value != null) {
-                text += `• *${escapeMarkdown(key)}*: \`${escapeMarkdown(String(value))}\`\n`;
+                text += `• <b>${escapeHtml(key)}</b>: <code>${escapeHtml(String(value))}</code>\n`;
             }
         }
     }
 
-    text += `\n🕐 ${escapeMarkdown(timestamp)}`;
-    text += `\n🏷 ${escapeMarkdown('PrecisionAI')}`;
+    text += `\n🕐 ${escapeHtml(timestamp)}`;
+    text += `\n🏷 ${escapeHtml('PrecisionAI')}`;
 
     text = truncate(text, MAX_MESSAGE_LENGTH);
 
@@ -112,7 +112,7 @@ export async function sendTelegramAlert(opts: AlertOptions): Promise<boolean> {
             body: JSON.stringify({
                 chat_id: config.chatId,
                 text,
-                parse_mode: 'MarkdownV2',
+                parse_mode: 'HTML',
                 disable_web_page_preview: true,
             }),
             signal: AbortSignal.timeout(10_000),

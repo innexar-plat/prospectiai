@@ -2,7 +2,10 @@ import { rateLimit } from "../lib/ratelimit"
 
 // Mock Redis
 jest.mock("ioredis", () => {
-    return jest.fn().mockImplementation(() => {
+    return jest.fn().mockImplementation((url?: string) => {
+        if (url === "throw://redis") {
+            throw new Error("redis unavailable")
+        }
         const store: Record<string, string> = {}
         return {
             get: jest.fn().mockImplementation((key) => Promise.resolve(store[key] || null)),
@@ -26,6 +29,11 @@ jest.mock("ioredis", () => {
 })
 
 describe("Rate Limiting Utility", () => {
+    beforeEach(() => {
+        process.env.RATE_LIMIT_FAIL_OPEN = "false"
+        process.env.REDIS_URL = "redis://localhost:6379"
+    })
+
     it("should allow requests within the limit", async () => {
         const { success, remaining } = await rateLimit("test-ip", 5, 60)
         expect(success).toBe(true)
@@ -41,5 +49,13 @@ describe("Rate Limiting Utility", () => {
         const { success, remaining } = await rateLimit("block-ip", 5, 60)
         expect(success).toBe(false)
         expect(remaining).toBe(0)
+    })
+
+    it("should allow requests in fail-open mode when redis is unavailable", async () => {
+        process.env.RATE_LIMIT_FAIL_OPEN = "true"
+        process.env.REDIS_URL = "throw://redis"
+
+        const { success } = await rateLimit("fail-open-ip", 5, 60)
+        expect(success).toBe(true)
     })
 })

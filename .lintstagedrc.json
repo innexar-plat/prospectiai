@@ -1,0 +1,1 @@
+{ "{backend,frontend,admin}/src/**/*.{ts,tsx}": "bash -c 'npm run lint'" }

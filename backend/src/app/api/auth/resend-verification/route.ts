@@ -4,6 +4,8 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { sendVerificationEmail } from '@/lib/email';
 import { logger } from '@/lib/logger';
+import { getRequestLocale } from '@/lib/i18n/locale';
+import { getSiteUrlFromRequest } from '@/lib/site-url';
 
 const COOLDOWN_SECONDS = 60;
 
@@ -12,7 +14,9 @@ const COOLDOWN_SECONDS = 60;
  * Resends verification email for the currently authenticated user.
  * Rate-limited to 1 request per 60 seconds per user.
  */
-export async function POST() {
+export async function POST(req: Request) {
+    const locale = getRequestLocale(req);
+    const siteUrl = getSiteUrlFromRequest(req);
     try {
         const session = await auth();
         if (!session?.user?.email) {
@@ -68,7 +72,7 @@ export async function POST() {
         });
 
         // Send email (fire-and-forget but still await for error reporting)
-        const result = await sendVerificationEmail(email, token);
+        const result = await sendVerificationEmail(email, token, locale, siteUrl);
         if (!result.sent) {
             logger.error('Resend verification email failed', { email, error: result.error });
             return NextResponse.json({ error: 'Falha ao enviar e-mail. Tente novamente.' }, { status: 500 });

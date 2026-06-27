@@ -35,9 +35,9 @@ describe('proration', () => {
         });
         expect(result).not.toBeNull();
         expect(result!.remainingRatio).toBeCloseTo(0.5, 1);
-        // BASIC monthly 129 BRL, PRO 397 BRL; diff 268; half = 134
-        expect(result!.amountBrl).toBeGreaterThanOrEqual(130);
-        expect(result!.amountBrl).toBeLessThanOrEqual(140);
+        // BASIC monthly 97 BRL, PRO 297 BRL; diff 200; half ≈ 100
+        expect(result!.amountBrl).toBeGreaterThanOrEqual(95);
+        expect(result!.amountBrl).toBeLessThanOrEqual(105);
         expect(result!.amountUsd).toBeGreaterThan(0);
     });
 

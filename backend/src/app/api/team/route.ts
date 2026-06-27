@@ -10,7 +10,8 @@ import { sendTeamInviteEmail, sendTeamInviteAccountCreatedEmail } from '@/lib/em
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
-const SITE_URL = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+import { getSiteUrlFromRequest } from '@/lib/site-url';
+import { getRequestLocale } from '@/lib/i18n/locale';
 
 const inviteBodySchema = z.object({
     email: z.email().transform((s) => s.trim().toLowerCase()),
@@ -198,7 +199,8 @@ export async function POST(req: NextRequest) {
         if (!result.ok) return result.error;
 
         const { email, workspaceId, inviterName, workspaceName, session: ctxSession } = result;
-        const baseUrl = SITE_URL.replace(/\/$/, '');
+        const baseUrl = getSiteUrlFromRequest(req).replace(/\/$/, '');
+        const locale = getRequestLocale(req);
 
         const existingUser = await prisma.user.findUnique({ where: { email } });
 
@@ -256,7 +258,7 @@ export async function POST(req: NextRequest) {
             }
 
             const setPasswordUrl = `${baseUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
-            sendTeamInviteAccountCreatedEmail(email, inviterName, workspaceName, setPasswordUrl)
+            sendTeamInviteAccountCreatedEmail(email, inviterName, workspaceName, setPasswordUrl, locale, baseUrl)
                 .then((res) => {
                     if (!res.sent) logger.warn('Team account-created email not sent', { email, reason: res.error ?? 'no config' }, requestId);
                     else logger.info('Team account-created email sent', { email }, requestId);
@@ -280,7 +282,7 @@ export async function POST(req: NextRequest) {
             update: { token, lastSentAt: new Date(), status: 'PENDING' },
         });
         const acceptInviteUrl = `${baseUrl}/accept-invite?token=${encodeURIComponent(token)}`;
-        sendTeamInviteEmail(email, inviterName, workspaceName, acceptInviteUrl)
+        sendTeamInviteEmail(email, inviterName, workspaceName, acceptInviteUrl, locale, baseUrl)
             .then((res) => {
                 if (!res.sent) logger.warn('Team invite email not sent', { email, reason: res.error ?? 'no config' }, requestId);
                 else logger.info('Team invite email sent', { email }, requestId);

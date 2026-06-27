@@ -3,6 +3,26 @@ import { auth } from '@/auth';
 import { getOrCreateRequestId, jsonWithRequestId } from '@/lib/request-id';
 import { getCached } from '@/lib/redis';
 
+const DEFAULT_STALE_JOB_MS = 720_000;
+
+function parsePositiveInt(value: string | undefined, fallback: number): number {
+    const parsed = Number.parseInt(value ?? '', 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function getStaleJobMs(): number {
+    return parsePositiveInt(process.env.ANALYZE_JOB_STALE_MS, DEFAULT_STALE_JOB_MS);
+}
+
+type AnalyzeJobCache = {
+    status: string;
+    step?: string;
+    result?: unknown;
+    error?: string;
+    httpStatus?: number;
+    updatedAt?: number;
+};
+
 /**
  * GET /api/analyze/status?jobId=X
  *
@@ -26,10 +46,24 @@ export async function GET(req: NextRequest) {
     }
 
     const jobKey = `analyze:job:${jobId}`;
-    const job = await getCached<{ status: string; step?: string; result?: unknown; error?: string; httpStatus?: number }>(jobKey);
+    const job = await getCached<AnalyzeJobCache>(jobKey);
 
     if (!job) {
         return jsonWithRequestId({ status: 'not_found', error: 'Job expired or not found' }, { status: 404, requestId });
+    }
+
+    if (job.status === 'processing' && job.updatedAt) {
+        const staleMs = getStaleJobMs();
+        if (Date.now() - job.updatedAt > staleMs) {
+            return jsonWithRequestId(
+                {
+                    status: 'error',
+                    errorCode: 'ANALYSIS_STALE',
+                    error: 'Analysis timed out or was interrupted. Please try again.',
+                },
+                { status: 504, requestId },
+            );
+        }
     }
 
     if (job.status === 'error') {

@@ -1,5 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { renderWithI18n } from '@/test/render-with-i18n';
+import { getLocaleStorageKey } from '@/lib/locale';
 import { ProfileCompletenessBanner } from './ProfileCompletenessBanner';
 import { getProfileCompleteness } from '@/lib/profile-completeness';
 import type { SessionUser } from '@/lib/api';
@@ -35,8 +37,8 @@ describe('getProfileCompleteness', () => {
 
     expect(result.percent).toBe(38);
     expect(result.isCompleteEnough).toBe(false);
-    expect(result.missing).toContain('público-alvo');
-    expect(result.missing).toContain('CNPJ ou site');
+    expect(result.missingKeys).toContain('common.profile.field.targetAudience');
+    expect(result.missingKeys).toContain('common.profile.field.cnpjOrWebsite');
   });
 
   it('marks profile as complete enough when the threshold is reached', () => {
@@ -58,7 +60,9 @@ describe('getProfileCompleteness', () => {
 
 describe('ProfileCompletenessBanner', () => {
   beforeEach(() => {
+    const locale = localStorage.getItem(getLocaleStorageKey());
     localStorage.clear();
+    if (locale) localStorage.setItem(getLocaleStorageKey(), locale);
   });
 
   afterEach(() => {
@@ -67,7 +71,7 @@ describe('ProfileCompletenessBanner', () => {
 
   it('renders for incomplete profiles and triggers primary action', () => {
     const onPrimaryAction = vi.fn();
-    render(<ProfileCompletenessBanner user={buildUser()} onPrimaryAction={onPrimaryAction} />);
+    renderWithI18n(<ProfileCompletenessBanner user={buildUser()} onPrimaryAction={onPrimaryAction} />);
 
     expect(screen.getByText(/perfil estratégico incompleto/i)).toBeInTheDocument();
     expect(screen.getByText(/faltando:/i)).toBeInTheDocument();
@@ -77,7 +81,7 @@ describe('ProfileCompletenessBanner', () => {
   });
 
   it('does not render for complete-enough profiles', () => {
-    render(
+    renderWithI18n(
       <ProfileCompletenessBanner
         user={buildUser({
           productService: 'Consultoria',
@@ -96,7 +100,7 @@ describe('ProfileCompletenessBanner', () => {
 
   it('dismisses and stores timestamp in localStorage', () => {
     const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
-    render(<ProfileCompletenessBanner user={buildUser()} onPrimaryAction={() => {}} />);
+    renderWithI18n(<ProfileCompletenessBanner user={buildUser()} onPrimaryAction={() => {}} />);
 
     fireEvent.click(screen.getByRole('button', { name: /fechar aviso/i }));
 
@@ -110,7 +114,7 @@ describe('ProfileCompletenessBanner', () => {
   it('stays hidden when dismissed recently', () => {
     localStorage.setItem('profile-completeness-banner-dismissed-at', String(Date.now()));
 
-    render(<ProfileCompletenessBanner user={buildUser()} onPrimaryAction={() => {}} />);
+    renderWithI18n(<ProfileCompletenessBanner user={buildUser()} onPrimaryAction={() => {}} />);
 
     expect(screen.queryByText(/perfil estratégico incompleto/i)).not.toBeInTheDocument();
   });

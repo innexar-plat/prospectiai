@@ -4,10 +4,9 @@ import { isAdmin } from '@/lib/admin';
 import { prisma } from '@/lib/prisma';
 import type { AffiliateStatus } from '@prisma/client';
 import { sendAffiliateApprovedEmail } from '@/lib/email';
+import { buildAffiliateDashboardUrl } from '@/lib/affiliate';
+import { getMarketFromRequest } from '@/lib/site-url';
 import { z } from 'zod';
-
-const APP_BASE = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-const AFFILIATE_DASHBOARD_PATH = '/dashboard/afiliado';
 
 const patchSchema = z.object({
   status: z.enum(['PENDING', 'APPROVED', 'SUSPENDED']).optional(),
@@ -85,8 +84,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     });
     const to = updated?.email ?? updated?.user?.email;
     if (to) {
-      const loginUrl = `${APP_BASE.replace(/\/$/, '')}${AFFILIATE_DASHBOARD_PATH}`;
-      sendAffiliateApprovedEmail(to, updated!.code, loginUrl).catch(async (e) => {
+      const market = getMarketFromRequest(req);
+      const loginUrl = buildAffiliateDashboardUrl(market === 'US' ? 'USD' : 'BRL');
+      sendAffiliateApprovedEmail(to, updated!.code, loginUrl, market).catch(async (e) => {
         const { logger } = await import('@/lib/logger');
         logger.error('Affiliate approved email failed', { affiliateId: id, error: e instanceof Error ? e.message : 'Unknown' });
       });

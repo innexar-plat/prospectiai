@@ -4,9 +4,12 @@
 import webpush from 'web-push';
 import { prisma } from '@/lib/prisma';
 
+import { getSiteUrlForMarket } from '@/lib/site-url';
+import type { Market } from '@/lib/market';
+
 const VAPID_PUBLIC = process.env.VAPID_PUBLIC_KEY ?? '';
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY ?? '';
-const FRONTEND_URL = process.env.FRONTEND_URL ?? 'https://precisionia.com.br';
+const DEFAULT_FRONTEND_URL = process.env.FRONTEND_URL ?? 'https://precisionia.com.br';
 
 let configured = false;
 
@@ -22,7 +25,11 @@ function ensureVapid() {
  * Send a web push notification to all of a user's subscriptions.
  * Silently removes expired/invalid subscriptions.
  */
-export async function sendPushToUser(userId: string, payload: { title: string; body: string; link?: string | null }) {
+export async function sendPushToUser(
+  userId: string,
+  payload: { title: string; body: string; link?: string | null },
+  market: Market = 'BR',
+) {
   if (!ensureVapid()) return;
 
   const subs = await prisma.pushSubscription.findMany({
@@ -32,10 +39,11 @@ export async function sendPushToUser(userId: string, payload: { title: string; b
 
   if (subs.length === 0) return;
 
+  const frontendUrl = getSiteUrlForMarket(market);
   const data = JSON.stringify({
     title: payload.title,
     body: payload.body,
-    url: payload.link ? `${FRONTEND_URL}${payload.link}` : `${FRONTEND_URL}/dashboard`,
+    url: payload.link ? `${frontendUrl}${payload.link}` : `${frontendUrl}/dashboard`,
   });
 
   const staleIds: string[] = [];

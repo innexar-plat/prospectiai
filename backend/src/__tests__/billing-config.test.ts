@@ -4,15 +4,15 @@ describe('billing-config', () => {
     it('getPlanPrices returns monthly prices for BASIC', () => {
         const plan = PLANS.BASIC;
         const prices = getPlanPrices(plan, 'monthly');
-        expect(prices.price_brl).toBe(129);
-        expect(prices.price_usd).toBe(25);
+        expect(prices.price_brl).toBe(99);
+        expect(prices.price_usd).toBe(19);
     });
 
     it('getPlanPrices returns annual prices for PRO', () => {
         const plan = PLANS.PRO;
         const prices = getPlanPrices(plan, 'annual');
-        expect(prices.price_brl).toBe(4049);
-        expect(prices.price_usd).toBe(805);
+        expect(prices.price_brl).toBe(3029);
+        expect(prices.price_usd).toBe(490);
     });
 
     it('FREE plan has zero prices', () => {

@@ -1,0 +1,22 @@
+import type { Market } from '@/lib/market';
+import { MARKET } from '@/lib/market';
+
+/** User + workspace data for new signups — inactive FREE until first payment (BR and US). */
+export function buildRegistrationUserData(_market: Market = MARKET) {
+    return {
+        plan: 'FREE' as const,
+        leadsLimit: 0,
+        leadsUsed: 0,
+    };
+}
+
+export function buildRegistrationWorkspaceData(name: string, _market: Market = MARKET) {
+    return {
+        name,
+        plan: 'FREE' as const,
+        leadsLimit: 0,
+        leadsUsed: 0,
+        subscriptionStatus: 'inactive',
+        currentPeriodEnd: null,
+    };
+}

@@ -46,11 +46,43 @@ jest.mock('@/lib/email', () => ({
   sendAffiliateConversionEmail: jest.fn().mockResolvedValue(undefined),
 }));
 
+jest.mock('@/lib/site-url', () => ({
+  getSiteUrlForMarket: jest.fn((market: string) =>
+    market === 'US' ? 'https://precisionai.innexar.app' : 'https://precisionia.com.br'
+  ),
+}));
+
+const sendAffiliateConversionEmail = require('@/lib/email').sendAffiliateConversionEmail as jest.Mock;
+
+async function flushAsyncEmail(): Promise<void> {
+  await new Promise((r) => setImmediate(r));
+  await new Promise((r) => setImmediate(r));
+}
+
 const prisma = require('@/lib/prisma').prisma;
 
 describe('affiliate lib', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('marketFromCurrency', () => {
+    const { marketFromCurrency, buildAffiliateDashboardUrl } = require('@/lib/affiliate');
+
+    it('maps USD to US market', () => {
+      expect(marketFromCurrency('USD')).toBe('US');
+      expect(marketFromCurrency('usd')).toBe('US');
+    });
+
+    it('maps BRL and other currencies to BR market', () => {
+      expect(marketFromCurrency('BRL')).toBe('BR');
+      expect(marketFromCurrency('EUR')).toBe('BR');
+    });
+
+    it('buildAffiliateDashboardUrl uses market-specific base', () => {
+      expect(buildAffiliateDashboardUrl('USD')).toBe('https://precisionai.innexar.app/dashboard/afiliado');
+      expect(buildAffiliateDashboardUrl('BRL')).toBe('https://precisionia.com.br/dashboard/afiliado');
+    });
   });
 
   describe('getAffiliateByCode', () => {
@@ -310,6 +342,60 @@ describe('affiliate lib', () => {
         data: expect.objectContaining({ convertedAt: expect.any(Date), planId: 'p1', valueCents: 10000 }),
       });
     });
+
+    it('sends conversion email with BR dashboard URL for BRL currency', async () => {
+      mockReferralFindFirst.mockResolvedValue({
+        id: 'r1',
+        convertedAt: null,
+        affiliateId: 'aff1',
+        affiliate: { status: 'APPROVED', commissionRatePercent: 10 },
+      });
+      mockFindUnique.mockResolvedValue({ email: 'aff@x.com', user: null });
+      mockCommissionCreate.mockResolvedValue({ id: 'comm1' });
+      mockReferralUpdate.mockResolvedValue({});
+      await createCommissionForFirstPayment({
+        userId: 'u1',
+        workspaceId: 'w1',
+        userEmail: 'u@x.com',
+        planId: 'p1',
+        valueCents: 10000,
+        currency: 'BRL',
+      });
+      await flushAsyncEmail();
+      expect(sendAffiliateConversionEmail).toHaveBeenCalledWith(
+        'aff@x.com',
+        expect.any(String),
+        'https://precisionia.com.br/dashboard/afiliado',
+        'BRL',
+      );
+    });
+
+    it('sends conversion email with US dashboard URL for USD currency', async () => {
+      mockReferralFindFirst.mockResolvedValue({
+        id: 'r1',
+        convertedAt: null,
+        affiliateId: 'aff1',
+        affiliate: { status: 'APPROVED', commissionRatePercent: 10 },
+      });
+      mockFindUnique.mockResolvedValue({ email: 'aff@x.com', user: null });
+      mockCommissionCreate.mockResolvedValue({ id: 'comm1' });
+      mockReferralUpdate.mockResolvedValue({});
+      await createCommissionForFirstPayment({
+        userId: 'u1',
+        workspaceId: 'w1',
+        userEmail: 'u@x.com',
+        planId: 'p1',
+        valueCents: 10000,
+        currency: 'USD',
+      });
+      await flushAsyncEmail();
+      expect(sendAffiliateConversionEmail).toHaveBeenCalledWith(
+        'aff@x.com',
+        expect.any(String),
+        'https://precisionai.innexar.app/dashboard/afiliado',
+        'USD',
+      );
+    });
   });
 
   describe('createCommissionForRecurring', () => {
@@ -366,11 +452,13 @@ describe('affiliate lib', () => {
       });
       mockCount.mockResolvedValue(1);
       mockCommissionCreate.mockResolvedValue({ id: 'rec-1' });
+      mockFindUnique.mockResolvedValue({ email: 'aff@x.com', user: null });
       const result = await createCommissionForRecurring({
         workspaceId: 'w1',
         subscriptionId: 'sub1',
         planId: 'p1',
         valueCents: 5000,
+        currency: 'USD',
       });
       expect(result).toEqual({ id: 'rec-1' });
       expect(mockCommissionCreate).toHaveBeenCalledWith(
@@ -381,6 +469,13 @@ describe('affiliate lib', () => {
             status: 'PENDING',
           }),
         })
+      );
+      await flushAsyncEmail();
+      expect(sendAffiliateConversionEmail).toHaveBeenCalledWith(
+        'aff@x.com',
+        expect.any(String),
+        'https://precisionai.innexar.app/dashboard/afiliado',
+        'USD',
       );
     });
   });

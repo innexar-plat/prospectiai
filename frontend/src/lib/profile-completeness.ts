@@ -8,23 +8,23 @@ function isFilled(value: string | number | null | undefined): boolean {
 export function getProfileCompleteness(user: SessionUser): {
   percent: number;
   isCompleteEnough: boolean;
-  missing: string[];
+  missingKeys: string[];
 } {
   const checks = [
-    { ok: isFilled(user.companyName), label: 'nome da empresa' },
-    { ok: isFilled(user.productService), label: 'produto ou serviço' },
-    { ok: isFilled(user.targetAudience), label: 'público-alvo' },
-    { ok: isFilled(user.mainBenefit), label: 'benefício principal' },
-    { ok: isFilled(user.city), label: 'cidade' },
-    { ok: isFilled(user.state), label: 'estado' },
-    { ok: isFilled(user.cnpj) || isFilled(user.websiteUrl), label: 'CNPJ ou site' },
-    { ok: isFilled(user.serviceModel) || isFilled(user.averageTicket), label: 'modelo de atendimento ou ticket médio' },
+    { ok: isFilled(user.companyName), labelKey: 'common.profile.field.companyName' },
+    { ok: isFilled(user.productService), labelKey: 'common.profile.field.productService' },
+    { ok: isFilled(user.targetAudience), labelKey: 'common.profile.field.targetAudience' },
+    { ok: isFilled(user.mainBenefit), labelKey: 'common.profile.field.mainBenefit' },
+    { ok: isFilled(user.city), labelKey: 'common.profile.field.city' },
+    { ok: isFilled(user.state), labelKey: 'common.profile.field.state' },
+    { ok: isFilled(user.cnpj) || isFilled(user.websiteUrl), labelKey: 'common.profile.field.cnpjOrWebsite' },
+    { ok: isFilled(user.serviceModel) || isFilled(user.averageTicket), labelKey: 'common.profile.field.serviceModelOrTicket' },
   ];
   const completed = checks.filter((item) => item.ok).length;
   const percent = Math.round((completed / checks.length) * 100);
   return {
     percent,
     isCompleteEnough: completed >= 6,
-    missing: checks.filter((item) => !item.ok).map((item) => item.label),
+    missingKeys: checks.filter((item) => !item.ok).map((item) => item.labelKey),
   };
 }

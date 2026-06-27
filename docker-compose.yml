@@ -11,12 +11,16 @@ services:
         - VITE_SUPPORT_EMAIL=${VITE_SUPPORT_EMAIL:-}
         - VITE_SUPPORT_WHATSAPP=${VITE_SUPPORT_WHATSAPP:-}
         - VITE_VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
+        - VITE_GA_MEASUREMENT_ID=${VITE_GA_MEASUREMENT_ID:-}
+        - VITE_GOOGLE_ADS_CONVERSION_ID=${VITE_GOOGLE_ADS_CONVERSION_ID:-}
+        - VITE_GOOGLE_ADS_CONVERSION_LABEL=${VITE_GOOGLE_ADS_CONVERSION_LABEL:-}
+        - VITE_MARKET=${VITE_MARKET:-BR}
     container_name: prospector-frontend
     logging:
       driver: json-file
       options:
-        max-size: "20m"
-        max-file: "5"
+        max-size: "50m"
+        max-file: "3"
     # Só localhost: tráfego público entra pelo Traefik (80/443)
     ports:
       - "127.0.0.1:5173:80"
@@ -50,6 +54,16 @@ services:
       - "traefik.http.routers.prospector-ai-http.middlewares=redirect-to-https-prospector"
       - "traefik.http.routers.prospector-ai-http.service=prospector-ai-frontend"
       - "traefik.http.routers.prospector-ai-http.priority=100"
+      - "traefik.http.routers.prospector-ai-us.rule=Host(`precisionai.innexar.app`)"
+      - "traefik.http.routers.prospector-ai-us.entrypoints=websecure"
+      - "traefik.http.routers.prospector-ai-us.tls.certresolver=cloudflare"
+      - "traefik.http.routers.prospector-ai-us.service=prospector-ai-frontend"
+      - "traefik.http.routers.prospector-ai-us.priority=100"
+      - "traefik.http.routers.prospector-ai-us-http.rule=Host(`precisionai.innexar.app`)"
+      - "traefik.http.routers.prospector-ai-us-http.entrypoints=web"
+      - "traefik.http.routers.prospector-ai-us-http.middlewares=redirect-to-https-prospector"
+      - "traefik.http.routers.prospector-ai-us-http.service=prospector-ai-frontend"
+      - "traefik.http.routers.prospector-ai-us-http.priority=100"
       - "traefik.http.middlewares.redirect-busca-to-prospectorai.redirectregex.regex=^https?:\\/\\/busca\\.innexar\\.com\\.br(.*)"
       - "traefik.http.middlewares.redirect-busca-to-prospectorai.redirectregex.replacement=https://precisionia.com.br$${1}"
       - "traefik.http.middlewares.redirect-busca-to-prospectorai.redirectregex.permanent=true"
@@ -69,6 +83,11 @@ services:
       context: ./docker/maintenance
       dockerfile: Dockerfile
     container_name: prospector-maintenance
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     profiles:
       - maintenance
     restart: unless-stopped
@@ -110,19 +129,39 @@ services:
       args:
         - NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY=${NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY}
         - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+        - MARKET=${MARKET:-BR}
     container_name: prospector-backend
     logging:
       driver: json-file
       options:
         max-size: "50m"
-        max-file: "10"
+        max-file: "3"
     env_file:
       - .env
     environment:
       - TZ=America/Sao_Paulo
-      - FRONTEND_URL=https://precisionia.com.br
+      - SITE_URL_US=https://precisionai.innexar.app
+      - SITE_URL_BR=https://precisionia.com.br
       - ADMIN_EMAILS=${ADMIN_EMAILS}
       - SUPPORT_EMAILS=${SUPPORT_EMAILS:-}
+      - SEARCH_RATE_LIMIT_MAX=${SEARCH_RATE_LIMIT_MAX:-240}
+      - SEARCH_RATE_LIMIT_AUTH_MAX=${SEARCH_RATE_LIMIT_AUTH_MAX:-6000}
+      - SEARCH_RATE_LIMIT_ANON_MAX=${SEARCH_RATE_LIMIT_ANON_MAX:-120}
+      - SEARCH_RATE_LIMIT_WINDOW_SECONDS=${SEARCH_RATE_LIMIT_WINDOW_SECONDS:-60}
+      - SEARCH_BULKHEAD_MAX_IN_FLIGHT=${SEARCH_BULKHEAD_MAX_IN_FLIGHT:-25}
+      - SEARCH_BULKHEAD_ACQUIRE_TIMEOUT_MS=${SEARCH_BULKHEAD_ACQUIRE_TIMEOUT_MS:-1500}
+      - SEARCH_HISTORY_ASYNC=${SEARCH_HISTORY_ASYNC:-true}
+      - SEARCH_USER_CONTEXT_CACHE_TTL_MS=${SEARCH_USER_CONTEXT_CACHE_TTL_MS:-5000}
+      - SEARCH_DISTRIBUTED_LOCK_ENABLED=${SEARCH_DISTRIBUTED_LOCK_ENABLED:-true}
+      - SEARCH_LOCK_TTL_MS=${SEARCH_LOCK_TTL_MS:-12000}
+      - SEARCH_LOCK_WAIT_MS=${SEARCH_LOCK_WAIT_MS:-2500}
+      - SEARCH_LOCK_POLL_MS=${SEARCH_LOCK_POLL_MS:-75}
+      - SEARCH_HISTORY_QUEUE_CONCURRENCY=${SEARCH_HISTORY_QUEUE_CONCURRENCY:-3}
+      - SEARCH_HISTORY_QUEUE_MAX_SIZE=${SEARCH_HISTORY_QUEUE_MAX_SIZE:-5000}
+      - LEAD_SYNC_QUEUE_CONCURRENCY=${LEAD_SYNC_QUEUE_CONCURRENCY:-2}
+      - LEAD_SYNC_QUEUE_MAX_SIZE=${LEAD_SYNC_QUEUE_MAX_SIZE:-1000}
+      - AI_ALWAYS_INCLUDE_ENV_FALLBACK=${AI_ALWAYS_INCLUDE_ENV_FALLBACK:-true}
+      - AI_FALLBACK_PROVIDER=GEMINI
     ports:
       - "127.0.0.1:3010:4000"
     depends_on:
@@ -131,9 +170,9 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4000/api/health || exit 1"]
-      interval: 10s
+      interval: 30s
       timeout: 5s
-      retries: 10
+      retries: 3
       start_period: 30s
     networks:
       - prospector-net
@@ -145,7 +184,7 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
+        max-size: "50m"
         max-file: "3"
     volumes:
       - redis-data:/data
@@ -157,11 +196,48 @@ services:
   db:
     image: postgres:16-alpine
     container_name: prospector-db
+    shm_size: 2gb
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=4GB"
+      - "-c"
+      - "effective_cache_size=14GB"
+      - "-c"
+      - "work_mem=64MB"
+      - "-c"
+      - "maintenance_work_mem=1GB"
+      - "-c"
+      - "random_page_cost=1.1"
+      - "-c"
+      - "effective_io_concurrency=200"
+      - "-c"
+      - "max_parallel_workers_per_gather=4"
+      - "-c"
+      - "max_parallel_workers=8"
+      - "-c"
+      - "max_worker_processes=8"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "wal_buffers=64MB"
+      - "-c"
+      - "max_wal_size=4GB"
+      - "-c"
+      - "min_wal_size=1GB"
+      - "-c"
+      - "checkpoint_completion_target=0.9"
+      - "-c"
+      - "default_statistics_target=200"
+      - "-c"
+      - "temp_buffers=16MB"
+      - "-c"
+      - "huge_pages=try"
     logging:
       driver: json-file
       options:
-        max-size: "20m"
-        max-file: "5"
+        max-size: "50m"
+        max-file: "3"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}

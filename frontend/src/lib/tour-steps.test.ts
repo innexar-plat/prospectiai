@@ -1,7 +1,8 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import {
-  WELCOME_TOUR_STEPS,
-  TOUR_STEPS_BY_SECTION,
+  getCheckoutCreditsTourSteps,
+  getWelcomeTourSteps,
+  getTourStepsBySection,
   TOUR_STORAGE_PREFIX,
   WELCOME_TOUR_STORAGE_KEY,
   getSectionIdFromPath,
@@ -13,19 +14,41 @@ import {
   clearAllTourFlags,
 } from './tour-steps';
 
+const mockT = (key: string) => key;
+
 describe('tour-steps', () => {
   describe('constants', () => {
-    it('WELCOME_TOUR_STEPS has steps', () => {
-      expect(WELCOME_TOUR_STEPS.length).toBeGreaterThan(0);
-      expect(WELCOME_TOUR_STEPS[0]).toHaveProperty('title');
-      expect(WELCOME_TOUR_STEPS[0]).toHaveProperty('body');
+    it('getWelcomeTourSteps returns localized steps', () => {
+      const steps = getWelcomeTourSteps(mockT);
+      expect(steps.length).toBe(12);
+      expect(steps[0]).toHaveProperty('title');
+      expect(steps[0]).toHaveProperty('body');
+      expect(steps[0].title).toBe('common.tour.welcome.1.title');
     });
 
-    it('TOUR_STEPS_BY_SECTION has expected keys', () => {
-      expect(TOUR_STEPS_BY_SECTION).toHaveProperty('prospecao');
-      expect(TOUR_STEPS_BY_SECTION).toHaveProperty('inteligencia');
-      expect(TOUR_STEPS_BY_SECTION).toHaveProperty('equipe');
-      expect(TOUR_STEPS_BY_SECTION).toHaveProperty('conta');
+    it('getWelcomeTourSteps returns 12 steps for US market', () => {
+      const steps = getWelcomeTourSteps(mockT, 'US');
+      expect(steps.length).toBe(12);
+    });
+
+    it('getWelcomeTourSteps returns 12 steps for BR market', () => {
+      const steps = getWelcomeTourSteps(mockT, 'BR');
+      expect(steps.length).toBe(12);
+    });
+
+    it('getCheckoutCreditsTourSteps returns 3 steps', () => {
+      const steps = getCheckoutCreditsTourSteps(mockT);
+      expect(steps.length).toBe(3);
+      expect(steps[1].target).toBe('header-credits');
+      expect(steps[0].title).toBe('common.tour.checkout.1.title');
+    });
+
+    it('getTourStepsBySection has expected keys', () => {
+      const sections = getTourStepsBySection(mockT);
+      expect(sections).toHaveProperty('prospecao');
+      expect(sections).toHaveProperty('inteligencia');
+      expect(sections).toHaveProperty('equipe');
+      expect(sections).toHaveProperty('conta');
     });
 
     it('storage keys are defined', () => {

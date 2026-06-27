@@ -7,6 +7,7 @@ import {
   HelpCircle, Building2, Share2, Command, Plug,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/lib/i18n';
 
 interface CommandItem {
   id: string;
@@ -17,26 +18,36 @@ interface CommandItem {
   section: string;
 }
 
-const COMMANDS: CommandItem[] = [
-  { id: 'nova-busca', label: 'Nova Busca', shortcut: 'N', icon: Search, to: '/dashboard', section: 'Prospecção' },
-  { id: 'historico', label: 'Histórico', shortcut: 'H', icon: Clock, to: '/dashboard/historico', section: 'Prospecção' },
-  { id: 'leads', label: 'Leads Salvos', shortcut: 'L', icon: Target, to: '/dashboard/leads', section: 'Prospecção' },
-  { id: 'concorrencia', label: 'Concorrência', icon: Swords, to: '/dashboard/concorrencia', section: 'Inteligência' },
-  { id: 'relatorios', label: 'Relatórios', icon: BarChart3, to: '/dashboard/relatorios', section: 'Inteligência' },
-  { id: 'minha-empresa', label: 'Análise minha empresa', icon: Building2, to: '/dashboard/minha-empresa', section: 'Inteligência' },
-  { id: 'viabilidade', label: 'Viabilidade', icon: TrendingUp, to: '/dashboard/viabilidade', section: 'Inteligência' },
-  { id: 'equipe', label: 'Minha Equipe', icon: Users, to: '/dashboard/equipe', section: 'Equipe' },
-  { id: 'equipe-dash', label: 'Dashboard da equipe', icon: LayoutDashboard, to: '/dashboard/equipe/dashboard', section: 'Equipe' },
-  { id: 'perfil', label: 'Perfil', icon: User, to: '/dashboard/perfil', section: 'Conta' },
-  { id: 'empresa', label: 'Empresa', icon: Building2, to: '/dashboard/empresa', section: 'Conta' },
-  { id: 'planos', label: 'Planos', icon: CreditCard, to: '/dashboard/planos', section: 'Conta' },
-  { id: 'afiliado', label: 'Afiliado', icon: Share2, to: '/dashboard/afiliado', section: 'Conta' },
-  { id: 'integracoes', label: 'Integrações', icon: Plug, to: '/dashboard/integracoes', section: 'Conta' },
-  { id: 'config', label: 'Configurações', icon: Settings, to: '/dashboard/configuracoes', section: 'Conta' },
-  { id: 'suporte', label: 'Suporte', icon: HelpCircle, to: '/dashboard/suporte', section: 'Conta' },
+interface CommandDef {
+  id: string;
+  labelKey: string;
+  shortcut?: string;
+  icon: typeof Search;
+  to: string;
+  sectionKey: string;
+}
+
+const COMMAND_DEFS: CommandDef[] = [
+  { id: 'nova-busca', labelKey: 'dash.nav.newSearch', shortcut: 'N', icon: Search, to: '/dashboard', sectionKey: 'dash.section.prospection' },
+  { id: 'historico', labelKey: 'dash.nav.history', shortcut: 'H', icon: Clock, to: '/dashboard/historico', sectionKey: 'dash.section.prospection' },
+  { id: 'leads', labelKey: 'dash.nav.savedLeads', shortcut: 'L', icon: Target, to: '/dashboard/leads', sectionKey: 'dash.section.prospection' },
+  { id: 'concorrencia', labelKey: 'dash.nav.competition', icon: Swords, to: '/dashboard/concorrencia', sectionKey: 'dash.section.intelligence' },
+  { id: 'relatorios', labelKey: 'dash.nav.reports', icon: BarChart3, to: '/dashboard/relatorios', sectionKey: 'dash.section.intelligence' },
+  { id: 'minha-empresa', labelKey: 'dash.nav.myCompany', icon: Building2, to: '/dashboard/minha-empresa', sectionKey: 'dash.section.intelligence' },
+  { id: 'viabilidade', labelKey: 'dash.nav.viability', icon: TrendingUp, to: '/dashboard/viabilidade', sectionKey: 'dash.section.intelligence' },
+  { id: 'equipe', labelKey: 'dash.nav.myTeam', icon: Users, to: '/dashboard/equipe', sectionKey: 'dash.section.team' },
+  { id: 'equipe-dash', labelKey: 'dash.nav.teamDashboard', icon: LayoutDashboard, to: '/dashboard/equipe/dashboard', sectionKey: 'dash.section.team' },
+  { id: 'perfil', labelKey: 'dash.nav.profile', icon: User, to: '/dashboard/perfil', sectionKey: 'dash.section.account' },
+  { id: 'empresa', labelKey: 'dash.nav.company', icon: Building2, to: '/dashboard/empresa', sectionKey: 'dash.section.account' },
+  { id: 'planos', labelKey: 'dash.breadcrumb.plans', icon: CreditCard, to: '/dashboard/planos', sectionKey: 'dash.section.account' },
+  { id: 'afiliado', labelKey: 'dash.nav.affiliate', icon: Share2, to: '/dashboard/afiliado', sectionKey: 'dash.section.account' },
+  { id: 'integracoes', labelKey: 'dash.nav.integrations', icon: Plug, to: '/dashboard/integracoes', sectionKey: 'dash.section.account' },
+  { id: 'config', labelKey: 'dash.menu.settings', icon: Settings, to: '/dashboard/configuracoes', sectionKey: 'dash.section.account' },
+  { id: 'suporte', labelKey: 'dash.nav.help', icon: HelpCircle, to: '/dashboard/suporte', sectionKey: 'dash.section.account' },
 ];
 
 export function CommandPalette() {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -44,7 +55,11 @@ export function CommandPalette() {
   const listRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
-  // Global Cmd+K / Ctrl+K listener
+  const COMMANDS: CommandItem[] = useMemo(
+    () => COMMAND_DEFS.map((c) => ({ ...c, label: t(c.labelKey), section: t(c.sectionKey) })),
+    [t],
+  );
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -59,7 +74,6 @@ export function CommandPalette() {
     return () => document.removeEventListener('keydown', handler);
   }, [open]);
 
-  // Focus input when opened
   useEffect(() => {
     if (open) {
       setQuery('');
@@ -72,11 +86,10 @@ export function CommandPalette() {
     if (!query.trim()) return COMMANDS;
     const q = query.toLowerCase();
     return COMMANDS.filter(
-      (c) => c.label.toLowerCase().includes(q) || c.section.toLowerCase().includes(q)
+      (c) => c.label.toLowerCase().includes(q) || c.section.toLowerCase().includes(q),
     );
-  }, [query]);
+  }, [query, COMMANDS]);
 
-  // Group by section
   const grouped = useMemo(() => {
     const map = new Map<string, CommandItem[]>();
     for (const item of filtered) {
@@ -107,7 +120,6 @@ export function CommandPalette() {
     }
   };
 
-  // Scroll selected into view
   useEffect(() => {
     if (!listRef.current) return;
     const el = listRef.current.querySelector(`[data-index="${selectedIndex}"]`);
@@ -122,14 +134,13 @@ export function CommandPalette() {
       onClick={() => setOpen(false)}
       role="dialog"
       aria-modal="true"
-      aria-label="Navegação rápida"
+      aria-label={t('dash.command.quickNavLabel')}
     >
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" aria-hidden />
       <div
         className="relative w-full max-w-lg mx-4 rounded-2xl border border-border bg-card shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Search input */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
           <Search size={18} className="text-muted shrink-0" />
           <input
@@ -138,19 +149,18 @@ export function CommandPalette() {
             value={query}
             onChange={(e) => { setQuery(e.target.value); setSelectedIndex(0); }}
             onKeyDown={handleKeyDown}
-            placeholder="Buscar página ou ação..."
+            placeholder={t('dash.command.placeholder')}
             className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted/60 outline-none"
-            aria-label="Buscar"
+            aria-label={t('dash.command.searchShort')}
           />
           <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface border border-border text-[10px] text-muted font-mono">
             ESC
           </kbd>
         </div>
 
-        {/* Results */}
         <div ref={listRef} className="max-h-[320px] overflow-y-auto py-2">
           {flatItems.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-muted text-center">Nenhum resultado encontrado.</p>
+            <p className="px-4 py-6 text-sm text-muted text-center">{t('dash.command.noResults')}</p>
           ) : (
             Array.from(grouped.entries()).map(([section, items]) => (
               <div key={section}>
@@ -171,7 +181,7 @@ export function CommandPalette() {
                         'w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors',
                         idx === selectedIndex
                           ? 'bg-violet-600/10 text-violet-500'
-                          : 'text-foreground hover:bg-surface'
+                          : 'text-foreground hover:bg-surface',
                       )}
                     >
                       <Icon size={16} className="shrink-0" />
@@ -189,29 +199,28 @@ export function CommandPalette() {
           )}
         </div>
 
-        {/* Footer hint */}
         <div className="flex items-center justify-between gap-2 px-4 py-2 border-t border-border text-[10px] text-muted">
           <span className="flex items-center gap-1">
             <kbd className="px-1 py-0.5 rounded bg-surface border border-border font-mono">↑↓</kbd>
-            navegar
+            {t('dash.command.navigate')}
           </span>
           <span className="flex items-center gap-1">
             <kbd className="px-1 py-0.5 rounded bg-surface border border-border font-mono">↵</kbd>
-            abrir
+            {t('dash.command.open')}
           </span>
           <span className="flex items-center gap-1">
             <kbd className="px-1 py-0.5 rounded bg-surface border border-border font-mono">esc</kbd>
-            fechar
+            {t('dash.command.close')}
           </span>
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }
 
-/** Small button to trigger the command palette */
 export function CommandPaletteTrigger() {
+  const { t } = useI18n();
   const handleClick = () => {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
   };
@@ -221,11 +230,11 @@ export function CommandPaletteTrigger() {
       type="button"
       onClick={handleClick}
       className="hidden sm:flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-border bg-surface/50 hover:bg-surface text-muted hover:text-foreground transition-colors text-xs"
-      aria-label="Busca rápida (Ctrl+K)"
-      title="Navegação rápida (Ctrl+K)"
+      aria-label={t('dash.command.quickSearch')}
+      title={t('dash.command.quickNav')}
     >
       <Command size={13} />
-      <span className="text-[11px]">Buscar...</span>
+      <span className="text-[11px]">{t('dash.command.searchShort')}</span>
       <kbd className="ml-1 px-1 py-0.5 rounded bg-background border border-border text-[9px] font-mono">⌘K</kbd>
     </button>
   );

@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Search, X, Building2 } from 'lucide-react';
 import { cnaeApi, type CnaeCode } from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
+import { getActiveMarket } from '@/lib/market';
 
 interface CnaeAutocompleteProps {
   /** Selected CNAE codes (multi-select) */
@@ -16,6 +18,10 @@ interface SelectedCnae {
 }
 
 export function CnaeAutocomplete({ values, onChange, disabled }: CnaeAutocompleteProps) {
+  const { t } = useI18n();
+  const isUsMarket = getActiveMarket() === 'US';
+  const basePlaceholder = isUsMarket ? t('page.search.cnae.placeholderUs') : t('page.search.cnae.placeholder');
+  const addPlaceholder = isUsMarket ? t('page.search.cnae.placeholderUs') : t('page.search.cnae.placeholderAdd');
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<CnaeCode[]>([]);
   const [open, setOpen] = useState(false);
@@ -110,7 +116,7 @@ export function CnaeAutocomplete({ values, onChange, disabled }: CnaeAutocomplet
                 onClick={() => removeCode(s.code)}
                 disabled={disabled}
                 className="shrink-0 text-muted hover:text-foreground transition-colors p-0.5 rounded"
-                aria-label={`Remover ${s.description}`}
+                aria-label={t('page.search.cnae.remove', { description: s.description })}
               >
                 <X size={12} />
               </button>
@@ -123,7 +129,7 @@ export function CnaeAutocomplete({ values, onChange, disabled }: CnaeAutocomplet
               disabled={disabled}
               className="text-[10px] text-muted hover:text-foreground transition-colors px-1.5 py-1"
             >
-              Limpar todos
+              {t('page.search.cnae.clearAll')}
             </button>
           )}
         </div>
@@ -138,12 +144,12 @@ export function CnaeAutocomplete({ values, onChange, disabled }: CnaeAutocomplet
         <input
           ref={inputRef}
           type="text"
-          placeholder={selected.length > 0 ? 'Adicionar outro CNAE...' : 'Buscar CNAE por código ou descrição...'}
+          placeholder={selected.length > 0 ? addPlaceholder : basePlaceholder}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           disabled={disabled}
           className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-violet-500/30 disabled:opacity-50"
-          aria-label="Buscar código CNAE"
+          aria-label={t('page.search.cnae.searchAria')}
           aria-autocomplete="list"
           role="combobox"
           aria-expanded={open}

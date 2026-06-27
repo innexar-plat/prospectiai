@@ -3,6 +3,10 @@
  * O usuário pode concluir ou pular; em ambos os casos o tour não é mais exibido.
  */
 
+import { getActiveMarket, type Market } from '@/lib/market';
+
+export type TourTranslateFn = (key: string) => string;
+
 export type TourStep = {
   /** CSS selector or data-tour id. null = centered modal (no highlight). */
   target: string | null;
@@ -14,90 +18,190 @@ export type TourStep = {
   icon?: string;
 };
 
-/** Tour unificado — 8 passos cobrindo toda a interface */
-export const WELCOME_TOUR_STEPS: TourStep[] = [
+type TourStepDef = {
+  target: string | null;
+  titleKey: string;
+  bodyKey: string;
+  placement?: TourStep['placement'];
+  icon?: string;
+  /** If set, step is only included for these markets. */
+  markets?: Market[];
+};
+
+function resolveTourSteps(defs: TourStepDef[], t: TourTranslateFn, market: Market): TourStep[] {
+  return defs
+    .filter((def) => !def.markets || def.markets.includes(market))
+    .map(({ titleKey, bodyKey, ...rest }) => ({
+      target: rest.target,
+      placement: rest.placement,
+      icon: rest.icon,
+      title: t(titleKey),
+      body: t(bodyKey),
+    }));
+}
+
+const WELCOME_TOUR_DEFS: TourStepDef[] = [
   {
     target: null,
-    title: 'Bem-vindo ao Precision IA!',
-    body: 'Vamos fazer um tour rápido pela plataforma. Você vai descobrir como encontrar leads qualificados com inteligência artificial em poucos cliques.',
+    titleKey: 'common.tour.welcome.1.title',
+    bodyKey: 'common.tour.welcome.1.body',
     icon: '👋',
   },
   {
     target: 'sidebar-nav',
-    title: 'Menu de navegação',
-    body: 'Aqui fica o menu principal. Suas seções: Prospecção, Inteligência, Equipe e Suporte. Clique no botão no rodapé para recolher e ganhar mais espaço.',
+    titleKey: 'common.tour.welcome.2.title',
+    bodyKey: 'common.tour.welcome.2.body',
     placement: 'right',
     icon: '📋',
   },
   {
     target: 'nova-busca',
-    title: 'Busca inteligente',
-    body: 'O coração da plataforma. Escolha país, estado, cidade e raio de busca. Logo abaixo defina o nicho (ex: "Restaurantes") e a IA encontrará leads qualificados na região.',
+    titleKey: 'common.tour.welcome.3.title',
+    bodyKey: 'common.tour.welcome.3.body',
     placement: 'bottom',
     icon: '🔍',
   },
   {
+    target: 'search-filters',
+    titleKey: 'common.tour.welcome.4.title',
+    bodyKey: 'common.tour.welcome.4.body',
+    placement: 'bottom',
+    icon: '🎯',
+  },
+  {
     target: 'quick-templates',
-    title: 'Templates rápidos',
-    body: 'Sem tempo? Clique em um template pronto — Restaurantes, Salões, Academias, Clínicas e mais. A busca é preenchida automaticamente.',
+    titleKey: 'common.tour.welcome.5.title',
+    bodyKey: 'common.tour.welcome.5.body',
     placement: 'top',
     icon: '⚡',
   },
   {
+    target: 'advanced-filters',
+    titleKey: 'common.tour.welcome.6.title',
+    bodyKey: 'common.tour.welcome.6.body.br',
+    placement: 'top',
+    icon: '🏷️',
+    markets: ['BR'],
+  },
+  {
+    target: 'advanced-filters',
+    titleKey: 'common.tour.welcome.6.title',
+    bodyKey: 'common.tour.welcome.6.body.us',
+    placement: 'top',
+    icon: '🌐',
+    markets: ['US'],
+  },
+  {
+    target: 'sidebar-historico',
+    titleKey: 'common.tour.welcome.7.title',
+    bodyKey: 'common.tour.welcome.7.body',
+    placement: 'right',
+    icon: '📊',
+  },
+  {
+    target: null,
+    titleKey: 'common.tour.welcome.8.title',
+    bodyKey: 'common.tour.welcome.8.body',
+    icon: '🤖',
+  },
+  {
     target: 'header-credits',
-    title: 'Seus créditos',
-    body: 'Aqui você vê quantos créditos restam no seu plano. Cada análise de lead consome 1 crédito. Os créditos renovam todo mês.',
+    titleKey: 'common.tour.welcome.9.title',
+    bodyKey: 'common.tour.welcome.9.body',
     placement: 'bottom',
     icon: '✨',
   },
   {
-    target: 'header-notifications',
-    title: 'Notificações',
-    body: 'Fique por dentro! Aqui aparecem alertas de análises concluídas, novos recursos e atualizações do sistema.',
-    placement: 'bottom',
-    icon: '🔔',
+    target: 'sidebar-planos',
+    titleKey: 'common.tour.welcome.10.title',
+    bodyKey: 'common.tour.welcome.10.body',
+    placement: 'right',
+    icon: '💳',
   },
   {
-    target: 'sidebar-integracoes',
-    title: 'Integrações CRM',
-    body: 'Conecte seu RD Station ou Agendor para enviar leads diretamente ao CRM com dados enriquecidos, negociações e tarefas — tudo automático.',
+    target: 'sidebar-inteligencia',
+    titleKey: 'common.tour.welcome.11.title',
+    bodyKey: 'common.tour.welcome.11.body',
     placement: 'right',
-    icon: '🔗',
+    icon: '🧠',
   },
   {
     target: null,
-    title: 'Tudo pronto para começar!',
-    body: 'Faça sua primeira busca agora. A IA vai analisar cada empresa encontrada e dar um score de oportunidade. Você pode refazer este tour a qualquer momento em Ajuda e Suporte.',
+    titleKey: 'common.tour.welcome.12.title',
+    bodyKey: 'common.tour.welcome.12.body',
     icon: '🚀',
   },
 ];
 
-/** Steps por seção (usado em Suporte "Ver tour do sistema" — refaz por seção) */
-const PROSPECAO_STEPS: TourStep[] = [
-  { target: 'nova-busca', title: 'Busca inteligente', body: 'Defina localização, nicho e filtros. Clique em "Buscar" para encontrar leads na região com score de oportunidade.', placement: 'bottom', icon: '🔍' },
-  { target: 'quick-templates', title: 'Templates rápidos', body: 'Nichos pré-configurados para buscar com um clique. Restaurantes, Clínicas, Academias e mais.', placement: 'top', icon: '⚡' },
-  { target: 'sidebar-historico', title: 'Histórico de buscas', body: 'Todas as suas buscas ficam salvas aqui. Clique para ver os resultados novamente ou refazer a busca.', placement: 'right', icon: '📜' },
-  { target: 'sidebar-leads', title: 'Leads salvos', body: 'Leads que você salvou para contato. Veja score de IA, telefone, e-mail e status (novo, contactado, convertido).', placement: 'right', icon: '🎯' },
+const PROSPECAO_TOUR_DEFS: TourStepDef[] = [
+  { target: 'nova-busca', titleKey: 'common.tour.prospecao.1.title', bodyKey: 'common.tour.prospecao.1.body', placement: 'bottom', icon: '🔍' },
+  { target: 'search-filters', titleKey: 'common.tour.prospecao.2.title', bodyKey: 'common.tour.prospecao.2.body', placement: 'bottom', icon: '🎯' },
+  { target: 'quick-templates', titleKey: 'common.tour.prospecao.3.title', bodyKey: 'common.tour.prospecao.3.body', placement: 'top', icon: '⚡' },
+  { target: 'advanced-filters', titleKey: 'common.tour.prospecao.4.title', bodyKey: 'common.tour.prospecao.4.body.br', placement: 'top', icon: '🏷️', markets: ['BR'] },
+  { target: 'advanced-filters', titleKey: 'common.tour.prospecao.4.title', bodyKey: 'common.tour.prospecao.4.body.us', placement: 'top', icon: '🌐', markets: ['US'] },
+  { target: 'sidebar-historico', titleKey: 'common.tour.prospecao.5.title', bodyKey: 'common.tour.prospecao.5.body', placement: 'right', icon: '📜' },
+  { target: 'sidebar-leads', titleKey: 'common.tour.prospecao.6.title', bodyKey: 'common.tour.prospecao.6.body', placement: 'right', icon: '🎯' },
 ];
 
-const INTELIGENCIA_STEPS: TourStep[] = [
-  { target: 'sidebar-inteligencia', title: 'Módulo de inteligência', body: 'Análises avançadas por plano: Concorrência, Relatórios, Análise da sua empresa e Viabilidade de mercado.', placement: 'right', icon: '🧠' },
+const INTELIGENCIA_TOUR_DEFS: TourStepDef[] = [
+  { target: 'sidebar-inteligencia', titleKey: 'common.tour.inteligencia.1.title', bodyKey: 'common.tour.inteligencia.1.body', placement: 'right', icon: '🧠' },
+  { target: null, titleKey: 'common.tour.inteligencia.2.title', bodyKey: 'common.tour.inteligencia.2.body', icon: '📈' },
 ];
 
-const EQUIPE_STEPS: TourStep[] = [
-  { target: 'sidebar-equipe', title: 'Gestão de equipe', body: 'No plano Enterprise, convide vendedores, distribua territórios e acompanhe performance no Dashboard da equipe.', placement: 'right', icon: '👥' },
+const EQUIPE_TOUR_DEFS: TourStepDef[] = [
+  { target: 'sidebar-equipe', titleKey: 'common.tour.equipe.1.title', bodyKey: 'common.tour.equipe.1.body', placement: 'right', icon: '👥' },
 ];
 
-const CONTA_STEPS: TourStep[] = [
-  { target: 'header-avatar', title: 'Sua conta', body: 'Acesse Perfil, Empresa, Planos e Configurações pelo menu do avatar. Em Suporte você encontra FAQ e pode refazer este tour.', placement: 'bottom', icon: '👤' },
+const CONTA_TOUR_DEFS: TourStepDef[] = [
+  { target: 'header-avatar', titleKey: 'common.tour.conta.1.title', bodyKey: 'common.tour.conta.1.body', placement: 'bottom', icon: '👤' },
+  { target: 'sidebar-planos', titleKey: 'common.tour.conta.2.title', bodyKey: 'common.tour.conta.2.body', placement: 'right', icon: '💳' },
 ];
 
-export const TOUR_STEPS_BY_SECTION: Record<string, TourStep[]> = {
-  prospecao: PROSPECAO_STEPS,
-  inteligencia: INTELIGENCIA_STEPS,
-  equipe: EQUIPE_STEPS,
-  conta: CONTA_STEPS,
+const TOUR_DEFS_BY_SECTION: Record<string, TourStepDef[]> = {
+  prospecao: PROSPECAO_TOUR_DEFS,
+  inteligencia: INTELIGENCIA_TOUR_DEFS,
+  equipe: EQUIPE_TOUR_DEFS,
+  conta: CONTA_TOUR_DEFS,
 };
+
+const CHECKOUT_CREDITS_TOUR_DEFS: TourStepDef[] = [
+  {
+    target: null,
+    titleKey: 'common.tour.checkout.1.title',
+    bodyKey: 'common.tour.checkout.1.body',
+    icon: '💳',
+  },
+  {
+    target: 'header-credits',
+    titleKey: 'common.tour.checkout.2.title',
+    bodyKey: 'common.tour.checkout.2.body',
+    placement: 'bottom',
+    icon: '✨',
+  },
+  {
+    target: null,
+    titleKey: 'common.tour.checkout.3.title',
+    bodyKey: 'common.tour.checkout.3.body',
+    icon: '🤖',
+  },
+];
+
+export function getCheckoutCreditsTourSteps(t: TourTranslateFn): TourStep[] {
+  return resolveTourSteps(CHECKOUT_CREDITS_TOUR_DEFS, t, getActiveMarket());
+}
+
+export function getWelcomeTourSteps(t: TourTranslateFn, market: Market = getActiveMarket()): TourStep[] {
+  return resolveTourSteps(WELCOME_TOUR_DEFS, t, market);
+}
+
+export function getTourStepsBySection(t: TourTranslateFn, market: Market = getActiveMarket()): Record<string, TourStep[]> {
+  return Object.fromEntries(
+    Object.entries(TOUR_DEFS_BY_SECTION).map(([sectionId, defs]) => [
+      sectionId,
+      resolveTourSteps(defs, t, market),
+    ]),
+  );
+}
 
 export const TOUR_STORAGE_PREFIX = 'prospector_tour_';
 export const WELCOME_TOUR_STORAGE_KEY = 'prospector_tour_welcome_done';

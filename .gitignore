@@ -18,6 +18,7 @@ admin/coverage
 
 # next.js
 /.next/
+/backend/.next/
 /out/
 
 # production
@@ -42,6 +43,7 @@ cookies.txt
 *.log
 backend/.rf-import-temp/
 rf-import.log
+backend/test-users/
 
 # vercel
 .vercel
@@ -49,3 +51,5 @@ rf-import.log
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+.secrets/

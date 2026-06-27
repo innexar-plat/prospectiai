@@ -3,10 +3,18 @@ import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { prisma } from '@/lib/prisma';
 import { PLANS, PlanType, getPlanPrices } from '@/lib/billing-config';
+import { getMarketLeadsLimit } from '@/lib/market';
 import Stripe from 'stripe';
 import { createCommissionForFirstPayment, cancelCommissionsByOrderOrSubscription, createCommissionForRecurring } from '@/lib/affiliate';
 import { isWebhookDuplicate } from '@/lib/webhook-dedup';
 import { rateLimit } from '@/lib/ratelimit';
+import {
+    notifyPaymentApproved,
+    notifyPaymentFailed,
+    notifyPaymentRefunded,
+    notifyPaymentRenewed,
+    notifyPlanUpgrade,
+} from '@/lib/telegram-business-alerts';
 
 type SubscriptionWithPeriod = Stripe.Subscription & { current_period_end: number };
 
@@ -19,6 +27,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
     const planId = session.metadata?.planId as PlanType;
     const affiliateCode = session.metadata?.affiliateCode as string | undefined;
     if (!userId) return NextResponse.json({ error: 'Missing userId in metadata' }, { status: 400 });
+    if (!planId || !(planId in PLANS) || planId === 'FREE' || planId === 'TRIAL') {
+        return NextResponse.json({ error: 'Invalid planId in metadata' }, { status: 400 });
+    }
 
     const raw = await stripe.subscriptions.retrieve(session.subscription as string);
     const subscription = raw as unknown as SubscriptionWithPeriod;
@@ -33,6 +44,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
     const interval = (subscription as { items?: { data?: Array<{ price?: { recurring?: { interval?: string } } }> } })
         .items?.data?.[0]?.price?.recurring?.interval;
     const billingCycle = interval === 'year' ? 'annual' : 'monthly';
+    const priceUsd = getPlanPrices(plan, billingCycle).price_usd;
     await prisma.workspace.update({
         where: { id: workspaceId },
         data: {
@@ -40,7 +52,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
             customerId: subscription.customer as string,
             plan: planId,
             subscriptionStatus: subscription.status,
-            leadsLimit: plan.leadsLimit,
+            leadsLimit: getMarketLeadsLimit(planId, 'US'),
             leadsUsed: 0,
             currentPeriodEnd: periodEnd(subscription),
             billingCycle,
@@ -48,8 +60,31 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
         },
     });
 
+    notifyPaymentApproved({
+        userId,
+        userEmail: userWithWorkspace.email,
+        workspaceId,
+        toPlan: planId,
+        billingCycle,
+        provider: 'stripe',
+        amount: priceUsd,
+        currency: 'USD',
+        paymentId: session.id,
+        subscriptionId: subscription.id,
+        status: subscription.status,
+    });
+
+    notifyPlanUpgrade({
+        userId,
+        userEmail: userWithWorkspace.email,
+        workspaceId,
+        toPlan: planId,
+        billingCycle,
+        provider: 'stripe',
+        subscriptionId: subscription.id,
+    });
+
     // Comissão afiliado (primeira conversão)
-    const priceUsd = getPlanPrices(plan, billingCycle).price_usd;
     const valueCents = Math.round(priceUsd * 100);
     try {
         await createCommissionForFirstPayment({
@@ -79,6 +114,13 @@ async function handleSubscriptionDeleted(subscription: SubscriptionWithPeriod): 
             leadsLimit: PLANS.FREE.leadsLimit,
             gracePeriodEnd: null,
         },
+    });
+
+    notifyPaymentFailed({
+        provider: 'stripe',
+        subscriptionId: subscription.id,
+        toPlan: 'FREE',
+        status: subscription.status,
     });
 }
 
@@ -110,7 +152,7 @@ async function handleSubscriptionUpdated(subscription: SubscriptionWithPeriod): 
         data: {
             plan: planId,
             subscriptionStatus: subscription.status,
-            leadsLimit: plan.leadsLimit,
+            leadsLimit: getMarketLeadsLimit(planId, 'US'),
             leadsUsed: isActive ? 0 : undefined,
             currentPeriodEnd: periodEnd(subscription),
             billingCycle,
@@ -120,6 +162,16 @@ async function handleSubscriptionUpdated(subscription: SubscriptionWithPeriod): 
                 : {}),
         },
     });
+
+    if (isPastDue) {
+        notifyPaymentFailed({
+            provider: 'stripe',
+            subscriptionId: subscription.id,
+            toPlan: planId,
+            billingCycle,
+            status: subscription.status,
+        });
+    }
 }
 
 export async function POST(req: Request) {
@@ -178,6 +230,12 @@ export async function POST(req: Request) {
                     const cancelled = await cancelCommissionsByOrderOrSubscription(null, subId);
                     const { logger } = await import('@/lib/logger');
                     if (cancelled > 0) logger.info('Affiliate commissions cancelled (refund)', { subscriptionId: subId, count: cancelled });
+                    notifyPaymentRefunded({
+                        provider: 'stripe',
+                        paymentId: charge.id,
+                        subscriptionId: subId,
+                        status: charge.status,
+                    });
                 }
             }
         } catch (e) {
@@ -215,6 +273,16 @@ export async function POST(req: Request) {
                             valueCents,
                             currency: currency === 'USD' ? 'USD' : 'BRL',
                             orderId: invoice.id,
+                        });
+                        notifyPaymentRenewed({
+                            workspaceId: workspace.id,
+                            toPlan: planId,
+                            provider: 'stripe',
+                            paymentId: invoice.id,
+                            subscriptionId: subId,
+                            billingCycle: ((invoice as { lines?: { data?: Array<{ price?: { recurring?: { interval?: string } } }> } }).lines?.data?.[0]?.price?.recurring?.interval === 'year') ? 'annual' : 'monthly',
+                            amount: valueCents / 100,
+                            currency,
                         });
                     }
                 }

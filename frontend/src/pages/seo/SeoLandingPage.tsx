@@ -12,8 +12,8 @@ import {
   getRelatedSeoSlugs,
   type SeoLandingSlug,
 } from '@/lib/seo-local';
-
-const BASE_URL = 'https://precisionia.com.br';
+import { getActiveMarket } from '@/lib/market';
+import { getAppOrigin } from '@/lib/site-url';
 
 function getSeoH1Title(entry: SeoLandingSlug): string {
   if (entry.type === 'cidade' && entry.city) return `Ferramenta de Inteligência Comercial para Empresas em ${entry.city}`;
@@ -48,9 +48,10 @@ export default function SeoLandingPage() {
 
   useEffect(() => {
     if (!entry) return;
+    const baseUrl = getAppOrigin();
     const title = getSeoTitle(entry);
     const description = getSeoDescription(entry);
-    const pageUrl = `${BASE_URL}/${entry.slug}`;
+    const pageUrl = `${baseUrl}/${entry.slug}`;
     const savedTitle = defaultTitleRef.current;
     const savedDesc = defaultDescRef.current;
 
@@ -70,34 +71,37 @@ export default function SeoLandingPage() {
     setMeta('og:description', description, true);
     setMeta('og:type', 'website', true);
     setMeta('og:locale', 'pt_BR', true);
-    setMeta('og:image', `${BASE_URL}/og-image.png`, true);
+    setMeta('og:image', `${baseUrl}/og-image-precisionia.png?v=20260420-2`, true);
     setMeta('twitter:card', 'summary_large_image');
     setMeta('twitter:url', pageUrl);
     setMeta('twitter:title', title);
     setMeta('twitter:description', description);
-    setMeta('twitter:image', `${BASE_URL}/og-image.png`);
+    setMeta('twitter:image', `${baseUrl}/og-image-precisionia.png?v=20260420-2`);
 
     return () => {
       document.title = savedTitle;
       setMeta('description', savedDesc);
-      if (canonical) canonical.setAttribute('href', BASE_URL + '/');
-      setMeta('og:url', BASE_URL + '/', true);
-      setMeta('og:title', 'Precision IA — Busca B2B e prospecção com IA', true);
+      if (canonical) canonical.setAttribute('href', `${baseUrl}/`);
+      setMeta('og:url', `${baseUrl}/`, true);
+      setMeta('og:title', 'Precision — Busca B2B e prospecção com IA', true);
       setMeta('og:description', 'Encontre e analise empresas por nicho e região com IA. Gestão de leads, exportação e trabalho em equipe.', true);
-      setMeta('og:image', `${BASE_URL}/og-image.png`, true);
-      setMeta('twitter:url', BASE_URL + '/');
-      setMeta('twitter:title', 'Precision IA — Busca B2B e prospecção com IA');
+      setMeta('og:image', `${baseUrl}/og-image-precisionia.png?v=20260420-2`, true);
+      setMeta('twitter:url', `${baseUrl}/`);
+      setMeta('twitter:title', 'Precision — Busca B2B e prospecção com IA');
       setMeta('twitter:description', 'Plataforma B2B para encontrar, analisar e converter empresas com inteligência artificial.');
-      setMeta('twitter:image', `${BASE_URL}/og-image.png`);
+      setMeta('twitter:image', `${baseUrl}/og-image-precisionia.png?v=20260420-2`);
     };
   }, [entry]);
 
+  if (getActiveMarket() === 'US') return <Navigate to="/" replace />;
+
   if (!entry) return <Navigate to="/" replace />;
 
+  const baseUrl = getAppOrigin();
   const description = getSeoDescription(entry);
   const h1 = getSeoH1Title(entry);
 
-  const pageUrl = `${BASE_URL}/${entry.slug}`;
+  const pageUrl = `${baseUrl}/${entry.slug}`;
   const intro = getSeoIntro(entry);
   const localBlock = getSeoLocalBlock(entry);
   const faq = getSeoFaq(entry);
@@ -106,7 +110,7 @@ export default function SeoLandingPage() {
   const schemaApp = {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication' as const,
-    name: 'Precision IA',
+    name: 'Precision',
     url: pageUrl,
     applicationCategory: 'BusinessApplication',
     description: description.slice(0, 200),
@@ -181,6 +185,28 @@ export default function SeoLandingPage() {
             sugere script de ligação, e-mail e WhatsApp por lead. Exporte em CSV ou JSON, trabalhe em equipe com
             workspaces e proteja a conta com 2FA.
           </p>
+        </section>
+
+        {/* Público-alvo — quem usa a plataforma */}
+        <section className="mb-8" aria-labelledby="publico-alvo-heading">
+          <h2 id="publico-alvo-heading" className="text-xl font-bold text-foreground mb-4">
+            Para quem é o Precision
+          </h2>
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 list-none p-0 m-0">
+            {[
+              { title: 'Agências de marketing', desc: 'Encontre empresas que precisam de presença digital e monte propostas com dados reais.' },
+              { title: 'Consultorias e contabilidades', desc: 'Prospecte clientes por segmento e região com score de potencial e scripts de abordagem.' },
+              { title: 'Equipes comerciais B2B', desc: 'Divida listas por workspace, acompanhe leads em equipe e exporte para o CRM.' },
+              { title: 'Fornecedores de tecnologia', desc: 'Mapeie empresas por porte e localização para campanhas segmentadas.' },
+              { title: 'Representantes comerciais', desc: 'Monte carteira de clientes filtrada por nicho, cidade ou bairro em minutos.' },
+              { title: 'Startups e SaaS B2B', desc: 'Identifique o ICP por região e priorize leads com maior chance de conversão.' },
+            ].map((item) => (
+              <li key={item.title} className="rounded-lg border border-border bg-card/50 p-4">
+                <p className="text-sm font-semibold text-foreground mb-1">{item.title}</p>
+                <p className="text-xs text-muted leading-relaxed">{item.desc}</p>
+              </li>
+            ))}
+          </ul>
         </section>
 
         {faq.length > 0 && (

@@ -60,6 +60,8 @@ interface SearchSection {
 function inferSectionLabel(query: string): { label: string; emoji: string } {
     const q = query.toLowerCase();
     if (q.includes('reclame aqui')) return { label: 'Reclame Aqui — Reputação do Consumidor', emoji: '🔴' };
+    if (q.includes('bbb')) return { label: 'Better Business Bureau — Consumer reputation', emoji: '🔴' };
+    if (q.includes('complaints')) return { label: 'Consumer complaints', emoji: '🔴' };
     if (q.includes('jusbrasil')) return { label: 'JusBrasil — Processos Judiciais', emoji: '⚖️' };
     if (q.includes('cnpj')) return { label: 'CNPJ — Dados Empresariais', emoji: '🏢' };
     if (q.includes('instagram')) return { label: 'Redes sociais — Instagram', emoji: '📱' };

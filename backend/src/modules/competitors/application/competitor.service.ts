@@ -11,12 +11,16 @@ import {
 } from '@/modules/search';
 import { scoreAndRankPlaces, type PlaceLikeForScoring } from '@/modules/scoring';
 import { generateCompletionForRole, resolveAiForRole } from '@/lib/ai';
+import { extractJsonFromLlm } from '@/lib/ai/parse-json';
 import { getWebContextForRole } from '@/lib/web-search/resolve';
 import { recordUsageEvent } from '@/lib/usage';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { getWorkspaceIdForUser } from '@/lib/workspace';
 import type { SearchInput } from '@/lib/validations/schemas';
 import type { CompetitorAnalysisResult, CompetitorPlace, AiPlaybook } from '../domain/types';
+import { buildCompetitorPlaybookPrompt, reviewsCountLabel } from '@/lib/ai/prompts/intelligence';
+import { normalizeAnalyzeLocale } from '@/lib/i18n/analysis-error-messages';
 
 function toCompetitorPlace(place: Record<string, unknown>): CompetitorPlace {
   const displayName = place.displayName as { text?: string } | undefined;
@@ -73,6 +77,7 @@ export { SearchHttpError };
 
 async function generatePlaybook(
   input: SearchInput,
+  locale: string,
   context: {
     totalCount: number;
     avgRating: number | null;
@@ -87,51 +92,20 @@ async function generatePlaybook(
   userId?: string,
 ): Promise<AiPlaybook | null> {
   try {
+    const webQuerySuffix = normalizeAnalyzeLocale(locale) === 'en' ? 'competition market' : 'concorrência mercado';
     const webContext = await getWebContextForRole(
       'viability',
-      [`${input.textQuery} concorrência mercado`],
+      [`${input.textQuery} ${webQuerySuffix}`],
       workspaceId && userId ? { workspaceId, userId } : undefined,
     );
 
-    const basePrompt = `Você é um consultor de marketing digital e vendas B2B especializado em análise competitiva local.
-Com base nos DADOS REAIS de mercado abaixo, gere um playbook de ataque para quem quer vender serviços digitais (site, SEO, marketing) para esse nicho/região.
-
-DADOS DO MERCADO LOCAL:
-- Busca: "${input.textQuery}"
-- Total de concorrentes mapeados: ${context.totalCount}
-- Rating médio: ${context.avgRating ?? 'N/A'}
-- Mediana de reviews (top 10): ${context.medianReviews}
-- Com website: ${context.withWebsite} / Sem website: ${context.withoutWebsite}
-- Top 3 por rating: ${context.topByRating || 'N/A'}
-- Top 3 por reviews: ${context.topByReviews || 'N/A'}
-- Oportunidades (presença digital fraca): ${context.opportunitiesCount}
-
-Responda EXCLUSIVAMENTE em JSON válido, sem markdown, sem backticks:
-{
-  "entryBarrier": "<alto | medio | baixo>",
-  "entryBarrierExplanation": "<1-2 frases explicando por que a barreira é esse nível>",
-  "marketSummary": "<parágrafo de 2-3 frases descrevendo o panorama competitivo>",
-  "seoChecklist": ["<ação SEO 1>", "<ação SEO 2>", "<ação SEO 3>", "<ação SEO 4>", "<ação SEO 5>"],
-  "reviewStrategy": ["<estratégia 1>", "<estratégia 2>", "<estratégia 3>"],
-  "quickWins": ["<ação rápida 24-72h #1>", "<ação rápida #2>", "<ação rápida #3>", "<ação rápida #4>"]
-}
-
-REGRAS:
-- Baseie-se nos dados fornecidos
-- seoChecklist: ações práticas de SEO Local (Google Meu Negócio, NAP, schema, páginas)
-- reviewStrategy: como conseguir mais reviews que os concorrentes
-- quickWins: ações que dão resultado em 24-72 horas
-- entryBarrier alto = top players muito fortes, muitas reviews, mercado saturado
-- entryBarrier baixo = poucos concorrentes bons, muitos sem site, fácil se destacar
-`;
-    const webSuffix = webContext ? '\n\n' + webContext + '\n\n' : '';
-    const prompt = basePrompt + webSuffix;
+    const prompt = buildCompetitorPlaybookPrompt(locale, input.textQuery, context, webContext || undefined);
 
     const { config } = await resolveAiForRole('viability');
     const result = await generateCompletionForRole('viability', {
       prompt,
       jsonMode: true,
-      maxTokens: 3000,
+      maxOutputTokens: 3000,
     });
 
     if (result.usage && workspaceId && userId) {
@@ -149,8 +123,7 @@ REGRAS:
       });
     }
 
-    const cleaned = result.text.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
-    return JSON.parse(cleaned) as AiPlaybook;
+    return extractJsonFromLlm<AiPlaybook>(result.text);
   } catch (err) {
     logger.error('Competitor AI playbook generation failed', {
       error: err instanceof Error ? err.message : 'Unknown',
@@ -161,8 +134,10 @@ REGRAS:
 
 export async function runCompetitorAnalysis(
   input: SearchInput,
-  userId: string
+  userId: string,
+  locale = 'pt',
 ): Promise<CompetitorAnalysisResult> {
+  const resolvedLocale = normalizeAnalyzeLocale(locale);
   const maxPlaces = Math.min(input.pageSize ?? 60, SEARCH_ALL_PAGES_MAX_PLACES);
   const result = await runSearchAllPages(
     { ...input },
@@ -192,19 +167,13 @@ export async function runCompetitorAnalysis(
 
   const { scored: topOpportunities, medianReviews, avgRating } = scoreAndRankPlaces(placesForScoring, 20);
 
-  // Get workspace for AI and persistence
-  let workspaceId: string | undefined;
-  const user = await prisma.user.findFirst({
-    where: { id: userId },
-    include: { workspaces: { include: { workspace: true }, take: 1 } },
-  });
-  if (user?.workspaces?.length) {
-    workspaceId = user.workspaces[0].workspace.id;
-  }
+  const workspaceId = await getWorkspaceIdForUser(userId);
 
   // AI Playbook (runs in parallel with nothing — just generate it)
+  const reviewsLabel = reviewsCountLabel(resolvedLocale);
   const aiPlaybook = await generatePlaybook(
     input,
+    resolvedLocale,
     {
       totalCount: places.length,
       avgRating,
@@ -212,7 +181,7 @@ export async function runCompetitorAnalysis(
       withWebsite,
       withoutWebsite: places.length - withWebsite,
       topByRating: byRating.slice(0, 3).map((c) => `${c.name} (${c.rating}★)`).join(', '),
-      topByReviews: byReviews.slice(0, 3).map((c) => `${c.name} (${c.reviewCount} avaliações)`).join(', '),
+      topByReviews: byReviews.slice(0, 3).map((c) => `${c.name} (${c.reviewCount} ${reviewsLabel})`).join(', '),
       opportunitiesCount: opportunities.length,
     },
     workspaceId,
@@ -238,7 +207,7 @@ export async function runCompetitorAnalysis(
 
   // Persist to IntelligenceReport
   if (workspaceId) {
-    prisma.intelligenceReport.create({
+    await prisma.intelligenceReport.create({
       data: {
         workspaceId,
         userId,

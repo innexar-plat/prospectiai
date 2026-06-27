@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { User, Save, Loader2 } from 'lucide-react';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { useOutletContext } from 'react-router-dom';
@@ -7,28 +7,41 @@ import { getPlanDisplayName } from '@/lib/billing-config';
 import { userApi } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/contexts/ToastContext';
+import { useI18n } from '@/lib/i18n';
+
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
 interface ProfileField {
   key: string;
-  label: string;
-  placeholder: string;
+  labelKey: string;
+  placeholderKey: string;
   type?: 'text' | 'email';
   disabled?: boolean;
 }
 
-const FIELDS: ProfileField[] = [
-  { key: 'name', label: 'Seu Nome', placeholder: 'João Silva' },
-  { key: 'email', label: 'Email', placeholder: 'joao@empresa.com', type: 'email', disabled: true },
-  { key: 'phone', label: 'Telefone', placeholder: '(11) 99999-9999' },
-  { key: 'address', label: 'Endereço', placeholder: 'Rua Exemplo, 123 - Cidade' },
-  { key: 'linkedInUrl', label: 'LinkedIn', placeholder: 'https://linkedin.com/in/seu-perfil' },
-  { key: 'instagramUrl', label: 'Instagram', placeholder: 'https://instagram.com/seu-perfil' },
-  { key: 'facebookUrl', label: 'Facebook', placeholder: 'https://facebook.com/seu-perfil' },
-  { key: 'websiteUrl', label: 'Site pessoal', placeholder: 'https://seusite.com' },
-  { key: 'image', label: 'URL da foto de perfil', placeholder: 'https://exemplo.com/foto.jpg' },
+const FIELD_DEFS: ProfileField[] = [
+  { key: 'name', labelKey: 'page.perfil.field.name', placeholderKey: 'page.perfil.placeholder.name' },
+  { key: 'email', labelKey: 'page.perfil.field.email', placeholderKey: 'page.perfil.placeholder.email', type: 'email', disabled: true },
+  { key: 'phone', labelKey: 'page.perfil.field.phone', placeholderKey: 'page.perfil.placeholder.phone' },
+  { key: 'address', labelKey: 'page.perfil.field.address', placeholderKey: 'page.perfil.placeholder.address' },
+  { key: 'linkedInUrl', labelKey: 'page.perfil.field.linkedin', placeholderKey: 'page.perfil.placeholder.linkedin' },
+  { key: 'instagramUrl', labelKey: 'page.perfil.field.instagram', placeholderKey: 'page.perfil.placeholder.instagram' },
+  { key: 'facebookUrl', labelKey: 'page.perfil.field.facebook', placeholderKey: 'page.perfil.placeholder.facebook' },
+  { key: 'websiteUrl', labelKey: 'page.perfil.field.website', placeholderKey: 'page.perfil.placeholder.website' },
+  { key: 'image', labelKey: 'page.perfil.field.image', placeholderKey: 'page.perfil.placeholder.image' },
 ];
 
+function getProfileFields(t: TranslateFn) {
+  return FIELD_DEFS.map((field) => ({
+    ...field,
+    label: t(field.labelKey),
+    placeholder: t(field.placeholderKey),
+  }));
+}
+
 export default function PerfilPage() {
+  const { t } = useI18n();
+  const fields = useMemo(() => getProfileFields(t), [t]);
   const { user } = useOutletContext<{ user: SessionUser }>();
   const { addToast } = useToast();
   const [saving, setSaving] = useState(false);
@@ -67,9 +80,9 @@ export default function PerfilPage() {
         image: form.image || undefined,
       });
       window.dispatchEvent(new Event('refresh-user'));
-      addToast('success', 'Perfil atualizado com sucesso!');
+      addToast('success', t('page.perfil.toast.saved'));
     } catch (err: unknown) {
-      addToast('error', err instanceof Error ? err.message : 'Erro ao salvar o perfil.');
+      addToast('error', err instanceof Error ? err.message : t('page.perfil.toast.error'));
     } finally {
       setSaving(false);
     }
@@ -78,9 +91,9 @@ export default function PerfilPage() {
   return (
     <>
       <HeaderDashboard
-        title="Meu Perfil"
-        subtitle="Gerencie seus dados pessoais."
-        breadcrumb="Dashboard / Perfil"
+        title={t('page.perfil.title')}
+        subtitle={t('page.perfil.subtitle')}
+        breadcrumb={t('page.perfil.breadcrumb')}
       />
       <div className="p-6 sm:p-8 max-w-3xl mx-auto w-full">
         <form onSubmit={handleSave} className="rounded-3xl bg-card border border-border p-6 sm:p-8 space-y-6">
@@ -98,15 +111,15 @@ export default function PerfilPage() {
               </div>
             )}
             <div>
-              <h2 className="text-lg font-bold text-foreground">{user.name || 'Usuário'}</h2>
+              <h2 className="text-lg font-bold text-foreground">{user.name || t('page.perfil.defaultUser')}</h2>
               <p className="text-xs text-muted">
-                Plano: <span className="text-violet-600 dark:text-violet-400 font-bold">{getPlanDisplayName(user.plan)}</span>
+                {t('page.perfil.plan')} <span className="text-violet-600 dark:text-violet-400 font-bold">{getPlanDisplayName(user.plan)}</span>
               </p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {FIELDS.map((field) => (
+            {fields.map((field) => (
               <div
                 key={field.key}
                 className={field.key === 'address' || field.key === 'image' ? 'md:col-span-2' : ''}
@@ -134,7 +147,7 @@ export default function PerfilPage() {
               icon={saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
               className="min-h-[48px] px-8 rounded-xl font-bold text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 shadow-lg shadow-violet-500/25 border-0 transition-all hover:-translate-y-0.5"
             >
-              {saving ? 'Salvando...' : 'Salvar Alterações'}
+              {saving ? t('page.perfil.saving') : t('page.perfil.save')}
             </Button>
           </div>
         </form>

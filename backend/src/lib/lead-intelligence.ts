@@ -75,14 +75,15 @@ export async function getConversionStats(userId: string, workspaceId?: string): 
     avgCycleDays = Math.round(totalDays / convertedWithDates.length);
   }
 
-  // Top lost reasons
-  const lostReasons = await prisma.leadAnalysis.groupBy({
+  // Top lost reasons (sort in JS — avoids Prisma groupBy orderBy quirks across versions)
+  const lostReasonsRaw = await prisma.leadAnalysis.groupBy({
     by: ['lostReason'],
     where: { ...where, status: 'LOST', lostReason: { not: null } },
     _count: true,
-    orderBy: { _count: { lostReason: 'desc' } },
-    take: 5,
   });
+  const lostReasons = lostReasonsRaw
+    .sort((a, b) => b._count - a._count)
+    .slice(0, 5);
 
   // Top converting lead types (from lead.types JSON)
   const convertedLeads = await prisma.leadAnalysis.findMany({

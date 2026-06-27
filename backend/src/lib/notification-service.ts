@@ -7,6 +7,9 @@ import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email';
 import { notificationTemplate } from '@/lib/email-templates';
 import { sendPushToUser } from '@/lib/web-push';
+import type { Locale } from '@/lib/i18n/locale';
+import { getSiteUrlForMarket } from '@/lib/site-url';
+import type { Market } from '@/lib/market';
 import type { NotificationType } from '@prisma/client';
 
 /** Known notification channels (key + display name). Config stored in NotificationChannelConfig. */
@@ -29,6 +32,10 @@ export interface CreateNotificationInput {
   emailSubject?: string;
   /** Channel key: if set, app/email are gated by NotificationChannelConfig. */
   channel?: string;
+  /** Locale for email/push copy (defaults from market). */
+  locale?: Locale;
+  /** Market for site URLs in email/push (defaults BR). */
+  market?: Market;
 }
 
 async function getChannelConfig(key: string): Promise<{ appEnabled: boolean; emailEnabled: boolean }> {
@@ -70,6 +77,8 @@ export async function createNotification(input: CreateNotificationInput): Promis
     sendEmailIfPreferred = false,
     emailSubject,
     channel,
+    locale = 'pt',
+    market = 'BR',
   } = input;
 
   let appEnabled = true;
@@ -104,14 +113,15 @@ export async function createNotification(input: CreateNotificationInput): Promis
     });
     if (user?.email && user.notifyByEmail) {
       const subject = emailSubject ?? title;
-      const html = notificationTemplate(title, message, link);
+      const siteUrl = getSiteUrlForMarket(market);
+      const html = notificationTemplate(title, message, link, undefined, locale, siteUrl);
       sendEmail(user.email, subject, html).catch(() => {});
     }
   }
 
   // Web Push (fire-and-forget)
   if (appEnabled) {
-    sendPushToUser(userId, { title, body: message, link }).catch(() => {});
+    sendPushToUser(userId, { title, body: message, link }, market).catch(() => {});
   }
 
   return { id: notificationId };

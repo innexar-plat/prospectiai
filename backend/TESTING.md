@@ -58,6 +58,8 @@ npm run test -- --testPathPatterns="api-register|api-search"
 | Billing checkout | billing-checkout.test.ts | POST 401, 400 (invalid plan) |
 | Product-modules lib | product-modules-lib.test.ts | getModulesForPlan, planHasModule, fallback |
 | Db-sync | db-sync.test.ts | syncLead upsert/success/error, syncLeads |
+| Change password | change-password.test.ts | POST 401, 429, 400 (validation, OAuth, wrong pass, same pass), 200, 500 |
+| Admin email-logs | admin-email-logs.test.ts | GET 401, 403, 200 (filters, pagination, limit cap), 500 |
 
 ## Objetivo 80%
 

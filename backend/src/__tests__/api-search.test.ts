@@ -9,7 +9,10 @@ jest.mock('@/auth', () => ({ auth: jest.fn() }));
 jest.mock('@/lib/prisma', () => ({
     prisma: {
         user: { findUnique: jest.fn() },
-        workspace: { update: jest.fn().mockResolvedValue({}) },
+        workspace: {
+            update: jest.fn().mockResolvedValue({}),
+            findUnique: jest.fn().mockResolvedValue(null),
+        },
         searchHistory: { create: jest.fn().mockResolvedValue({}) },
         lead: { findMany: jest.fn().mockResolvedValue([]) },
         usageEvent: { create: jest.fn().mockResolvedValue({}) },
@@ -20,7 +23,10 @@ jest.mock('@/lib/ratelimit', () => ({ rateLimit: jest.fn(() => Promise.resolve({
 jest.mock('@/lib/google-places');
 jest.mock('@/lib/redis', () => ({
     getCached: jest.fn().mockResolvedValue(null),
-    setCached: jest.fn().mockResolvedValue(undefined)
+    setCached: jest.fn().mockResolvedValue(undefined),
+    acquireRedisLock: jest.fn().mockResolvedValue(true),
+    releaseRedisLock: jest.fn().mockResolvedValue(undefined),
+    waitForCached: jest.fn().mockResolvedValue(null),
 }));
 jest.mock('@/lib/db-sync', () => ({
     syncLeads: jest.fn().mockResolvedValue(true),
@@ -209,5 +215,17 @@ describe('Search API Route', () => {
         expect(data.places).toBeDefined();
         expect(data.places.length).toBeGreaterThanOrEqual(5);
         expect(jest.mocked(textSearch)).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 when body is invalid JSON', async () => {
+        auth.mockResolvedValue({ user: { id: 'u1' } });
+        const req = new NextRequest('http://localhost/api/search', {
+            method: 'POST',
+            body: 'not-json',
+        });
+        const res = await POST(req);
+        expect(res.status).toBe(400);
+        const json = await res.json();
+        expect(json.error).toBe('Invalid JSON body');
     });
 });

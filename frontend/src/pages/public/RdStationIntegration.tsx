@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom';
+import { Logo } from '@/components/brand/Logo';
+import LegalFooterLinks from '@/components/legal/LegalFooterLinks';
 import {
   ArrowRight,
   CheckCircle2,
@@ -72,8 +74,7 @@ export default function RdStationIntegration() {
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-border">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
           <Link to="/" className="inline-flex items-center shrink-0">
-            <img src="/precisionai-logo-dark.png" alt="PrecisionAI" className="h-36 shrink-0 hidden dark:block" />
-            <img src="/precisionai-logo-light.png" alt="PrecisionAI" className="h-36 shrink-0 block dark:hidden" />
+            <Logo height={36} className="shrink-0" />
           </Link>
           <div className="flex items-center gap-3">
             <Link
@@ -99,9 +100,8 @@ export default function RdStationIntegration() {
           {/* Partner logos */}
           <div className="flex items-center justify-center gap-6 sm:gap-10 mb-10">
             <div className="flex flex-col items-center gap-2">
-              <img src="/precisionai-logo-dark.png" alt="PrecisionAI" className="h-48 sm:h-72 hidden dark:block" />
-              <img src="/precisionai-logo-light.png" alt="PrecisionAI" className="h-48 sm:h-72 block dark:hidden" />
-              <span className="text-xs font-bold text-muted">Precision IA</span>
+              <Logo height={48} className="sm:h-[4.5rem] w-auto shrink-0" />
+              <span className="text-xs font-bold text-muted">Precision</span>
             </div>
             <div className="flex flex-col items-center gap-1">
               <Handshake size={32} className="text-violet-500" />
@@ -122,7 +122,7 @@ export default function RdStationIntegration() {
             <br className="hidden sm:block" /> direto para o <span className="text-[#00C4CC]">RD Station</span>
           </h1>
           <p className="mt-5 text-base sm:text-lg text-muted max-w-2xl mx-auto leading-relaxed">
-            O Precision IA prospecta empresas por nicho e região, classifica com inteligência artificial e entrega
+            O Precision prospecta empresas por nicho e região, classifica com inteligência artificial e entrega
             contatos, negócios e tarefas prontas no seu RD Station CRM ou Marketing — sem esforço manual.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -187,14 +187,14 @@ export default function RdStationIntegration() {
         </div>
       </section>
 
-      {/* ── Funcionalidades do Precision IA ──────────────────── */}
+      {/* ── Funcionalidades do Precision ──────────────────── */}
       <section className="bg-card border-y border-border">
         <div className="max-w-6xl mx-auto px-6 py-16">
           <div className="text-center mb-12">
             <span className="inline-block px-3 py-1 rounded-full bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 text-[11px] font-bold uppercase tracking-wider mb-3">
               Plataforma
             </span>
-            <h2 className="text-2xl sm:text-3xl font-black">O que o Precision IA faz</h2>
+            <h2 className="text-2xl sm:text-3xl font-black">O que o Precision faz</h2>
             <p className="text-muted mt-2 max-w-xl mx-auto">
               Uma plataforma completa de prospecção B2B com inteligência artificial.
             </p>
@@ -226,10 +226,10 @@ export default function RdStationIntegration() {
           <p className="text-muted mt-2">Conecte em menos de 2 minutos — sem código, sem complicação.</p>
         </div>
         <div className="space-y-6 bg-card border border-border rounded-2xl p-6 sm:p-8">
-          <Step n={1} title="Crie sua conta no Precision IA" desc="Acesse precisionia.com.br/auth/signup e cadastre-se gratuitamente." />
+          <Step n={1} title="Crie sua conta no Precision" desc="Acesse precisionia.com.br/auth/signup e cadastre-se gratuitamente." />
           <Step n={2} title="Acesse Integrações" desc="No menu lateral do painel, clique em 'Integrações'." />
           <Step n={3} title="Conecte o RD Station" desc="Clique em 'Conectar com OAuth' na seção RD Station. Você será redirecionado para autorizar o acesso." />
-          <Step n={4} title="Autorize as permissões" desc="Revise as permissões e clique em 'Autorizar'. Você voltará ao Precision IA com a conexão ativa." />
+          <Step n={4} title="Autorize as permissões" desc="Revise as permissões e clique em 'Autorizar'. Você voltará ao Precision com a conexão ativa." />
           <Step n={5} title="Prospecte e envie leads" desc="Faça buscas por nicho, analise com IA e envie contatos + negócios para o RD Station com um clique." />
         </div>
       </section>
@@ -272,7 +272,7 @@ export default function RdStationIntegration() {
               <h3 className="text-xl font-black text-foreground">Evento de Conversão</h3>
               <ul className="space-y-2 text-sm text-muted">
                 {[
-                  'Evento "Precision IA — Lead Mapeado"',
+                  'Evento "Precision — Lead Mapeado"',
                   '11 campos customizados (score, resumo IA…)',
                   'Tags automáticas por classificação',
                   'Dados de contato completos',
@@ -321,7 +321,7 @@ export default function RdStationIntegration() {
             {
               icon: Globe,
               title: 'Visualizar código de monitoramento',
-              desc: 'Identificar o código de rastreamento do RD Station para correta atribuição de conversões originadas pelo Precision IA.',
+              desc: 'Identificar o código de rastreamento do RD Station para correta atribuição de conversões originadas pelo Precision.',
             },
           ].map(({ icon: I, title, desc }) => (
             <div key={title} className="flex gap-4 p-5 rounded-2xl bg-card border border-border">
@@ -344,7 +344,7 @@ export default function RdStationIntegration() {
           <div className="space-y-3">
             <Accordion title="Preciso de conhecimento técnico para conectar?">
               Não. A conexão é feita via OAuth com um clique — sem código, sem configurações avançadas. Basta autorizar
-              o acesso e o Precision IA faz o resto.
+              o acesso e o Precision faz o resto.
             </Accordion>
             <Accordion title="Funciona com RD Station CRM e Marketing?">
               Sim. A integração suporta ambos os produtos. No modo CRM, cria contatos, negócios, notas e tarefas.
@@ -355,11 +355,11 @@ export default function RdStationIntegration() {
               refresh automático e todas as comunicações são via HTTPS. Seguimos as melhores práticas do OWASP.
             </Accordion>
             <Accordion title="Quantos leads posso enviar por mês?">
-              Depende do seu plano Precision IA. O plano Free oferece 10 créditos/mês, Starter 100, Growth 400 e
+              Depende do seu plano Precision. O plano Free oferece 10 créditos/mês, Starter 100, Growth 400 e
               Business 1.200. Cada análise de lead consome 1 crédito.
             </Accordion>
             <Accordion title="Como desconectar a integração?">
-              Acesse Integrações no menu lateral do Precision IA, clique em &quot;Desconectar&quot; na seção RD Station
+              Acesse Integrações no menu lateral do Precision, clique em &quot;Desconectar&quot; na seção RD Station
               e confirme. Todas as credenciais são removidas imediatamente.
             </Accordion>
             <Accordion title="Posso escolher quais campos são enviados?">
@@ -401,16 +401,14 @@ export default function RdStationIntegration() {
       <footer className="border-t border-border bg-card">
         <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <img src="/precisionai-logo-dark.png" alt="PrecisionAI" className="h-30 hidden dark:block" />
-            <img src="/precisionai-logo-light.png" alt="PrecisionAI" className="h-30 block dark:hidden" />
-            <span className="text-xs text-muted">PrecisionAI</span>
+            <Logo height={30} />
+            <span className="text-xs text-muted">Precision</span>
           </div>
           <div className="flex items-center gap-4 text-xs text-muted">
             <a href="https://precisionia.com.br" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
               precisionia.com.br
             </a>
-            <Link to="/privacy" className="hover:text-foreground transition-colors">Privacidade</Link>
-            <Link to="/terms" className="hover:text-foreground transition-colors">Termos</Link>
+            <LegalFooterLinks />
           </div>
         </div>
       </footer>

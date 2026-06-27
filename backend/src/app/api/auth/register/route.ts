@@ -6,7 +6,13 @@ import { rateLimit } from "@/lib/ratelimit"
 import { sendVerificationEmail } from "@/lib/email"
 import { registerSchema, formatZodError } from "@/lib/validations/schemas"
 import { logger } from "@/lib/logger"
-import { getAffiliateByCode, isSelfReferral, getOrCreateSettings } from "@/lib/affiliate"
+import { attachReferralOnSignup } from "@/lib/affiliate"
+import { notifyNewSignup } from '@/lib/telegram-business-alerts'
+import { buildRegistrationUserData, buildRegistrationWorkspaceData } from '@/lib/registration'
+import { getRequestLocale } from '@/lib/i18n/locale'
+import { getRequestMarket } from '@/lib/market'
+import { getSiteUrlFromRequest } from '@/lib/site-url'
+import { tApiError } from '@/lib/i18n/messages'
 
 /**
  * POST /api/auth/register
@@ -14,12 +20,14 @@ import { getAffiliateByCode, isSelfReferral, getOrCreateSettings } from "@/lib/a
  * Usuário só acessa o dashboard após concluir onboarding (onboardingCompletedAt).
  */
 export async function POST(req: Request) {
+    const locale = getRequestLocale(req);
+    const market = getRequestMarket(req);
     try {
         const ip = req.headers.get("x-forwarded-for") || "127.0.0.1"
         const { success } = await rateLimit(`register:${ip}`, 5, 3600) // 5 per hour
 
         if (!success) {
-            return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 })
+            return NextResponse.json({ error: tApiError(locale, 'tooManyRequests') }, { status: 429 })
         }
 
         const body = await req.json()
@@ -34,10 +42,13 @@ export async function POST(req: Request) {
         })
 
         if (existingUser) {
-            return NextResponse.json({ error: "Email already in use" }, { status: 400 })
+            return NextResponse.json({ error: tApiError(locale, 'emailInUse') }, { status: 400 })
         }
 
         const hashedPassword = await bcrypt.hash(password, 10)
+
+        const regUser = buildRegistrationUserData(market)
+        const workspaceName = (name && name.trim()) ? `${name.trim()} - Workspace` : "Meu Workspace"
 
         const result = await prisma.$transaction(async (tx) => {
             const user = await tx.user.create({
@@ -45,19 +56,12 @@ export async function POST(req: Request) {
                     email,
                     password: hashedPassword,
                     name,
-                    plan: "FREE",
-                    leadsLimit: 10,
-                    leadsUsed: 0,
+                    ...regUser,
                 }
             })
 
             const workspace = await tx.workspace.create({
-                data: {
-                    name: (name && name.trim()) ? `${name.trim()} - Workspace` : "Meu Workspace",
-                    plan: "FREE",
-                    leadsLimit: 10,
-                    leadsUsed: 0,
-                }
+                data: buildRegistrationWorkspaceData(workspaceName, market),
             })
 
             await tx.workspaceMember.create({
@@ -73,29 +77,12 @@ export async function POST(req: Request) {
 
         // Atribuição afiliado: criar Referral se código válido e não auto-indicação (fora da tx)
         if (affiliateCode) {
-            try {
-                const settings = await getOrCreateSettings()
-                if (settings.allowSelfSignup) {
-                    const affiliate = await getAffiliateByCode(affiliateCode)
-                    if (affiliate) {
-                        const selfRef = await isSelfReferral(affiliate.id, email)
-                        if (!selfRef) {
-                            await prisma.referral.create({
-                                data: {
-                                    affiliateId: affiliate.id,
-                                    userId: result.user.id,
-                                    workspaceId: result.workspace.id,
-                                    landedAt: new Date(),
-                                    signupAt: new Date(),
-                                    refSource: 'QUERYSTRING',
-                                }
-                            })
-                        }
-                    }
-                }
-            } catch (e) {
-                logger.error('Referral create failed after register', { error: e instanceof Error ? e.message : 'Unknown' })
-            }
+            await attachReferralOnSignup({
+                affiliateCode,
+                userId: result.user.id,
+                workspaceId: result.workspace.id,
+                email,
+            });
         }
 
         const verifyToken = crypto.randomBytes(32).toString("hex")
@@ -103,15 +90,36 @@ export async function POST(req: Request) {
         await prisma.verificationToken.create({
             data: { identifier: email, token: verifyToken, expires: verifyExpires },
         })
-        sendVerificationEmail(email, verifyToken).catch(() => {})
+
+        const siteUrl = getSiteUrlFromRequest(req)
+        const verificationEmailResult = await sendVerificationEmail(email, verifyToken, locale, siteUrl)
+        if (!verificationEmailResult.sent) {
+            logger.error('Initial verification email failed after register', {
+                email,
+                userId: result.user.id,
+                error: verificationEmailResult.error ?? 'Unknown error',
+            })
+        }
+
+        notifyNewSignup({
+            userId: result.user.id,
+            userEmail: email,
+            userName: name,
+            workspaceId: result.workspace.id,
+            verificationEmailSent: verificationEmailResult.sent,
+        })
 
         return NextResponse.json({
             message: "User created successfully",
             id: result.user.id,
             requiresOnboarding: true,
+            verificationEmailSent: verificationEmailResult.sent,
+            verificationEmailError: verificationEmailResult.sent
+                ? null
+                : (verificationEmailResult.error ?? 'Falha ao enviar e-mail de confirmação.'),
         })
     } catch (error) {
         logger.error("Registration error", { error: error instanceof Error ? error.message : "Unknown" })
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+        return NextResponse.json({ error: tApiError(locale, 'internalError') }, { status: 500 })
     }
 }

@@ -7,8 +7,8 @@ import { sendTeamInviteEmail } from '@/lib/email';
 import { logger } from '@/lib/logger';
 import { rateLimit } from '@/lib/ratelimit';
 import { z } from 'zod';
-
-const SITE_URL = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+import { getSiteUrlFromRequest } from '@/lib/site-url';
+import { getRequestLocale } from '@/lib/i18n/locale';
 
 export async function POST(req: NextRequest) {
     const requestId = getOrCreateRequestId(req);
@@ -47,7 +47,8 @@ export async function POST(req: NextRequest) {
         }
 
         const token = crypto.randomBytes(32).toString('hex');
-        const baseUrl = SITE_URL.replace(/\/$/, '');
+        const baseUrl = getSiteUrlFromRequest(req).replace(/\/$/, '');
+        const locale = getRequestLocale(req);
         const acceptInviteUrl = `${baseUrl}/accept-invite?token=${encodeURIComponent(token)}`;
 
         await prisma.workspaceInvitation.update({
@@ -62,7 +63,9 @@ export async function POST(req: NextRequest) {
             invitation.email,
             inviterName,
             workspaceName,
-            acceptInviteUrl
+            acceptInviteUrl,
+            locale,
+            baseUrl,
         );
 
         if (!result.sent) {

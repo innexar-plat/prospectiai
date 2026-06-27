@@ -2,15 +2,25 @@ import { NextResponse } from 'next/server';
 import { createHmac } from 'crypto';
 import { mpConfig } from '@/lib/mercadopago';
 import { Payment } from 'mercadopago';
-import { getPreApproval } from '@/lib/mercadopago-subscription';
+import { getPreApproval, updatePreApprovalAmount } from '@/lib/mercadopago-subscription';
 import { prisma } from '@/lib/prisma';
 import { PLANS, PlanType, getPlanPrices } from '@/lib/billing-config';
+import { parseMpExternalReference, STARTER_PROMO_BR } from '@/lib/billing-promo';
+import { getMarketLeadsLimit } from '@/lib/market';
 import { sendEmail } from '@/lib/email';
 import { paymentSuccessTemplate, paymentFailureTemplate } from '@/lib/email-templates';
 import { logger } from '@/lib/logger';
 import { createCommissionForFirstPayment, cancelCommissionsByOrderOrSubscription, createCommissionForRecurring } from '@/lib/affiliate';
 import { isWebhookDuplicate } from '@/lib/webhook-dedup';
 import { rateLimit } from '@/lib/ratelimit';
+import {
+    notifyPaymentApproved,
+    notifyPaymentCreated,
+    notifyPaymentFailed,
+    notifyPaymentRefunded,
+    notifyPaymentRenewed,
+    notifyPlanUpgrade,
+} from '@/lib/telegram-business-alerts';
 
 const GRACE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 const APP_BASE_URL = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
@@ -69,7 +79,39 @@ function periodEndFromInterval(interval: string): Date {
     return d;
 }
 
-async function applyApprovedPaymentMp(userId: string, planId: PlanType, interval: string, paymentId: string): Promise<void> {
+async function applyPromoRenewalIfNeeded(
+    workspaceId: string,
+    subscriptionId: string,
+    promoPaymentsRemaining: number | null | undefined,
+    promoRegularAmountBrl: number | null | undefined,
+): Promise<void> {
+    if (promoPaymentsRemaining == null || promoPaymentsRemaining <= 0) return;
+    const remaining = promoPaymentsRemaining - 1;
+    if (remaining > 0) {
+        await prisma.workspace.update({
+            where: { id: workspaceId },
+            data: { promoPaymentsRemaining: remaining },
+        });
+        return;
+    }
+    const regularAmount = promoRegularAmountBrl ?? STARTER_PROMO_BR.regularPriceBrl;
+    await updatePreApprovalAmount(subscriptionId, regularAmount);
+    await prisma.workspace.update({
+        where: { id: workspaceId },
+        data: {
+            promoPaymentsRemaining: null,
+            promoRegularAmountBrl: null,
+            starterPromoCode: null,
+        },
+    });
+    logger.info('MP promo period ended — subscription amount updated to regular price', {
+        workspaceId,
+        subscriptionId,
+        regularAmount,
+    });
+}
+
+async function applyApprovedPaymentMp(userId: string, planId: PlanType, interval: string, paymentId: string, promoId?: string): Promise<void> {
     const plan = PLANS[planId];
     const userWithWorkspace = await prisma.user.findUnique({
         where: { id: userId },
@@ -84,11 +126,19 @@ async function applyApprovedPaymentMp(userId: string, planId: PlanType, interval
         data: {
             plan: planId,
             subscriptionStatus: 'active',
-            leadsLimit: plan.leadsLimit,
+            leadsLimit: getMarketLeadsLimit(planId as PlanType),
             leadsUsed: 0,
             currentPeriodEnd: periodEndFromInterval(interval),
             billingCycle,
             gracePeriodEnd: null,
+            ...(promoId === STARTER_PROMO_BR.id
+                ? {
+                    starterPromoCode: promoId,
+                    promoPaymentsRemaining: STARTER_PROMO_BR.months,
+                    promoRegularAmountBrl: STARTER_PROMO_BR.regularPriceBrl,
+                    starterPromoEligible: false,
+                }
+                : {}),
             // Store payment ID as reference for one-time MP Preference payments
             // PreApproval payments will overwrite this with the preapproval ID later
             ...(!workspace.subscriptionId ? { subscriptionId: `mp_pay_${paymentId}` } : {}),
@@ -115,16 +165,46 @@ async function handlePaymentTopic(id: string): Promise<void> {
     const payment = new Payment(mpConfig);
     const data = await payment.get({ id });
     const statusDetail = (data as { status_detail?: string }).status_detail;
+    const preapprovalId = (data.metadata?.preapproval_id ?? data.metadata?.subscription_id) as string | undefined;
     logger.info('MP Full Payment Data', { paymentId: id, status: data.status, status_detail: statusDetail });
+    notifyPaymentCreated({
+        userId: data.metadata?.user_id,
+        toPlan: data.metadata?.plan_id as string | undefined,
+        billingCycle: (data.metadata?.interval as string) || 'monthly',
+        provider: 'mercadopago',
+        amount: (data as { transaction_amount?: number }).transaction_amount ?? null,
+        currency: 'BRL',
+        paymentId: id,
+        subscriptionId: preapprovalId,
+        status: data.status,
+    });
 
     if (data.status === 'approved') {
         const userId = data.metadata?.user_id;
         const planId = data.metadata?.plan_id as PlanType;
         const interval = (data.metadata?.interval as string) || 'monthly';
         const affiliateCode = data.metadata?.affiliate_code as string | undefined;
-        const preapprovalId = (data.metadata?.preapproval_id ?? data.metadata?.subscription_id) as string | undefined;
+        const promoId = data.metadata?.promo_id as string | undefined;
         if (userId && planId) {
-            await applyApprovedPaymentMp(userId, planId, interval, id);
+            await applyApprovedPaymentMp(userId, planId, interval, id, promoId);
+            notifyPaymentApproved({
+                userId,
+                toPlan: planId,
+                billingCycle: interval,
+                provider: 'mercadopago',
+                amount: (data as { transaction_amount?: number }).transaction_amount ?? null,
+                currency: 'BRL',
+                paymentId: id,
+                subscriptionId: preapprovalId ?? null,
+                status: data.status,
+            });
+            notifyPlanUpgrade({
+                userId,
+                toPlan: planId,
+                billingCycle: interval,
+                provider: 'mercadopago',
+                subscriptionId: preapprovalId ?? null,
+            });
             const plan = PLANS[planId];
             if (plan) {
                 const userWithWorkspace = await prisma.user.findUnique({
@@ -157,7 +237,12 @@ async function handlePaymentTopic(id: string): Promise<void> {
             try {
                 const workspace = await prisma.workspace.findFirst({
                     where: { subscriptionId: preapprovalId },
-                    select: { id: true, plan: true },
+                    select: {
+                        id: true,
+                        plan: true,
+                        promoPaymentsRemaining: true,
+                        promoRegularAmountBrl: true,
+                    },
                 });
                 if (workspace) {
                     const transactionAmount = (data as { transaction_amount?: number }).transaction_amount;
@@ -171,6 +256,21 @@ async function handlePaymentTopic(id: string): Promise<void> {
                             currency: 'BRL',
                             orderId: id,
                         });
+                        notifyPaymentRenewed({
+                            workspaceId: workspace.id,
+                            toPlan: workspace.plan,
+                            provider: 'mercadopago',
+                            paymentId: id,
+                            subscriptionId: preapprovalId,
+                            amount: valueCents / 100,
+                            currency: 'BRL',
+                        });
+                        await applyPromoRenewalIfNeeded(
+                            workspace.id,
+                            preapprovalId,
+                            workspace.promoPaymentsRemaining,
+                            workspace.promoRegularAmountBrl,
+                        );
                     }
                 }
             } catch (e) {
@@ -181,9 +281,26 @@ async function handlePaymentTopic(id: string): Promise<void> {
     }
     if (data.status === 'rejected') {
         const userId = data.metadata?.user_id;
+        notifyPaymentFailed({
+            userId,
+            toPlan: data.metadata?.plan_id as string | undefined,
+            billingCycle: (data.metadata?.interval as string) || 'monthly',
+            provider: 'mercadopago',
+            paymentId: id,
+            subscriptionId: preapprovalId ?? null,
+            status: data.status,
+        });
         if (userId) await sendPaymentRejectedEmail(userId);
     }
     if (data.status === 'refunded' || data.status === 'cancelled') {
+        notifyPaymentRefunded({
+            userId: data.metadata?.user_id,
+            toPlan: data.metadata?.plan_id as string | undefined,
+            provider: 'mercadopago',
+            paymentId: id,
+            subscriptionId: preapprovalId ?? null,
+            status: data.status,
+        });
         try {
             const cancelled = await cancelCommissionsByOrderOrSubscription(id, undefined);
             if (cancelled > 0) logger.info('Affiliate commissions cancelled (MP refund/cancel)', { paymentId: id, count: cancelled });
@@ -197,11 +314,12 @@ async function handlePreapprovalTopic(id: string): Promise<void> {
     const preapproval = await getPreApproval(id);
     const extRef = (preapproval as { external_reference?: string }).external_reference;
     if (!extRef) return;
-    const parts = extRef.split(':');
-    const userId = parts[0];
-    const planId = parts[1] as PlanType;
-    const cycle = (parts[2] || 'monthly') as 'monthly' | 'annual';
-    const affiliateCode = parts[3] as string | undefined;
+    const parsed = parseMpExternalReference(extRef);
+    if (!parsed) {
+        logger.warn('MP preapproval: invalid external_reference', { preapprovalId: id, extRef });
+        return;
+    }
+    const { userId, planId, cycle, affiliateCode, promoId } = parsed;
     const plan = PLANS[planId];
     if (!plan || !userId) {
         logger.warn('MP preapproval: invalid external_reference', { preapprovalId: id, extRef });
@@ -219,21 +337,53 @@ async function handlePreapprovalTopic(id: string): Promise<void> {
     if (status === 'authorized' || status === 'active') {
         const nextPayment = (preapproval as { next_payment_date?: string }).next_payment_date;
         const currentPeriodEnd = nextPayment ? new Date(nextPayment) : periodEndFromInterval(cycle);
+        const promoAmount = (preapproval as { auto_recurring?: { transaction_amount?: number } }).auto_recurring?.transaction_amount;
+        const { price_brl } = getPlanPrices(plan, cycle);
+        const chargedBrl = promoId && promoAmount != null ? promoAmount : price_brl;
+        const valueCents = Math.round(chargedBrl * 100);
         await prisma.workspace.update({
             where: { id: workspaceId },
             data: {
                 subscriptionId: preapproval.id,
                 plan: planId,
                 subscriptionStatus: 'active',
-                leadsLimit: plan.leadsLimit,
+                leadsLimit: getMarketLeadsLimit(planId as PlanType),
                 leadsUsed: 0,
                 currentPeriodEnd,
                 billingCycle: cycle,
                 gracePeriodEnd: null,
+                ...(promoId === STARTER_PROMO_BR.id
+                    ? {
+                        starterPromoCode: promoId,
+                        promoPaymentsRemaining: STARTER_PROMO_BR.months,
+                        promoRegularAmountBrl: STARTER_PROMO_BR.regularPriceBrl,
+                        starterPromoEligible: false,
+                    }
+                    : {}),
             },
         });
-        const { price_brl } = getPlanPrices(plan, cycle);
-        const valueCents = Math.round(price_brl * 100);
+        notifyPaymentApproved({
+            userId,
+            userEmail: userWithWorkspace?.email ?? null,
+            workspaceId,
+            toPlan: planId,
+            billingCycle: cycle,
+            provider: 'mercadopago',
+            amount: valueCents / 100,
+            currency: 'BRL',
+            paymentId: id,
+            subscriptionId: id,
+            status,
+        });
+        notifyPlanUpgrade({
+            userId,
+            userEmail: userWithWorkspace?.email ?? null,
+            workspaceId,
+            toPlan: planId,
+            billingCycle: cycle,
+            provider: 'mercadopago',
+            subscriptionId: id,
+        });
         try {
             await createCommissionForFirstPayment({
                 userId,
@@ -256,6 +406,17 @@ async function handlePreapprovalTopic(id: string): Promise<void> {
                 subscriptionStatus: 'past_due',
                 gracePeriodEnd: new Date(Date.now() + GRACE_DAYS_MS),
             },
+        });
+        notifyPaymentFailed({
+            userId,
+            userEmail: userWithWorkspace?.email ?? null,
+            workspaceId,
+            toPlan: planId,
+            billingCycle: cycle,
+            provider: 'mercadopago',
+            paymentId: id,
+            subscriptionId: id,
+            status,
         });
         if (status === 'cancelled') {
             try {

@@ -8,6 +8,9 @@ import { Button } from '@/components/ui/Button';
 import { useToast } from '@/contexts/ToastContext';
 import { LoadingState, EmptyState } from '@/components/dashboard/shared/DashboardUI';
 import { request } from '@/lib/request-helpers';
+import { useI18n } from '@/lib/i18n';
+
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
 interface TeamMember {
     id: string;
@@ -68,29 +71,29 @@ interface TeamTotals {
     belowGoalCount: number;
 }
 
-function TeamDashboardView({ loading, data }: { loading: boolean; data: { members: DashboardMember[]; totals: TeamTotals } | null }) {
-    if (loading) return <LoadingState message="Carregando dashboard..." />;
+function TeamDashboardView({ loading, data, t }: { loading: boolean; data: { members: DashboardMember[]; totals: TeamTotals } | null; t: TranslateFn }) {
+    if (loading) return <LoadingState message={t('page.equipe.loadingDashboard')} />;
     if (!data) {
-        return <div className="rounded-3xl bg-card border border-border p-8 text-center text-muted">Nenhum dado do dashboard.</div>;
+        return <div className="rounded-3xl bg-card border border-border p-8 text-center text-muted">{t('page.equipe.noDashboardData')}</div>;
     }
     const { totals, members } = data;
     return (
         <>
             <div className="rounded-3xl bg-card border border-border p-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div>
-                    <p className="text-xs text-muted uppercase tracking-wider">Leads hoje</p>
+                    <p className="text-xs text-muted uppercase tracking-wider">{t('page.equipe.todayLeads')}</p>
                     <p className="text-2xl font-bold text-foreground tabular-nums">{totals.todayLeads}</p>
                 </div>
                 <div>
-                    <p className="text-xs text-muted uppercase tracking-wider">Análises hoje</p>
+                    <p className="text-xs text-muted uppercase tracking-wider">{t('page.equipe.todayAnalyses')}</p>
                     <p className="text-2xl font-bold text-violet-600 dark:text-violet-400 tabular-nums">{totals.todayAnalyses}</p>
                 </div>
                 <div>
-                    <p className="text-xs text-muted uppercase tracking-wider">Leads no mês</p>
+                    <p className="text-xs text-muted uppercase tracking-wider">{t('page.equipe.monthLeads')}</p>
                     <p className="text-2xl font-bold text-foreground tabular-nums">{totals.monthLeads}</p>
                 </div>
                 <div>
-                    <p className="text-xs text-muted uppercase tracking-wider">Abaixo da meta</p>
+                    <p className="text-xs text-muted uppercase tracking-wider">{t('page.equipe.belowGoal')}</p>
                     <p className="text-2xl font-bold tabular-nums">
                         {totals.belowGoalCount > 0 ? <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1"><AlertCircle size={20} /> {totals.belowGoalCount}</span> : <span className="text-emerald-600 dark:text-emerald-400">0</span>}
                     </p>
@@ -98,18 +101,18 @@ function TeamDashboardView({ loading, data }: { loading: boolean; data: { member
             </div>
             <div className="rounded-3xl bg-card border border-border overflow-hidden">
                 <div className="p-5 border-b border-border">
-                    <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Meta vs Realizado</h3>
+                    <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">{t('page.equipe.goalVsActual')}</h3>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-border text-left">
-                                <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">Membro</th>
-                                <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase text-right">Hoje (L/A)</th>
-                                <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">Meta vs Dia</th>
-                                <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">Uso vs Limite</th>
-                                <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">Conversões mês</th>
-                                <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase w-20">Alerta</th>
+                                <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">{t('page.equipe.col.member')}</th>
+                                <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase text-right">{t('page.equipe.col.todayLa')}</th>
+                                <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">{t('page.equipe.col.goalVsDay')}</th>
+                                <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">{t('page.equipe.col.usageVsLimit')}</th>
+                                <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase">{t('page.equipe.col.monthConversions')}</th>
+                                <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase w-20">{t('page.equipe.col.alert')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -162,7 +165,7 @@ function TeamDashboardView({ loading, data }: { loading: boolean; data: { member
                                         )}
                                     </td>
                                     <td className="py-3 px-5">
-                                        {m.belowGoal ? <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1"><AlertCircle size={14} /> Abaixo</span> : <span className="text-muted">—</span>}
+                                        {m.belowGoal ? <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1"><AlertCircle size={14} /> {t('page.equipe.belowGoalShort')}</span> : <span className="text-muted">—</span>}
                                     </td>
                                 </tr>
                             ))}
@@ -176,11 +179,13 @@ function TeamDashboardView({ loading, data }: { loading: boolean; data: { member
 
 
 function TeamInviteForm({
+    t,
     email,
     onEmailChange,
     inviting,
     onSubmit,
 }: {
+    t: TranslateFn;
     email: string;
     onEmailChange: (v: string) => void;
     inviting: boolean;
@@ -192,7 +197,7 @@ function TeamInviteForm({
                 type="email"
                 value={email}
                 onChange={(e) => onEmailChange(e.target.value)}
-                placeholder="Email do vendedor"
+                placeholder={t('page.equipe.inviteEmailPlaceholder')}
                 className="flex-1 h-12 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                 required
             />
@@ -203,19 +208,21 @@ function TeamInviteForm({
                 icon={inviting ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
                 className="h-12 px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 border-0"
             >
-                {inviting ? 'Convidando...' : 'Enviar Convite'}
+                {inviting ? t('page.equipe.inviting') : t('page.equipe.sendInvite')}
             </Button>
         </form>
     );
 }
 
 function TeamPendingInvitationsList({
+    t,
     invitations,
     resendCooldownMs,
     resendingId,
     onResend,
     nowMs,
 }: {
+    t: TranslateFn;
     invitations: PendingInvitation[];
     resendCooldownMs: number;
     resendingId: string | null;
@@ -226,7 +233,7 @@ function TeamPendingInvitationsList({
     if (invitations.length === 0) return null;
     return (
         <div className="rounded-3xl bg-card border border-amber-500/20 p-6 flex flex-col gap-3">
-            <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Convites enviados (aguardando aceite)</h3>
+            <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">{t('page.equipe.pendingInvites')}</h3>
             <ul className="space-y-2">
                 {invitations.map((p) => {
                     const cooldown = !canResend(p.lastSentAt);
@@ -237,7 +244,7 @@ function TeamPendingInvitationsList({
                         <li key={p.id} className="flex items-center justify-between gap-4 py-2 border-b border-border/50 last:border-0">
                             <span className="text-sm text-foreground">{p.email}</span>
                             <div className="flex items-center gap-2">
-                                <span className="text-xs text-muted">Convite enviado</span>
+                                <span className="text-xs text-muted">{t('page.equipe.inviteSent')}</span>
                                 <Button
                                     type="button"
                                     variant="secondary"
@@ -248,9 +255,9 @@ function TeamPendingInvitationsList({
                                     className="min-w-[100px]"
                                 >
                                     {(() => {
-                                        if (resendingId === p.id) return 'Enviando...';
-                                        if (cooldown) return `Reenviar (${secondsLeft}s)`;
-                                        return 'Reenviar';
+                                        if (resendingId === p.id) return t('page.equipe.resending');
+                                        if (cooldown) return t('page.equipe.resendCooldown', { seconds: secondsLeft });
+                                        return t('page.equipe.resend');
                                     })()}
                                 </Button>
                             </div>
@@ -258,7 +265,7 @@ function TeamPendingInvitationsList({
                     );
                 })}
             </ul>
-            <p className="text-xs text-muted">A pessoa só entra na equipe após aceitar o convite pelo link do email.</p>
+            <p className="text-xs text-muted">{t('page.equipe.pendingHint')}</p>
         </div>
     );
 }
@@ -267,6 +274,7 @@ export default function EquipePage() {
     const { user } = useOutletContext<{ user: SessionUser }>();
     const navigate = useNavigate();
     const { addToast } = useToast();
+    const { t } = useI18n();
 
     const [members, setMembers] = useState<TeamMember[]>([]);
     const [workspace, setWorkspace] = useState<WorkspaceInfo | null>(null);
@@ -352,7 +360,7 @@ export default function EquipePage() {
                 }
             })
             .catch(() => {
-                if (!cancelled) addToast('error', 'Falha ao carregar a equipe.');
+                if (!cancelled) addToast('error', t('page.equipe.toast.loadError'));
             })
             .finally(() => {
                 if (!cancelled) setLoading(false);
@@ -369,7 +377,7 @@ export default function EquipePage() {
                 if (!cancelled) setDashboardData(data);
             })
             .catch(() => {
-                if (!cancelled) addToast('error', 'Falha ao carregar dashboard da equipe.');
+                if (!cancelled) addToast('error', t('page.equipe.toast.dashboardLoadError'));
             })
             .finally(() => {
                 if (!cancelled) setLoadingDashboard(false);
@@ -384,9 +392,9 @@ export default function EquipePage() {
         try {
             const res = await request<{ ok: boolean; pendingInvite?: PendingInvitation; accountCreated?: boolean }>('/team', { method: 'POST', body: JSON.stringify({ email: inviteEmail.trim() }) });
             if (res.accountCreated) {
-                addToast('success', `Conta criada e convite enviado para ${inviteEmail}. A pessoa receberá um email para definir a senha e acessar a equipe.`);
+                addToast('success', t('page.equipe.toast.inviteAccountCreated', { email: inviteEmail }));
             } else {
-                addToast('success', `Convite enviado para ${inviteEmail}. A pessoa só entra na equipe após aceitar.`);
+                addToast('success', t('page.equipe.toast.invitePending', { email: inviteEmail }));
             }
             setInviteEmail('');
             setShowInvite(false);
@@ -398,7 +406,7 @@ export default function EquipePage() {
             setMembers(data.members);
             setPendingInvitations(data.pendingInvitations ?? []);
         } catch (err: unknown) {
-            addToast('error', err instanceof Error ? err.message : 'Erro ao convidar.');
+            addToast('error', err instanceof Error ? err.message : t('page.equipe.toast.inviteError'));
         } finally {
             setInviting(false);
         }
@@ -411,14 +419,14 @@ export default function EquipePage() {
                 method: 'POST',
                 body: JSON.stringify({ invitationId }),
             });
-            addToast('success', 'Convite reenviado.');
+            addToast('success', t('page.equipe.toast.resendSuccess'));
             setPendingInvitations((prev) =>
                 prev.map((p) =>
                     p.id === invitationId ? { ...p, lastSentAt: new Date().toISOString() } : p
                 )
             );
         } catch (err: unknown) {
-            addToast('error', err instanceof Error ? err.message : 'Erro ao reenviar.');
+            addToast('error', err instanceof Error ? err.message : t('page.equipe.toast.resendError'));
         } finally {
             setResendingId(null);
         }
@@ -456,13 +464,13 @@ export default function EquipePage() {
                     monthlyLeadsLimit: creditsForm.monthlyLeadsLimit === '' ? null : parseInt(creditsForm.monthlyLeadsLimit, 10),
                 }),
             });
-            addToast('success', 'Limites de créditos atualizados.');
+            addToast('success', t('page.equipe.toast.creditsUpdated'));
             setCreditsModalMember(null);
             const data = await request<{ members: TeamMember[]; workspace: WorkspaceInfo; pendingInvitations: PendingInvitation[] }>('/team');
             setMembers(data.members);
             if (data.pendingInvitations != null) setPendingInvitations(data.pendingInvitations);
         } catch (err: unknown) {
-            addToast('error', err instanceof Error ? err.message : 'Erro ao salvar limites.');
+            addToast('error', err instanceof Error ? err.message : t('page.equipe.toast.creditsError'));
         } finally {
             setSavingCredits(false);
         }
@@ -482,12 +490,12 @@ export default function EquipePage() {
                     monthlyConversionsGoal: goalsForm.monthlyConversionsGoal === '' ? null : parseInt(goalsForm.monthlyConversionsGoal, 10),
                 }),
             });
-            addToast('success', 'Metas atualizadas.');
+            addToast('success', t('page.equipe.toast.goalsUpdated'));
             setGoalsModalMember(null);
             const data = await request<{ members: TeamMember[]; workspace: WorkspaceInfo }>('/team');
             setMembers(data.members);
         } catch (err: unknown) {
-            addToast('error', err instanceof Error ? err.message : 'Erro ao salvar metas.');
+            addToast('error', err instanceof Error ? err.message : t('page.equipe.toast.goalsError'));
         } finally {
             setSavingGoals(false);
         }
@@ -502,13 +510,13 @@ export default function EquipePage() {
                 method: 'PUT',
                 body: JSON.stringify({ memberId: editModalMember.id, role: editRole }),
             });
-            addToast('success', 'Função atualizada.');
+            addToast('success', t('page.equipe.toast.roleUpdated'));
             setEditModalMember(null);
             const data = await request<{ members: TeamMember[]; workspace: WorkspaceInfo; pendingInvitations: PendingInvitation[] }>('/team');
             setMembers(data.members);
             if (data.pendingInvitations != null) setPendingInvitations(data.pendingInvitations);
         } catch (err: unknown) {
-            addToast('error', err instanceof Error ? err.message : 'Erro ao atualizar função.');
+            addToast('error', err instanceof Error ? err.message : t('page.equipe.toast.roleError'));
         } finally {
             setSavingRole(false);
         }
@@ -522,14 +530,14 @@ export default function EquipePage() {
                 method: 'DELETE',
                 body: JSON.stringify({ userIdToRemove: deleteConfirmMember.userId }),
             });
-            addToast('success', 'Membro removido da equipe.');
+            addToast('success', t('page.equipe.toast.memberRemoved'));
             setDeleteConfirmMember(null);
             setActionsOpenId(null);
             const data = await request<{ members: TeamMember[]; workspace: WorkspaceInfo; pendingInvitations: PendingInvitation[] }>('/team');
             setMembers(data.members);
             if (data.pendingInvitations != null) setPendingInvitations(data.pendingInvitations);
         } catch (err: unknown) {
-            addToast('error', err instanceof Error ? err.message : 'Erro ao remover.');
+            addToast('error', err instanceof Error ? err.message : t('page.equipe.toast.removeError'));
         } finally {
             setRemoving(false);
         }
@@ -538,13 +546,13 @@ export default function EquipePage() {
     if (!hasAccess) {
         return (
             <>
-                <HeaderDashboard title="Gestão de Equipe" subtitle="Convide vendedores, defina metas e acompanhe performance." breadcrumb="Dashboard / Equipe" />
+                <HeaderDashboard title={t('page.equipe.title')} subtitle={t('page.equipe.subtitle')} breadcrumb={t('page.equipe.breadcrumb')} />
                 <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full">
                     <EmptyState
                         icon={Lock}
-                        title="Gestão de Equipe"
-                        description="Convide vendedores por email, acompanhe as ações de cada membro, defina metas mensais e veja o ranking de performance do time."
-                        actionLabel="Faça Upgrade para Enterprise"
+                        title={t('page.equipe.lockedTitle')}
+                        description={t('page.equipe.lockedDesc')}
+                        actionLabel={t('page.equipe.upgrade')}
                         onAction={() => navigate('/dashboard/configuracoes')}
                     />
                 </div>
@@ -554,15 +562,15 @@ export default function EquipePage() {
 
     return (
         <>
-            <HeaderDashboard title="Gestão de Equipe" subtitle={`${members.length} membro(s) no workspace.`} breadcrumb="Dashboard / Equipe" />
+            <HeaderDashboard title={t('page.equipe.title')} subtitle={t('page.equipe.subtitleMembers', { count: members.length })} breadcrumb={t('page.equipe.breadcrumb')} />
             <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full space-y-6">
 
                 {/* Workspace Overview */}
                 {workspace && (
                     <div className="rounded-3xl bg-card border border-border p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div>
-                            <h2 className="text-lg font-bold text-foreground">{workspace.name || 'Meu Workspace'}</h2>
-                            <p className="text-xs text-muted mt-1">Plano: <span className="text-emerald-600 dark:text-emerald-400 font-bold">{workspace.plan}</span> · Créditos: <span className="tabular-nums">{workspace.leadsUsed}/{workspace.leadsLimit}</span></p>
+                            <h2 className="text-lg font-bold text-foreground">{workspace.name || t('page.equipe.myWorkspace')}</h2>
+                            <p className="text-xs text-muted mt-1">{t('page.equipe.planCredits', { plan: workspace.plan, used: workspace.leadsUsed, limit: workspace.leadsLimit })}</p>
                         </div>
                         <Button
                             variant="primary"
@@ -571,13 +579,14 @@ export default function EquipePage() {
                             onClick={() => setShowInvite(!showInvite)}
                             className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 shadow-lg shadow-emerald-500/25 border-0"
                         >
-                            Convidar Membro
+                            {t('page.equipe.invite')}
                         </Button>
                     </div>
                 )}
 
                 {showInvite && (
                     <TeamInviteForm
+                        t={t}
                         email={inviteEmail}
                         onEmailChange={setInviteEmail}
                         inviting={inviting}
@@ -586,6 +595,7 @@ export default function EquipePage() {
                 )}
 
                 <TeamPendingInvitationsList
+                    t={t}
                     invitations={pendingInvitations}
                     resendCooldownMs={RESEND_COOLDOWN_MS}
                     resendingId={resendingId}
@@ -594,7 +604,7 @@ export default function EquipePage() {
                 />
 
                 {loading ? (
-                    <LoadingState message="Carregando equipe..." />
+                    <LoadingState message={t('page.equipe.loadingTeam')} />
                 ) : (
                     <>
                         {isAdminOrOwner && (
@@ -604,21 +614,21 @@ export default function EquipePage() {
                                     onClick={() => setViewMode('ranking')}
                                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${viewMode === 'ranking' ? 'bg-emerald-600 text-white' : 'text-muted hover:text-foreground'}`}
                                 >
-                                    <Trophy size={14} className="inline mr-2 align-middle" /> Ranking
+                                    <Trophy size={14} className="inline mr-2 align-middle" /> {t('page.equipe.ranking')}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setViewMode('dashboard')}
                                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${viewMode === 'dashboard' ? 'bg-emerald-600 text-white' : 'text-muted hover:text-foreground'}`}
                                 >
-                                    <LayoutDashboard size={14} className="inline mr-2 align-middle" /> Dashboard
+                                    <LayoutDashboard size={14} className="inline mr-2 align-middle" /> {t('page.equipe.dashboard')}
                                 </button>
                             </div>
                         )}
 
                         {viewMode === 'dashboard' && isAdminOrOwner ? (
                             <div className="space-y-6">
-                                <TeamDashboardView loading={loadingDashboard} data={dashboardData} />
+                                <TeamDashboardView loading={loadingDashboard} data={dashboardData} t={t} />
                             </div>
                         ) : (
                             <>
@@ -626,7 +636,7 @@ export default function EquipePage() {
                                 <div className="rounded-3xl bg-card border border-border overflow-hidden">
                                     <div className="p-5 border-b border-border">
                                         <h3 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
-                                            <Trophy size={16} className="text-amber-600 dark:text-amber-400" /> Ranking da Equipe
+                                            <Trophy size={16} className="text-amber-600 dark:text-amber-400" />{t('page.equipe.teamRanking')}
                                         </h3>
                                     </div>
                                     <div className="overflow-x-auto">
@@ -634,16 +644,16 @@ export default function EquipePage() {
                                             <thead>
                                                 <tr className="border-b border-border text-left">
                                                     <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider">#</th>
-                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider">Membro</th>
-                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider">Função</th>
-                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">Leads</th>
-                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">Análises IA</th>
-                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">Ações (30d)</th>
-                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">Meta leads/dia</th>
-                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">Meta análises/dia</th>
-                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">Meta conversões/mês</th>
-                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">Uso/Limite</th>
-                                                    {isAdminOrOwner && <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider">Ações</th>}
+                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider">{t('page.equipe.col.member')}</th>
+                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider">{t('page.equipe.col.role')}</th>
+                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">{t('page.equipe.col.leads')}</th>
+                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">{t('page.equipe.col.analyses')}</th>
+                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">{t('page.equipe.col.actions30d')}</th>
+                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">{t('page.equipe.col.goalLeadsDay')}</th>
+                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">{t('page.equipe.col.goalAnalysesDay')}</th>
+                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">{t('page.equipe.col.goalConversionsMonth')}</th>
+                                                    <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider text-right">{t('page.equipe.col.usageLimit')}</th>
+                                                    {isAdminOrOwner && <th className="py-3 px-5 text-[10px] font-bold text-muted uppercase tracking-wider">{t('page.equipe.col.actions')}</th>}
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -662,7 +672,7 @@ export default function EquipePage() {
                                                                         {m.name?.[0] || m.email?.[0] || '?'}
                                                                     </div>
                                                                     <div>
-                                                                        <p className="font-medium text-foreground">{m.name || 'Sem nome'}</p>
+                                                                        <p className="font-medium text-foreground">{m.name || t('page.equipe.noName')}</p>
                                                                         <p className="text-[10px] text-muted">{m.email}</p>
                                                                     </div>
                                                                 </div>
@@ -709,7 +719,7 @@ export default function EquipePage() {
                                                                                 setActionsOpenId(m.id);
                                                                             }}
                                                                             className="p-2 rounded-lg border border-border bg-surface hover:bg-surface/80 text-muted hover:text-foreground transition-colors"
-                                                                            aria-label="Ações"
+                                                                            aria-label={t('page.equipe.actionsAria')}
                                                                         >
                                                                             <MoreVertical size={18} />
                                                                         </button>
@@ -731,11 +741,11 @@ export default function EquipePage() {
                 {goalsModalMember && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 overflow-y-auto" onClick={() => !savingGoals && setGoalsModalMember(null)}>
                         <div className="my-auto w-full max-w-md rounded-2xl sm:rounded-3xl bg-card border border-border shadow-xl p-4 sm:p-6 max-h-[90dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                            <h3 className="text-base sm:text-lg font-bold text-foreground mb-1">Metas — {goalsModalMember.name || goalsModalMember.email}</h3>
-                            <p className="text-xs text-muted mb-3 sm:mb-4">Defina as metas diárias/mensais para este membro.</p>
+                            <h3 className="text-base sm:text-lg font-bold text-foreground mb-1">{t('page.equipe.goalsTitle', { name: goalsModalMember.name || goalsModalMember.email })}</h3>
+                            <p className="text-xs text-muted mb-3 sm:mb-4">{t('page.equipe.goalsDesc')}</p>
                             <form onSubmit={handleSaveGoals} className="space-y-3 sm:space-y-4">
                                 <div>
-                                    <label className="block text-xs font-medium text-muted mb-1">Meta leads/dia</label>
+                                    <label className="block text-xs font-medium text-muted mb-1">{t('page.equipe.goalLeadsDay')}</label>
                                     <input
                                         type="number"
                                         min={0}
@@ -746,7 +756,7 @@ export default function EquipePage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium text-muted mb-1">Meta análises/dia</label>
+                                    <label className="block text-xs font-medium text-muted mb-1">{t('page.equipe.goalAnalysesDay')}</label>
                                     <input
                                         type="number"
                                         min={0}
@@ -757,7 +767,7 @@ export default function EquipePage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium text-muted mb-1">Meta conversões/mês</label>
+                                    <label className="block text-xs font-medium text-muted mb-1">{t('page.equipe.goalConversionsMonth')}</label>
                                     <input
                                         type="number"
                                         min={0}
@@ -775,7 +785,7 @@ export default function EquipePage() {
                                         disabled={savingGoals}
                                         className="w-full sm:flex-1"
                                     >
-                                        Cancelar
+                                        {t('common.cancel')}
                                     </Button>
                                     <Button
                                         type="submit"
@@ -784,7 +794,7 @@ export default function EquipePage() {
                                         icon={savingGoals ? <Loader2 size={16} className="animate-spin" /> : undefined}
                                         className="w-full sm:flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 border-0"
                                     >
-                                        {savingGoals ? 'Salvando...' : 'Salvar'}
+                                        {savingGoals ? t('page.equipe.saving') : t('common.save')}
                                     </Button>
                                 </div>
                             </form>
@@ -796,46 +806,46 @@ export default function EquipePage() {
                 {creditsModalMember && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 overflow-y-auto" onClick={() => !savingCredits && setCreditsModalMember(null)}>
                         <div className="my-auto w-full max-w-md rounded-2xl sm:rounded-3xl bg-card border border-border shadow-xl p-4 sm:p-6 max-h-[90dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                            <h3 className="text-base sm:text-lg font-bold text-foreground mb-1">Limites de créditos — {creditsModalMember.name || creditsModalMember.email}</h3>
-                            <p className="text-xs text-muted mb-3 sm:mb-4">Teto de consumo por período (vazio = sem limite individual). Uso atual: dia {creditsModalMember.usage?.today ?? 0}, semana {creditsModalMember.usage?.week ?? 0}, mês {creditsModalMember.usage?.month ?? 0}.</p>
+                            <h3 className="text-base sm:text-lg font-bold text-foreground mb-1">{t('page.equipe.creditsTitle', { name: creditsModalMember.name || creditsModalMember.email })}</h3>
+                            <p className="text-xs text-muted mb-3 sm:mb-4">{t('page.equipe.creditsDesc', { today: creditsModalMember.usage?.today ?? 0, week: creditsModalMember.usage?.week ?? 0, month: creditsModalMember.usage?.month ?? 0 })}</p>
                             <form onSubmit={handleSaveCredits} className="space-y-3 sm:space-y-4">
                                 <div>
-                                    <label className="block text-xs font-medium text-muted mb-1">Limite diário (créditos)</label>
+                                    <label className="block text-xs font-medium text-muted mb-1">{t('page.equipe.dailyLimit')}</label>
                                     <input
                                         type="number"
                                         min={0}
                                         value={creditsForm.dailyLeadsLimit}
                                         onChange={(e) => setCreditsForm((f) => ({ ...f, dailyLeadsLimit: e.target.value }))}
-                                        placeholder="Sem limite"
+                                        placeholder={t('page.equipe.noLimit')}
                                         className="w-full min-w-0 h-10 sm:h-11 bg-surface border border-border rounded-xl px-3 text-sm text-foreground"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium text-muted mb-1">Limite semanal (créditos)</label>
+                                    <label className="block text-xs font-medium text-muted mb-1">{t('page.equipe.weeklyLimit')}</label>
                                     <input
                                         type="number"
                                         min={0}
                                         value={creditsForm.weeklyLeadsLimit}
                                         onChange={(e) => setCreditsForm((f) => ({ ...f, weeklyLeadsLimit: e.target.value }))}
-                                        placeholder="Sem limite"
+                                        placeholder={t('page.equipe.noLimit')}
                                         className="w-full min-w-0 h-10 sm:h-11 bg-surface border border-border rounded-xl px-3 text-sm text-foreground"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium text-muted mb-1">Limite mensal (créditos)</label>
+                                    <label className="block text-xs font-medium text-muted mb-1">{t('page.equipe.monthlyLimit')}</label>
                                     <input
                                         type="number"
                                         min={0}
                                         value={creditsForm.monthlyLeadsLimit}
                                         onChange={(e) => setCreditsForm((f) => ({ ...f, monthlyLeadsLimit: e.target.value }))}
-                                        placeholder="Sem limite"
+                                        placeholder={t('page.equipe.noLimit')}
                                         className="w-full min-w-0 h-10 sm:h-11 bg-surface border border-border rounded-xl px-3 text-sm text-foreground"
                                     />
                                 </div>
                                 <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-2">
-                                    <Button type="button" variant="secondary" onClick={() => setCreditsModalMember(null)} disabled={savingCredits} className="w-full sm:flex-1">Cancelar</Button>
+                                    <Button type="button" variant="secondary" onClick={() => setCreditsModalMember(null)} disabled={savingCredits} className="w-full sm:flex-1">{t('common.cancel')}</Button>
                                     <Button type="submit" variant="primary" disabled={savingCredits} icon={savingCredits ? <Loader2 size={16} className="animate-spin" /> : undefined} className="w-full sm:flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 border-0">
-                                        {savingCredits ? 'Salvando...' : 'Salvar'}
+                                        {savingCredits ? t('page.equipe.saving') : t('common.save')}
                                     </Button>
                                 </div>
                             </form>
@@ -847,24 +857,24 @@ export default function EquipePage() {
                 {editModalMember && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 overflow-y-auto" onClick={() => !savingRole && setEditModalMember(null)}>
                         <div className="my-auto w-full max-w-sm rounded-2xl sm:rounded-3xl bg-card border border-border shadow-xl p-4 sm:p-6" onClick={(e) => e.stopPropagation()}>
-                            <h3 className="text-base sm:text-lg font-bold text-foreground mb-1">Editar função — {editModalMember.name || editModalMember.email}</h3>
-                            <p className="text-xs text-muted mb-3 sm:mb-4">Altere a função do membro na equipe.</p>
+                            <h3 className="text-base sm:text-lg font-bold text-foreground mb-1">{t('page.equipe.editRoleTitle', { name: editModalMember.name || editModalMember.email })}</h3>
+                            <p className="text-xs text-muted mb-3 sm:mb-4">{t('page.equipe.editRoleDesc')}</p>
                             <form onSubmit={handleSaveRole} className="space-y-4">
                                 <div>
-                                    <label className="block text-xs font-medium text-muted mb-1">Função</label>
+                                    <label className="block text-xs font-medium text-muted mb-1">{t('page.equipe.role')}</label>
                                     <select
                                         value={editRole}
                                         onChange={(e) => setEditRole(e.target.value as 'MEMBER' | 'ADMIN')}
                                         className="w-full min-w-0 h-10 sm:h-11 bg-surface border border-border rounded-xl px-3 text-sm text-foreground"
                                     >
-                                        <option value="MEMBER">Membro</option>
-                                        {members.some((x) => x.userId === user.id && x.role === 'OWNER') && <option value="ADMIN">Admin</option>}
+                                        <option value="MEMBER">{t('page.equipe.role.member')}</option>
+                                        {members.some((x) => x.userId === user.id && x.role === 'OWNER') && <option value="ADMIN">{t('page.equipe.role.admin')}</option>}
                                     </select>
                                 </div>
                                 <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-2">
-                                    <Button type="button" variant="secondary" onClick={() => setEditModalMember(null)} disabled={savingRole} className="w-full sm:flex-1">Cancelar</Button>
+                                    <Button type="button" variant="secondary" onClick={() => setEditModalMember(null)} disabled={savingRole} className="w-full sm:flex-1">{t('common.cancel')}</Button>
                                     <Button type="submit" variant="primary" disabled={savingRole} icon={savingRole ? <Loader2 size={16} className="animate-spin" /> : undefined} className="w-full sm:flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 border-0">
-                                        {savingRole ? 'Salvando...' : 'Salvar'}
+                                        {savingRole ? t('page.equipe.saving') : t('common.save')}
                                     </Button>
                                 </div>
                             </form>
@@ -876,14 +886,14 @@ export default function EquipePage() {
                 {deleteConfirmMember && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 overflow-y-auto" onClick={() => !removing && setDeleteConfirmMember(null)}>
                         <div className="my-auto w-full max-w-sm rounded-2xl sm:rounded-3xl bg-card border border-border shadow-xl p-4 sm:p-6" onClick={(e) => e.stopPropagation()}>
-                            <h3 className="text-base sm:text-lg font-bold text-foreground mb-1">Remover da equipe</h3>
+                            <h3 className="text-base sm:text-lg font-bold text-foreground mb-1">{t('page.equipe.removeTitle')}</h3>
                             <p className="text-sm text-muted mb-4">
-                                Remover <strong className="text-foreground">{deleteConfirmMember.name || deleteConfirmMember.email}</strong>? Esta ação não pode ser desfeita.
+                                {t('page.equipe.removeDesc', { name: deleteConfirmMember.name || deleteConfirmMember.email })}
                             </p>
                             <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
-                                <Button type="button" variant="secondary" onClick={() => setDeleteConfirmMember(null)} disabled={removing} className="w-full sm:flex-1">Cancelar</Button>
+                                <Button type="button" variant="secondary" onClick={() => setDeleteConfirmMember(null)} disabled={removing} className="w-full sm:flex-1">{t('common.cancel')}</Button>
                                 <Button type="button" variant="primary" onClick={handleRemoveMember} disabled={removing} icon={removing ? <Loader2 size={16} className="animate-spin" /> : undefined} className="w-full sm:flex-1 bg-destructive hover:bg-destructive/90 border-0 text-destructive-foreground">
-                                    {removing ? 'Removendo...' : 'Remover'}
+                                    {removing ? t('page.equipe.removing') : t('page.equipe.remove')}
                                 </Button>
                             </div>
                         </div>
@@ -909,14 +919,14 @@ export default function EquipePage() {
                                 className="w-full px-4 py-2.5 text-left text-sm text-foreground hover:bg-surface flex items-center gap-2"
                                 onClick={() => { openGoalsModal(m); closeActionsMenu(); }}
                             >
-                                <Target size={14} className="text-amber-500 shrink-0" /> Metas
+                                <Target size={14} className="text-amber-500 shrink-0" /> {t('page.equipe.menu.goals')}
                             </button>
                             <button
                                 type="button"
                                 className="w-full px-4 py-2.5 text-left text-sm text-foreground hover:bg-surface flex items-center gap-2"
                                 onClick={() => { openCreditsModal(m); closeActionsMenu(); }}
                             >
-                                <CreditCard size={14} className="text-emerald-500 shrink-0" /> Limites de créditos
+                                <CreditCard size={14} className="text-emerald-500 shrink-0" /> {t('page.equipe.menu.credits')}
                             </button>
                             {m.role !== 'OWNER' && (
                                 <>
@@ -925,14 +935,14 @@ export default function EquipePage() {
                                         className="w-full px-4 py-2.5 text-left text-sm text-foreground hover:bg-surface flex items-center gap-2"
                                         onClick={() => { setEditModalMember(m); setEditRole(m.role === 'ADMIN' ? 'ADMIN' : 'MEMBER'); closeActionsMenu(); }}
                                     >
-                                        <Pencil size={14} className="text-violet-600 dark:text-violet-400 shrink-0" /> Editar função
+                                        <Pencil size={14} className="text-violet-600 dark:text-violet-400 shrink-0" /> {t('page.equipe.menu.editRole')}
                                     </button>
                                     <button
                                         type="button"
                                         className="w-full px-4 py-2.5 text-left text-sm text-destructive hover:bg-destructive/10 flex items-center gap-2"
                                         onClick={() => { setDeleteConfirmMember(m); closeActionsMenu(); }}
                                     >
-                                        <Trash2 size={14} className="shrink-0" /> Remover
+                                        <Trash2 size={14} className="shrink-0" /> {t('page.equipe.remove')}
                                     </button>
                                 </>
                             )}

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { IntelligenceFormValues } from '@/components/dashboard/SearchParamsIntelligenceCard';
 import { PLACE_TYPE_CATEGORIES, getPlaceTypeByValue } from '@/lib/placeTypes';
+import { useI18n } from '@/lib/i18n';
 
 interface SearchSegmentRowProps {
   value: IntelligenceFormValues;
@@ -16,6 +17,7 @@ export function SearchSegmentRow({
   disabled,
   advancedTermError,
 }: SearchSegmentRowProps) {
+  const { t } = useI18n();
   const [selectedCategoryIndex, setSelectedCategoryIndex] = useState<number>(-1);
 
   const categoryIndexFromType = value.includedType
@@ -41,7 +43,7 @@ export function SearchSegmentRow({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
       <div className="lg:col-span-4 space-y-2">
-        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted block">Categoria</label>
+        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted block">{t('page.search.segment.category')}</label>
         <select
           value={effectiveCategoryIndex >= 0 ? effectiveCategoryIndex : ''}
           onChange={(e) => {
@@ -50,9 +52,9 @@ export function SearchSegmentRow({
           }}
           disabled={disabled}
           className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/30 disabled:opacity-50"
-          aria-label="Categoria do estabelecimento"
+          aria-label={t('page.search.segment.categoryAria')}
         >
-          <option value="">Selecione uma categoria</option>
+          <option value="">{t('page.search.segment.selectCategory')}</option>
           {PLACE_TYPE_CATEGORIES.map((cat, idx) => (
             <option key={cat.label} value={idx}>
               {cat.label}
@@ -60,15 +62,15 @@ export function SearchSegmentRow({
           ))}
         </select>
 
-        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted block">Tipo / Segmento</label>
+        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted block">{t('page.search.segment.typeLabel')}</label>
         <select
           value={value.includedType ?? ''}
           onChange={(e) => handleTypeChange(e.target.value)}
           disabled={disabled || effectiveCategoryIndex < 0}
           className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/30 disabled:opacity-50"
-          aria-label="Tipo de estabelecimento (Google Places)"
+          aria-label={t('page.search.segment.typeAria')}
         >
-          <option value="">Selecione um tipo</option>
+          <option value="">{t('page.search.segment.selectType')}</option>
           {currentTypes.map((t) => (
             <option key={t.value} value={t.value}>
               {t.label}
@@ -76,16 +78,16 @@ export function SearchSegmentRow({
           ))}
         </select>
         {selectedTypeLabel && (
-          <p className="text-[10px] text-muted">Filtro ativo: {selectedTypeLabel}</p>
+          <p className="text-[10px] text-muted">{t('page.search.segment.activeFilter', { label: selectedTypeLabel })}</p>
         )}
       </div>
 
       <div className="lg:col-span-8">
-        <label htmlFor="advanced-term-row" className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5 block">Termo avançado</label>
+        <label htmlFor="advanced-term-row" className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-1.5 block">{t('page.search.segment.advancedTerm')}</label>
         <input
           id="advanced-term-row"
           type="text"
-          placeholder="Ex: Empresas de logística em São Paulo..."
+          placeholder={t('page.search.segment.advancedPlaceholder')}
           value={value.advancedTerm}
           onChange={(e) => onChange({ advancedTerm: e.target.value })}
           disabled={disabled}

@@ -21,6 +21,7 @@ export function AffiliatesPage() {
   const [createForm, setCreateForm] = useState({ name: '', email: '', document: '', notes: '' });
   const [createSubmitting, setCreateSubmitting] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -62,6 +63,8 @@ export function AffiliatesPage() {
       });
       setModalOpen(false);
       setCreateForm({ name: '', email: '', document: '', notes: '' });
+      setToast({ type: 'success', message: 'Afiliado criado com sucesso.' });
+      setTimeout(() => setToast(null), 5000);
       load();
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Erro ao criar');
@@ -95,6 +98,11 @@ export function AffiliatesPage() {
 
   return (
     <div>
+      {toast && (
+        <div className={`mb-4 rounded-lg px-4 py-3 text-sm ${toast.type === 'success' ? 'bg-emerald-50 border border-emerald-300 text-emerald-700' : 'bg-red-50 border border-red-300 text-red-700'}`}>
+          {toast.message}
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <h1 className="text-xl font-semibold text-gray-900">Afiliados</h1>
         <button
@@ -171,7 +179,13 @@ export function AffiliatesPage() {
               </tr>
             </thead>
             <tbody>
-              {items.map((a) => (
+              {items.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                    Nenhum afiliado encontrado.
+                  </td>
+                </tr>
+              ) : items.map((a) => (
                 <tr key={a.id} className="border-b border-gray-200 hover:bg-gray-50">
                   <td className="px-4 py-3 font-mono text-violet-700">{a.code}</td>
                   <td className="px-4 py-3 text-gray-700">{a.name ?? a.email ?? '—'}</td>
@@ -189,7 +203,7 @@ export function AffiliatesPage() {
                     >
                       {copiedCode === a.code ? 'Copiado' : 'Copiar link'}
                     </button>
-                    <Link to={`/affiliates/${a.id}`} className="text-violet-600 hover:text-violet-700 text-sm">Detalhes</Link>
+                    <Link to={a.id} className="text-violet-600 hover:text-violet-700 text-sm">Detalhes</Link>
                   </td>
                 </tr>
               ))}

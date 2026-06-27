@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { emailMarketingApi, type EmailCampaignItem, type EmailCampaignRecipientItem } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
@@ -31,7 +31,7 @@ export function EmailCampaignDetailPage() {
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const { confirm, ConfirmDialog } = useConfirm();
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     try {
@@ -47,9 +47,9 @@ export function EmailCampaignDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, recipientPage]);
 
-  useEffect(() => { load(); }, [id, recipientPage]);
+  useEffect(() => { load(); }, [load]);
 
   const handleSend = async () => {
     if (!campaign || !(await confirm({ title: 'Enviar campanha', message: `Enviar campanha "${campaign.name}" agora?`, confirmLabel: 'Enviar', variant: 'primary' }))) return;
@@ -87,7 +87,7 @@ export function EmailCampaignDetailPage() {
     return (
       <div className="text-center py-16 text-gray-400">
         <p>Campanha não encontrada.</p>
-        <Button variant="ghost" onClick={() => navigate('/email-campaigns')} className="mt-4">Voltar</Button>
+        <Button variant="ghost" onClick={() => navigate('..')} className="mt-4">Voltar</Button>
       </div>
     );
   }
@@ -103,7 +103,7 @@ export function EmailCampaignDetailPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          <button onClick={() => navigate('/email-campaigns')} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 shrink-0">
+          <button onClick={() => navigate('..')} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 shrink-0">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex-1 min-w-0">

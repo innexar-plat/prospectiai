@@ -7,7 +7,8 @@ vi.mock('./api', () => ({
   },
 }));
 
-const searchApi = (await import('./api')).searchApi as unknown as { search: ReturnType<typeof vi.fn> };
+const api = await import('./api');
+const searchApi = api.searchApi as unknown as { search: ReturnType<typeof vi.fn> };
 
 describe('searchService', () => {
   beforeEach(() => {
@@ -117,6 +118,7 @@ describe('searchService', () => {
       });
       const result = await startSearch({
         country: 'Brasil',
+        countryCode: 'BR',
         city: 'BH',
         niches: ['cafes'],
       });

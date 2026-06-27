@@ -1,6 +1,7 @@
 import { Zap, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/lib/i18n';
 
 interface SearchActionBarProps {
   onIniciarBusca: () => void;
@@ -17,6 +18,11 @@ export function SearchActionBar({
   estimatedCredits = 1,
   className,
 }: SearchActionBarProps) {
+  const { t } = useI18n();
+  const estimate = t('page.search.action.estimate');
+  const searchingLabel = t('page.search.action.searching');
+  const startLabel = t('page.search.action.start');
+
   return (
     <div
       className={cn(
@@ -37,16 +43,16 @@ export function SearchActionBar({
           <Zap size={32} className="fill-current" aria-hidden />
         </div>
         <div>
-          <h3 className="text-2xl font-black text-white mb-1">Pronto para prospectar?</h3>
+          <h3 className="text-2xl font-black text-white mb-1">{t('page.search.action.title')}</h3>
           <p className="text-white/90 font-bold">
-            Estimamos <span className="text-white underline decoration-2 decoration-white/30 underline-offset-4">1.5M+ empresas</span> na sua região.
+            {t('page.search.action.subtitle', { estimate })}
           </p>
         </div>
       </div>
       <div className="relative z-10 flex items-center gap-4">
         <div className="text-right hidden sm:block">
-          <p className="text-[10px] font-black text-white/70 uppercase tracking-[0.2em] mb-1">Custo Estimado</p>
-          <p className="text-xl font-black text-white">{estimatedCredits} Crédito(s)</p>
+          <p className="text-[10px] font-black text-white/70 uppercase tracking-[0.2em] mb-1">{t('page.search.action.estimatedCost')}</p>
+          <p className="text-xl font-black text-white">{t('page.search.action.credits', { count: estimatedCredits })}</p>
         </div>
         <Button
           variant="secondary"
@@ -55,9 +61,9 @@ export function SearchActionBar({
           icon={loading ? <Loader2 size={20} className="animate-spin" aria-hidden /> : <Zap size={20} aria-hidden />}
           onClick={onIniciarBusca}
           disabled={disabled || loading}
-          aria-label={loading ? 'Buscando...' : 'Iniciar Busca IA'}
+          aria-label={loading ? searchingLabel : t('page.search.action.startAria')}
         >
-          {loading ? 'Buscando...' : 'Iniciar Busca IA'}
+          {loading ? searchingLabel : startLabel}
         </Button>
       </div>
     </div>

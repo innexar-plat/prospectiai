@@ -1,7 +1,7 @@
 /**
  * Tests for AI Zod schemas.
  */
-import { leadAnalysisSchema } from '@/lib/ai/schemas';
+import { leadAnalysisCoreSchema, leadAnalysisSchema } from '@/lib/ai/schemas';
 
 describe('leadAnalysisSchema', () => {
     const validAnalysis = {
@@ -28,6 +28,12 @@ describe('leadAnalysisSchema', () => {
 
     it('validates a correct lead analysis object', () => {
         const result = leadAnalysisSchema.safeParse(validAnalysis);
+        expect(result.success).toBe(true);
+    });
+
+    it('validates a correct core lead analysis object without full report', () => {
+        const { fullReport, ...core } = validAnalysis;
+        const result = leadAnalysisCoreSchema.safeParse(core);
         expect(result.success).toBe(true);
     });
 

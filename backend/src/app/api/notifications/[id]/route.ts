@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { auth } from '@/auth';
+import { getApiSession } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { getOrCreateRequestId, jsonWithRequestId } from '@/lib/request-id';
 
@@ -10,7 +10,7 @@ export async function PATCH(
 ) {
   const requestId = getOrCreateRequestId(req);
   try {
-    const session = await auth();
+    const session = await getApiSession();
     if (!session?.user?.id) {
       return jsonWithRequestId({ error: 'Unauthorized' }, { status: 401, requestId });
     }

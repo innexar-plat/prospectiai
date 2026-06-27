@@ -2,7 +2,27 @@ import type { LucideIcon } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
-export function StatCard({ value, label, color, suffix, icon: Icon }: { value: string | number; label: string; color: string; suffix?: string; icon?: LucideIcon }) {
+export function StatCard({
+    value,
+    label,
+    color,
+    suffix,
+    icon: Icon,
+    compact = false,
+    hint,
+    sublabel,
+    sublabelColor,
+}: {
+    value: string | number;
+    label: string;
+    color: string;
+    suffix?: string;
+    icon?: LucideIcon;
+    compact?: boolean;
+    hint?: string;
+    sublabel?: string;
+    sublabelColor?: string;
+}) {
     const colors: Record<string, string> = {
         violet: 'text-violet-600 dark:text-violet-400',
         emerald: 'text-emerald-600 dark:text-emerald-400',
@@ -11,10 +31,12 @@ export function StatCard({ value, label, color, suffix, icon: Icon }: { value: s
         rose: 'text-rose-600 dark:text-rose-400'
     };
     return (
-        <div className="rounded-2xl bg-card border border-border p-5 flex flex-col items-center justify-center text-center gap-1">
-            {Icon && <Icon size={20} className={`${colors[color] || 'text-foreground'} mb-1`} />}
-            <div className={`text-3xl font-black tabular-nums ${colors[color] || 'text-foreground'}`}>{value}{suffix}</div>
-            <div className="text-[10px] font-bold text-muted uppercase tracking-wider">{label}</div>
+        <div className={`rounded-xl bg-card border border-border flex flex-col items-center justify-center text-center gap-1 ${compact ? 'p-3 sm:p-4' : 'p-5'}`}>
+            {Icon && <Icon size={compact ? 16 : 20} className={`${colors[color] || 'text-foreground'} mb-0.5`} />}
+            <div className={`font-black tabular-nums ${compact ? 'text-xl sm:text-2xl' : 'text-3xl'} ${colors[color] || 'text-foreground'}`}>{value}{suffix}</div>
+            <div className="text-[10px] font-bold text-muted uppercase tracking-wider leading-tight">{label}</div>
+            {sublabel && <p className={`text-[10px] font-bold mt-0.5 ${sublabelColor ?? 'text-muted'}`}>{sublabel}</p>}
+            {hint && <p className="text-[10px] text-muted/80 mt-1 leading-snug">{hint}</p>}
         </div>
     );
 }

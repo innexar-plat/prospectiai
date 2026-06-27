@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { getConversionStats } from '@/lib/lead-intelligence';
+import { classifyRouteError } from '@/lib/api-route-errors';
+import { MARKET, getRequestMarket } from '@/lib/market';
 
 /**
  * GET /api/pipeline/stats
@@ -9,7 +12,7 @@ import { getConversionStats } from '@/lib/lead-intelligence';
  * Returns conversion statistics for the user/workspace.
  * Used for the pipeline dashboard KPIs.
  */
-export async function GET() {
+export async function GET(req?: NextRequest) {
     try {
         const session = await auth();
         if (!session?.user?.id) {
@@ -25,7 +28,9 @@ export async function GET() {
         return NextResponse.json(stats);
     } catch (error) {
         const { logger } = await import('@/lib/logger');
-        logger.error('Pipeline stats error', { error: error instanceof Error ? error.message : 'Unknown' });
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        const market = req ? getRequestMarket(req) : MARKET;
+        const classified = classifyRouteError(error, 'Internal Server Error', market);
+        logger.error('Pipeline stats error', { error: error instanceof Error ? error.message : 'Unknown', status: classified.status });
+        return NextResponse.json({ error: classified.message }, { status: classified.status });
     }
 }

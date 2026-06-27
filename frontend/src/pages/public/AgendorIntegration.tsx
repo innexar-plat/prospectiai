@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom';
+import { Logo } from '@/components/brand/Logo';
+import LegalFooterLinks from '@/components/legal/LegalFooterLinks';
 import {
   ArrowRight,
   CheckCircle2,
@@ -92,8 +94,7 @@ export default function AgendorIntegration() {
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-border">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
           <Link to="/" className="inline-flex items-center shrink-0">
-            <img src="/precisionai-logo-dark.png" alt="PrecisionAI" className="h-36 shrink-0 hidden dark:block" />
-            <img src="/precisionai-logo-light.png" alt="PrecisionAI" className="h-36 shrink-0 block dark:hidden" />
+            <Logo height={36} className="shrink-0" />
           </Link>
           <div className="flex items-center gap-3">
             <Link
@@ -119,9 +120,8 @@ export default function AgendorIntegration() {
           {/* Partner logos */}
           <div className="flex items-center justify-center gap-6 sm:gap-10 mb-10">
             <div className="flex flex-col items-center gap-2">
-              <img src="/precisionai-logo-dark.png" alt="PrecisionAI" className="h-48 sm:h-72 hidden dark:block" />
-              <img src="/precisionai-logo-light.png" alt="PrecisionAI" className="h-48 sm:h-72 block dark:hidden" />
-              <span className="text-xs font-bold text-muted">Precision IA</span>
+              <Logo height={48} className="sm:h-[4.5rem] w-auto shrink-0" />
+              <span className="text-xs font-bold text-muted">Precision</span>
             </div>
             <div className="flex flex-col items-center gap-1">
               <Handshake size={32} className="text-[#7C5CFC]" />
@@ -142,7 +142,7 @@ export default function AgendorIntegration() {
             <br className="hidden sm:block" /> pelo <span className="text-[#4400CC]">Agendor</span>
           </h1>
           <p className="mt-5 text-base sm:text-lg text-muted max-w-2xl mx-auto leading-relaxed">
-            O Precision IA encontra empresas com perfil do seu cliente ideal, analisa com inteligência artificial
+            O Precision encontra empresas com perfil do seu cliente ideal, analisa com inteligência artificial
             e envia contatos, organizações, negociações e tarefas direto para o Agendor — pronto para vender.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -206,7 +206,7 @@ export default function AgendorIntegration() {
             </span>
             <h2 className="text-2xl sm:text-3xl font-black">Como obter seu Token de API do Agendor</h2>
             <p className="text-muted mt-2 max-w-lg mx-auto">
-              O token é necessário para conectar o Precision IA ao seu Agendor. Leva menos de 1 minuto.
+              O token é necessário para conectar o Precision ao seu Agendor. Leva menos de 1 minuto.
             </p>
           </div>
 
@@ -262,8 +262,8 @@ export default function AgendorIntegration() {
               Clique no botão <strong>&quot;Copiar&quot;</strong> ao lado do token ou selecione e copie manualmente (Ctrl+C).
             </TokenStep>
 
-            <TokenStep n={5} title="Cole no Precision IA">
-              No Precision IA, acesse{' '}
+            <TokenStep n={5} title="Cole no Precision">
+              No Precision, acesse{' '}
               <strong>Painel → Integrações → Agendor</strong>, cole o token no campo indicado e clique em <strong>&quot;Salvar&quot;</strong>.
               A conexão será validada automaticamente.
             </TokenStep>
@@ -283,20 +283,20 @@ export default function AgendorIntegration() {
             <Shield size={18} className="text-violet-600 dark:text-violet-400 shrink-0 mt-0.5" />
             <p className="text-xs text-muted leading-relaxed">
               <strong className="text-foreground">Seu token é seguro.</strong>{' '}
-              O Precision IA armazena seu token de forma criptografada no banco de dados.
+              O Precision armazena seu token de forma criptografada no banco de dados.
               Ele nunca é exposto no frontend nem compartilhado com terceiros. Você pode desconectar a qualquer momento.
             </p>
           </div>
         </div>
       </section>
 
-      {/* ── Funcionalidades do Precision IA ──────────────────── */}
+      {/* ── Funcionalidades do Precision ──────────────────── */}
       <section className="max-w-6xl mx-auto px-6 py-16">
         <div className="text-center mb-12">
           <span className="inline-block px-3 py-1 rounded-full bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 text-[11px] font-bold uppercase tracking-wider mb-3">
             Plataforma
           </span>
-          <h2 className="text-2xl sm:text-3xl font-black">O poder do Precision IA + Agendor</h2>
+          <h2 className="text-2xl sm:text-3xl font-black">O poder do Precision + Agendor</h2>
           <p className="text-muted mt-2 max-w-xl mx-auto">
             Prospecção inteligente que alimenta direto o seu CRM.
           </p>
@@ -328,8 +328,8 @@ export default function AgendorIntegration() {
             <p className="text-muted mt-2">Conecte, prospecte e venda — tudo integrado.</p>
           </div>
           <div className="space-y-6 bg-background border border-border rounded-2xl p-6 sm:p-8">
-            <Step n={1} title="Conecte seu Agendor" desc="Cole o token de API nas configurações de integração do Precision IA." highlight />
-            <Step n={2} title="Busque por nicho e região" desc="Ex: 'Restaurantes em São Paulo' — o Precision IA mapeia todas as empresas usando Google Places." />
+            <Step n={1} title="Conecte seu Agendor" desc="Cole o token de API nas configurações de integração do Precision." highlight />
+            <Step n={2} title="Busque por nicho e região" desc="Ex: 'Restaurantes em São Paulo' — o Precision mapeia todas as empresas usando Google Places." />
             <Step n={3} title="Analise com inteligência artificial" desc="Cada lead recebe um score de oportunidade, classificação e estratégia de abordagem personalizada." />
             <Step n={4} title="Envie para o Agendor com um clique" desc="Abra o painel lateral CRM, escolha modo automático ou manual, selecione funil e etapa, e clique em enviar." />
             <Step n={5} title="Encontre tudo organizado no Agendor" desc="Pessoa, organização, negociação com descrição rica e tarefa de follow-up — tudo criado automaticamente." />
@@ -435,19 +435,19 @@ export default function AgendorIntegration() {
             <a href="https://web.agendor.com.br/configuracoes/integracao" target="_blank" rel="noopener noreferrer" className="text-[#7C5CFC] underline">
               web.agendor.com.br → Configurações → Integrações
             </a>. O token é uma string que começa com letras e números separados por hífens.
-            Copie e cole no campo de token do Precision IA em Integrações → Agendor → Salvar.
+            Copie e cole no campo de token do Precision em Integrações → Agendor → Salvar.
           </Accordion>
           <Accordion title="Preciso instalar alguma coisa no Agendor?">
             Não. A integração usa a API REST oficial do Agendor (v3). Basta o token de API — sem instalar apps,
             plugins ou extensões. Funciona com qualquer plano do Agendor que tenha acesso à API.
           </Accordion>
           <Accordion title="Os contatos são duplicados se eu enviar duas vezes?">
-            Não. O Precision IA usa a funcionalidade de <strong>upsert</strong> do Agendor. Se o e-mail já existir,
+            Não. O Precision usa a funcionalidade de <strong>upsert</strong> do Agendor. Se o e-mail já existir,
             a pessoa é atualizada em vez de duplicada. Organizações também são deduplicadas pelo nome.
           </Accordion>
           <Accordion title="Posso escolher o funil e a etapa da negociação?">
             Sim. No painel lateral CRM, você pode selecionar o funil, a etapa e o responsável antes de enviar.
-            Se não selecionar, o Precision IA usa os valores padrão configurados.
+            Se não selecionar, o Precision usa os valores padrão configurados.
           </Accordion>
           <Accordion title="Como é calculado o valor da negociação?">
             O valor é calculado automaticamente pelo score de oportunidade da IA:{' '}
@@ -497,16 +497,14 @@ export default function AgendorIntegration() {
       <footer className="border-t border-border bg-card">
         <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <img src="/precisionai-logo-dark.png" alt="PrecisionAI" className="h-30 hidden dark:block" />
-            <img src="/precisionai-logo-light.png" alt="PrecisionAI" className="h-30 block dark:hidden" />
-            <span className="text-xs text-muted">PrecisionAI</span>
+            <Logo height={30} />
+            <span className="text-xs text-muted">Precision</span>
           </div>
           <div className="flex items-center gap-4 text-xs text-muted">
             <a href="https://precisionia.com.br" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
               precisionia.com.br
             </a>
-            <Link to="/privacy" className="hover:text-foreground transition-colors">Privacidade</Link>
-            <Link to="/terms" className="hover:text-foreground transition-colors">Termos</Link>
+            <LegalFooterLinks />
           </div>
         </div>
       </footer>

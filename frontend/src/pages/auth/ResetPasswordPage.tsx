@@ -4,8 +4,10 @@ import { authApi } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Logo } from '@/components/brand/Logo';
+import { useI18n } from '@/lib/i18n';
 
 export default function ResetPasswordPage() {
+  const { t } = useI18n();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') ?? '';
   const [password, setPassword] = useState('');
@@ -15,17 +17,17 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!token.trim()) setError('Link inválido. Solicite um novo link de recuperação.');
-  }, [token]);
+    if (!token.trim()) setError(t('page.auth.resetPassword.invalidLink'));
+  }, [token, t]);
 
   const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (password !== confirm) {
-      setError('As senhas não coincidem.');
+      setError(t('page.auth.resetPassword.mismatch'));
       return;
     }
     if (password.length < 8) {
-      setError('A senha deve ter pelo menos 8 caracteres.');
+      setError(t('page.auth.resetPassword.minLength'));
       return;
     }
     setLoading(true);
@@ -34,7 +36,7 @@ export default function ResetPasswordPage() {
       await authApi.resetPassword({ token, password });
       setDone(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Token inválido ou expirado. Solicite um novo link.');
+      setError(err instanceof Error ? err.message : t('page.auth.resetPassword.tokenError'));
     } finally {
       setLoading(false);
     }
@@ -44,16 +46,16 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
       <div className="w-full max-w-sm space-y-6">
         <Link to="/auth/signin" className="inline-block">
-          <Logo height={144} />
+          <Logo height={40} />
         </Link>
-        <h1 className="text-xl font-bold text-foreground">Nova senha</h1>
+        <h1 className="text-xl font-bold text-foreground">{t('page.auth.resetPassword.title')}</h1>
         {done ? (
-          <p className="text-muted text-sm">Senha alterada com sucesso. Faça login com a nova senha.</p>
+          <p className="text-muted text-sm">{t('page.auth.resetPassword.done')}</p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1">
-                Nova senha
+                {t('page.auth.resetPassword.newPassword')}
               </label>
               <Input
                 id="password"
@@ -68,7 +70,7 @@ export default function ResetPasswordPage() {
             </div>
             <div>
               <label htmlFor="confirm" className="block text-sm font-medium text-foreground mb-1">
-                Confirmar senha
+                {t('page.auth.resetPassword.confirm')}
               </label>
               <Input
                 id="confirm"
@@ -88,13 +90,13 @@ export default function ResetPasswordPage() {
               disabled={loading || !token.trim()}
               isLoading={loading}
             >
-              Redefinir senha
+              {t('page.auth.resetPassword.submit')}
             </Button>
           </form>
         )}
         <p className="text-center text-sm text-muted">
           <Link to="/auth/signin" className="text-violet-500 hover:underline">
-            Voltar ao login
+            {t('page.auth.resetPassword.back')}
           </Link>
         </p>
       </div>

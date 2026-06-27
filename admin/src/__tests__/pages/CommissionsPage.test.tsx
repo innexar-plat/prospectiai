@@ -27,4 +27,15 @@ describe('CommissionsPage', () => {
     await screen.findByText(/comissões/i, {}, { timeout: 3000 });
     expect(mockCommissions).toHaveBeenCalled();
   });
+
+  it('shows empty state when no commissions', async () => {
+    render(
+      <MemoryRouter>
+        <Routes>
+          <Route path="/" element={<CommissionsPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(await screen.findByText(/nenhuma comissão encontrada/i)).toBeInTheDocument();
+  });
 });

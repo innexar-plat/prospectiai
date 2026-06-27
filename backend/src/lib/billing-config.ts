@@ -1,7 +1,14 @@
 export const PLANS = {
     FREE: {
         name: 'Free',
-        leadsLimit: 5,
+        leadsLimit: 10,
+        maxMembers: 1,
+        monthly: { price_usd: 0, price_brl: 0 },
+        annual: { price_usd: 0, price_brl: 0 },
+    },
+    TRIAL: {
+        name: 'Trial',
+        leadsLimit: 50,
         maxMembers: 1,
         monthly: { price_usd: 0, price_brl: 0 },
         annual: { price_usd: 0, price_brl: 0 },
@@ -10,29 +17,29 @@ export const PLANS = {
         name: 'Starter',
         leadsLimit: 100,
         maxMembers: 1,
-        monthly: { price_usd: 25, price_brl: 129 },
-        annual: { price_usd: 255, price_brl: 1315 }, // ~15% discount
+        monthly: { price_usd: 19, price_brl: 99 },
+        annual: { price_usd: 190, price_brl: 990 },
     },
     PRO: {
         name: 'Growth',
         leadsLimit: 400,
         maxMembers: 3,
-        monthly: { price_usd: 79, price_brl: 397 },
-        annual: { price_usd: 805, price_brl: 4049 }, // ~15% discount
+        monthly: { price_usd: 49, price_brl: 297 },
+        annual: { price_usd: 490, price_brl: 3029 },
     },
     BUSINESS: {
         name: 'Business',
         leadsLimit: 1200,
         maxMembers: 10,
-        monthly: { price_usd: 199, price_brl: 997 },
-        annual: { price_usd: 2029, price_brl: 10169 }, // ~15% discount
+        monthly: { price_usd: 99, price_brl: 797 },
+        annual: { price_usd: 990, price_brl: 8135 },
     },
     SCALE: {
         name: 'Enterprise',
         leadsLimit: 5000,
         maxMembers: 50,
-        monthly: { price_usd: 499, price_brl: 2497 },
-        annual: { price_usd: 5089, price_brl: 25469 }, // ~15% discount
+        monthly: { price_usd: 249, price_brl: 1997 },
+        annual: { price_usd: 2490, price_brl: 20369 },
     },
 } as const;
 
@@ -42,7 +49,10 @@ export const INVITE_EXPIRATION_DAYS = 7;
 export type PlanType = keyof typeof PLANS;
 
 /** Plan tier order (lower index = lower tier). Used to detect upgrade vs downgrade. */
-export const PLAN_TIER_ORDER: PlanType[] = ['FREE', 'BASIC', 'PRO', 'BUSINESS', 'SCALE'];
+export const PLAN_TIER_ORDER: PlanType[] = ['FREE', 'TRIAL', 'BASIC', 'PRO', 'BUSINESS', 'SCALE'];
+
+/** Plan keys shown on pricing / checkout (excludes legacy FREE and auto TRIAL). */
+export const PUBLIC_PLAN_KEYS: PlanType[] = ['BASIC', 'PRO', 'BUSINESS', 'SCALE'];
 
 export function isDowngrade(currentPlan: PlanType, targetPlan: PlanType): boolean {
     const currentIdx = PLAN_TIER_ORDER.indexOf(currentPlan);

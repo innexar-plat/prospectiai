@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { ToastProvider } from '@/components/ui/ToastProvider';
 import { AdminGuard } from '@/components/AdminGuard';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { AdminOnlyRoute } from '@/components/AdminOnlyRoute';
@@ -27,14 +28,21 @@ import { EmailCampaignsPage } from '@/pages/EmailCampaignsPage';
 import { EmailCampaignDetailPage } from '@/pages/EmailCampaignDetailPage';
 import { WeeklyReportConfigPage } from '@/pages/WeeklyReportConfigPage';
 import { EmailAnalyticsPage } from '@/pages/EmailAnalyticsPage';
+import { EmailLogsPage } from '@/pages/EmailLogsPage';
+import { AutoProspeccaoTemplatesPage } from '@/pages/AutoProspeccaoTemplatesPage';
+import { AutoProspeccaoTemplateEditorPage } from '@/pages/AutoProspeccaoTemplateEditorPage';
+import { AutoProspeccaoSearchProfilesPage } from '@/pages/AutoProspeccaoSearchProfilesPage';
+import { AutoProspeccaoConfigPage } from '@/pages/AutoProspeccaoConfigPage';
+import { AutoProspeccaoSenderPoolPage } from '@/pages/AutoProspeccaoSenderPoolPage';
 
 function RedirectAffiliateDetail() {
   const { id } = useParams<{ id: string }>();
-  return <Navigate to={id ? `/affiliates/${id}` : '/affiliates'} replace />;
+  return <Navigate to={id ? `../../${id}` : '../..'} replace />;
 }
 
 function App() {
   return (
+    <ToastProvider>
     <BrowserRouter basename="/admin">
       <Routes>
         <Route element={<AdminGuard />}>
@@ -64,6 +72,12 @@ function App() {
               <Route path="email-campaigns/:id" element={<EmailCampaignDetailPage />} />
               <Route path="email-weekly-report" element={<WeeklyReportConfigPage />} />
               <Route path="email-analytics" element={<EmailAnalyticsPage />} />
+              <Route path="email-logs" element={<EmailLogsPage />} />
+              <Route path="auto-prospeccao/templates" element={<AutoProspeccaoTemplatesPage />} />
+              <Route path="auto-prospeccao/templates/:id" element={<AutoProspeccaoTemplateEditorPage />} />
+              <Route path="auto-prospeccao/search-profiles" element={<AutoProspeccaoSearchProfilesPage />} />
+              <Route path="auto-prospeccao/config" element={<AutoProspeccaoConfigPage />} />
+              <Route path="auto-prospeccao/sender-pool" element={<AutoProspeccaoSenderPoolPage />} />
             </Route>
             <Route path="users" element={<UsersPage />} />
             <Route path="users/:id" element={<UserDetailPage />} />
@@ -72,6 +86,7 @@ function App() {
         <Route path="*" element={<Navigate to="." replace />} />
       </Routes>
     </BrowserRouter>
+    </ToastProvider>
   );
 }
 

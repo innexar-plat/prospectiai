@@ -1,0 +1,161 @@
+# Cron: Auto-Prospeccao - busca, analise, sequencia de e-mails e push CRM.
+#
+# Executa as 4 etapas do pipeline de auto-prospeccao em ordem:
+#   1. search       - busca novas empresas na base RF
+#   2. analyze      - classifica leads (HOT/WARM/COLD) via IA
+#   3. email-seq    - envia e-mails da sequencia automatica
+#   4. crm-push     - envia leads HOT convertidos para o CRM
+#
+# === Secrets necessarios ===
+# CRON_SECRET - mesmo valor do .env do backend (CRON_SECRET)
+# BACKEND_URL - URL base em producao, sem barra final (ex: https://precisionia.com.br)
+#
+name: Auto-Prospecção (cron)
+
+on:
+  schedule:
+    # Busca + análise: todos os dias às 07:00 UTC (04:00 BRT)
+    - cron: '0 7 * * *'
+    # Email sequence + CRM push: todos os dias às 09:00 UTC (06:00 BRT)
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+    inputs:
+      step:
+        description: 'Etapa a executar (all | search | analyze | email-sequence | crm-push)'
+        required: false
+        default: 'all'
+
+jobs:
+  search:
+    name: 1. Busca de leads
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call auto-prospeccao/search
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$BACKEND_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "BACKEND_URL e CRON_SECRET não configurados. Pulando."
+            exit 0
+          fi
+          STEP="${{ github.event.inputs.step || 'all' }}"
+          if [ "$STEP" != "all" ] && [ "$STEP" != "search" ]; then
+            echo "Pulando etapa search (step=$STEP)"
+            exit 0
+          fi
+          URL="${BACKEND_URL%/}/api/cron/auto-prospeccao/search"
+          echo "POST $URL"
+          HTTP=$(curl -sL -o /tmp/out -w "%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            "$URL")
+          cat /tmp/out && echo ""
+          echo "HTTP $HTTP"
+          if [ "$HTTP" -ge 400 ]; then
+            echo "::error::auto-prospeccao/search retornou HTTP $HTTP"
+            exit 1
+          fi
+
+  analyze:
+    name: 2. Análise IA dos leads
+    runs-on: ubuntu-latest
+    needs: search
+    if: always()
+    steps:
+      - name: Call auto-prospeccao/analyze
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$BACKEND_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "BACKEND_URL e CRON_SECRET não configurados. Pulando."
+            exit 0
+          fi
+          STEP="${{ github.event.inputs.step || 'all' }}"
+          if [ "$STEP" != "all" ] && [ "$STEP" != "analyze" ]; then
+            echo "Pulando etapa analyze (step=$STEP)"
+            exit 0
+          fi
+          URL="${BACKEND_URL%/}/api/cron/auto-prospeccao/analyze"
+          echo "POST $URL"
+          HTTP=$(curl -sL -o /tmp/out -w "%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            "$URL")
+          cat /tmp/out && echo ""
+          echo "HTTP $HTTP"
+          if [ "$HTTP" -ge 400 ]; then
+            echo "::error::auto-prospeccao/analyze retornou HTTP $HTTP"
+            exit 1
+          fi
+
+  email-sequence:
+    name: 3. Sequência de e-mails
+    runs-on: ubuntu-latest
+    needs: analyze
+    if: always()
+    steps:
+      - name: Call auto-prospeccao/email-sequence
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$BACKEND_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "BACKEND_URL e CRON_SECRET não configurados. Pulando."
+            exit 0
+          fi
+          STEP="${{ github.event.inputs.step || 'all' }}"
+          if [ "$STEP" != "all" ] && [ "$STEP" != "email-sequence" ]; then
+            echo "Pulando etapa email-sequence (step=$STEP)"
+            exit 0
+          fi
+          URL="${BACKEND_URL%/}/api/cron/auto-prospeccao/email-sequence"
+          echo "POST $URL"
+          HTTP=$(curl -sL -o /tmp/out -w "%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            "$URL")
+          cat /tmp/out && echo ""
+          echo "HTTP $HTTP"
+          if [ "$HTTP" -ge 400 ]; then
+            echo "::error::auto-prospeccao/email-sequence retornou HTTP $HTTP"
+            exit 1
+          fi
+
+  crm-push:
+    name: 4. Push para CRM
+    runs-on: ubuntu-latest
+    needs: email-sequence
+    if: always()
+    steps:
+      - name: Call auto-prospeccao/crm-push
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$BACKEND_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "BACKEND_URL e CRON_SECRET não configurados. Pulando."
+            exit 0
+          fi
+          STEP="${{ github.event.inputs.step || 'all' }}"
+          if [ "$STEP" != "all" ] && [ "$STEP" != "crm-push" ]; then
+            echo "Pulando etapa crm-push (step=$STEP)"
+            exit 0
+          fi
+          URL="${BACKEND_URL%/}/api/cron/auto-prospeccao/crm-push"
+          echo "POST $URL"
+          HTTP=$(curl -sL -o /tmp/out -w "%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            "$URL")
+          cat /tmp/out && echo ""
+          echo "HTTP $HTTP"
+          if [ "$HTTP" -ge 400 ]; then
+            echo "::error::auto-prospeccao/crm-push retornou HTTP $HTTP"
+            exit 1
+          fi

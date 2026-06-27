@@ -13,18 +13,15 @@ export default function Pricing({
     locale,
     currentPlan,
     onBack,
-    userEmail,
     t: tProp,
     tRaw,
 }: {
     locale: string;
     currentPlan: PlanType;
     onBack?: () => void;
-    userEmail?: string;
     t?: TFunction;
     tRaw?: TRawFunction;
 }) {
-    console.debug(userEmail);
     const [loading, setLoading] = useState<string | null>(null);
     const [interval, setInterval] = useState<'monthly' | 'annual'>('monthly');
     const t = tProp ?? fallbackT;

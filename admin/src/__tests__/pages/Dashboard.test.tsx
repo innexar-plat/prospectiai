@@ -20,6 +20,11 @@ const mockStats = {
   serperRequestsTotal: 0,
   aiInputTokensTotal: 1000,
   aiOutputTokensTotal: 500,
+  usersByMarket: { BR: 8, US: 2, unknown: 0 },
+  revenueByMarket: {
+    BR: { total: 500, mrr: 297, currency: 'BRL' as const, paidWorkspaces: 1 },
+    US: { total: 49, mrr: 49, currency: 'USD' as const, paidWorkspaces: 1 },
+  },
 };
 
 const mockHistory = {
@@ -58,6 +63,15 @@ describe('Dashboard', () => {
     render(<Dashboard />);
     const errorText = await screen.findByText(/API error/i, {}, { timeout: 3000 });
     expect(errorText).toBeInTheDocument();
+  });
+
+  it('renders market comparison section', async () => {
+    vi.mocked(adminApi.stats).mockResolvedValue(mockStats);
+    vi.mocked(adminApi.statsHistory).mockResolvedValue(mockHistory);
+    render(<Dashboard />);
+    await screen.findByRole('heading', { name: /mercados/i }, { timeout: 3000 });
+    expect(screen.getByRole('heading', { name: /usuários por mercado/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /receita por mercado/i })).toBeInTheDocument();
   });
 
   it('renders sparklines when history is available', async () => {

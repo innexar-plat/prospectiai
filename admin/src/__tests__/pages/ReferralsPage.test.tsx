@@ -27,4 +27,15 @@ describe('ReferralsPage', () => {
     await screen.findByText(/Funil de Referrals|Referrals/i, {}, { timeout: 3000 });
     expect(mockReferrals).toHaveBeenCalled();
   });
+
+  it('shows empty state when no referrals', async () => {
+    render(
+      <MemoryRouter>
+        <Routes>
+          <Route path="/" element={<ReferralsPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(await screen.findByText(/nenhum referral encontrado/i)).toBeInTheDocument();
+  });
 });

@@ -6,11 +6,21 @@ import { logAdminAction } from '@/lib/audit';
 import { aiConfigUpdateSchema, formatZodError } from '@/lib/validations/schemas';
 import { encryptApiKey } from '@/lib/ai/encrypt';
 
-const ROLE_TO_PRISMA = { lead_analysis: 'LEAD_ANALYSIS' as const, viability: 'VIABILITY' as const };
+const ROLE_TO_PRISMA = {
+    lead_analysis: 'LEAD_ANALYSIS' as const,
+    viability: 'VIABILITY' as const,
+    company_analysis: 'COMPANY_ANALYSIS' as const,
+};
+
+function fromPrismaRole(role: 'LEAD_ANALYSIS' | 'VIABILITY' | 'COMPANY_ANALYSIS'): 'lead_analysis' | 'viability' | 'company_analysis' {
+    if (role === 'LEAD_ANALYSIS') return 'lead_analysis';
+    if (role === 'VIABILITY') return 'viability';
+    return 'company_analysis';
+}
 
 type AiConfigUpdatePayload = {
-    role?: 'lead_analysis' | 'viability';
-    provider?: 'GEMINI' | 'OPENAI' | 'CLOUDFLARE';
+    role?: 'lead_analysis' | 'viability' | 'company_analysis';
+    provider?: 'GEMINI' | 'OPENAI' | 'CLOUDFLARE' | 'GROQ' | 'DEEPSEEK' | 'ANTHROPIC' | 'OPENROUTER';
     model?: string;
     apiKey?: string | null;
     cloudflareAccountId?: string | null;
@@ -18,8 +28,8 @@ type AiConfigUpdatePayload = {
 };
 
 function buildAiConfigUpdate(data: AiConfigUpdatePayload): {
-    role?: 'LEAD_ANALYSIS' | 'VIABILITY';
-    provider?: 'GEMINI' | 'OPENAI' | 'CLOUDFLARE';
+    role?: 'LEAD_ANALYSIS' | 'VIABILITY' | 'COMPANY_ANALYSIS';
+    provider?: 'GEMINI' | 'OPENAI' | 'CLOUDFLARE' | 'GROQ' | 'DEEPSEEK' | 'ANTHROPIC' | 'OPENROUTER';
     model?: string;
     apiKeyEncrypted?: string | null;
     cloudflareAccountId?: string | null;
@@ -58,7 +68,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         logAdminAction(session, 'admin.ai-config.update', { resource: 'ai-config', resourceId: id }).catch(() => {});
         return NextResponse.json({
             id: updated.id,
-            role: updated.role === 'LEAD_ANALYSIS' ? 'lead_analysis' : 'viability',
+            role: fromPrismaRole(updated.role),
             provider: updated.provider,
             model: updated.model,
             enabled: updated.enabled,

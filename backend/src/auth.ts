@@ -1,11 +1,21 @@
 import NextAuth, { CredentialsSignin } from "next-auth"
-import { PrismaAdapter } from "@auth/prisma-adapter"
+import { createProspectorAuthAdapter } from "@/lib/auth-adapter"
 import { prisma } from "@/lib/prisma"
 import { getPanelRole } from "@/lib/admin"
+import { logger } from "@/lib/logger"
+import { sendOAuthWelcomeEmail } from "@/lib/email"
+import { resolveAdapterMarket } from "@/lib/oauth-registration"
+import {
+    isLikelyFirstOauthSignIn,
+    isOauthSignIn,
+    isProviderEmailVerified,
+    shouldSendOauthWelcomeEmail,
+} from "@/lib/oauth-security"
 import Google from "next-auth/providers/google"
 import GitHub from "next-auth/providers/github"
 import Credentials from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
+import { resolveAuthRedirectUrl } from "@/lib/app-origins"
 
 const isDevelopment = process.env.NODE_ENV === "development";
 
@@ -77,14 +87,28 @@ providers.push(
     }),
 );
 
+
+
+function serializeNextAuthLogDetails(message: unknown[]): unknown {
+    if (message.length === 0) return undefined;
+    const mapOne = (item: unknown): unknown => {
+        if (item instanceof Error) {
+            return { name: item.name, message: item.message };
+        }
+        return item;
+    };
+    if (message.length === 1) return mapOne(message[0]);
+    return message.map(mapOne);
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
-    adapter: PrismaAdapter(prisma),
+    adapter: createProspectorAuthAdapter(prisma),
     providers,
     basePath: "/api/auth",
     trustHost: true,
     session: {
         strategy: "jwt",
-        maxAge: 7 * 24 * 60 * 60,   // 7 days (was default 30)
+        maxAge: 30 * 24 * 60 * 60,  // 30 days
     },
     callbacks: {
         async session({ session, token }) {
@@ -92,14 +116,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             if (token.id) session.user.id = String(token.id);
             if (token.email) session.user.email = String(token.email);
             if (!session.user.email && token.id) {
-                const dbUser = await prisma.user.findUnique({
-where: { id: String(token.id) },
-                select: { email: true, name: true, image: true },
-                });
-                if (dbUser?.email) {
-                    session.user.email = dbUser.email;
-                    if (dbUser.name != null) session.user.name = dbUser.name;
-                    if (dbUser.image != null) session.user.image = dbUser.image;
+                try {
+                    const dbUser = await prisma.user.findUnique({
+                        where: { id: String(token.id) },
+                        select: { email: true, name: true, image: true },
+                    });
+                    if (dbUser?.email) {
+                        session.user.email = dbUser.email;
+                        if (dbUser.name != null) session.user.name = dbUser.name;
+                        if (dbUser.image != null) session.user.image = dbUser.image;
+                    }
+                } catch (err) {
+                    logger.error('Session callback user lookup failed', {
+                        error: err instanceof Error ? err.message : 'Unknown',
+                        userId: String(token.id),
+                    });
                 }
             }
             const role = (token.role as 'admin' | 'support' | null) ?? getPanelRole(session);
@@ -107,23 +138,84 @@ where: { id: String(token.id) },
             return session;
         },
         async redirect({ url, baseUrl }) {
-            const base = baseUrl.replace(/\/$/, "");
-            if (url.startsWith("/")) return `${base}${url}`;
-            try {
-                if (new URL(url).origin === base) return url;
-            } catch {
-                return base;
-            }
-            return base;
+            return resolveAuthRedirectUrl(url, baseUrl);
         },
-        async signIn({ user, account }) {
-            if (account?.provider === "credentials") return true;
+        async signIn({ user, account, profile }) {
+            if (!isOauthSignIn(account?.provider)) return true;
             if (!user?.email) return false;
+
             const dbUser = await prisma.user.findUnique({
                 where: { email: user.email },
-                select: { disabledAt: true },
+                select: { id: true, disabledAt: true, emailVerified: true, createdAt: true },
             });
             if (dbUser?.disabledAt) return false;
+
+            const providerEmailVerified = isProviderEmailVerified(profile as Record<string, unknown> | null | undefined);
+            const isFirstOauthSignIn = isLikelyFirstOauthSignIn(dbUser?.createdAt);
+
+            if (dbUser?.id && providerEmailVerified && !dbUser.emailVerified) {
+                await prisma.user
+                    .update({
+                        where: { id: dbUser.id },
+                        data: { emailVerified: new Date() },
+                    })
+                    .catch((error: unknown) => {
+                        logger.warn("OAuth emailVerified update failed", {
+                            userId: dbUser.id,
+                            email: user.email,
+                            provider: account?.provider,
+                            error: error instanceof Error ? error.message : "Unknown",
+                        });
+                    });
+            }
+
+            if (dbUser?.id) {
+                prisma.auditLog
+                    .create({
+                        data: {
+                            userId: dbUser.id,
+                            adminEmail: user.email ?? undefined,
+                            action: isFirstOauthSignIn ? "auth.oauth.signup" : "auth.oauth.login",
+                            resource: "auth",
+                            resourceId: dbUser.id,
+                            details: {
+                                provider: account?.provider ?? "unknown",
+                                providerAccountId: account?.providerAccountId ?? null,
+                                providerEmailVerified,
+                            },
+                        },
+                    })
+                    .catch(() => {});
+            }
+
+            if (isFirstOauthSignIn && shouldSendOauthWelcomeEmail(process.env.SEND_OAUTH_WELCOME_EMAIL)) {
+                resolveAdapterMarket()
+                    .then((market) =>
+                        sendOAuthWelcomeEmail(
+                            user.email!,
+                            user.name ?? null,
+                            account?.provider ?? "oauth",
+                            market,
+                        ),
+                    )
+                    .then((result) => {
+                        if (!result.sent) {
+                            logger.warn("OAuth welcome email not sent", {
+                                email: user.email,
+                                provider: account?.provider,
+                                reason: result.error ?? "no-config",
+                            });
+                        }
+                    })
+                    .catch((error: unknown) => {
+                        logger.warn("OAuth welcome email failed", {
+                            email: user.email,
+                            provider: account?.provider,
+                            error: error instanceof Error ? error.message : "Unknown",
+                        });
+                    });
+            }
+
             return true;
         },
         async jwt({ token, user }) {
@@ -135,13 +227,20 @@ where: { id: String(token.id) },
                 token.role = getPanelRole({ user: { email: user.email ?? undefined }, expires: '' });
             }
             if (!token.role && token.id) {
-                const dbUser = await prisma.user.findUnique({
-                    where: { id: String(token.id) },
-                    select: { email: true },
-                });
-                if (dbUser?.email) {
-                    token.email = dbUser.email;
-                    token.role = getPanelRole({ user: { email: dbUser.email }, expires: '' });
+                try {
+                    const dbUser = await prisma.user.findUnique({
+                        where: { id: String(token.id) },
+                        select: { email: true },
+                    });
+                    if (dbUser?.email) {
+                        token.email = dbUser.email;
+                        token.role = getPanelRole({ user: { email: dbUser.email }, expires: '' });
+                    }
+                } catch (err) {
+                    logger.error('JWT callback user lookup failed', {
+                        error: err instanceof Error ? err.message : 'Unknown',
+                        userId: String(token.id),
+                    });
                 }
             }
             return token;
@@ -178,10 +277,23 @@ where: { id: String(token.id) },
     },
     debug: isDevelopment,
     logger: {
-        error(code, ...message) { console.error("[AUTH] ERROR:", code, message) },
-        warn(code, ...message) { console.warn("[AUTH] WARN:", code, message) },
+        error(code, ...message) {
+            logger.error('NextAuth error', {
+                code: String(code),
+                route: '/api/auth',
+                ...(String(code) === 'CredentialsSignin' || String(code).includes('CredentialsSignin')
+                    ? { reason: 'credentials_signin_failed' }
+                    : {}),
+                details: serializeNextAuthLogDetails(message),
+            });
+        },
+        warn(code, ...message) {
+            logger.warn('NextAuth warning', { code: String(code), details: serializeNextAuthLogDetails(message) });
+        },
         debug(code, ...message) {
-            if (isDevelopment) console.log("[AUTH] DEBUG:", code, message)
+            if (isDevelopment) {
+                logger.info('NextAuth debug', { code: String(code), details: serializeNextAuthLogDetails(message) });
+            }
         },
     }
 })

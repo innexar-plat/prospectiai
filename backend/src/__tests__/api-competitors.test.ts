@@ -98,6 +98,7 @@ describe('POST /api/competitors', () => {
 
     const req = new NextRequest('http://x/api/competitors', {
       method: 'POST',
+      headers: { 'X-Locale': 'en', 'X-Prospector-Market': 'US' },
       body: JSON.stringify({ textQuery: 'cafes sao paulo' }),
     });
     const res = await POST(req);
@@ -107,7 +108,8 @@ describe('POST /api/competitors', () => {
     expect(json.digitalPresence.withWebsite).toBe(2);
     expect(runCompetitorAnalysis).toHaveBeenCalledWith(
       expect.objectContaining({ textQuery: 'cafes sao paulo' }),
-      'u1'
+      'u1',
+      'en',
     );
   });
 });

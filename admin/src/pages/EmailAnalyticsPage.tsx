@@ -9,15 +9,19 @@ export function EmailAnalyticsPage() {
   const [stats, setStats] = useState<EmailMarketingStats | null>(null);
   const [recentCampaigns, setRecentCampaigns] = useState<EmailCampaignItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
       emailMarketingApi.stats(),
       emailMarketingApi.campaigns.list({ limit: 5 }),
-    ]).then(([s, c]) => {
-      setStats(s);
-      setRecentCampaigns(c.items);
-    }).finally(() => setLoading(false));
+    ])
+      .then(([s, c]) => {
+        setStats(s);
+        setRecentCampaigns(c.items);
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Erro ao carregar analytics.'))
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) {
@@ -28,6 +32,15 @@ export function EmailAnalyticsPage() {
           {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-gray-100 rounded-xl" />)}
         </div>
         <div className="h-64 bg-gray-100 rounded-xl" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">Email Analytics</h1>
+        <div className="rounded-lg bg-red-50 border border-red-300 text-red-600 px-4 py-3">{error}</div>
       </div>
     );
   }
@@ -53,13 +66,13 @@ export function EmailAnalyticsPage() {
           icon={<FileText className="w-5 h-5 text-violet-600" />}
           label="Templates"
           value={stats?.totalTemplates ?? 0}
-          onClick={() => navigate('/email-templates')}
+          onClick={() => navigate('../email-templates')}
         />
         <StatCard
           icon={<Send className="w-5 h-5 text-blue-600" />}
           label="Campanhas"
           value={stats?.totalCampaigns ?? 0}
-          onClick={() => navigate('/email-campaigns')}
+          onClick={() => navigate('../email-campaigns')}
         />
         <StatCard
           icon={<CheckCircle2 className="w-5 h-5 text-emerald-600" />}
@@ -92,7 +105,7 @@ export function EmailAnalyticsPage() {
           <h2 className="font-semibold text-gray-900 flex items-center gap-2">
             <BarChart3 className="w-4 h-4 text-gray-400" /> Campanhas Recentes
           </h2>
-          <Button variant="ghost" size="sm" onClick={() => navigate('/email-campaigns')} className="flex items-center gap-1 text-violet-600">
+          <Button variant="ghost" size="sm" onClick={() => navigate('../email-campaigns')} className="flex items-center gap-1 text-violet-600">
             Ver todas <ArrowRight className="w-3.5 h-3.5" />
           </Button>
         </div>
@@ -100,7 +113,7 @@ export function EmailAnalyticsPage() {
           <div className="p-8 text-center text-gray-400">
             <Send className="w-10 h-10 mx-auto mb-2 opacity-40" />
             <p>Nenhuma campanha ainda.</p>
-            <Button variant="ghost" onClick={() => navigate('/email-campaigns')} className="mt-2 text-violet-600">Criar primeira campanha</Button>
+            <Button variant="ghost" onClick={() => navigate('../email-campaigns')} className="mt-2 text-violet-600">Criar primeira campanha</Button>
           </div>
         ) : (
           <div className="divide-y divide-gray-50">
@@ -114,7 +127,7 @@ export function EmailAnalyticsPage() {
                 <div
                   key={c.id}
                   className="px-4 py-3 flex items-center justify-between hover:bg-gray-50/50 cursor-pointer"
-                  onClick={() => c.status === 'SENT' ? navigate(`/email-campaigns/${c.id}`) : navigate('/email-campaigns')}
+                  onClick={() => c.status === 'SENT' ? navigate(`../email-campaigns/${c.id}`) : navigate('../email-campaigns')}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
@@ -146,19 +159,19 @@ export function EmailAnalyticsPage() {
         <QuickAction
           title="Criar Template"
           description="Crie um novo template para suas campanhas"
-          onClick={() => navigate('/email-templates')}
+          onClick={() => navigate('../email-templates')}
           icon={<FileText className="w-5 h-5 text-violet-600" />}
         />
         <QuickAction
           title="Nova Campanha"
           description="Envie uma campanha de email marketing"
-          onClick={() => navigate('/email-campaigns')}
+          onClick={() => navigate('../email-campaigns')}
           icon={<Send className="w-5 h-5 text-blue-600" />}
         />
         <QuickAction
           title="Relatório Semanal"
           description="Configure o envio automático de relatórios"
-          onClick={() => navigate('/email-weekly-report')}
+          onClick={() => navigate('../email-weekly-report')}
           icon={<BarChart3 className="w-5 h-5 text-emerald-600" />}
         />
       </div>

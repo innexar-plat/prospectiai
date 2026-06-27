@@ -2,8 +2,10 @@ import { z } from 'zod';
 
 const MIN_ADVANCED_TERM = 3;
 
+import { getDefaultSearchCountry } from '@/lib/market';
+
 export const searchFormSchema = z.object({
-  country: z.string().min(1, 'Selecione um país').default('BR'),
+  country: z.string().min(1, 'Selecione um país').default(getDefaultSearchCountry()),
   state: z.string().default('Todos'),
   city: z.string().default(''),
   radiusKm: z.number().min(5).max(100).default(20),
@@ -27,17 +29,23 @@ export const searchFormSchema = z.object({
 
 export type SearchFormValues = z.infer<typeof searchFormSchema>;
 
-export const DEFAULT_SEARCH_VALUES: SearchFormValues = {
-  country: 'BR',
-  state: 'Todos',
-  city: '',
-  radiusKm: 20,
-  includedType: undefined,
-  niches: [],
-  advancedTerm: '',
-  hasWebsite: 'any',
-  hasPhone: 'any',
-  cnae: undefined,
-  cnaeDescricao: undefined,
-  cnaes: [],
-};
+/** Runtime defaults — respects hostname / VITE_MARKET (US vs BR). */
+export function createDefaultSearchValues(): SearchFormValues {
+  return {
+    country: getDefaultSearchCountry(),
+    state: 'Todos',
+    city: '',
+    radiusKm: 20,
+    includedType: undefined,
+    niches: [],
+    advancedTerm: '',
+    hasWebsite: 'any',
+    hasPhone: 'any',
+    cnae: undefined,
+    cnaeDescricao: undefined,
+    cnaes: [],
+  };
+}
+
+/** @deprecated Prefer createDefaultSearchValues() for runtime market-aware defaults. */
+export const DEFAULT_SEARCH_VALUES: SearchFormValues = createDefaultSearchValues();

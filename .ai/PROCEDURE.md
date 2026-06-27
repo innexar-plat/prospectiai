@@ -18,7 +18,7 @@ Este projeto roda 100% em Docker. Nenhuma validação é considerada "feita" se 
 - **Build:** `make build` — build de todos os serviços (imagem web unificada + backend).
 - **Testes:** `make test` — roda testes Jest do backend no container (com DB).
 - **Check (build sem regressão):** `make check` — executa `make test` e depois `make build`; falha se testes ou build falharem. Use antes de PR ou em CI.
-- **E2E:** `make test-e2e` — roda testes Playwright (backend/e2e). A stack deve estar up (`make up`) e saudável (`make health`). Use `E2E_BASE_URL` para override (ex.: `E2E_BASE_URL=http://localhost:3010` para apontar ao backend diretamente).
+- **E2E:** `make test-e2e` — roda testes Playwright (backend/e2e). A stack deve estar up (`make up`) e saudável (`make health`). Use `E2E_BASE_URL` para override (ex.: `E2E_BASE_URL=http://localhost:3010` para apontar ao backend diretamente). Fluxo US: `npx playwright test e2e/us-market.spec.ts` (ver `backend/e2e/README.md`). Stack US: `docker compose -f docker-compose.yml -f docker-compose.us.yml up -d --build`.
 - **Logs:** `make logs` ou `make logs SERVICE=backend` (ou `frontend`, `db`, `redis`).
 - **Health:** `make health` — checa o backend em http://localhost:3010/api/health (aguardar ~30s após `make up`).
 - **Parar:** `make down`

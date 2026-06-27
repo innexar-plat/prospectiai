@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { COUNTRIES, getStatesByCountry } from '@/lib/locationData';
+import { getSearchCountries, getStatesByCountry } from '@/lib/locationData';
+import type { StateOption } from '@/lib/locationData';
 import { searchApi } from '@/lib/api';
 import type { LocationFormValues } from '@/components/dashboard/SearchParamsLocationCard';
+import { useI18n } from '@/lib/i18n';
 
 const RADIUS_OPTIONS = [5, 10, 20, 30, 50, 100];
 
@@ -14,6 +16,7 @@ interface SearchFiltersRowProps {
 }
 
 export function SearchFiltersRow({ value, onChange, disabled }: SearchFiltersRowProps) {
+  const { t } = useI18n();
   const [countryOpen, setCountryOpen] = useState(false);
   const [stateOpen, setStateOpen] = useState(false);
   const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
@@ -23,8 +26,10 @@ export function SearchFiltersRow({ value, onChange, disabled }: SearchFiltersRow
   const stateRef = useRef<HTMLDivElement>(null);
   const cityRef = useRef<HTMLDivElement>(null);
 
+  const searchCountries = getSearchCountries();
   const states = getStatesByCountry(value.country);
-  const selectedCountry = COUNTRIES.find((c) => c.value === value.country);
+  const selectedCountry = searchCountries.find((c) => c.value === value.country);
+  const selectedState = states.find((s: StateOption) => s.value === value.state);
 
   useEffect(() => {
     if (!countryOpen) return;
@@ -57,7 +62,7 @@ export function SearchFiltersRow({ value, onChange, disabled }: SearchFiltersRow
     const country = value.country;
     const state = value.state;
     const q = value.city.trim();
-    if (disabled || country !== 'BR' || !state || state === 'Todos' || q.length < 3) {
+    if (disabled || !['BR', 'US'].includes(country) || !state || state === 'Todos' || q.length < (country === 'US' ? 2 : 3)) {
       setCitySuggestions([]);
       setCityOpen(false);
       return;
@@ -95,7 +100,7 @@ export function SearchFiltersRow({ value, onChange, disabled }: SearchFiltersRow
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 items-end">
       <div className="relative" ref={countryRef}>
-        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-1 block">País</label>
+        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-1 block">{t('page.search.filters.country')}</label>
         <button
           type="button"
           onClick={() => !disabled && setCountryOpen((o) => !o)}
@@ -112,7 +117,7 @@ export function SearchFiltersRow({ value, onChange, disabled }: SearchFiltersRow
             role="listbox"
             className="absolute z-20 mt-1 w-full rounded-lg bg-card border border-border shadow-lg py-1 max-h-48 overflow-auto"
           >
-            {COUNTRIES.map((c) => (
+            {searchCountries.map((c) => (
               <li key={c.value} role="option" aria-selected={value.country === c.value}>
                 <button
                   type="button"
@@ -134,7 +139,7 @@ export function SearchFiltersRow({ value, onChange, disabled }: SearchFiltersRow
       </div>
 
       <div className="relative" ref={stateRef}>
-        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-1 block">Estado</label>
+        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-1 block">{t('page.search.filters.state')}</label>
         <button
           type="button"
           onClick={() => !disabled && setStateOpen((o) => !o)}
@@ -143,7 +148,7 @@ export function SearchFiltersRow({ value, onChange, disabled }: SearchFiltersRow
           aria-expanded={stateOpen}
           className={cn(selectClass, stateOpen && 'border-violet-500/40')}
         >
-          <span className="truncate">{value.state}</span>
+          <span className="truncate">{selectedState ? (value.country === 'BR' && value.state !== 'Todos' ? `${selectedState.label} (${selectedState.value})` : selectedState.label) : value.state}</span>
           <ChevronDown size={14} className={cn('shrink-0 text-muted', stateOpen && 'rotate-180')} />
         </button>
         {stateOpen && (
@@ -151,20 +156,20 @@ export function SearchFiltersRow({ value, onChange, disabled }: SearchFiltersRow
             role="listbox"
             className="absolute z-20 mt-1 w-full rounded-lg bg-card border border-border shadow-lg py-1 max-h-48 overflow-auto"
           >
-            {states.map((s) => (
-              <li key={s} role="option" aria-selected={value.state === s}>
+            {states.map((s: StateOption) => (
+              <li key={s.value} role="option" aria-selected={value.state === s.value}>
                 <button
                   type="button"
                   className={cn(
                     'w-full px-3 py-2 text-left text-xs hover:bg-surface focus:outline-none',
-                    value.state === s && 'bg-violet-600/10 text-violet-500 font-medium'
+                    value.state === s.value && 'bg-violet-600/10 text-violet-500 font-medium'
                   )}
                   onClick={() => {
-                    onChange({ state: s });
+                    onChange({ state: s.value });
                     setStateOpen(false);
                   }}
                 >
-                  {s}
+                  {s.value !== 'Todos' && value.country === 'BR' ? `${s.label} (${s.value})` : s.label}
                 </button>
               </li>
             ))}
@@ -173,11 +178,11 @@ export function SearchFiltersRow({ value, onChange, disabled }: SearchFiltersRow
       </div>
 
       <div className="relative" ref={cityRef}>
-        <label htmlFor="search-city" className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-1 block">Cidade</label>
+        <label htmlFor="search-city" className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-1 block">{t('page.search.filters.city')}</label>
         <input
           id="search-city"
           type="text"
-          placeholder={value.state && value.state !== 'Todos' ? 'Digite 3 letras...' : 'Selecione o estado primeiro'}
+          placeholder={value.state && value.state !== 'Todos' ? t('page.search.filters.cityPlaceholder') : t('page.search.filters.cityPlaceholderNoState')}
           value={value.city}
           onChange={(e) => {
             onChange({ city: e.target.value });
@@ -214,12 +219,12 @@ export function SearchFiltersRow({ value, onChange, disabled }: SearchFiltersRow
           </ul>
         )}
         {cityLoading && (
-          <p className="absolute -bottom-4 left-0 text-[10px] text-muted">Buscando cidades...</p>
+          <p className="absolute -bottom-4 left-0 text-[10px] text-muted">{t('page.search.filters.cityLoading')}</p>
         )}
       </div>
 
       <div>
-        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-1 block">Raio (km)</label>
+        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-1 block">{t('page.search.filters.radius')}</label>
         <div className="flex gap-1 flex-wrap">
           {RADIUS_OPTIONS.map((r) => (
             <button

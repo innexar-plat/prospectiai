@@ -12,12 +12,15 @@ export function SupportSidebar({ onNavigate }: { onNavigate?: () => void }) {
     <aside className="w-60 shrink-0 border-r border-gray-200 bg-white flex flex-col h-full">
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center">
-            <span className="text-white text-xs font-bold">P</span>
-          </div>
+          <img
+            src="/brands/precision-favicon.svg"
+            alt=""
+            aria-hidden
+            className="w-8 h-8 object-contain"
+          />
           <div>
             <h1 className="font-semibold text-gray-900 text-sm leading-tight">Painel Suporte</h1>
-            <p className="text-xs text-gray-400 leading-tight">Precision IA</p>
+            <p className="text-xs text-gray-400 leading-tight">Precision</p>
           </div>
         </div>
       </div>

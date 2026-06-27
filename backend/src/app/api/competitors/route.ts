@@ -6,6 +6,7 @@ import { getOrCreateRequestId, jsonWithRequestId } from '@/lib/request-id';
 import { searchSchema, formatZodError } from '@/lib/validations/schemas';
 import { planHasModule, type ProductPlan } from '@/lib/product-modules';
 import { runCompetitorAnalysis, SearchHttpError } from '@/modules/competitors';
+import { resolveAiRequestLocale } from '@/lib/i18n/locale';
 
 export async function POST(req: NextRequest) {
   const requestId = getOrCreateRequestId(req);
@@ -42,7 +43,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await runCompetitorAnalysis(parsed.data, session.user.id);
+    const locale = resolveAiRequestLocale(req);
+    const result = await runCompetitorAnalysis(parsed.data, session.user.id, locale);
     return jsonWithRequestId(result, { requestId });
   } catch (err) {
     if (err instanceof SearchHttpError) {

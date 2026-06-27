@@ -5,6 +5,7 @@ import { PLANS, PlanType } from '@/lib/billing-config';
 import { logger } from '@/lib/logger';
 import { scheduleDowngradeSchema, formatZodError } from '@/lib/validations/schemas';
 import { performScheduleDowngrade, ScheduleDowngradeError } from '@/lib/schedule-downgrade';
+import { notifyPlanDowngradeScheduled } from '@/lib/telegram-business-alerts';
 
 export async function POST(req: Request) {
     const session = await auth();
@@ -52,6 +53,18 @@ export async function POST(req: Request) {
             },
             targetPlanId
         );
+
+        notifyPlanDowngradeScheduled({
+            userId: session.user.id,
+            userEmail: session.user.email,
+            userName: session.user.name,
+            workspaceId: workspace.id,
+            fromPlan: workspace.plan,
+            toPlan: targetPlanId,
+            billingCycle: workspace.billingCycle,
+            provider: workspace.subscriptionId?.startsWith('sub_') ? 'stripe' : 'mercadopago',
+            effectiveAt: result.pendingPlanEffectiveAt,
+        });
 
         return NextResponse.json({
             ok: true,

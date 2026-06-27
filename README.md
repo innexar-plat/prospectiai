@@ -25,7 +25,7 @@ Monorepo do Prospector AI: frontend (Vite/React), backend (Next.js API), admin (
 | `make health` | Verifica saúde do backend (aguardar ~30s após `make up`). |
 | `make test` | Testes Jest do backend (via script no container). |
 | `make check` | Roda `make test` e depois `make build`. |
-| `make test-e2e` | Testes E2E Playwright (stack deve estar up). |
+| `make test-e2e` | Testes E2E Playwright (stack deve estar up). Fluxo US: ver `backend/e2e/README.md`. |
 | `make logs` | Logs de todos os serviços; `make logs SERVICE=backend` para um só. |
 
 ## Desenvolvimento rápido

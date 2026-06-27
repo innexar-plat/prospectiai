@@ -17,6 +17,9 @@ jest.mock('@/lib/prisma', () => ({
 jest.mock('@/lib/redis', () => ({
     getCached: jest.fn().mockResolvedValue(null),
     setCached: jest.fn().mockResolvedValue(undefined),
+    acquireRedisLock: jest.fn().mockResolvedValue(true),
+    releaseRedisLock: jest.fn().mockResolvedValue(undefined),
+    waitForCached: jest.fn().mockResolvedValue(null),
 }));
 
 describe('GET /api/search/history/:id', () => {

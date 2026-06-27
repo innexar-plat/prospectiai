@@ -1,0 +1,66 @@
+# Cron: BR trial reactivation promo emails (expired trial → Starter R$59 x 6 months).
+#
+# Default GitHub run is dry-run (counts eligible users only).
+# To send in production, trigger workflow_dispatch with send=true.
+#
+# Secrets: CRON_SECRET, BACKEND_URL (same as auto-prospeccao-cron.yml)
+#
+name: BR trial reactivation (cron)
+
+on:
+  schedule:
+    # Segundas 10:00 UTC (07:00 BRT) — após trial-expiry da semana
+    - cron: '0 10 * * 1'
+  workflow_dispatch:
+    inputs:
+      send:
+        description: 'Enviar e-mails (false = apenas contar elegíveis)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      limit:
+        description: 'Limite de envios (vazio = todos elegíveis)'
+        required: false
+        default: ''
+
+jobs:
+  reactivation:
+    name: BR trial reactivation promo
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call br-trial-reactivation cron
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SEND: ${{ github.event.inputs.send || 'false' }}
+          LIMIT: ${{ github.event.inputs.limit || '' }}
+        run: |
+          if [ -z "$BACKEND_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "BACKEND_URL e CRON_SECRET não configurados. Pulando."
+            exit 0
+          fi
+          QUERY=""
+          if [ "$SEND" = "true" ]; then
+            QUERY="send=1"
+          fi
+          if [ -n "$LIMIT" ]; then
+            if [ -n "$QUERY" ]; then QUERY="${QUERY}&"; fi
+            QUERY="${QUERY}limit=${LIMIT}"
+          fi
+          URL="${BACKEND_URL%/}/api/cron/br-trial-reactivation"
+          if [ -n "$QUERY" ]; then URL="${URL}?${QUERY}"; fi
+          echo "POST $URL (send=$SEND)"
+          HTTP=$(curl -sL -o /tmp/out -w "%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            "$URL")
+          cat /tmp/out && echo ""
+          echo "HTTP $HTTP"
+          if [ "$HTTP" -ge 400 ]; then
+            echo "::error::br-trial-reactivation retornou HTTP $HTTP"
+            exit 1
+          fi

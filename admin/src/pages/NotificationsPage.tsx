@@ -9,34 +9,47 @@ export function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [channels, setChannels] = useState<NotificationChannelItem[]>([]);
   const [channelsLoading, setChannelsLoading] = useState(true);
+  const [channelsError, setChannelsError] = useState<string | null>(null);
+  const [listError, setListError] = useState<string | null>(null);
   const [channelUpdating, setChannelUpdating] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [link, setLink] = useState('');
   const [sending, setSending] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const showToast = (type: 'success' | 'error', message: string) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 5000);
+  };
 
   const loadChannels = useCallback(() => {
     setChannelsLoading(true);
+    setChannelsError(null);
     adminApi.notificationChannels
       .list()
       .then((res) => setChannels(res.channels))
-      .catch(() => setChannels([]))
+      .catch((err) => {
+        setChannels([]);
+        setChannelsError(err instanceof Error ? err.message : 'Erro ao carregar canais.');
+      })
       .finally(() => setChannelsLoading(false));
   }, []);
 
   const loadList = () => {
     setLoading(true);
+    setListError(null);
     adminApi.notifications
       .list({ limit: 50, offset: 0 })
       .then((res) => {
         setItems(res.items);
         setTotal(res.total);
       })
-      .catch(() => {
+      .catch((err) => {
         setItems([]);
         setTotal(0);
+        setListError(err instanceof Error ? err.message : 'Erro ao carregar notificações.');
       })
       .finally(() => setLoading(false));
   };
@@ -58,10 +71,9 @@ export function NotificationsPage() {
     try {
       const updated = await adminApi.notificationChannels.update({ key, [field]: value });
       setChannels((prev) => prev.map((c) => (c.key === key ? { ...c, ...updated } : c)));
-      setToast('Canal atualizado.');
-      setTimeout(() => setToast(null), 3000);
+      showToast('success', 'Canal atualizado.');
     } catch (err) {
-      setToast(err instanceof Error ? err.message : 'Erro ao atualizar.');
+      showToast('error', err instanceof Error ? err.message : 'Erro ao atualizar.');
     } finally {
       setChannelUpdating(null);
     }
@@ -71,7 +83,7 @@ export function NotificationsPage() {
     const t = title.trim();
     const m = message.trim();
     if (!t || !m) {
-      setToast('Preencha título e mensagem.');
+      showToast('error', 'Preencha título e mensagem.');
       return;
     }
     setConfirmOpen(false);
@@ -83,14 +95,13 @@ export function NotificationsPage() {
         message: m,
         link: link.trim() || undefined,
       });
-      setToast(`Enviado para ${res.sent} usuário(s).`);
+      showToast('success', `Enviado para ${res.sent} usuário(s).`);
       setTitle('');
       setMessage('');
       setLink('');
       loadList();
-      setTimeout(() => setToast(null), 5000);
     } catch (err) {
-      setToast(err instanceof Error ? err.message : 'Erro ao enviar.');
+      showToast('error', err instanceof Error ? err.message : 'Erro ao enviar.');
     } finally {
       setSending(false);
     }
@@ -98,7 +109,7 @@ export function NotificationsPage() {
 
   const openConfirm = () => {
     if (!title.trim() || !message.trim()) {
-      setToast('Preencha título e mensagem.');
+      showToast('error', 'Preencha título e mensagem.');
       return;
     }
     setConfirmOpen(true);
@@ -111,6 +122,12 @@ export function NotificationsPage() {
         <p className="text-sm text-gray-500 mt-1">Canais, listar notificações e enviar para todos os usuários.</p>
       </div>
 
+      {toast && (
+        <div className={`mb-4 rounded-lg px-4 py-3 text-sm ${toast.type === 'success' ? 'bg-emerald-50 border border-emerald-300 text-emerald-700' : 'bg-red-50 border border-red-300 text-red-700'}`}>
+          {toast.message}
+        </div>
+      )}
+
       <div className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm mb-6">
         <div className="p-4 border-b border-gray-200">
           <h2 className="text-gray-900 font-medium">Canais de notificação</h2>
@@ -121,6 +138,7 @@ export function NotificationsPage() {
         <div className="overflow-x-auto">
           {(() => {
             if (channelsLoading) return <p className="p-4 text-sm text-gray-500">Carregando canais...</p>;
+            if (channelsError) return <p className="p-4 text-sm text-red-600">{channelsError}</p>;
             if (channels.length === 0) return <p className="p-4 text-sm text-gray-500">Nenhum canal configurado.</p>;
             return (
               <table className="w-full text-sm">
@@ -170,7 +188,6 @@ export function NotificationsPage() {
             );
           })()}
         </div>
-        {toast && <p className="p-4 pt-0 text-sm text-gray-500">{toast}</p>}
       </div>
 
       <div className="rounded-xl border border-gray-200 bg-white p-5 mb-6 shadow-sm">
@@ -217,7 +234,6 @@ export function NotificationsPage() {
           >
             Enviar para todos os usuários
           </Button>
-          {toast && <p className="text-sm text-gray-500">{toast}</p>}
         </div>
       </div>
 
@@ -261,6 +277,7 @@ export function NotificationsPage() {
         <div className="overflow-x-auto">
           {(() => {
             if (loading) return <p className="p-4 text-sm text-gray-500">Carregando...</p>;
+            if (listError) return <p className="p-4 text-sm text-red-600">{listError}</p>;
             if (items.length === 0) return <p className="p-4 text-sm text-gray-500">Nenhuma notificação.</p>;
             return (
               <table className="w-full text-sm">

@@ -135,6 +135,12 @@ export const MODULES: Record<ModuleKey, ModuleDefinition> = {
 /** Planos e módulos que cada um desbloqueia (Starter → Growth → Scale) */
 export const PLAN_MODULES: Record<ProductPlan, ModuleKey[]> = {
   FREE: ['MAPEAMENTO', 'INTELIGENCIA_LEADS'],
+  TRIAL: [
+    'MAPEAMENTO',
+    'INTELIGENCIA_LEADS',
+    'ANALISE_CONCORRENCIA',
+    'ACAO_COMERCIAL',
+  ],
   BASIC: ['MAPEAMENTO', 'INTELIGENCIA_LEADS'],
   PRO: [
     'MAPEAMENTO',
@@ -162,7 +168,7 @@ export const PLAN_MODULES: Record<ProductPlan, ModuleKey[]> = {
 
 /** Retorna os módulos disponíveis para um plano */
 export function getModulesForPlan(plan: ProductPlan): ModuleKey[] {
-  return PLAN_MODULES[plan] ?? PLAN_MODULES.FREE;
+  return PLAN_MODULES[plan] ?? PLAN_MODULES.TRIAL;
 }
 
 /** Verifica se o plano tem acesso ao módulo */

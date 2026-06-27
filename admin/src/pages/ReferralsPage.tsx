@@ -74,10 +74,16 @@ export function ReferralsPage() {
               </tr>
             </thead>
             <tbody>
-              {items.map((r) => (
+              {items.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                    Nenhum referral encontrado.
+                  </td>
+                </tr>
+              ) : items.map((r) => (
                 <tr key={r.id} className="border-b border-gray-200 hover:bg-gray-50">
                   <td className="px-4 py-3">
-                    <Link to={`/affiliates/${r.affiliateId}`} className="text-violet-600 hover:text-violet-700 font-mono">{r.affiliateCode}</Link>
+                    <Link to={`../affiliates/${r.affiliateId}`} className="text-violet-600 hover:text-violet-700 font-mono">{r.affiliateCode}</Link>
                   </td>
                   <td className="px-4 py-3 text-gray-500">{r.emailMasked ?? '—'}</td>
                   <td className="px-4 py-3 text-gray-600">{new Date(r.signupAt).toLocaleDateString('pt-BR')}</td>

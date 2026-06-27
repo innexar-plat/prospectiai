@@ -52,6 +52,7 @@ jest.mock('@/lib/lead-intelligence', () => ({
 jest.mock('@/lib/prisma', () => ({
     prisma: {
         user: { findUnique: jest.fn(), upsert: jest.fn() },
+        workspace: { findUnique: jest.fn() },
         lead: { findUnique: jest.fn() },
         leadAnalysis: { create: jest.fn() },
         pipelineBrief: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
@@ -60,6 +61,7 @@ jest.mock('@/lib/prisma', () => ({
 
 const prismaMock = prisma as unknown as {
     user: { findUnique: jest.Mock; upsert: jest.Mock };
+    workspace: { findUnique: jest.Mock };
     lead: { findUnique: jest.Mock };
     leadAnalysis: { create: jest.Mock };
     pipelineBrief: { deleteMany: jest.Mock };
@@ -229,6 +231,17 @@ describe('Gemini AI Lib', () => {
         expect(result.analysis.summary).toContain('Limite de uso');
     });
 
+    it('when AI throws returns English fallback for en locale', async () => {
+        jest.mocked(generateObjectForRole).mockRejectedValueOnce(new Error('no ai config for role'));
+        jest.mocked(generateCompletionForRole).mockRejectedValueOnce(new Error('no ai config for role'));
+        const business: BusinessData = { placeId: 'p-en-err', name: 'Err Lead' };
+        const result = await analyzeLead(business, undefined, 'en');
+        expect(result.analysis.scoreLabel).toBe('Unavailable');
+        expect(result.analysis.approach).toBe('Check AI configuration in the admin panel.');
+        expect(result.analysis.summary).toContain('AI is not configured');
+        expect(result.analysis.fullReport).toContain('# Error');
+    });
+
     it('when AI throws 401 returns fallback with API key message', async () => {
         jest.mocked(generateObjectForRole).mockRejectedValueOnce(new Error('401 invalid api key'));
         jest.mocked(generateCompletionForRole).mockRejectedValueOnce(new Error('401 invalid api key'));
@@ -361,5 +374,65 @@ describe('Gemini AI Lib', () => {
 
         const reportCalls = jest.mocked(generateCompletionForRole).mock.calls;
         expect(reportCalls[0][1].maxOutputTokens).toBe(300);
+    });
+
+    it('includes seller profile and forbids imobiliária when analyzing barber_shop lead', async () => {
+        const profile = {
+            companyName: 'BarberPro',
+            productService: 'Barbershop booking software',
+            targetAudience: 'US barbershops',
+            mainBenefit: 'More appointments',
+            city: 'Miami',
+            state: 'FL',
+        };
+        const business: BusinessData = {
+            placeId: 'p-barber',
+            name: 'Classic Cuts',
+            primaryType: 'barber_shop',
+            formattedAddress: '500 Ocean Dr, Miami Beach, FL',
+        };
+
+        await analyzeLead(business, profile, 'en', 'user-1', false, { workspaceId: 'ws-1', userId: 'user-1' });
+
+        const callArgs = jest.mocked(generateObjectForRole).mock.calls;
+        const prompt = callArgs[callArgs.length - 1][1].prompt as string;
+        expect(prompt).toContain('barber_shop');
+        expect(prompt).toContain('Barbershop booking software');
+        expect(prompt).toContain('NEVER mention real estate');
+        expect(prompt).not.toContain('Se você é imobiliária');
+    });
+
+    it('sanitizes off-topic imobiliária terms from AI output', async () => {
+        jest.mocked(generateObjectForRole).mockResolvedValueOnce({
+            text: '{}',
+            object: {
+                score: 75,
+                scoreLabel: 'Hot',
+                summary: 'A imobiliária nova luz tem uma solução para esta barbearia.',
+                strengths: [],
+                weaknesses: [],
+                painPoints: [],
+                gaps: [],
+                approach: 'Pitch imobiliária',
+                contactStrategy: 'WhatsApp',
+                firstContactMessage: 'Somos imobiliária nova luz.',
+                suggestedWhatsAppMessage: 'Olá, imobiliária aqui.',
+            },
+            usage: { inputTokens: 10, outputTokens: 20 },
+            provider: 'GEMINI',
+            model: 'gemini-structured',
+        });
+
+        const business: BusinessData = { placeId: 'p-sanitize', name: 'Barber Shop', primaryType: 'barber_shop' };
+        const profile = {
+            companyName: 'BarberPro',
+            productService: 'Barbershop SaaS',
+            targetAudience: 'Barbers',
+            mainBenefit: 'Growth',
+        };
+
+        const result = await analyzeLead(business, profile, 'en');
+        expect(result.analysis.summary.toLowerCase()).not.toContain('imobiliária');
+        expect(result.analysis.firstContactMessage.toLowerCase()).not.toContain('imobiliária');
     });
 });

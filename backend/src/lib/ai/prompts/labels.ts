@@ -49,7 +49,7 @@ export const LEAD_DATA_LABELS = {
 export const LEAD_REQUIREMENTS_LABELS = {
     en: {
         header: 'ANALYSIS REQUIREMENTS (be extremely specific, not generic):',
-        gaps: 'GAPS & OPPORTUNITIES: What is this business missing that YOUR company can solve? Focus on gaps relevant to YOUR product/service. Only mention digital gaps (website, SEO) if that is what you sell. If you sell real estate, look for space/property needs. If you sell insurance, look for risk gaps.',
+        gaps: 'GAPS & OPPORTUNITIES: What is this business missing that YOUR company can solve? Focus ONLY on gaps relevant to YOUR actual product/service (see seller profile above). Never invent or assume a different industry for your company.',
         painPoints: 'CUSTOMER PAIN POINTS: Based on reviews and business type, what frustrations do their customers likely face? What operational challenges does this business have?',
         socialMedia: 'SOCIAL MEDIA STRATEGY: Proactively analyze scenarios for Instagram, LinkedIn, and Facebook based on their niche. Suggest what kind of content they SHOULD be posting to get more clients. Be highly sincere about what they can improve.',
         firstContact: 'FIRST CONTACT MESSAGE: Write a professional, personalized opening message for the FIRST contact (WhatsApp/email). It should reference something specific about this business (their rating, a review pattern, missing digital element). Max 3 short paragraphs. No generic templates.',
@@ -59,7 +59,7 @@ export const LEAD_REQUIREMENTS_LABELS = {
     },
     pt: {
         header: 'REQUISITOS DA ANÁLISE (seja extremamente específico, não genérico):',
-        gaps: 'LACUNAS & OPORTUNIDADES: O que este negócio está faltando que A SUA empresa pode resolver? Foque em lacunas relevantes ao SEU produto/serviço. Só mencione lacunas digitais (website, SEO) se for isso que você vende. Se você é imobiliária, busque necessidades de espaço/imóvel. Se vende seguros, busque lacunas de risco.',
+        gaps: 'LACUNAS & OPORTUNIDADES: O que este negócio está faltando que A SUA empresa pode resolver? Foque APENAS em lacunas relevantes ao SEU produto/serviço real (veja o perfil do vendedor acima). Nunca invente ou assuma outro setor para a sua empresa.',
         painPoints: 'DORES DO CLIENTE: Com base nas avaliações e tipo de negócio, quais frustrações os clientes provavelmente enfrentam? Quais desafios operacionais este negócio tem?',
         socialMedia: 'ESTRATÉGIA DE REDES SOCIAIS: Analise proativamente cenários para Instagram, LinkedIn e Facebook com base no nicho deles. Sugira que tipo de conteúdo eles DEVERIAM postar para atrair mais clientes. Seja altamente sincero sobre o que eles podem melhorar.',
         firstContact: 'MENSAGEM DE PRIMEIRO CONTATO: Escreva uma mensagem de abertura profissional e personalizada para o PRIMEIRO contato (WhatsApp/email). Deve referenciar algo específico deste negócio (avaliação, padrão nas reviews, elemento digital faltando). Máximo 3 parágrafos curtos. Sem templates genéricos.',

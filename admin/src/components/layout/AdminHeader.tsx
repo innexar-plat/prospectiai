@@ -25,11 +25,21 @@ const pathToTitle: Record<string, string> = {
   'email-templates': 'Templates Email',
   'email-campaigns': 'Campanhas',
   'email-weekly-report': 'Relatório Semanal',
+  'email-logs': 'Logs de Email',
+  'auto-prospeccao/templates': 'Templates de Email',
+  'auto-prospeccao/search-profiles': 'Perfis de Busca',
+  'auto-prospeccao/sender-pool': 'Pool de Remetentes',
+  'auto-prospeccao/config': 'Configurações Auto-Prospecção',
 };
 
 function getPageTitle(pathname: string): string {
-  const segment = pathname.replace(/^\//, '').split('/')[0] ?? '';
-  return pathToTitle[segment] ?? 'Painel';
+  const clean = pathname.replace(/^\/+/, '').replace(/\/$/, '');
+  if (!clean) return 'Dashboard';
+
+  if (pathToTitle[clean]) return pathToTitle[clean];
+
+  const first = clean.split('/')[0] ?? '';
+  return pathToTitle[first] ?? 'Painel';
 }
 
 export function AdminHeader({ user, onMenuToggle }: { user: SessionUser; onMenuToggle?: () => void }) {

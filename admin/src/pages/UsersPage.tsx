@@ -4,6 +4,7 @@ import { adminApi, supportApi, type AdminUserListItem, type SupportUserListItem,
 import type { AdminLayoutContext } from '@/components/layout/AdminLayout';
 
 const PAGE_SIZE = 20;
+const SEARCH_DEBOUNCE_MS = 300;
 
 export function UsersPage() {
   const { role } = useOutletContext<AdminLayoutContext>();
@@ -12,13 +13,22 @@ export function UsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [offset, setOffset] = useState(0);
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearch(searchInput.trim());
+      setOffset(0);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
 
   useEffect(() => {
     setLoading(true);
     if (isSupport) {
       const params: SupportUsersParams = { limit: PAGE_SIZE, offset };
-      if (search.trim()) params.search = search.trim();
+      if (search) params.search = search;
       supportApi
         .users(params)
         .then((res) => setData({ items: res.items, total: res.total }))
@@ -26,6 +36,7 @@ export function UsersPage() {
         .finally(() => setLoading(false));
     } else {
       const params: AdminListParams = { limit: PAGE_SIZE, offset };
+      if (search) params.search = search;
       adminApi
         .users(params)
         .then((res) => setData({ items: res.items, total: res.total }))
@@ -63,15 +74,13 @@ export function UsersPage() {
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <h1 className="text-xl font-semibold text-gray-900">Usuários</h1>
-        {isSupport && (
-          <input
-            type="search"
-            placeholder="Buscar por nome ou email..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700 placeholder-gray-400 w-full sm:w-64"
-          />
-        )}
+        <input
+          type="search"
+          placeholder="Buscar por nome ou email..."
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          className="rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700 placeholder-gray-400 w-full sm:w-64"
+        />
       </div>
       <div className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
@@ -128,7 +137,7 @@ export function UsersPage() {
                     </td>
                     <td className="px-4 py-3">
                       <Link
-                        to={`/users/${u.id}`}
+                        to={u.id}
                         className="text-violet-600 hover:text-violet-700 text-xs font-medium"
                       >
                         Ver

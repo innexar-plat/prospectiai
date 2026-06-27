@@ -44,8 +44,8 @@ describe('POST /api/auth/forgot-password', () => {
     prisma.user.update.mockResolvedValue({});
     sendPasswordResetEmail.mockResolvedValue({ sent: true });
     await POST(new Request('http://x', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'u@x.com' }) }));
-    expect(sendPasswordResetEmail).toHaveBeenCalledWith('u@x.com', expect.any(String));
+    expect(sendPasswordResetEmail).toHaveBeenCalledWith('u@x.com', expect.any(String), expect.any(String), expect.any(String));
     const token = prisma.user.update.mock.calls[0][0].data.resetToken;
-    expect(sendPasswordResetEmail).toHaveBeenCalledWith('u@x.com', token);
+    expect(sendPasswordResetEmail).toHaveBeenCalledWith('u@x.com', token, expect.any(String), expect.any(String));
   });
 });

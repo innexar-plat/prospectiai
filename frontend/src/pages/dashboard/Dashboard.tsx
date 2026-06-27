@@ -68,7 +68,7 @@ export default function Dashboard({ user }: { user: SessionUser }) {
             <aside className="w-72 min-w-[288px] bg-card border-r border-border flex flex-col relative overflow-hidden hidden md:flex">
                 <div className="p-8 z-10 relative">
                     <div className="mb-12">
-                        <Logo height={180} />
+                        <Logo height={40} />
                     </div>
                     <nav className="space-y-2">
                         {SIDEBAR_ITEMS.map((item) => (

@@ -80,6 +80,30 @@ export async function createPreApproval(params: CreatePreApprovalParams): Promis
     return res.json() as Promise<PreApprovalResponse>;
 }
 
+export async function updatePreApprovalAmount(preapprovalId: string, transactionAmount: number): Promise<void> {
+    const token = process.env.MERCADOPAGO_ACCESS_TOKEN;
+    if (!token) throw new Error('MERCADOPAGO_ACCESS_TOKEN is not set');
+
+    const res = await fetch(`${MP_BASE}/preapproval/${preapprovalId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+            auto_recurring: {
+                transaction_amount: transactionAmount,
+                currency_id: 'BRL',
+            },
+        }),
+    });
+
+    if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`Mercado Pago update preapproval failed: ${res.status} ${err}`);
+    }
+}
+
 /** GET preapproval by id (for webhook). */
 export async function getPreApproval(preapprovalId: string): Promise<PreApprovalResponse & { payer_id?: number }> {
     const token = process.env.MERCADOPAGO_ACCESS_TOKEN;

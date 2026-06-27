@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Lock, Loader2, Search, Link as LinkIcon, Star, AlertTriangle, CheckCircle2, Lightbulb, Share2, User, Globe } from 'lucide-react';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { Link, useOutletContext, useNavigate } from 'react-router-dom';
@@ -6,35 +6,51 @@ import type { SessionUser, CompanyAnalysisReport } from '@/lib/api';
 import { companyAnalysisApi } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/contexts/ToastContext';
+import { EmptyState, StatCard } from '@/components/dashboard/shared/DashboardUI';
+import {
+    INTELLIGENCE_CONTENT_CLASS,
+    INTELLIGENCE_STAT_GRID_CLASS,
+    IntelligenceFormCard,
+    IntelligenceErrorBanner,
+    IntelligenceLoadingSkeleton,
+    IntelligenceSectionCard,
+} from '@/components/dashboard/shared/IntelligenceUI';
+import { LocationFields, createDefaultLocationValue, type LocationFieldsValue } from '@/components/dashboard/LocationFields';
+import { useI18n } from '@/lib/i18n';
+import type { SupportedLocale } from '@/lib/locale';
+import { isMarketFeatureEnabled } from '@/lib/market';
 
-const UF_OPTIONS = ['', 'AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MG', 'MS', 'MT', 'PA', 'PB', 'PE', 'PI', 'PR', 'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP', 'TO'];
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
 type AnalysisMode = 'profile' | 'search';
 
-function buildProfileRequestBody(profile: { companyName: string; city: string; state: string }) {
+function buildProfileRequestBody(profile: { companyName: string; location: LocationFieldsValue }, locale: SupportedLocale) {
     return {
         useProfile: true as const,
         companyName: profile.companyName.trim() || undefined,
-        city: profile.city.trim() || undefined,
-        state: profile.state || undefined,
+        city: profile.location.city.trim() || undefined,
+        state: profile.location.state && profile.location.state !== 'Todos' ? profile.location.state : undefined,
+        country: profile.location.country || undefined,
+        locale,
     };
 }
 
 function buildSearchRequestBody(search: {
     companyName: string;
-    city: string;
-    state: string;
+    location: LocationFieldsValue;
     productService: string;
     websiteUrl: string;
     linkedInUrl: string;
     instagramUrl: string;
     facebookUrl: string;
-}) {
+}, locale: SupportedLocale) {
     return {
         useProfile: false as const,
         companyName: search.companyName.trim(),
-        city: search.city.trim() || undefined,
-        state: search.state || undefined,
+        city: search.location.city.trim() || undefined,
+        state: search.location.state && search.location.state !== 'Todos' ? search.location.state : undefined,
+        country: search.location.country || undefined,
+        locale,
         productService: search.productService.trim() || undefined,
         websiteUrl: search.websiteUrl.trim() || undefined,
         linkedInUrl: search.linkedInUrl.trim() || undefined,
@@ -45,10 +61,11 @@ function buildSearchRequestBody(search: {
 
 function buildAnalysisRequestBody(
     mode: AnalysisMode,
-    profile: { companyName: string; city: string; state: string },
+    profile: { companyName: string; location: LocationFieldsValue },
     search: Parameters<typeof buildSearchRequestBody>[0],
+    locale: SupportedLocale,
 ) {
-    return mode === 'profile' ? buildProfileRequestBody(profile) : buildSearchRequestBody(search);
+    return mode === 'profile' ? buildProfileRequestBody(profile, locale) : buildSearchRequestBody(search, locale);
 }
 
 type MinhaEmpresaFormProps = {
@@ -56,16 +73,12 @@ type MinhaEmpresaFormProps = {
     setMode: (m: AnalysisMode) => void;
     companyName: string;
     setCompanyName: (v: string) => void;
-    city: string;
-    setCity: (v: string) => void;
-    state: string;
-    setState: (v: string) => void;
+    profileLocation: LocationFieldsValue;
+    setProfileLocation: (v: Partial<LocationFieldsValue>) => void;
     searchCompanyName: string;
     setSearchCompanyName: (v: string) => void;
-    searchCity: string;
-    setSearchCity: (v: string) => void;
-    searchState: string;
-    setSearchState: (v: string) => void;
+    searchLocation: LocationFieldsValue;
+    setSearchLocation: (v: Partial<LocationFieldsValue>) => void;
     searchProductService: string;
     setSearchProductService: (v: string) => void;
     searchWebsiteUrl: string;
@@ -81,27 +94,34 @@ type MinhaEmpresaFormProps = {
     canSubmit: boolean;
     profileEmpty: boolean;
     workspaceName: string;
+    t: TranslateFn;
 };
 
-function MinhaEmpresaFormAndReport(props: MinhaEmpresaFormProps) {
+function MinhaEmpresaFormAndReport(props: MinhaEmpresaFormProps & { t: TranslateFn }) {
     const {
         mode, setMode,
-        companyName, setCompanyName, city, setCity, state, setState,
-        searchCompanyName, setSearchCompanyName, searchCity, setSearchCity, searchState, setSearchState,
+        companyName, setCompanyName,
+        profileLocation, setProfileLocation,
+        searchCompanyName, setSearchCompanyName,
+        searchLocation, setSearchLocation,
         searchProductService, setSearchProductService, searchWebsiteUrl, setSearchWebsiteUrl,
         searchLinkedInUrl, setSearchLinkedInUrl, searchInstagramUrl, setSearchInstagramUrl, searchFacebookUrl, setSearchFacebookUrl,
-        loading, onAnalyze, canSubmit, profileEmpty, workspaceName,
+        loading, onAnalyze, canSubmit, profileEmpty, workspaceName, t,
     } = props;
     return (
-        <div className="rounded-3xl bg-card border border-border p-6 sm:p-8">
+        <IntelligenceFormCard>
             <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                <h3 className="text-lg font-bold text-foreground">Gerar análise da empresa</h3>
+                <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">{t('page.minhaEmpresa.formTitle')}</h3>
                 <Link to="/dashboard/historico?tab=intelligence&module=MY_COMPANY" className="text-sm text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 font-medium">
-                    Ver histórico
+                    {t('page.minhaEmpresa.viewHistory')}
                 </Link>
             </div>
             <p className="text-xs text-muted mb-4">
-                Use o <strong>perfil da empresa</strong> (dados salvos em Empresa) ou <strong>pesquise por nome e cidade</strong> para analisar com dados informados aqui, sem depender do perfil.
+                {t('page.minhaEmpresa.formDescPart1')}{' '}
+                <strong>{t('page.minhaEmpresa.formProfile')}</strong>{' '}
+                {t('page.minhaEmpresa.formDescPart2')}{' '}
+                <strong>{t('page.minhaEmpresa.formSearch')}</strong>{' '}
+                {t('page.minhaEmpresa.formDescPart3')}
             </p>
 
             <div className="flex gap-2 mb-6 p-1 rounded-xl bg-surface border border-border w-fit">
@@ -111,7 +131,7 @@ function MinhaEmpresaFormAndReport(props: MinhaEmpresaFormProps) {
                     className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${mode === 'profile' ? 'bg-violet-500/20 text-violet-600 dark:text-violet-400' : 'text-muted hover:text-foreground'}`}
                 >
                     <User size={16} />
-                    Usar perfil da empresa
+                    {t('page.minhaEmpresa.modeProfile')}
                 </button>
                 <button
                     type="button"
@@ -119,7 +139,7 @@ function MinhaEmpresaFormAndReport(props: MinhaEmpresaFormProps) {
                     className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${mode === 'search' ? 'bg-violet-500/20 text-violet-600 dark:text-violet-400' : 'text-muted hover:text-foreground'}`}
                 >
                     <Globe size={16} />
-                    Pesquisar por nome e cidade
+                    {t('page.minhaEmpresa.modeSearch')}
                 </button>
             </div>
 
@@ -127,49 +147,34 @@ function MinhaEmpresaFormAndReport(props: MinhaEmpresaFormProps) {
                 <>
                     {profileEmpty && (
                         <div className="mb-5 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-sm text-muted">
-                            <p className="font-bold text-foreground mb-1">Preencha o perfil da empresa</p>
-                            <p className="mb-3">Informe o nome da empresa (e opcionalmente produto/serviço e redes) em Empresa para que a análise use seus dados.</p>
+                            <p className="font-bold text-foreground mb-1">{t('page.minhaEmpresa.profileEmptyTitle')}</p>
+                            <p className="mb-3">{t('page.minhaEmpresa.profileEmptyDesc')}</p>
                             <Link to="/dashboard/empresa" className="inline-flex items-center gap-1.5 text-violet-600 dark:text-violet-400 font-bold hover:underline">
-                                Ir para Perfil da empresa
+                                {t('page.minhaEmpresa.goToProfile')}
                             </Link>
                         </div>
                     )}
                     {!profileEmpty && (
                         <p className="text-sm text-muted mb-4">
-                            Perfil atual: <span className="font-bold text-foreground">{workspaceName}</span>
+                            {t('page.minhaEmpresa.currentProfile')} <span className="font-bold text-foreground">{workspaceName}</span>
                         </p>
                     )}
-                    <form onSubmit={onAnalyze} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <form onSubmit={onAnalyze} className="space-y-4">
                         <input
                             value={companyName}
                             onChange={(e) => setCompanyName(e.target.value)}
-                            placeholder={profileEmpty ? 'Nome da empresa (obrigatório)' : 'Sobrescrever nome (opcional)'}
-                            className="h-12 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-violet-500/50 sm:col-span-2"
+                            placeholder={profileEmpty ? t('page.minhaEmpresa.placeholder.companyName') : t('page.minhaEmpresa.placeholder.overrideName')}
+                            className="h-12 w-full bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                         />
-                        <input
-                            value={city}
-                            onChange={(e) => setCity(e.target.value)}
-                            placeholder="Cidade (opcional, para Google)"
-                            className="h-12 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-violet-500/50"
-                        />
-                        <select
-                            value={state}
-                            onChange={(e) => setState(e.target.value)}
-                            className="h-12 bg-surface border border-border rounded-xl px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50"
-                        >
-                            <option value="">Estado (UF)</option>
-                            {UF_OPTIONS.filter(Boolean).map((uf) => (
-                                <option key={uf} value={uf}>{uf}</option>
-                            ))}
-                        </select>
+                        <LocationFields value={profileLocation} onChange={setProfileLocation} disabled={loading} accent="violet" gridClass="grid-cols-1 sm:grid-cols-3" />
                         <Button
                             type="submit"
                             variant="primary"
                             disabled={loading || !canSubmit}
                             icon={loading ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
-                            className="h-12 px-6 rounded-xl font-bold whitespace-nowrap bg-gradient-to-r from-violet-600 to-violet-700 hover:from-violet-500 hover:to-violet-600 shadow-lg shadow-violet-500/25 border-0 sm:col-span-2 lg:col-span-4"
+                            className="h-12 w-full px-6 rounded-xl font-bold whitespace-nowrap bg-gradient-to-r from-violet-600 to-violet-700 hover:from-violet-500 hover:to-violet-600 shadow-lg shadow-violet-500/25 border-0"
                         >
-                            {loading ? 'Gerando análise...' : 'Gerar análise'}
+                            {loading ? t('page.minhaEmpresa.generating') : t('page.minhaEmpresa.generate')}
                         </Button>
                     </form>
                 </>
@@ -177,42 +182,25 @@ function MinhaEmpresaFormAndReport(props: MinhaEmpresaFormProps) {
 
             {mode === 'search' && (
                 <form onSubmit={onAnalyze} className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <input
-                            value={searchCompanyName}
-                            onChange={(e) => setSearchCompanyName(e.target.value)}
-                            placeholder="Nome da empresa (obrigatório)"
-                            className="h-12 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-violet-500/50 sm:col-span-2"
-                            required
-                        />
-                        <input
-                            value={searchCity}
-                            onChange={(e) => setSearchCity(e.target.value)}
-                            placeholder="Cidade (opcional)"
-                            className="h-12 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-violet-500/50"
-                        />
-                        <select
-                            value={searchState}
-                            onChange={(e) => setSearchState(e.target.value)}
-                            className="h-12 bg-surface border border-border rounded-xl px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50"
-                        >
-                            <option value="">Estado (UF)</option>
-                            {UF_OPTIONS.filter(Boolean).map((uf) => (
-                                <option key={uf} value={uf}>{uf}</option>
-                            ))}
-                        </select>
-                    </div>
+                    <input
+                        value={searchCompanyName}
+                        onChange={(e) => setSearchCompanyName(e.target.value)}
+                        placeholder={t('page.minhaEmpresa.placeholder.companyName')}
+                        className="h-12 w-full bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                        required
+                    />
+                    <LocationFields value={searchLocation} onChange={setSearchLocation} disabled={loading} accent="violet" gridClass="grid-cols-1 sm:grid-cols-3" />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <input
                             value={searchProductService}
                             onChange={(e) => setSearchProductService(e.target.value)}
-                            placeholder="Produto/serviço (opcional)"
+                            placeholder={t('page.minhaEmpresa.placeholder.productService')}
                             className="h-12 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                         />
                         <input
                             value={searchWebsiteUrl}
                             onChange={(e) => setSearchWebsiteUrl(e.target.value)}
-                            placeholder="Site (opcional)"
+                            placeholder={t('page.minhaEmpresa.placeholder.website')}
                             type="url"
                             className="h-12 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                         />
@@ -221,21 +209,21 @@ function MinhaEmpresaFormAndReport(props: MinhaEmpresaFormProps) {
                         <input
                             value={searchLinkedInUrl}
                             onChange={(e) => setSearchLinkedInUrl(e.target.value)}
-                            placeholder="LinkedIn (opcional)"
+                            placeholder={t('page.minhaEmpresa.placeholder.linkedIn')}
                             type="url"
                             className="h-12 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                         />
                         <input
                             value={searchInstagramUrl}
                             onChange={(e) => setSearchInstagramUrl(e.target.value)}
-                            placeholder="Instagram (opcional)"
+                            placeholder={t('page.minhaEmpresa.placeholder.instagram')}
                             type="url"
                             className="h-12 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                         />
                         <input
                             value={searchFacebookUrl}
                             onChange={(e) => setSearchFacebookUrl(e.target.value)}
-                            placeholder="Facebook (opcional)"
+                            placeholder={t('page.minhaEmpresa.placeholder.facebook')}
                             type="url"
                             className="h-12 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                         />
@@ -247,29 +235,61 @@ function MinhaEmpresaFormAndReport(props: MinhaEmpresaFormProps) {
                         icon={loading ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
                         className="h-12 px-6 rounded-xl font-bold whitespace-nowrap bg-gradient-to-r from-violet-600 to-violet-700 hover:from-violet-500 hover:to-violet-600 shadow-lg shadow-violet-500/25 border-0"
                     >
-                        {loading ? 'Gerando análise...' : 'Gerar análise'}
+                        {loading ? t('page.minhaEmpresa.generating') : t('page.minhaEmpresa.generate')}
                     </Button>
                 </form>
             )}
-        </div>
+        </IntelligenceFormCard>
     );
 }
 
-function MinhaEmpresaReportView({ report }: { report: CompanyAnalysisReport }) {
+function MinhaEmpresaReportView({ report, t, showReclameAqui }: { report: CompanyAnalysisReport; t: TranslateFn; showReclameAqui: boolean }) {
+    const strengthCount = report.strengths?.length ?? 0;
+    const weaknessCount = report.weaknesses?.length ?? 0;
+    const opportunityCount = report.opportunities?.length ?? 0;
+
     return (
         <>
-            <div className="rounded-3xl bg-gradient-to-br from-card to-surface border border-border p-6 sm:p-8">
-                <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-3">Resumo</h3>
-                <p className="text-muted leading-relaxed">{report.summary}</p>
-            </div>
+            <IntelligenceSectionCard className="border-violet-500/20 bg-violet-500/5 space-y-2.5">
+                <h3 className="text-xs font-bold text-foreground uppercase tracking-widest">{t('page.minhaEmpresa.summary')}</h3>
+                <div className="flex flex-wrap gap-1.5">
+                    {strengthCount > 0 && (
+                        <span className="inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                            {strengthCount} {t('page.minhaEmpresa.strengths').toLowerCase()}
+                        </span>
+                    )}
+                    {weaknessCount > 0 && (
+                        <span className="inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300">
+                            {weaknessCount} {t('page.minhaEmpresa.weaknesses').toLowerCase()}
+                        </span>
+                    )}
+                    {opportunityCount > 0 && (
+                        <span className="inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300">
+                            {opportunityCount} {t('page.minhaEmpresa.opportunities').toLowerCase()}
+                        </span>
+                    )}
+                </div>
+                <p className="text-sm text-muted leading-relaxed break-words [overflow-wrap:anywhere]">{report.summary}</p>
+            </IntelligenceSectionCard>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="rounded-3xl bg-card border border-border p-6">
+            {(report.googlePresenceScore != null || (showReclameAqui && report.reclameAquiSummary)) && (
+                <div className={INTELLIGENCE_STAT_GRID_CLASS}>
+                    {report.googlePresenceScore != null && (
+                        <StatCard compact value={report.googlePresenceScore} label={t('page.minhaEmpresa.googlePresence')} color="amber" suffix="/10" icon={Star} />
+                    )}
+                    {report.googleRating != null && (
+                        <StatCard compact value={report.googleRating.toFixed(1)} label={t('page.minhaEmpresa.googleRating', { rating: report.googleRating, count: report.googleReviewCount ?? 0 })} color="blue" icon={Star} />
+                    )}
+                </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <IntelligenceSectionCard>
                     <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400" /> Pontos fortes
+                        <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400" />{t('page.minhaEmpresa.strengths')}
                     </h3>
                     <ul className="space-y-2">
-                        {report.strengths.map((s) => (
+                        {(report.strengths ?? []).map((s) => (
                             <li key={`strength-${String(s).slice(0, 80)}`} className="flex items-start gap-2 text-sm text-muted">
                                 <span className="w-5 h-5 rounded bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
                                     <CheckCircle2 size={12} className="text-emerald-600 dark:text-emerald-400" />
@@ -278,13 +298,13 @@ function MinhaEmpresaReportView({ report }: { report: CompanyAnalysisReport }) {
                             </li>
                         ))}
                     </ul>
-                </div>
-                <div className="rounded-3xl bg-card border border-border p-6">
-                    <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400" /> Pontos fracos
+                </IntelligenceSectionCard>
+                <IntelligenceSectionCard>
+                    <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <AlertTriangle size={14} className="text-amber-600 dark:text-amber-400" />{t('page.minhaEmpresa.weaknesses')}
                     </h3>
                     <ul className="space-y-2">
-                        {report.weaknesses.map((w) => (
+                        {(report.weaknesses ?? []).map((w) => (
                             <li key={`weak-${String(w).slice(0, 80)}`} className="flex items-start gap-2 text-sm text-muted">
                                 <span className="w-5 h-5 rounded bg-amber-500/10 flex items-center justify-center shrink-0 mt-0.5">
                                     <AlertTriangle size={12} className="text-amber-600 dark:text-amber-400" />
@@ -293,54 +313,36 @@ function MinhaEmpresaReportView({ report }: { report: CompanyAnalysisReport }) {
                             </li>
                         ))}
                     </ul>
-                </div>
+                </IntelligenceSectionCard>
             </div>
 
-            {report.opportunities.length > 0 && (
-                <div className="rounded-3xl bg-card border border-border p-6">
-                    <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <Lightbulb size={16} className="text-violet-600 dark:text-violet-400" /> Oportunidades
+            {(report.opportunities?.length ?? 0) > 0 && (
+                <IntelligenceSectionCard>
+                    <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <Lightbulb size={14} className="text-violet-600 dark:text-violet-400" />{t('page.minhaEmpresa.opportunities')}
                     </h3>
                     <ul className="space-y-2">
-                        {report.opportunities.map((o, i) => (
+                        {(report.opportunities ?? []).map((o, i) => (
                             <li key={`opp-${String(o).slice(0, 80)}`} className="text-sm text-muted flex items-start gap-2">
                                 <span className="text-violet-600 dark:text-violet-400 font-bold shrink-0">{i + 1}.</span>
                                 {o}
                             </li>
                         ))}
                     </ul>
-                </div>
+                </IntelligenceSectionCard>
             )}
 
-            {(report.reclameAquiSummary ?? report.googlePresenceScore != null) && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {report.reclameAquiSummary && (
-                        <div className="rounded-2xl bg-card border border-border p-5">
-                            <h4 className="text-xs font-bold text-muted uppercase tracking-wider mb-2">Reclame Aqui</h4>
-                            <p className="text-sm text-muted">{report.reclameAquiSummary}</p>
-                        </div>
-                    )}
-                    {report.googlePresenceScore != null && (
-                        <div className="rounded-2xl bg-card border border-border p-5 flex flex-col gap-2">
-                            <h4 className="text-xs font-bold text-muted uppercase tracking-wider flex items-center gap-1.5">
-                                <Star size={12} className="text-amber-600 dark:text-amber-400" /> Presença Google
-                            </h4>
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-2xl font-black text-foreground">{report.googlePresenceScore}</span>
-                                <span className="text-muted">/10</span>
-                            </div>
-                            {report.googleRating != null && (
-                                <p className="text-sm text-muted">Nota: {report.googleRating} ({report.googleReviewCount ?? 0} avaliações)</p>
-                            )}
-                        </div>
-                    )}
-                </div>
+            {showReclameAqui && report.reclameAquiSummary && (
+                <IntelligenceSectionCard>
+                    <h4 className="text-xs font-bold text-muted uppercase tracking-wider mb-2">{t('page.minhaEmpresa.reclameAqui')}</h4>
+                    <p className="text-sm text-muted leading-relaxed">{report.reclameAquiSummary}</p>
+                </IntelligenceSectionCard>
             )}
 
             {report.socialNetworks?.presence && (
-                <div className="rounded-3xl bg-card border border-border p-6">
+                <IntelligenceSectionCard>
                     <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
-                        <Share2 size={16} className="text-blue-600 dark:text-blue-400" /> Redes sociais
+                        <Share2 size={16} className="text-blue-600 dark:text-blue-400" />{t('page.minhaEmpresa.socialNetworks')}
                     </h3>
                     <p className="text-sm text-muted mb-4">{report.socialNetworks.presence}</p>
                     {report.socialNetworks.perNetwork && report.socialNetworks.perNetwork.length > 0 && (
@@ -356,7 +358,7 @@ function MinhaEmpresaReportView({ report }: { report: CompanyAnalysisReport }) {
                         </div>
                     )}
                     {report.socialNetworks.consistency && (
-                        <p className="text-sm text-muted mt-3 pt-3 border-t border-border">Consistência: {report.socialNetworks.consistency}</p>
+                        <p className="text-sm text-muted mt-3 pt-3 border-t border-border">{t('page.minhaEmpresa.consistency')} {report.socialNetworks.consistency}</p>
                     )}
                     {report.socialNetworks.recommendations && report.socialNetworks.recommendations.length > 0 && (
                         <ul className="mt-3 space-y-1 text-sm text-muted">
@@ -365,64 +367,64 @@ function MinhaEmpresaReportView({ report }: { report: CompanyAnalysisReport }) {
                             ))}
                         </ul>
                     )}
-                </div>
+                </IntelligenceSectionCard>
             )}
 
             {(report.suggestedNiche || report.suggestedBusinessModel) && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {report.suggestedNiche && (
-                        <div className="rounded-2xl bg-gradient-to-br from-violet-900/20 to-card border border-violet-500/20 p-5">
-                            <h4 className="text-xs font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider mb-2">Nicho sugerido</h4>
+                        <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
+                            <h4 className="text-xs font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider mb-2">{t('page.minhaEmpresa.suggestedNiche')}</h4>
                             <p className="text-sm font-bold text-foreground">{report.suggestedNiche}</p>
                         </div>
                     )}
                     {report.suggestedBusinessModel && (
-                        <div className="rounded-2xl bg-gradient-to-br from-emerald-900/20 to-card border border-emerald-500/20 p-5">
-                            <h4 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-2">Modelo de negócio sugerido</h4>
+                        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+                            <h4 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-2">{t('page.minhaEmpresa.suggestedBusinessModel')}</h4>
                             <p className="text-sm font-bold text-foreground">{report.suggestedBusinessModel}</p>
                         </div>
                     )}
                 </div>
             )}
 
-            <div className="rounded-3xl bg-card border border-border p-6">
-                <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <Lightbulb size={16} className="text-amber-600 dark:text-amber-400" /> Recomendações
+            <IntelligenceSectionCard>
+                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <Lightbulb size={14} className="text-amber-600 dark:text-amber-400" />{t('page.minhaEmpresa.recommendations')}
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {report.recommendations.map((rec, i) => (
-                        <div key={`recommendation-${String(rec).slice(0, 80)}`} className="flex items-start gap-3 p-4 bg-surface rounded-xl border border-border/50">
+                        <div key={`recommendation-${String(rec).slice(0, 80)}`} className="flex items-start gap-3 p-3 bg-surface rounded-lg border border-border/50">
                             <span className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center font-bold text-xs text-amber-600 dark:text-amber-400 shrink-0">{i + 1}</span>
                             <p className="text-sm text-muted">{rec}</p>
                         </div>
                     ))}
                 </div>
-            </div>
+            </IntelligenceSectionCard>
         </>
     );
 }
 
-function MinhaEmpresaNoAccess({ onUpgrade }: { onUpgrade: () => void }) {
+function MinhaEmpresaNoAccess({ onUpgrade, t, showReclameAqui }: { onUpgrade: () => void; t: TranslateFn; showReclameAqui: boolean }) {
     return (
         <>
-            <HeaderDashboard title="Análise da minha empresa" subtitle="Diagnóstico com Reclame Aqui, Google e redes sociais." breadcrumb="Inteligência / Minha empresa" />
-            <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full">
-                <div className="rounded-[2.4rem] bg-gradient-to-br from-violet-900/30 via-emerald-900/20 to-background border border-violet-500/20 p-12 flex flex-col items-center justify-center gap-6 min-h-[400px] text-center shadow-2xl relative overflow-hidden">
-                    <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-violet-500/10 blur-[100px] -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none" />
-                    <div className="w-20 h-20 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center relative z-10">
-                        <Lock size={32} className="text-violet-600 dark:text-violet-400" />
-                    </div>
-                    <div className="space-y-2 relative z-10 max-w-xl">
-                        <h2 className="text-2xl font-black text-foreground">Análise da minha empresa</h2>
-                        <p className="text-muted leading-relaxed">
-                            A IA analisa <span className="text-violet-600 dark:text-violet-400 font-bold">Reclame Aqui</span>, avaliações Google,
-                            <span className="text-violet-600 dark:text-violet-400 font-bold"> redes sociais</span> (link + dados públicos) e sugere nicho e modelo de negócio.
-                        </p>
-                    </div>
-                    <Button variant="primary" onClick={onUpgrade} className="mt-4 min-h-[56px] px-8 rounded-xl font-bold text-white bg-gradient-to-r from-violet-600 to-violet-700 hover:from-violet-500 hover:to-violet-600 shadow-lg shadow-violet-500/25 border-0 relative z-10">
-                        Faça upgrade para acessar
-                    </Button>
-                </div>
+            <HeaderDashboard compact title={t('page.minhaEmpresa.title')} subtitle={t('page.minhaEmpresa.subtitleLocked')} breadcrumb={t('page.minhaEmpresa.breadcrumb')} />
+            <div className={INTELLIGENCE_CONTENT_CLASS}>
+                <EmptyState
+                    icon={Lock}
+                    title={t('page.minhaEmpresa.title')}
+                    description={
+                        showReclameAqui
+                            ? t('page.minhaEmpresa.lockedDesc', {
+                                reclameAqui: t('page.minhaEmpresa.lockedReclameAqui'),
+                                socialMedia: t('page.minhaEmpresa.lockedSocialMedia'),
+                            })
+                            : t('page.minhaEmpresa.lockedDescNoRa', {
+                                socialMedia: t('page.minhaEmpresa.lockedSocialMedia'),
+                            })
+                    }
+                    actionLabel={t('page.minhaEmpresa.upgrade')}
+                    onAction={onUpgrade}
+                />
             </div>
         </>
     );
@@ -432,14 +434,14 @@ export default function MinhaEmpresaPage() {
     const { user } = useOutletContext<{ user: SessionUser }>();
     const navigate = useNavigate();
     const { addToast } = useToast();
+    const { t, locale } = useI18n();
+    const showReclameAqui = isMarketFeatureEnabled('reclameAqui');
 
     const [mode, setMode] = useState<AnalysisMode>('profile');
     const [companyName, setCompanyName] = useState('');
-    const [city, setCity] = useState('');
-    const [state, setState] = useState('');
+    const [profileLocation, setProfileLocation] = useState<LocationFieldsValue>(() => createDefaultLocationValue());
     const [searchCompanyName, setSearchCompanyName] = useState('');
-    const [searchCity, setSearchCity] = useState('');
-    const [searchState, setSearchState] = useState('');
+    const [searchLocation, setSearchLocation] = useState<LocationFieldsValue>(() => createDefaultLocationValue());
     const [searchProductService, setSearchProductService] = useState('');
     const [searchWebsiteUrl, setSearchWebsiteUrl] = useState('');
     const [searchLinkedInUrl, setSearchLinkedInUrl] = useState('');
@@ -447,6 +449,7 @@ export default function MinhaEmpresaPage() {
     const [searchFacebookUrl, setSearchFacebookUrl] = useState('');
     const [loading, setLoading] = useState(false);
     const [report, setReport] = useState<CompanyAnalysisReport | null>(null);
+    const [error, setError] = useState('');
 
     const hasAccess = user.plan === 'BUSINESS' || user.plan === 'SCALE';
     const workspaceName = user.companyName ?? '';
@@ -456,60 +459,64 @@ export default function MinhaEmpresaPage() {
     const canSubmitSearch = searchCompanyName.trim().length > 0;
     const canSubmit = mode === 'profile' ? canSubmitProfile : canSubmitSearch;
 
-    const handleAnalyze = async (e: React.SyntheticEvent<HTMLFormElement>) => {
-        e.preventDefault();
+    const runAnalyze = useCallback(async () => {
         if (!canSubmit) return;
         setLoading(true);
         setReport(null);
+        setError('');
         try {
             const body = buildAnalysisRequestBody(
                 mode,
-                { companyName, city, state },
+                { companyName, location: profileLocation },
                 {
                     companyName: searchCompanyName,
-                    city: searchCity,
-                    state: searchState,
+                    location: searchLocation,
                     productService: searchProductService,
                     websiteUrl: searchWebsiteUrl,
                     linkedInUrl: searchLinkedInUrl,
                     instagramUrl: searchInstagramUrl,
                     facebookUrl: searchFacebookUrl,
                 },
+                locale,
             );
             const result = await companyAnalysisApi.run(body);
             setReport(result);
-            addToast('success', 'Análise concluída!');
+            addToast('success', t('page.minhaEmpresa.toast.success'));
         } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : 'Erro ao gerar análise.';
+            const message = err instanceof Error ? err.message : t('page.minhaEmpresa.toast.error');
+            setError(message);
             addToast('error', message);
         } finally {
             setLoading(false);
         }
+    }, [canSubmit, mode, companyName, profileLocation, searchCompanyName, searchLocation, searchProductService, searchWebsiteUrl, searchLinkedInUrl, searchInstagramUrl, searchFacebookUrl, addToast, t, locale]);
+
+    const handleAnalyze = async (e: React.SyntheticEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        await runAnalyze();
     };
 
     if (!hasAccess) {
-        return <MinhaEmpresaNoAccess onUpgrade={() => navigate('/dashboard/planos')} />;
+        return <MinhaEmpresaNoAccess onUpgrade={() => navigate('/dashboard/planos')} t={t} showReclameAqui={showReclameAqui} />;
     }
+
+    const subtitleKey = showReclameAqui ? 'page.minhaEmpresa.subtitle' : 'page.minhaEmpresa.subtitleNoRa';
 
     return (
         <>
-            <HeaderDashboard title="Análise da minha empresa" subtitle="Diagnóstico com Reclame Aqui, Google, redes sociais e IA." breadcrumb="Inteligência / Minha empresa" />
-            <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full space-y-6">
+            <HeaderDashboard compact title={t('page.minhaEmpresa.title')} subtitle={t(subtitleKey)} breadcrumb={t('page.minhaEmpresa.breadcrumb')} />
+            <div className={INTELLIGENCE_CONTENT_CLASS}>
                 <MinhaEmpresaFormAndReport
                     mode={mode}
                     setMode={setMode}
                     companyName={companyName}
                     setCompanyName={setCompanyName}
-                    city={city}
-                    setCity={setCity}
-                    state={state}
-                    setState={setState}
+                    profileLocation={profileLocation}
+                    setProfileLocation={(v) => setProfileLocation((prev) => ({ ...prev, ...v }))}
                     searchCompanyName={searchCompanyName}
                     setSearchCompanyName={setSearchCompanyName}
-                    searchCity={searchCity}
-                    setSearchCity={setSearchCity}
-                    searchState={searchState}
-                    setSearchState={setSearchState}
+                    searchLocation={searchLocation}
+                    setSearchLocation={(v) => setSearchLocation((prev) => ({ ...prev, ...v }))}
                     searchProductService={searchProductService}
                     setSearchProductService={setSearchProductService}
                     searchWebsiteUrl={searchWebsiteUrl}
@@ -525,15 +532,13 @@ export default function MinhaEmpresaPage() {
                     canSubmit={canSubmit}
                     profileEmpty={profileEmpty}
                     workspaceName={workspaceName}
+                    t={t}
                 />
-                {loading && (
-                    <div className="flex flex-col items-center justify-center p-16 gap-4">
-                        <Loader2 size={40} className="animate-spin text-violet-600 dark:text-violet-400" />
-                        <p className="text-sm text-muted">Buscando Reclame Aqui, avaliações, redes sociais e gerando relatório...</p>
-                        <p className="text-xs text-muted/60">Isso pode levar até 60 segundos</p>
-                    </div>
+                {error && !loading && !report && (
+                    <IntelligenceErrorBanner message={error} onRetry={runAnalyze} />
                 )}
-                {report && !loading && <MinhaEmpresaReportView report={report} />}
+                {loading && <IntelligenceLoadingSkeleton statCount={2} />}
+                {report && !loading && <MinhaEmpresaReportView report={report} t={t} showReclameAqui={showReclameAqui} />}
             </div>
         </>
     );

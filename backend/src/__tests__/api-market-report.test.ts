@@ -90,8 +90,31 @@ describe('POST /api/market-report', () => {
     expect(json.segments).toHaveLength(1);
     expect(json.digitalMaturity.withWebsitePercent).toBe(75);
     expect(runMarketReport).toHaveBeenCalledWith(
-      expect.objectContaining({ textQuery: 'restaurantes praia grande' }),
-      'u1'
+      expect.objectContaining({ textQuery: 'restaurantes praia grande', country: 'BR' }),
+      'u1',
+      expect.any(String),
+    );
+  });
+
+  it('defaults country to US when X-Prospector-Market is US and body omits country', async () => {
+    jest.mocked(auth).mockResolvedValue({ user: { id: 'u1' } });
+    prisma.user.findUnique.mockResolvedValue({
+      workspaces: [{ workspace: { plan: 'BUSINESS' } }],
+      plan: 'BUSINESS',
+    });
+    jest.mocked(runMarketReport).mockResolvedValue({ totalBusinesses: 5, segments: [], digitalMaturity: { withWebsite: 0, withPhone: 0, total: 5, withWebsitePercent: 0, withPhonePercent: 0 }, saturationIndex: 0 });
+
+    const req = new NextRequest('http://x/api/market-report', {
+      method: 'POST',
+      headers: { 'X-Prospector-Market': 'US' },
+      body: JSON.stringify({ textQuery: 'restaurants', city: 'Orlando', state: 'FL' }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    expect(runMarketReport).toHaveBeenCalledWith(
+      expect.objectContaining({ country: 'US', city: 'Orlando', state: 'FL' }),
+      'u1',
+      expect.any(String),
     );
   });
 });

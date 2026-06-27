@@ -41,10 +41,25 @@ export interface PlaceResult {
     cnpj?: string;
     companyLegalName?: string;
     companyTradeName?: string;
+    companyMainCnae?: string;
     cnpjStatus?: string;
     opportunityScore?: number;
     primaryType?: string;
     primaryTypeDisplayName?: { text: string };
+    /** Additional fields populated by search enrichment pipeline */
+    phone?: string | null;
+    email?: string;
+    website?: string | null;
+    recommendedPhone?: string;
+    recommendedEmail?: string;
+    recommendedWebsite?: string;
+    contactsHealthScore?: number;
+    /** All unique phones collected from every source (Google, RF, BrasilAPI, Lead DB). */
+    phones?: string[];
+    /** All unique emails collected from every source. */
+    emails?: string[];
+    /** All unique websites collected from every source. */
+    websites?: string[];
 }
 
 export interface TextSearchResponse {
@@ -116,12 +131,21 @@ const DETAILS_FIELD_MASK = [
  */
 const PAGE_TOKEN_CACHE_TTL_S = 1800; // 30 minutes
 const PAGE_TOKEN_CACHE_PREFIX = 'places:pt:';
+const pageTokenBodyMemoryCache = new Map<string, Record<string, unknown>>();
 
 async function getPageTokenBody(pageToken: string): Promise<Record<string, unknown> | null> {
-    return getCached<Record<string, unknown>>(`${PAGE_TOKEN_CACHE_PREFIX}${pageToken}`);
+    const inMemory = pageTokenBodyMemoryCache.get(pageToken);
+    if (inMemory) return inMemory;
+
+    const cached = await getCached<Record<string, unknown>>(`${PAGE_TOKEN_CACHE_PREFIX}${pageToken}`);
+    if (cached) {
+        pageTokenBodyMemoryCache.set(pageToken, cached);
+    }
+    return cached;
 }
 
 async function setPageTokenBody(pageToken: string, body: Record<string, unknown>): Promise<void> {
+    pageTokenBodyMemoryCache.set(pageToken, body);
     await setCached(`${PAGE_TOKEN_CACHE_PREFIX}${pageToken}`, body, PAGE_TOKEN_CACHE_TTL_S);
 }
 
@@ -158,18 +182,10 @@ async function buildSearchBody(
     if (params.pageToken) {
         const cached = await getPageTokenBody(params.pageToken);
         if (cached) return { ...cached, pageToken: params.pageToken };
-        // Cache miss — rebuild with text params only (no locationBias since we
-        // don't know if the original search had it). Include includedType since
-        // Google requires it to match.
-        const body: Record<string, unknown> = {
-            textQuery: params.textQuery,
-            pageSize: pageSizeClamped,
-            languageCode: params.languageCode || 'pt-BR',
-            regionCode: params.regionCode || 'BR',
-            pageToken: params.pageToken,
-        };
-        if (params.includedType) body.includedType = params.includedType;
-        return body;
+        // Cache miss fallback: rebuild the original body from the incoming
+        // params so paging still works when Redis is unavailable.
+        const rebuilt = buildSearchBodyNoToken(params, pageSizeClamped);
+        return { ...rebuilt, pageToken: params.pageToken };
     }
     return buildSearchBodyNoToken(params, pageSizeClamped);
 }

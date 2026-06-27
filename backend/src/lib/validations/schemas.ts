@@ -1,20 +1,54 @@
 import { z } from 'zod';
 
+const REAL_NAME_CONNECTORS = new Set(['da', 'de', 'di', 'do', 'du', 'das', 'dos', 'del', 'della', 'van', 'von', 'e']);
+const REAL_NAME_PART_REGEX = /^\p{L}[\p{L}'’-]*$/u;
+const REAL_NAME_ERROR_MESSAGE = 'Use seu nome e sobrenome reais. Evite numeros, apelidos e simbolos.';
+
+function countLetters(value: string): number {
+  return Array.from(value).filter((char) => /\p{L}/u.test(char)).length;
+}
+
+function normalizeOptionalText(value?: string): string | undefined {
+  const normalized = value?.trim().replace(/\s+/g, ' ');
+  return normalized || undefined;
+}
+
+export function isLikelyRealPersonName(value: string): boolean {
+  const normalized = normalizeOptionalText(value);
+  if (!normalized || normalized.length < 5 || /[\d_]/.test(normalized)) return false;
+
+  const parts = normalized.split(' ');
+  if (parts.length < 2) return false;
+
+  const significantParts = parts.filter((part) => !REAL_NAME_CONNECTORS.has(part.toLocaleLowerCase('pt-BR')));
+  if (significantParts.length < 2) return false;
+
+  return significantParts.every((part) => REAL_NAME_PART_REGEX.test(part) && countLetters(part) >= 2);
+}
+
+const optionalRealNameSchema = z.string()
+  .max(200)
+  .optional()
+  .transform(normalizeOptionalText)
+  .refine((value) => !value || isLikelyRealPersonName(value), {
+    message: REAL_NAME_ERROR_MESSAGE,
+  });
+
 /** POST /api/auth/register */
 export const registerSchema = z.object({
   email: z.email({ error: 'Invalid email' }).transform((s) => s.trim().toLowerCase()),
   password: z.string().min(8, 'Password must be at least 8 characters'),
-  name: z.string().max(200).optional().transform((s) => (s?.trim() || undefined)),
+  name: optionalRealNameSchema,
   /** Código do afiliado (?ref=CODE). Opcional. */
-  affiliateCode: z.string().max(50).optional().transform((s) => (s?.trim() || undefined)),
+  affiliateCode: z.string().max(50).optional().transform(normalizeOptionalText),
 });
 
 /** POST /api/onboarding/complete */
 export const onboardingCompleteSchema = z.object({
-  companyName: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
-  productService: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
-  targetAudience: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
-  mainBenefit: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
+  companyName: z.string().max(500).optional().transform(normalizeOptionalText),
+  productService: z.string().max(500).optional().transform(normalizeOptionalText),
+  targetAudience: z.string().max(500).optional().transform(normalizeOptionalText),
+  mainBenefit: z.string().max(500).optional().transform(normalizeOptionalText),
 });
 
 /** POST /api/search — city/state/country/radiusKm for locationBias (Places API) */
@@ -38,6 +72,7 @@ export const marketReportSchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(60).optional(),
   city: z.string().max(200).optional(),
   state: z.string().max(100).optional(),
+  country: z.string().max(100).optional(),
 });
 
 /** POST /api/analyze — full place data improves precision (website, address, reviews). */
@@ -73,14 +108,14 @@ export const analyzeSchema = z.object({
 
 /** POST /api/user/profile (personal profile only) */
 export const profileSchema = z.object({
-  name: z.string().max(200).optional().transform((s) => (s?.trim() || undefined)),
-  phone: z.string().max(50).optional().transform((s) => (s?.trim() || undefined)),
-  address: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
-  linkedInUrl: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
-  instagramUrl: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
-  facebookUrl: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
-  websiteUrl: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
-  image: z.string().max(2000).optional().transform((s) => (s?.trim() || undefined)),
+  name: optionalRealNameSchema,
+  phone: z.string().max(50).optional().transform(normalizeOptionalText),
+  address: z.string().max(500).optional().transform(normalizeOptionalText),
+  linkedInUrl: z.string().max(500).optional().transform(normalizeOptionalText),
+  instagramUrl: z.string().max(500).optional().transform(normalizeOptionalText),
+  facebookUrl: z.string().max(500).optional().transform(normalizeOptionalText),
+  websiteUrl: z.string().max(500).optional().transform(normalizeOptionalText),
+  image: z.string().max(2000).optional().transform(normalizeOptionalText),
   notifyByEmail: z.boolean().optional(),
 });
 
@@ -88,8 +123,19 @@ export const profileSchema = z.object({
 export const companyAnalysisSchema = z.object({
   useProfile: z.boolean().optional().default(true),
   companyName: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
+  legalName: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
+  tradeName: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
+  cnpj: z.string().max(18).optional().transform((s) => (s?.trim() || undefined)),
   city: z.string().max(200).optional().transform((s) => (s?.trim() || undefined)),
   state: z.string().max(100).optional().transform((s) => (s?.trim() || undefined)),
+  country: z.string().max(100).optional().transform((s) => (s?.trim() || undefined)),
+  locale: z.enum(['pt', 'en', 'es']).optional(),
+  postalCode: z.string().max(20).optional().transform((s) => (s?.trim() || undefined)),
+  neighborhood: z.string().max(200).optional().transform((s) => (s?.trim() || undefined)),
+  primaryCnaeCode: z.string().max(20).optional().transform((s) => (s?.trim() || undefined)),
+  primaryCnaeDescription: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
+  companySize: z.string().max(100).optional().transform((s) => (s?.trim() || undefined)),
+  foundingDate: z.string().max(50).optional().transform((s) => (s?.trim() || undefined)),
   productService: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
   targetAudience: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
   mainBenefit: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
@@ -98,20 +144,42 @@ export const companyAnalysisSchema = z.object({
   linkedInUrl: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
   instagramUrl: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
   facebookUrl: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
+  serviceModel: z.string().max(100).optional().transform((s) => (s?.trim() || undefined)),
+  averageTicket: z.coerce.number().min(0).max(100000000).optional(),
+  operationRadiusKm: z.coerce.number().int().min(0).max(5000).optional(),
+  knownCompetitors: z.string().max(4000).optional().transform((s) => (s?.trim() || undefined)),
 });
 
 /** PATCH /api/workspace/current/profile (workspace/company profile) */
 export const workspaceProfileSchema = z.object({
   companyName: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
+  legalName: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
+  tradeName: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
+  cnpj: z.string().max(18).optional().transform((s) => (s?.trim() || undefined)),
+  primaryCnaeCode: z.string().max(20).optional().transform((s) => (s?.trim() || undefined)),
+  primaryCnaeDescription: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
+  companySize: z.string().max(100).optional().transform((s) => (s?.trim() || undefined)),
+  foundingDate: z.string().max(50).optional().transform((s) => (s?.trim() || undefined)),
   productService: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
   targetAudience: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
   mainBenefit: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
   address: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
+  postalCode: z.string().max(20).optional().transform((s) => (s?.trim() || undefined)),
+  street: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
+  number: z.string().max(50).optional().transform((s) => (s?.trim() || undefined)),
+  complement: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
+  neighborhood: z.string().max(200).optional().transform((s) => (s?.trim() || undefined)),
+  city: z.string().max(200).optional().transform((s) => (s?.trim() || undefined)),
+  state: z.string().max(100).optional().transform((s) => (s?.trim() || undefined)),
   linkedInUrl: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
   instagramUrl: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
   facebookUrl: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
   websiteUrl: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
   logoUrl: z.string().max(2000).optional().transform((s) => (s?.trim() || undefined)),
+  serviceModel: z.string().max(100).optional().transform((s) => (s?.trim() || undefined)),
+  averageTicket: z.coerce.number().min(0).max(100000000).optional(),
+  operationRadiusKm: z.coerce.number().int().min(0).max(5000).optional(),
+  knownCompetitors: z.string().max(4000).optional().transform((s) => (s?.trim() || undefined)),
 });
 
 /** POST /api/billing/checkout and /api/v1/billing/checkout */
@@ -126,6 +194,9 @@ export const checkoutSchema = z.object({
   scheduleAtPeriodEnd: z.boolean().optional(),
   /** Código do afiliado (do cookie/ref). Repasse no metadata do pagamento para atribuição. */
   affiliateCode: z.string().max(50).optional().transform((s) => (s?.trim() || undefined)),
+  /** Promo code (e.g. starter-6m, reactivation) or virtual plan STARTER_PROMO_BR */
+  promoCode: z.string().max(50).optional().transform((s) => (s?.trim() || undefined)),
+  promoToken: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),
 });
 
 /** POST /api/billing/schedule-downgrade — schedule plan change at end of current period (no immediate charge). */
@@ -153,10 +224,18 @@ export const adminListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional(),
   offset: z.coerce.number().int().min(0).optional(),
   workspaceId: z.string().min(1).optional(),
+  search: z.string().min(1).max(200).optional(),
 });
 
 /** Support users list: limit, offset, search (name/email) */
 export const supportUsersListSchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+  search: z.string().min(1).max(200).optional(),
+});
+
+/** Admin users list: limit, offset, search (name/email) */
+export const adminUsersListSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional(),
   offset: z.coerce.number().int().min(0).optional(),
   search: z.string().min(1).max(200).optional(),
@@ -177,7 +256,7 @@ export const adminResetPasswordSchema = z.object({
 
 /** PATCH /api/admin/workspaces/[id] */
 export const adminWorkspaceUpdateSchema = z.object({
-  plan: z.enum(['FREE', 'BASIC', 'PRO', 'BUSINESS', 'SCALE']).optional(),
+  plan: z.enum(['FREE', 'TRIAL', 'BASIC', 'PRO', 'BUSINESS', 'SCALE']).optional(),
   leadsLimit: z.coerce.number().int().min(0).optional(),
 });
 
@@ -259,8 +338,8 @@ export const v1AnalyzeSchema = analyzeSchema.extend({
 
 /** POST /api/admin/ai-config — create AI provider config */
 export const aiConfigCreateSchema = z.object({
-  role: z.enum(['lead_analysis', 'viability']),
-  provider: z.enum(['GEMINI', 'OPENAI', 'CLOUDFLARE']),
+  role: z.enum(['lead_analysis', 'viability', 'company_analysis']),
+  provider: z.enum(['GEMINI', 'OPENAI', 'CLOUDFLARE', 'GROQ', 'DEEPSEEK', 'ANTHROPIC', 'OPENROUTER']),
   model: z.string().min(1).max(200),
   apiKey: z.string().optional(),
   cloudflareAccountId: z.string().max(100).optional(),
@@ -269,12 +348,28 @@ export const aiConfigCreateSchema = z.object({
 
 /** PATCH /api/admin/ai-config/[id] — update AI provider config */
 export const aiConfigUpdateSchema = z.object({
-  role: z.enum(['lead_analysis', 'viability']).optional(),
-  provider: z.enum(['GEMINI', 'OPENAI', 'CLOUDFLARE']).optional(),
+  role: z.enum(['lead_analysis', 'viability', 'company_analysis']).optional(),
+  provider: z.enum(['GEMINI', 'OPENAI', 'CLOUDFLARE', 'GROQ', 'DEEPSEEK', 'ANTHROPIC', 'OPENROUTER']).optional(),
   model: z.string().min(1).max(200).optional(),
   apiKey: z.string().optional(),
   cloudflareAccountId: z.string().max(100).optional().nullable(),
   enabled: z.boolean().optional(),
+});
+
+/** PUT /api/admin/ai-config/runtime — runtime controls */
+export const aiRuntimeUpdateSchema = z.object({
+  analyzeRateLimitMax: z.number().int().min(10).max(20000).optional(),
+  analyzeRateLimitWindowSeconds: z.number().int().min(1).max(3600).optional(),
+  analyzeBulkheadMaxInFlight: z.number().int().min(1).max(2000).optional(),
+  analyzeBulkheadAcquireTimeoutMs: z.number().int().min(100).max(180000).optional(),
+  aiModelMaxInFlight: z.number().int().min(1).max(2000).optional(),
+  analyzeAiMaxOutputTokens: z.number().int().min(64).max(16384).optional(),
+  aiCircuitBreakerFailureThreshold: z.number().int().min(1).max(100).optional(),
+  aiCircuitBreakerOpenMs: z.number().int().min(500).max(300000).optional(),
+  aiFallbackProvider: z.enum(['GEMINI', 'CLOUDFLARE', 'OPENROUTER']).optional(),
+  aiCloudflareModelsLeadAnalysis: z.string().max(2000).optional(),
+  aiCloudflareModelsViability: z.string().max(2000).optional(),
+  aiCloudflareModelsCompanyAnalysis: z.string().max(2000).optional(),
 });
 
 /** PATCH /api/admin/web-search-config — upsert web search config by role */
@@ -314,4 +409,5 @@ export type TeamRemoveInput = z.infer<typeof teamRemoveSchema>;
 export type V1AnalyzeInput = z.infer<typeof v1AnalyzeSchema>;
 export type AiConfigCreateInput = z.infer<typeof aiConfigCreateSchema>;
 export type AiConfigUpdateInput = z.infer<typeof aiConfigUpdateSchema>;
+export type AiRuntimeUpdateInput = z.infer<typeof aiRuntimeUpdateSchema>;
 export type WebSearchConfigInput = z.infer<typeof webSearchConfigSchema>;

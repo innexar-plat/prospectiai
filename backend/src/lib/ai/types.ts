@@ -8,18 +8,20 @@
 
 export type AiRole = 'lead_analysis' | 'viability' | 'company_analysis';
 
-export type AiProviderType = 'GEMINI' | 'OPENAI' | 'CLOUDFLARE' | 'GROQ' | 'DEEPSEEK' | 'ANTHROPIC';
+export type AiProviderType = 'GEMINI' | 'OPENAI' | 'CLOUDFLARE' | 'GROQ' | 'DEEPSEEK' | 'ANTHROPIC' | 'OPENROUTER';
 
 export interface CompletionOptions {
     prompt: string;
     systemPrompt?: string;
     jsonMode?: boolean;
-    maxTokens?: number;
+    maxOutputTokens?: number;
 }
 
 export interface CompletionResult {
     text: string;
     usage?: { inputTokens: number; outputTokens: number };
+    provider?: AiProviderType;
+    model?: string;
 }
 
 /** @deprecated Use AI SDK `generateText` / `generateObject` via resolve. */

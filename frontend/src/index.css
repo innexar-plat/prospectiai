@@ -75,6 +75,12 @@
 }
 
 @layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
   body {
     @apply antialiased;
     background-color: var(--theme-bg);
@@ -144,6 +150,11 @@
 
   .accent-gradient {
     @apply bg-gradient-to-br from-violet-500 to-cyan-500 bg-clip-text text-transparent;
+  }
+
+  .text-wrap-safe {
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .text-premium {

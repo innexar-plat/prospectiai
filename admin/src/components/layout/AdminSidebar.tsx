@@ -19,6 +19,7 @@ import {
   Send,
   BarChart3,
   TrendingUp,
+  Search,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -47,9 +48,19 @@ const sections: NavSection[] = [
     ],
   },
   {
+    title: 'Auto-Prospecção',
+    items: [
+      { to: 'auto-prospeccao/templates', end: false, label: 'Templates de Email', icon: Mail },
+      { to: 'auto-prospeccao/search-profiles', end: false, label: 'Perfis de Busca', icon: Search },
+      { to: 'auto-prospeccao/sender-pool', end: false, label: 'Pool de Remetentes', icon: Send },
+      { to: 'auto-prospeccao/config', end: false, label: 'Configurações', icon: Settings },
+    ],
+  },
+  {
     title: 'Email Marketing',
     items: [
       { to: 'email-analytics', end: false, label: 'Analytics', icon: TrendingUp },
+      { to: 'email-logs', end: false, label: 'Logs de Email', icon: ClipboardList },
       { to: 'email-templates', end: false, label: 'Templates Email', icon: FileText },
       { to: 'email-campaigns', end: false, label: 'Campanhas', icon: Send },
       { to: 'email-weekly-report', end: false, label: 'Relatório Semanal', icon: BarChart3 },
@@ -78,12 +89,15 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
     <aside className="flex-shrink-0 w-60 border-r border-gray-200 bg-white flex flex-col overflow-y-auto h-full">
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center">
-            <span className="text-white text-xs font-bold">P</span>
-          </div>
+          <img
+            src="/brands/precision-favicon.svg"
+            alt=""
+            aria-hidden
+            className="w-8 h-8 object-contain"
+          />
           <div>
             <h1 className="font-semibold text-gray-900 text-sm leading-tight">Painel Admin</h1>
-            <p className="text-xs text-gray-400 leading-tight">Precision IA</p>
+            <p className="text-xs text-gray-400 leading-tight">Precision</p>
           </div>
         </div>
       </div>

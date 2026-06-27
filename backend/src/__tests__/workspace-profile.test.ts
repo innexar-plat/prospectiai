@@ -15,15 +15,33 @@ jest.mock('@/lib/ratelimit', () => ({ rateLimit: jest.fn(() => Promise.resolve({
 
 const profileData = {
   companyName: 'Acme',
+  legalName: null,
+  tradeName: null,
+  cnpj: null,
+  primaryCnaeCode: null,
+  primaryCnaeDescription: null,
+  companySize: null,
+  foundingDate: null,
   productService: null,
   targetAudience: null,
   mainBenefit: null,
   address: null,
+  postalCode: null,
+  street: null,
+  number: null,
+  complement: null,
+  neighborhood: null,
+  city: null,
+  state: null,
   linkedInUrl: null,
   instagramUrl: null,
   facebookUrl: null,
   websiteUrl: null,
   logoUrl: null,
+  serviceModel: null,
+  averageTicket: null,
+  operationRadiusKm: null,
+  knownCompetitors: null,
 };
 
 describe('GET /api/workspace/current/profile', () => {
@@ -147,6 +165,38 @@ describe('PATCH /api/workspace/current/profile', () => {
       expect.objectContaining({
         where: { id: 'w1' },
         data: expect.objectContaining({ companyName: 'New Co', websiteUrl: 'https://x.com' }),
+      }),
+    );
+  });
+
+  it('updates enriched business fields', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    (prisma.workspaceMember.findFirst as jest.Mock).mockResolvedValue({ workspaceId: 'w1' });
+    const res = await PATCH(
+      new NextRequest('http://localhost/api/workspace/current/profile', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          cnpj: '12345678000199',
+          legalName: 'Acme LTDA',
+          city: 'Santos',
+          state: 'SP',
+          averageTicket: 450,
+          operationRadiusKm: 25,
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(prisma.workspace.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          cnpj: '12345678000199',
+          legalName: 'Acme LTDA',
+          city: 'Santos',
+          state: 'SP',
+          averageTicket: 450,
+          operationRadiusKm: 25,
+        }),
       }),
     );
   });

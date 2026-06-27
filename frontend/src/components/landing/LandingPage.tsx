@@ -103,7 +103,7 @@ const LANDING_FAQ = [
     },
     {
         q: 'Quanto tempo leva para ver resultados?',
-        a: 'Imediatamente. Em 30 segundos você encontra empresas, em 10 segundos a IA analisa cada lead com score, dores, gaps e scripts prontos para enviar.'
+        a: 'Imediatamente. Em poucos segundos você encontra empresas, recebe o score IA e já sai com contexto para abordar os leads com muito mais precisão.'
     },
     {
         q: 'A IA é confiável? De onde vêm os dados?',
@@ -123,7 +123,7 @@ const LANDING_FAQ = [
     },
     {
         q: 'Como funciona o plano gratuito?',
-        a: 'Você recebe 5 créditos/mês para testar a plataforma completa. Sem cartão de crédito, sem compromisso.'
+        a: 'Você recebe 10 créditos/mês para testar a plataforma sem cartão de crédito. Dá para buscar empresas, analisar os melhores leads com IA e validar o fluxo antes de assinar.'
     },
     {
         q: 'O sistema é seguro?',
@@ -179,8 +179,39 @@ function AnimatedStat({ value, label, icon: Icon }: { value: string; label: stri
 export default function LandingPage({ onViewPlans, t }: { locale: string; onViewPlans: () => void; t: (key: string, options?: Record<string, unknown>) => string }) {
     const [faqOpenIndex, setFaqOpenIndex] = useState<number | null>(null);
 
+    const landingFaqSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: LANDING_FAQ.map((item) => ({
+            '@type': 'Question',
+            name: item.q,
+            acceptedAnswer: { '@type': 'Answer', text: item.a },
+        })),
+    };
+
+    const softwareAppSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'SoftwareApplication',
+        name: 'Precision',
+        applicationCategory: 'BusinessApplication',
+        operatingSystem: 'Web',
+        offers: {
+            '@type': 'AggregateOffer',
+            lowPrice: '0',
+            highPrice: '2497',
+            priceCurrency: 'BRL',
+            offerCount: '5',
+        },
+        description: 'Como encontrar empresas para vender: plataforma de prospecção B2B com IA. Busca por nicho, região, score de leads e análise de mercado.',
+        featureList: 'Busca por nicho e região, Score de leads com IA, Análise de concorrência, Viabilidade de negócio, Smart Relations, Smart Tags, Gestão de equipe, Integração RD Station, Agendor e HubSpot, Activity Tracking, Exportação CSV/JSON, Scripts de abordagem com IA',
+        inLanguage: 'pt-BR',
+        url: 'https://precisionia.com.br',
+    };
+
     return (
         <div className="min-h-screen bg-background text-foreground selection:bg-violet-500/30 overflow-x-hidden" role="document">
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(landingFaqSchema) }} />
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareAppSchema) }} />
             {/* Background Decorative Elements */}
             <div className="absolute top-0 left-0 right-0 h-[80vh] bg-[radial-gradient(circle_at_50%_0%,rgba(139,92,246,0.18)_0%,transparent_65%)] pointer-events-none" />
             <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-violet-500/10 blur-[120px] rounded-full pointer-events-none animate-float" />
@@ -197,17 +228,20 @@ export default function LandingPage({ onViewPlans, t }: { locale: string; onView
                     </div>
 
                     <h1 id="hero-title" className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black leading-[0.95] tracking-tight mb-6 animate-slide">
-                        <span className="text-foreground">Reduza em </span>
-                        <span className="accent-gradient">60%</span>
-                        <span className="text-foreground"> o tempo</span>
+                        <span className="text-foreground">Encontre empresas e</span>
                         <br />
-                        <span className="text-foreground">de </span>
-                        <span className="accent-gradient">prospecção</span>
+                        <span className="accent-gradient">priorize os melhores leads</span>
                     </h1>
 
                     <p className="text-lg md:text-xl text-muted max-w-3xl mx-auto mb-10 leading-relaxed animate-fade animation-delay-200 animation-fill-both">
-                        A IA encontra empresas, qualifica leads com score inteligente, gera scripts de abordagem e envia direto para seu CRM — com dados de <strong className="text-foreground">27 milhões de empresas brasileiras</strong>.
+                        Busque por nicho e região, receba score IA em segundos e descubra quem vale seu tempo antes de entrar em contato. Teste com <strong className="text-foreground">10 créditos grátis</strong> e dados de <strong className="text-foreground">27 milhões de empresas brasileiras</strong>.
                     </p>
+
+                    <div className="flex flex-wrap items-center justify-center gap-3 mb-10 text-xs md:text-sm font-semibold text-muted animate-fade animation-delay-300 animation-fill-both">
+                        <span className="px-3 py-1.5 rounded-full bg-card border border-border">10 créditos grátis</span>
+                        <span className="px-3 py-1.5 rounded-full bg-card border border-border">Sem cartão</span>
+                        <span className="px-3 py-1.5 rounded-full bg-card border border-border">Busca por nicho e região</span>
+                    </div>
 
                     {/* STATS BAR */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-10 animate-fade animation-delay-300 animation-fill-both">
@@ -223,7 +257,7 @@ export default function LandingPage({ onViewPlans, t }: { locale: string; onView
                             className="inline-flex items-center justify-center font-bold rounded-2xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-violet-500/50 active:scale-95 bg-[#7c3aed] text-white shadow-[0_4px_14px_0_rgba(124,58,237,0.3)] hover:bg-[#6d28d9] hover:shadow-[0_6px_20px_rgba(109,40,217,0.4)] hover:-translate-y-0.5 w-full sm:w-auto h-16 px-10 text-lg group"
                         >
                             <Rocket size={20} className="mr-2 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" aria-hidden />
-                            Comece grátis — 5 análises gratuitas
+                            Testar agora — 10 créditos grátis
                         </Link>
                         <Button onClick={onViewPlans} variant="secondary" size="lg" className="w-full sm:w-auto h-16 px-10 text-lg">
                             {t('landing.ctaPlans')}
@@ -255,8 +289,8 @@ export default function LandingPage({ onViewPlans, t }: { locale: string; onView
             <section className="py-20 md:py-28 px-4" aria-labelledby="demo-heading">
                 <div className="max-w-6xl mx-auto">
                     <div className="text-center mb-12">
-                        <h2 id="demo-heading" className="text-3xl md:text-5xl font-black mb-4 text-foreground">Veja o <span className="accent-gradient">Precision IA</span> em ação</h2>
-                        <p className="text-muted max-w-xl mx-auto">De 6 horas para 2 horas: prospecção B2B turbinada com inteligência artificial.</p>
+                        <h2 id="demo-heading" className="text-3xl md:text-5xl font-black mb-4 text-foreground">Veja o <span className="accent-gradient">Precision</span> em ação</h2>
+                        <p className="text-muted max-w-xl mx-auto">Busca real, score IA e decisão mais rápida sobre quais leads abordar primeiro.</p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Video Card 1 */}
@@ -270,7 +304,7 @@ export default function LandingPage({ onViewPlans, t }: { locale: string; onView
                                         <Play size={32} className="text-violet-500 ml-1" />
                                     </div>
                                     <h3 className="text-xl font-bold text-foreground mb-2">Como encontrar leads em 30 segundos</h3>
-                                    <p className="text-muted text-sm">Busca inteligente + Score IA + Scripts prontos</p>
+                                    <p className="text-muted text-sm">Busca inteligente + Score IA + priorização comercial</p>
                                 </div>
                             </div>
                         </div>
@@ -303,7 +337,7 @@ export default function LandingPage({ onViewPlans, t }: { locale: string; onView
                             <Sparkles size={14} className="fill-current" /> 8 MÓDULOS DE INTELIGÊNCIA COMERCIAL
                         </span>
                         <h2 id="modules-heading" className="text-3xl md:text-5xl font-black text-foreground">Tudo que você precisa em <span className="accent-gradient">1 plataforma</span></h2>
-                        <p className="text-muted max-w-2xl mx-auto mt-4">Substitua 6-8 ferramentas separadas. De pesquisa no Google até envio para CRM — tudo automatizado.</p>
+                        <p className="text-muted max-w-2xl mx-auto mt-4">Da descoberta de empresas ao score IA, você valida o potencial do lead antes de gastar tempo comercial.</p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         {HERO_CARDS.map((card) => {
@@ -350,15 +384,15 @@ export default function LandingPage({ onViewPlans, t }: { locale: string; onView
                 <div className="max-w-5xl mx-auto">
                     <div className="text-center mb-16">
                         <h2 id="how-heading" className="text-3xl md:text-5xl font-black mb-4 text-foreground">Como funciona?</h2>
-                        <p className="text-muted max-w-xl mx-auto">3 passos para transformar sua prospecção.</p>
+                        <p className="text-muted max-w-xl mx-auto">3 passos para sair da busca manual e chegar nos leads certos mais rápido.</p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
                         {/* Connection line */}
                         <div className="hidden md:block absolute top-1/2 left-[16%] right-[16%] h-0.5 bg-gradient-to-r from-violet-500 via-cyan-500 to-emerald-500 -translate-y-1/2 opacity-30" />
                         {[
                             { step: '01', title: 'Busque', desc: 'Informe o nicho e a região. Nossa IA busca empresas reais via Google Places + Receita Federal.', icon: Search, color: 'bg-violet-600' },
-                            { step: '02', title: 'Analise', desc: 'Score IA 0-100, concorrência, viabilidade, tendências, dores e gaps — tudo automatizado.', icon: Brain, color: 'bg-cyan-600' },
-                            { step: '03', title: 'Converta', desc: 'Scripts personalizados, WhatsApp, email, telefone e integração direta com seu CRM.', icon: Rocket, color: 'bg-emerald-600' },
+                            { step: '02', title: 'Analise', desc: 'Veja score IA, sinais de maturidade e contexto suficiente para decidir quem priorizar primeiro.', icon: Brain, color: 'bg-cyan-600' },
+                            { step: '03', title: 'Aborde', desc: 'Use scripts, CRM e histórico para entrar em contato com mais contexto e menos achismo.', icon: Rocket, color: 'bg-emerald-600' },
                         ].map((item) => {
                             const Icon = item.icon;
                             return (
@@ -385,7 +419,7 @@ export default function LandingPage({ onViewPlans, t }: { locale: string; onView
                         <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/10 border border-red-500/20 text-red-700 dark:text-red-400 text-xs font-bold mb-6">
                             <TrendingDown size={14} /> CHEGA DE PERDER TEMPO
                         </span>
-                        <h2 id="comparison-heading" className="text-3xl md:text-5xl font-black text-foreground">Antes vs Depois do <span className="accent-gradient">Precision IA</span></h2>
+                        <h2 id="comparison-heading" className="text-3xl md:text-5xl font-black text-foreground">Antes vs Depois do <span className="accent-gradient">Precision</span></h2>
                         <p className="text-muted mt-4 max-w-xl mx-auto">Veja quanto tempo você economiza em cada etapa da prospecção.</p>
                     </div>
 
@@ -450,11 +484,11 @@ export default function LandingPage({ onViewPlans, t }: { locale: string; onView
                                 <li className="flex justify-between"><span>Análise de mercado</span><span className="text-muted">Não faz</span></li>
                             </ul>
                         </div>
-                        {/* Precision AI */}
+                        {/* Precision */}
                         <div className="p-8 rounded-3xl border-2 border-violet-500/30 bg-violet-500/5 relative">
                             <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-violet-600 text-white text-xs font-bold">RECOMENDADO</div>
                             <h3 className="text-xl font-bold text-violet-700 dark:text-violet-300 mb-6 flex items-center gap-2">
-                                <CheckCircle2 size={22} aria-hidden /> Precision IA (Growth)
+                                <CheckCircle2 size={22} aria-hidden /> Precision (Growth)
                             </h3>
                             <ul className="space-y-4 text-sm">
                                 <li className="flex justify-between text-muted"><span>Investimento</span><span className="font-bold text-violet-700 dark:text-violet-300">R$ 397/mês</span></li>
@@ -561,7 +595,7 @@ export default function LandingPage({ onViewPlans, t }: { locale: string; onView
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-10">
                         {[
-                            { name: 'Free', leads: '5 leads', price: 'R$ 0' },
+                            { name: 'Free', leads: '10 leads', price: 'R$ 0' },
                             { name: 'Starter', leads: '100 leads', price: 'R$ 129/mês' },
                             { name: 'Growth', leads: '400 leads', price: 'R$ 397/mês', highlight: true },
                             { name: 'Business', leads: '1.200 leads', price: 'R$ 997/mês' },

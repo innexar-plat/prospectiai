@@ -27,4 +27,15 @@ describe('AffiliatesPage', () => {
     await screen.findByText(/afiliados|novo afiliado/i, {}, { timeout: 3000 });
     expect(mockAffiliates).toHaveBeenCalled();
   });
+
+  it('shows empty state when no affiliates', async () => {
+    render(
+      <MemoryRouter>
+        <Routes>
+          <Route path="/" element={<AffiliatesPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(await screen.findByText(/nenhum afiliado encontrado/i)).toBeInTheDocument();
+  });
 });

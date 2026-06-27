@@ -28,7 +28,29 @@ export function normalizeCnpj(value: string | null | undefined): string | null {
   if (!value) return null;
   const digits = value.replace(/\D/g, '');
   if (digits.length !== 14) return null;
+  if (!isValidCnpj(digits)) return null;
   return digits;
+}
+
+/** Validate CNPJ check digits (mod-11 algorithm). */
+function isValidCnpj(digits: string): boolean {
+  // Reject all-same-digit sequences (e.g. 00000000000000)
+  if (/^(\d)\1{13}$/.test(digits)) return false;
+
+  const w1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const w2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+
+  let sum = 0;
+  for (let i = 0; i < 12; i++) sum += Number(digits[i]) * w1[i];
+  let rem = sum % 11;
+  if (Number(digits[12]) !== (rem < 2 ? 0 : 11 - rem)) return false;
+
+  sum = 0;
+  for (let i = 0; i < 13; i++) sum += Number(digits[i]) * w2[i];
+  rem = sum % 11;
+  if (Number(digits[13]) !== (rem < 2 ? 0 : 11 - rem)) return false;
+
+  return true;
 }
 
 export function extractCnpjFromText(value: string | null | undefined): string | null {

@@ -50,7 +50,7 @@ async function main() {
           'Relatórios semanais personalizados',
           'Suporte prioritário durante o trial',
         ],
-        legalNote: 'Seu trial expira em 7 dias. Após o período, você será movido para o plano Free automaticamente.',
+        legalNote: 'Seu trial expira em 7 dias. Após o período, escolha um plano para continuar usando a plataforma.',
       },
       ctaLabel: 'Começar a prospectar',
       ctaUrl: 'https://app.prospectorai.com.br/dashboard',
@@ -182,7 +182,7 @@ async function main() {
         subtitle: 'Continue de onde parou com uma condição especial',
         paragraphs: [
           'Olá {{firstName}}, seu período de trial do Prospector AI terminou, mas não queremos que você perca todo o progresso que fez! 📊',
-          'Durante o trial, você encontrou dezenas de leads qualificados e construiu uma base valiosa de prospecção. Com o plano Free, seu acesso é limitado a 50 leads/mês.',
+          'Durante o trial, você encontrou dezenas de leads qualificados e construiu uma base valiosa de prospecção. Sem um plano ativo, o acesso à busca e análise IA fica bloqueado.',
           'Para não perder o ritmo, preparamos uma oferta exclusiva: assine o plano Pro com 25% de desconto no primeiro trimestre e mantenha acesso total.',
         ],
         benefits: [

@@ -9,7 +9,10 @@ jest.mock('@/lib/prisma', () => ({
         user: { findUnique: jest.fn() },
         lead: { findUnique: jest.fn() },
         leadAnalysis: { findFirst: jest.fn(), updateMany: jest.fn() },
-        workspace: { update: jest.fn() },
+        workspace: {
+            update: jest.fn(),
+            findUnique: jest.fn().mockResolvedValue(null),
+        },
         searchHistory: { count: jest.fn() },
     },
 }));

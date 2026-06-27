@@ -2,6 +2,11 @@ import { NextRequest } from "next/server";
 import { getOrCreateRequestId, jsonWithRequestId } from "@/lib/request-id";
 import { prisma } from "@/lib/prisma";
 import { alertCritical, alertSuccess } from "@/lib/telegram-alert";
+import { getLeadSyncQueueStats } from "@/lib/lead-sync-queue";
+import { getSearchHistoryQueueStats } from "@/lib/search-history-queue";
+import { getSearchBulkheadStats } from "@/lib/search-bulkhead";
+import { getAnalyzeBulkheadStats } from "@/lib/analyze-bulkhead";
+import { getModelBulkheadSnapshot } from "@/lib/ai/model-bulkhead";
 
 // Track downtime to send recovery alerts
 let lastDbStatus = true;
@@ -27,6 +32,7 @@ async function checkRedis(): Promise<{ ok: boolean; latencyMs: number }> {
       connectTimeout: 3000,
       lazyConnect: true,
     });
+    client.on('error', () => {});
     await client.connect();
     await client.ping();
     await client.quit();
@@ -48,6 +54,11 @@ export async function GET(req: NextRequest) {
 
   const allOk = db.ok && redis.ok;
   const status = allOk ? "ok" : "degraded";
+  const leadSyncQueue = getLeadSyncQueueStats();
+  const searchHistoryQueue = getSearchHistoryQueueStats();
+  const searchBulkhead = getSearchBulkheadStats();
+  const analyzeBulkhead = getAnalyzeBulkheadStats();
+  const aiModelBulkhead = getModelBulkheadSnapshot();
 
   // Alert on state changes (down/recovery)
   if (!db.ok && lastDbStatus) {
@@ -82,6 +93,11 @@ export async function GET(req: NextRequest) {
         postgres: { ok: db.ok, latencyMs: db.latencyMs },
         redis: { ok: redis.ok, latencyMs: redis.latencyMs },
       },
+      leadSyncQueue,
+      searchHistoryQueue,
+      searchBulkhead,
+      analyzeBulkhead,
+      aiModelBulkhead,
       timestamp: new Date().toISOString(),
     },
     { requestId, status: 200 }

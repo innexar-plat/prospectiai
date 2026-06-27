@@ -5,7 +5,7 @@ import { Logo } from './Logo';
 describe('Logo', () => {
   it('renders the logo image', () => {
     renderWithProviders(<Logo />);
-    const img = document.querySelector('img[alt="PrecisionAI"]');
+    const img = document.querySelector('img[alt="Precision"]');
     expect(img).toBeInTheDocument();
   });
 

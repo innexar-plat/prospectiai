@@ -36,6 +36,7 @@ describe('POST /api/auth/register', () => {
     jest.clearAllMocks();
     prisma.user.findUnique.mockResolvedValue(null);
     prisma.verificationToken.create.mockResolvedValue({});
+    sendVerificationEmail.mockResolvedValue({ sent: true });
     mockTx.user.create.mockResolvedValue({
       id: 'user-1',
       email: 'test@example.com',
@@ -45,8 +46,9 @@ describe('POST /api/auth/register', () => {
       id: 'ws-1',
       name: 'Test User - Workspace',
       plan: 'FREE',
-      leadsLimit: 10,
+      leadsLimit: 0,
       leadsUsed: 0,
+      subscriptionStatus: 'inactive',
     });
     mockTx.workspaceMember.create.mockResolvedValue({
       id: 'wm-1',
@@ -79,6 +81,17 @@ describe('POST /api/auth/register', () => {
     expect(json.error).toMatch(/8|password/i);
   });
 
+  it('returns 400 when name is not a real personal name', async () => {
+    const res = await POST(new Request('http://localhost/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'a@b.com', password: 'password123', name: '46jhon_zx' }),
+    }));
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toMatch(/nome e sobrenome reais/i);
+  });
+
   it('returns 400 when email already in use', async () => {
     prisma.user.findUnique.mockResolvedValue({ id: 'existing', email: 'test@example.com' });
     const res = await POST(new Request('http://localhost/api/auth/register', {
@@ -88,7 +101,7 @@ describe('POST /api/auth/register', () => {
     }));
     expect(res.status).toBe(400);
     const json = await res.json();
-    expect(json.error).toMatch(/already in use/i);
+    expect(json.error).toMatch(/already in use|cadastrado/i);
   });
 
   it('creates user, workspace and workspaceMember in transaction', async () => {
@@ -112,8 +125,9 @@ describe('POST /api/auth/register', () => {
         data: expect.objectContaining({
           name: 'New User - Workspace',
           plan: 'FREE',
-          leadsLimit: 10,
+          leadsLimit: 0,
           leadsUsed: 0,
+          subscriptionStatus: 'inactive',
         }),
       })
     );
@@ -127,6 +141,7 @@ describe('POST /api/auth/register', () => {
     const json = await res.json();
     expect(json.message).toMatch(/success/i);
     expect(json.requiresOnboarding).toBe(true);
+    expect(json.verificationEmailSent).toBe(true);
     expect(prisma.verificationToken.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         identifier: 'new@example.com',
@@ -134,6 +149,96 @@ describe('POST /api/auth/register', () => {
         expires: expect.any(Date),
       }),
     });
-    expect(sendVerificationEmail).toHaveBeenCalledWith('new@example.com', expect.any(String));
+    expect(sendVerificationEmail).toHaveBeenCalledWith('new@example.com', expect.any(String), expect.any(String), expect.any(String));
+  });
+
+  it('sends BR verification email link for BR market registration', async () => {
+    const res = await POST(new Request('http://localhost/api/auth/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        host: 'precisionia.com.br',
+        'X-Prospector-Market': 'BR',
+      },
+      body: JSON.stringify({ email: 'br@example.com', password: 'password123', name: 'BR User' }),
+    }));
+
+    expect(res.status).toBe(200);
+    expect(sendVerificationEmail).toHaveBeenCalledWith(
+      'br@example.com',
+      expect.any(String),
+      expect.any(String),
+      expect.stringContaining('precisionia.com.br'),
+    );
+    expect(sendVerificationEmail).not.toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.any(String),
+      expect.stringContaining('precisionai.innexar.app'),
+    );
+  });
+
+  it('creates inactive FREE workspace for US market registration', async () => {
+    mockTx.workspace.create.mockResolvedValue({
+      id: 'ws-us',
+      name: 'New User - Workspace',
+      plan: 'FREE',
+      leadsLimit: 0,
+      leadsUsed: 0,
+      subscriptionStatus: 'inactive',
+    });
+
+    const res = await POST(new Request('http://localhost/api/auth/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Prospector-Market': 'US',
+      },
+      body: JSON.stringify({ email: 'us@example.com', password: 'password123', name: 'New User' }),
+    }));
+
+    expect(res.status).toBe(200);
+    expect(mockTx.workspace.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          plan: 'FREE',
+          leadsLimit: 0,
+          subscriptionStatus: 'inactive',
+        }),
+      }),
+    );
+    const json = await res.json();
+    expect(json.verificationEmailSent).toBe(true);
+    expect(sendVerificationEmail).toHaveBeenCalledWith(
+      'us@example.com',
+      expect.any(String),
+      expect.any(String),
+      expect.stringContaining('precisionai.innexar.app'),
+    );
+    expect(sendVerificationEmail).not.toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.any(String),
+      expect.stringContaining('precisionia.com.br'),
+    );
+    const createData = mockTx.workspace.create.mock.calls[0][0].data;
+    expect(createData.plan).not.toBe('TRIAL');
+    expect(createData.subscriptionStatus).not.toBe('trialing');
+  });
+
+  it('returns signup success with verificationEmailSent false when the first email send fails', async () => {
+    sendVerificationEmail.mockResolvedValue({ sent: false, error: 'Rate limited' });
+
+    const res = await POST(new Request('http://localhost/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'new@example.com', password: 'password123', name: 'New User' }),
+    }));
+
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.verificationEmailSent).toBe(false);
+    expect(json.verificationEmailError).toBe('Rate limited');
+    expect(sendVerificationEmail).toHaveBeenCalledWith('new@example.com', expect.any(String), expect.any(String), expect.any(String));
   });
 });

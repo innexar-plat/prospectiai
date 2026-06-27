@@ -68,7 +68,7 @@ export function EmailTemplateEditorPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     setSaving(true);
     setToast(null);
     try {
@@ -101,7 +101,7 @@ export function EmailTemplateEditorPage() {
     } finally {
       setSaving(false);
     }
-  };
+  }, [id, name, slug, type, status, subject, preheader, paragraphs, benefits, badge, badgeColor, subtitle, legalNote, expiresAt, ctaLabel, ctaUrl, accentColor]);
 
   const handlePreview = useCallback(async () => {
     if (!id) return;
@@ -114,7 +114,7 @@ export function EmailTemplateEditorPage() {
     } catch {
       setToast({ type: 'error', message: 'Erro ao gerar preview.' });
     }
-  }, [id, name, slug, type, subject, paragraphs, benefits, badge, ctaLabel, ctaUrl, accentColor]);
+  }, [id, handleSave]);
 
   const addParagraph = () => setParagraphs([...paragraphs, '']);
   const removeParagraph = (i: number) => setParagraphs(paragraphs.filter((_, idx) => idx !== i));
@@ -135,7 +135,7 @@ export function EmailTemplateEditorPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-3 min-w-0">
-          <button onClick={() => navigate('/email-templates')} className="p-2 rounded-lg hover:bg-gray-100 shrink-0">
+          <button onClick={() => navigate('..')} className="p-2 rounded-lg hover:bg-gray-100 shrink-0">
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </button>
           <div className="min-w-0">

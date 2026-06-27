@@ -1,9 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { Session } from 'next-auth';
 import { auth } from '@/auth';
 import { isAdmin } from '@/lib/admin';
 import { logAdminAction, type AuditAction } from '@/lib/audit';
 import { adminListQuerySchema, formatZodError } from '@/lib/validations/schemas';
-import { prisma } from '@/lib/prisma';
+
+/** Returns session when caller is authenticated admin; otherwise a 401/403 response. */
+export async function assertAdminSession(): Promise<{ session: Session } | NextResponse> {
+    const session = await auth();
+    if (!session?.user?.id) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (!isAdmin(session)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    return { session };
+}
 
 export interface AdminListOptions<T, Q = any> {
     req: NextRequest;
@@ -23,9 +35,12 @@ export async function handleAdminListRequest<T, Q = any>(options: AdminListOptio
     if (!isAdmin(session)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     try {
+        const rawSearch = req.nextUrl.searchParams.get('search');
         const parsed = adminListQuerySchema.safeParse({
             limit: req.nextUrl.searchParams.get('limit') ?? undefined,
             offset: req.nextUrl.searchParams.get('offset') ?? undefined,
+            workspaceId: req.nextUrl.searchParams.get('workspaceId') ?? undefined,
+            search: rawSearch?.trim() || undefined,
         });
 
         if (!parsed.success) {

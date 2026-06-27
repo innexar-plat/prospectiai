@@ -27,7 +27,7 @@ describe('POST /api/viability', () => {
     (planHasModule as jest.Mock).mockReturnValue(true);
     (prisma.user.findUnique as jest.Mock).mockResolvedValue({
       id: 'u1',
-      workspaces: [{ workspace: { plan: 'SCALE' } }],
+      workspaces: [{ workspace: { plan: 'SCALE', companyName: 'Acme', legalName: 'Acme LTDA', tradeName: 'Acme', cnpj: '12345678000199', primaryCnaeCode: '6201501', primaryCnaeDescription: 'Software', companySize: 'ME', foundingDate: '2020-01-01', productService: 'Services', targetAudience: 'PMEs', mainBenefit: 'Velocidade', city: 'Santos', state: 'SP', serviceModel: 'remoto', averageTicket: 500, operationRadiusKm: 30, knownCompetitors: 'Concorrente A' } }],
       plan: 'SCALE',
       companyName: 'Acme',
       productService: 'Services',
@@ -76,16 +76,94 @@ describe('POST /api/viability', () => {
     expect(runViabilityAnalysis).toHaveBeenCalledWith(
       expect.objectContaining({ mode: 'new_business', businessType: 'Restaurant', city: 'São Paulo' }),
       'u1',
+      expect.any(String),
     );
     const data = await res.json();
     expect(data.verdict).toBe('GO');
   });
 
-  it('returns 500 when runViabilityAnalysis throws', async () => {
+  it('passes locale and country to runViabilityAnalysis', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    const res = await POST(req({
+      mode: 'new_business',
+      businessType: 'Gym',
+      city: 'Austin',
+      state: 'TX',
+      country: 'US',
+      locale: 'en',
+    }));
+    expect(res.status).toBe(200);
+    expect(runViabilityAnalysis).toHaveBeenCalledWith(
+      expect.objectContaining({
+        city: 'Austin',
+        state: 'TX',
+        country: 'US',
+        locale: 'en',
+      }),
+      'u1',
+      'en',
+    );
+  });
+
+  it('passes enriched business context when mode is my_business', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    const res = await POST(req({ mode: 'my_business', city: 'São Paulo' }));
+    expect(res.status).toBe(200);
+    expect(runViabilityAnalysis).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: 'my_business',
+        businessContext: expect.objectContaining({
+          cnpj: '12345678000199',
+          primaryCnaeDescription: 'Software',
+          averageTicket: 500,
+        }),
+      }),
+      'u1',
+      expect.any(String),
+    );
+  });
+
+  it('returns 503 when runViabilityAnalysis throws rate limit error', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    (runViabilityAnalysis as jest.Mock).mockRejectedValue(new Error('Failed after 3 attempts. Last error: Too Many Requests'));
+    const res = await POST(req({ mode: 'new_business', businessType: 'Bar', city: 'Salvador' }));
+    expect(res.status).toBe(503);
+    const json = await res.json();
+    expect(json.error).toContain('Limite de uso');
+  });
+
+  it('returns 500 when runViabilityAnalysis throws unexpected error', async () => {
     (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1' }, expires: '' });
     (runViabilityAnalysis as jest.Mock).mockRejectedValue(new Error('Service error'));
     const res = await POST(req({ mode: 'new_business', businessType: 'Bar', city: 'Salvador' }));
     expect(res.status).toBe(500);
-    expect(await res.json()).toMatchObject({ error: 'Internal server error' });
+    expect(await res.json()).toMatchObject({ error: 'Não foi possível concluir a análise de viabilidade. Tente novamente.' });
+  });
+
+  it('returns 400 when body is invalid JSON', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    const res = await POST(new NextRequest('http://localhost/api/viability', {
+      method: 'POST',
+      body: '{bad json',
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ error: 'Invalid JSON body' });
+  });
+
+  it('returns 400 when my_business mode lacks profile data', async () => {
+    (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      id: 'u1',
+      workspaces: [{ workspace: { plan: 'SCALE' } }],
+      plan: 'SCALE',
+      companyName: null,
+      productService: null,
+    });
+    const res = await POST(req({ mode: 'my_business', city: 'São Paulo' }));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({
+      error: expect.stringContaining('Complete seu perfil'),
+    });
   });
 });

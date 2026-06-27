@@ -1,0 +1,19 @@
+# US domain routes are in docker-compose.yml (host-based MARKET detection).
+# Optional: override env for US-only staging.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.us.yml up -d --build
+
+services:
+  frontend:
+    build:
+      args:
+        VITE_MARKET: US
+    labels: []
+
+  backend:
+    environment:
+      AI_ALWAYS_INCLUDE_ENV_FALLBACK: "true"
+      MARKET: US
+      NEXT_PUBLIC_APP_URL: https://precisionai.innexar.app
+      SITE_URL: https://precisionai.innexar.app
+      AUTH_URL: https://precisionai.innexar.app
+      EMAIL_FROM: "Precision AI <noreply@precisionai.innexar.app>"

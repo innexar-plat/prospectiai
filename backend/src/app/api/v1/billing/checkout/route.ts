@@ -27,7 +27,7 @@ export async function POST(req: Request) {
         const { planId, locale, cycle = 'monthly' } = parsed.data;
         const plan = PLANS[planId as PlanType];
 
-        if (!plan || planId === 'FREE') {
+        if (!plan || planId === 'FREE' || planId === 'TRIAL') {
             return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
         }
 

@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { searchFormSchema, DEFAULT_SEARCH_VALUES } from './searchFormSchema';
+import { describe, it, expect, vi } from 'vitest';
+import { searchFormSchema, DEFAULT_SEARCH_VALUES, createDefaultSearchValues } from './searchFormSchema';
 
 describe('searchFormSchema', () => {
   it('parses valid object with defaults', () => {
@@ -47,5 +47,12 @@ describe('searchFormSchema', () => {
     expect(DEFAULT_SEARCH_VALUES.state).toBe('Todos');
     expect(DEFAULT_SEARCH_VALUES.radiusKm).toBe(20);
     expect(DEFAULT_SEARCH_VALUES.niches).toEqual([]);
+  });
+
+  it('createDefaultSearchValues uses US country on US hostname', () => {
+    const originalHostname = window.location.hostname;
+    vi.stubGlobal('location', { ...window.location, hostname: 'precisionai.innexar.app', protocol: 'https:' });
+    expect(createDefaultSearchValues().country).toBe('US');
+    vi.stubGlobal('location', { ...window.location, hostname: originalHostname });
   });
 });

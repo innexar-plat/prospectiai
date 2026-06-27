@@ -5,9 +5,13 @@ import App from './App';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
 
+vi.mock('./pages/public/Landing', () => ({
+  default: () => <main data-testid="landing-main">Landing</main>,
+}));
+
 vi.mock('./lib/api', () => ({
   authApi: { session: vi.fn().mockResolvedValue({ user: null }) },
-  userApi: { me: vi.fn().mockRejectedValue(new Error('unauthorized')) },
+  userApi: { me: vi.fn().mockResolvedValue({ user: null }) },
 }));
 
 function TestWrapper({ children }: { children: React.ReactNode }) {

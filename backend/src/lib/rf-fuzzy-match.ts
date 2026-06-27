@@ -13,6 +13,8 @@ export interface RfFuzzyMatchResult {
     logradouro: string | null;
     numero: string | null;
     email: string | null;
+    ddd: string | null;
+    telefone: string | null;
     porte: string | null;
     capitalSocial: number | null;
     cnaePrincipal: string | null;
@@ -100,11 +102,12 @@ export async function fuzzyMatchRfCompany(
             const exactMatches = await prisma.$queryRaw<Array<{
                 cnpj: string; razaoSocial: string; nomeFantasia: string | null;
                 municipio: string | null; logradouro: string | null; numero: string | null;
-                email: string | null; porte: string | null; capitalSocial: number | null;
+                email: string | null; ddd: string | null; telefone: string | null;
+                porte: string | null; capitalSocial: number | null;
                 cnaePrincipal: string | null; dataAbertura: string | null;
             }>>`
                 SELECT cnpj, "razaoSocial", "nomeFantasia", municipio, logradouro, numero,
-                       email, porte, "capitalSocial", "cnaePrincipal", "dataAbertura"
+                       email, ddd, telefone, porte, "capitalSocial", "cnaePrincipal", "dataAbertura"
                 FROM "RfCompany"
                 WHERE UPPER("nomeFantasia") = ${normalizedName}
                   AND UPPER(municipio) = ${city}
@@ -128,12 +131,13 @@ export async function fuzzyMatchRfCompany(
             const fuzzyMatches = await prisma.$queryRaw<Array<{
                 cnpj: string; razaoSocial: string; nomeFantasia: string | null;
                 municipio: string | null; logradouro: string | null; numero: string | null;
-                email: string | null; porte: string | null; capitalSocial: number | null;
+                email: string | null; ddd: string | null; telefone: string | null;
+                porte: string | null; capitalSocial: number | null;
                 cnaePrincipal: string | null; dataAbertura: string | null;
                 sim: number;
             }>>`
                 SELECT cnpj, "razaoSocial", "nomeFantasia", municipio, logradouro, numero,
-                       email, porte, "capitalSocial", "cnaePrincipal", "dataAbertura",
+                       email, ddd, telefone, porte, "capitalSocial", "cnaePrincipal", "dataAbertura",
                        similarity(UPPER("nomeFantasia"), ${normalizedName}) as sim
                 FROM "RfCompany"
                 WHERE UPPER(municipio) = ${city}
@@ -164,12 +168,13 @@ export async function fuzzyMatchRfCompany(
             const razaoMatches = await prisma.$queryRaw<Array<{
                 cnpj: string; razaoSocial: string; nomeFantasia: string | null;
                 municipio: string | null; logradouro: string | null; numero: string | null;
-                email: string | null; porte: string | null; capitalSocial: number | null;
+                email: string | null; ddd: string | null; telefone: string | null;
+                porte: string | null; capitalSocial: number | null;
                 cnaePrincipal: string | null; dataAbertura: string | null;
                 sim: number;
             }>>`
                 SELECT cnpj, "razaoSocial", "nomeFantasia", municipio, logradouro, numero,
-                       email, porte, "capitalSocial", "cnaePrincipal", "dataAbertura",
+                       email, ddd, telefone, porte, "capitalSocial", "cnaePrincipal", "dataAbertura",
                        similarity(UPPER("razaoSocial"), ${normalizedName}) as sim
                 FROM "RfCompany"
                 WHERE UPPER(municipio) = ${city}

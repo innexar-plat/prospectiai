@@ -5,18 +5,29 @@ import { useNavigate, useOutletContext } from 'react-router-dom';
 import type { SessionUser, PipelineBrief } from '@/lib/api';
 import { pipelineApi } from '@/lib/api';
 import { StatCard, EmptyState } from '@/components/dashboard/shared/DashboardUI';
+import { useI18n } from '@/lib/i18n';
+import { getActiveMarket } from '@/lib/market';
 
-const LOST_REASON_LABELS: Record<string, string> = {
-    PRICE: 'Preço',
-    NO_NEED: 'Sem necessidade',
-    COMPETITOR: 'Concorrente',
-    NO_RESPONSE: 'Sem resposta',
-    OTHER: 'Outro',
-};
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
+
+function getLostReasonLabel(t: TranslateFn, reason: string): string {
+    const map: Record<string, string> = {
+        PRICE: t('page.pipeline.lostReason.price'),
+        NO_NEED: t('page.pipeline.lostReason.noNeed'),
+        COMPETITOR: t('page.pipeline.lostReason.competitor'),
+        NO_RESPONSE: t('page.pipeline.lostReason.noResponse'),
+        OTHER: t('page.pipeline.lostReason.other'),
+    };
+    return map[reason] || reason;
+}
 
 export default function PipelinePage() {
     const { user } = useOutletContext<{ user: SessionUser }>();
     const navigate = useNavigate();
+    const { t } = useI18n();
+    const isUsMarket = getActiveMarket() === 'US';
+    const currencyPrefix = isUsMarket ? '$' : 'R$';
+    const currencyLocale = isUsMarket ? 'en-US' : 'pt-BR';
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<PipelineBrief | null>(null);
     const [error, setError] = useState('');
@@ -27,16 +38,16 @@ export default function PipelinePage() {
         if (!hasAccess) { setLoading(false); return; }
         pipelineApi.getDailyBrief()
             .then(setData)
-            .catch((err) => setError(err instanceof Error ? err.message : 'Erro ao carregar pipeline'))
+            .catch((err) => setError(err instanceof Error ? err.message : t('page.pipeline.loadError')))
             .finally(() => setLoading(false));
-    }, [hasAccess]);
+    }, [hasAccess, t]);
 
     if (!hasAccess) {
         return (
             <>
-                <HeaderDashboard title="Pipeline Inteligente" subtitle="IA analisa seus leads e sugere os melhores para contatar hoje." breadcrumb="Inteligência / Pipeline" />
+                <HeaderDashboard title={t('page.pipeline.title')} subtitle={t('page.pipeline.subtitleLocked')} breadcrumb={t('page.pipeline.breadcrumb')} />
                 <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full">
-                    <EmptyState icon={Lock} title="Pipeline Inteligente" description="Veja probabilidade de fechamento, valor estimado do deal e recomendações diárias com IA." actionLabel="Faça Upgrade para PRO" onAction={() => navigate('/dashboard/configuracoes')} />
+                    <EmptyState icon={Lock} title={t('page.pipeline.lockedTitle')} description={t('page.pipeline.lockedDesc')} actionLabel={t('page.pipeline.upgrade')} onAction={() => navigate('/dashboard/configuracoes')} />
                 </div>
             </>
         );
@@ -44,13 +55,13 @@ export default function PipelinePage() {
 
     return (
         <>
-            <HeaderDashboard title="Pipeline Inteligente" subtitle="Recomendações diárias baseadas em IA e seus dados de conversão." breadcrumb="Inteligência / Pipeline" />
+            <HeaderDashboard title={t('page.pipeline.title')} subtitle={t('page.pipeline.subtitle')} breadcrumb={t('page.pipeline.breadcrumb')} />
             <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full space-y-6">
 
                 {loading && (
                     <div className="flex flex-col items-center justify-center p-16 gap-4">
                         <Loader2 size={40} className="animate-spin text-violet-600 dark:text-violet-400" />
-                        <p className="text-sm text-muted">Calculando pipeline inteligente...</p>
+                        <p className="text-sm text-muted">{t('page.pipeline.loading')}</p>
                     </div>
                 )}
 
@@ -63,23 +74,21 @@ export default function PipelinePage() {
 
                 {data && !loading && (
                     <>
-                        {/* KPIs */}
                         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-                            <StatCard value={data.stats.totalActive} label="Leads Ativos" color="violet" />
-                            <StatCard value={data.stats.hotLeads} label="Leads Quentes" color="amber" suffix="🔥" />
-                            <StatCard value={`${data.stats.avgCloseProbability}%`} label="Prob. Média" color="emerald" />
-                            <StatCard value={`R$ ${(data.stats.pipelineValue / 1000).toFixed(0)}k`} label="Pipeline Total" color="blue" />
-                            <StatCard value={data.stats.conversionRate != null ? `${data.stats.conversionRate}%` : '-'} label="Taxa Conversão" color="amber" />
+                            <StatCard value={data.stats.totalActive} label={t('page.pipeline.stat.activeLeads')} color="violet" />
+                            <StatCard value={data.stats.hotLeads} label={t('page.pipeline.stat.hotLeads')} color="amber" suffix="🔥" />
+                            <StatCard value={`${data.stats.avgCloseProbability}%`} label={t('page.pipeline.stat.avgProbability')} color="emerald" />
+                            <StatCard value={`${currencyPrefix} ${(data.stats.pipelineValue / 1000).toFixed(0)}k`} label={t('page.pipeline.stat.pipelineTotal')} color="blue" />
+                            <StatCard value={data.stats.conversionRate != null ? `${data.stats.conversionRate}%` : '-'} label={t('page.pipeline.stat.conversionRate')} color="amber" />
                         </div>
 
-                        {/* Extra stats row */}
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                             {data.stats.avgDealValue != null && (
                                 <div className="rounded-2xl bg-card border border-border p-4 flex items-center gap-3">
                                     <DollarSign size={20} className="text-emerald-500 shrink-0" />
                                     <div>
-                                        <p className="text-xs text-muted">Ticket Médio</p>
-                                        <p className="text-sm font-bold text-foreground">R$ {data.stats.avgDealValue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</p>
+                                        <p className="text-xs text-muted">{t('page.pipeline.avgTicket')}</p>
+                                        <p className="text-sm font-bold text-foreground">{currencyPrefix} {data.stats.avgDealValue.toLocaleString(currencyLocale, { minimumFractionDigits: 0 })}</p>
                                     </div>
                                 </div>
                             )}
@@ -87,51 +96,49 @@ export default function PipelinePage() {
                                 <div className="rounded-2xl bg-card border border-border p-4 flex items-center gap-3">
                                     <Clock size={20} className="text-blue-500 shrink-0" />
                                     <div>
-                                        <p className="text-xs text-muted">Ciclo Médio</p>
-                                        <p className="text-sm font-bold text-foreground">{data.stats.avgCycleDays} dias</p>
+                                        <p className="text-xs text-muted">{t('page.pipeline.avgCycle')}</p>
+                                        <p className="text-sm font-bold text-foreground">{t('page.pipeline.avgCycleDays', { days: data.stats.avgCycleDays })}</p>
                                     </div>
                                 </div>
                             )}
                             <div className="rounded-2xl bg-card border border-border p-4 flex items-center gap-3">
                                 <TrendingUp size={20} className="text-emerald-500 shrink-0" />
                                 <div>
-                                    <p className="text-xs text-muted">Convertidos</p>
+                                    <p className="text-xs text-muted">{t('page.pipeline.converted')}</p>
                                     <p className="text-sm font-bold text-foreground">{data.stats.totalConverted}</p>
                                 </div>
                             </div>
                             <div className="rounded-2xl bg-card border border-border p-4 flex items-center gap-3">
                                 <BarChart3 size={20} className="text-rose-500 shrink-0" />
                                 <div>
-                                    <p className="text-xs text-muted">Perdidos</p>
+                                    <p className="text-xs text-muted">{t('page.pipeline.lost')}</p>
                                     <p className="text-sm font-bold text-foreground">{data.stats.totalLost}</p>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Top Lost Reasons */}
                         {data.stats.topLostReasons.length > 0 && (
                             <div className="rounded-2xl bg-card border border-border p-4">
-                                <h4 className="text-xs font-bold text-muted uppercase tracking-wider mb-3">Principais Motivos de Perda</h4>
+                                <h4 className="text-xs font-bold text-muted uppercase tracking-wider mb-3">{t('page.pipeline.lostReasons')}</h4>
                                 <div className="flex flex-wrap gap-2">
                                     {data.stats.topLostReasons.map((r) => (
                                         <span key={r.reason} className="px-3 py-1 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-full text-xs font-medium">
-                                            {LOST_REASON_LABELS[r.reason] || r.reason} ({r.count}x)
+                                            {t('page.pipeline.lostReason.count', { label: getLostReasonLabel(t, r.reason), count: r.count })}
                                         </span>
                                     ))}
                                 </div>
                             </div>
                         )}
 
-                        {/* Recommendations */}
                         <div className="rounded-3xl bg-card border border-border p-6">
                             <div className="flex items-center gap-2 mb-1">
                                 <Zap size={20} className="text-violet-600 dark:text-violet-400" />
-                                <h3 className="text-lg font-bold text-foreground">Contate Hoje</h3>
+                                <h3 className="text-lg font-bold text-foreground">{t('page.pipeline.contactToday')}</h3>
                             </div>
-                            <p className="text-xs text-muted mb-4">IA ranqueou os leads com maior potencial de fechar agora.</p>
+                            <p className="text-xs text-muted mb-4">{t('page.pipeline.contactTodayDesc')}</p>
 
                             {data.recommendations.length === 0 ? (
-                                <p className="text-sm text-muted text-center py-8">Nenhum lead ativo no pipeline. Comece prospectando!</p>
+                                <p className="text-sm text-muted text-center py-8">{t('page.pipeline.noActiveLeads')}</p>
                             ) : (
                                 <div className="space-y-3">
                                     {data.recommendations.map((rec) => (
@@ -141,14 +148,12 @@ export default function PipelinePage() {
                                             onClick={() => navigate(`/dashboard/lead/${rec.leadPlaceId || rec.leadId}`)}
                                             className="w-full text-left p-4 bg-surface rounded-xl border border-border/50 hover:border-violet-500/30 transition-colors flex items-start gap-4"
                                         >
-                                            {/* Rank */}
                                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 ${
                                                 rec.rank <= 3 ? 'bg-violet-600/20 text-violet-600 dark:text-violet-400' : 'bg-surface text-muted'
                                             }`}>
                                                 #{rec.rank}
                                             </div>
 
-                                            {/* Info */}
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 mb-1">
                                                     <p className="text-sm font-bold text-foreground truncate">{rec.leadName}</p>
@@ -163,7 +168,7 @@ export default function PipelinePage() {
                                                     )}
                                                 </div>
                                                 <div className="flex flex-wrap gap-1.5 mb-1.5">
-                                                    {rec.reasons.map((reason, idx) => (
+                                                    {(rec.reasons ?? []).map((reason, idx) => (
                                                         <span key={idx} className="text-[10px] text-muted bg-card px-2 py-0.5 rounded-full border border-border/50">
                                                             {reason}
                                                         </span>
@@ -173,13 +178,13 @@ export default function PipelinePage() {
                                                     {rec.closeProbability != null && (
                                                         <span className="flex items-center gap-1">
                                                             <Target size={12} className="text-emerald-500" />
-                                                            {rec.closeProbability}% chance
+                                                            {t('page.pipeline.chance', { pct: rec.closeProbability })}
                                                         </span>
                                                     )}
                                                     {rec.estimatedDealValue != null && (
                                                         <span className="flex items-center gap-1">
                                                             <DollarSign size={12} className="text-emerald-500" />
-                                                            R$ {rec.estimatedDealValue.toLocaleString('pt-BR')}
+                                                            {currencyPrefix} {rec.estimatedDealValue.toLocaleString(currencyLocale)}
                                                         </span>
                                                     )}
                                                     {rec.bestContactWindow && (
@@ -197,7 +202,6 @@ export default function PipelinePage() {
                                                 </div>
                                             </div>
 
-                                            {/* Action */}
                                             <div className="shrink-0 flex flex-col items-end gap-1">
                                                 <span className="text-[10px] font-medium text-violet-600 dark:text-violet-400">{rec.suggestedAction}</span>
                                                 <ArrowRight size={16} className="text-muted" />

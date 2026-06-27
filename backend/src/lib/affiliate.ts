@@ -3,9 +3,24 @@
  */
 import { randomInt } from 'node:crypto';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
+import { getSiteUrlForMarket } from '@/lib/site-url';
+import type { Market } from '@/lib/market';
+import { getAffiliateConversionEmailCopy, localeForAffiliateCurrency } from '@/lib/i18n/messages';
 import type { Affiliate, Referral, AffiliateCommissionStatus } from '@prisma/client';
 
 const AFFILIATE_SETTINGS_ID = 'affiliate-settings-default';
+const AFFILIATE_DASHBOARD_PATH = '/dashboard/afiliado';
+
+/** USD → US site; demais moedas → BR. */
+export function marketFromCurrency(currency: string): Market {
+  return currency.toUpperCase() === 'USD' ? 'US' : 'BR';
+}
+
+export function buildAffiliateDashboardUrl(currency: string): string {
+  const base = getSiteUrlForMarket(marketFromCurrency(currency)).replace(/\/$/, '');
+  return `${base}${AFFILIATE_DASHBOARD_PATH}`;
+}
 
 export type AffiliateSettingsRow = {
   defaultCommissionRatePercent: number;
@@ -50,6 +65,51 @@ export async function getOrCreateSettings(): Promise<AffiliateSettingsRow> {
     minPayoutCents: row.minPayoutCents,
     allowSelfSignup: row.allowSelfSignup,
   };
+}
+
+/** Reads affiliate_ref cookie set by the frontend (?ref= attribution). */
+export function parseAffiliateRefFromCookie(cookieHeader: string | null | undefined): string | null {
+  if (!cookieHeader) return null;
+  const match = cookieHeader.match(/(?:^|;\s*)affiliate_ref=([^;]*)/i);
+  if (!match?.[1]) return null;
+  try {
+    const raw = decodeURIComponent(match[1]).trim().toUpperCase().slice(0, 50);
+    return raw || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Creates Referral on signup when a valid affiliate code is present (register or OAuth). */
+export async function attachReferralOnSignup(params: {
+  affiliateCode: string;
+  userId: string;
+  workspaceId: string;
+  email: string;
+}): Promise<void> {
+  try {
+    const settings = await getOrCreateSettings();
+    if (!settings.allowSelfSignup) return;
+    const affiliate = await getAffiliateByCode(params.affiliateCode);
+    if (!affiliate) return;
+    const selfRef = await isSelfReferral(affiliate.id, params.email);
+    if (selfRef) return;
+    await prisma.referral.create({
+      data: {
+        affiliateId: affiliate.id,
+        userId: params.userId,
+        workspaceId: params.workspaceId,
+        landedAt: new Date(),
+        signupAt: new Date(),
+        refSource: 'QUERYSTRING',
+      },
+    });
+  } catch (e) {
+    logger.error('Referral create failed on signup', {
+      error: e instanceof Error ? e.message : 'Unknown',
+      userId: params.userId,
+    });
+  }
 }
 
 /** Bloqueia auto-indicação: mesmo email afiliado e usuário. */
@@ -153,13 +213,13 @@ export async function createCommissionForFirstPayment(params: {
 
   const affiliateEmail = await getAffiliateEmail(referral.affiliateId);
   if (affiliateEmail) {
-    const base = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-    const dashboardUrl = `${base.replace(/\/$/, '')}/dashboard/afiliado`;
+    const dashboardUrl = buildAffiliateDashboardUrl(currency);
     import('@/lib/email').then(({ sendAffiliateConversionEmail }) => {
       sendAffiliateConversionEmail(
         affiliateEmail,
-        'Um indicado seu realizou a primeira assinatura paga. A comissão foi registrada e estará disponível após o período de segurança.',
-        dashboardUrl
+        getAffiliateConversionEmailCopy(localeForAffiliateCurrency(currency)).firstPaymentSummary,
+        dashboardUrl,
+        currency,
       ).catch((e: unknown) => {
         import('@/lib/logger').then(({ logger }) => {
           logger.error('Affiliate conversion email failed', { error: e instanceof Error ? e.message : 'Unknown' });
@@ -276,13 +336,13 @@ export async function createCommissionForRecurring(params: {
   });
   const affiliateEmail = await getAffiliateEmail(referral.affiliateId);
   if (affiliateEmail) {
-    const base = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-    const dashboardUrl = `${base.replace(/\/$/, '')}/dashboard/afiliado`;
+    const dashboardUrl = buildAffiliateDashboardUrl(currency);
     import('@/lib/email').then(({ sendAffiliateConversionEmail }) => {
       sendAffiliateConversionEmail(
         affiliateEmail,
-        'Um indicado seu renovou a assinatura. Nova comissão recorrente foi registrada.',
-        dashboardUrl
+        getAffiliateConversionEmailCopy(localeForAffiliateCurrency(currency)).recurringSummary,
+        dashboardUrl,
+        currency,
       ).catch((e: unknown) => {
         import('@/lib/logger').then(({ logger }) => {
           logger.error('Affiliate recurring conversion email failed', { error: e instanceof Error ? e.message : 'Unknown' });

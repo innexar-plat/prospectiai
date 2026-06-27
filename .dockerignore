@@ -1,5 +1,7 @@
 node_modules
+**/node_modules
 .next
+**/.next
 .git
 .gitignore
 *.md
@@ -7,10 +9,19 @@ node_modules
 .env.*
 !.env.example
 coverage
+**/coverage
 test-results
+**/test-results
 *.log
 .vscode
 .idea
 dist
+**/dist
 *.tgz
 playwright-report
+**/playwright-report
+.scannerwork
+.cursor
+.ai
+cookies.txt
+rf-import.log

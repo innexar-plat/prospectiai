@@ -12,6 +12,7 @@ datasource db {
 
 enum Plan {
   FREE
+  TRIAL
   BASIC
   PRO
   BUSINESS
@@ -38,6 +39,7 @@ enum AiConfigProvider {
   GROQ
   DEEPSEEK
   ANTHROPIC
+  OPENROUTER
 }
 
 enum NotificationType {
@@ -45,6 +47,28 @@ enum NotificationType {
   ALERT
   REMINDER
   SYSTEM
+}
+
+enum LeadContactType {
+  PHONE
+  EMAIL
+  WEBSITE
+}
+
+enum LeadContactSource {
+  GOOGLE
+  RECEITA
+  WEBSITE_SCRAPER
+  WEB_SEARCH
+  MANUAL
+}
+
+enum LeadContactRoleHint {
+  OWNER
+  COMMERCIAL
+  CENTRAL
+  ACCOUNTANT
+  UNKNOWN
 }
 
 model User {
@@ -175,20 +199,48 @@ model Workspace {
   /** Downgrade scheduled for end of period: plan to apply at pendingPlanEffectiveAt */
   pendingPlanId      String?   // PlanType key, e.g. BUSINESS
   pendingPlanEffectiveAt DateTime?
+  /** BR Starter promo (R$59 x 6 months) — set when trial expires or via email link */
+  starterPromoEligible   Boolean  @default(false)
+  starterPromoCode       String?
+  promoPaymentsRemaining Int?
+  promoRegularAmountBrl  Int?
+  /** When BR trial reactivation promo email was sent (dedup for cron/script). */
+  reactivationPromoSentAt DateTime?
   createdAt          DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   // Business profile (one per workspace; shared by all members)
   companyName    String?
+  legalName      String?
+  tradeName      String?
+  cnpj           String?
+  primaryCnaeCode String?
+  primaryCnaeDescription String?
+  companySize    String?
+  foundingDate   String?
   productService String?
   targetAudience String?
   mainBenefit    String?
   address        String?
+  postalCode     String?
+  street         String?
+  number         String?
+  complement     String?
+  neighborhood   String?
+  city           String?
+  state          String?
   linkedInUrl    String?
   instagramUrl   String?
   facebookUrl    String?
   websiteUrl     String?
   logoUrl        String?
+  serviceModel   String?
+  averageTicket  Float?
+  operationRadiusKm Int?
+  knownCompetitors String?
+
+  /// Controla acesso ao módulo de Auto-Prospecção (ativado pelo admin do sistema)
+  autoProspeccaoEnabled Boolean @default(false)
 
   members              WorkspaceMember[]
   invitations          WorkspaceInvitation[]
@@ -196,6 +248,10 @@ model Workspace {
   searchHistory        SearchHistory[]
   usageEvents          UsageEvent[]
   intelligenceReports  IntelligenceReport[]
+  autoProspeccaoConfig AutoProspeccaoConfig?
+  autoProspeccaoRuns   AutoProspeccaoRun[]
+  autoProspSenderPool  AutoProspSenderPool[]
+  prospectedLeads      ProspectedLead[]
 }
 
 model WorkspaceMember {
@@ -215,6 +271,9 @@ model WorkspaceMember {
   dailyLeadsLimit   Int?  // max consumptions (search + analysis) per calendar day
   weeklyLeadsLimit  Int?  // max consumptions in rolling 7 days
   monthlyLeadsLimit Int?  // max consumptions per calendar month
+
+  /// Acesso ao módulo de Auto-Prospecção (ativado pelo owner da workspace)
+  autoProspeccaoEnabled Boolean @default(false)
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -271,15 +330,45 @@ model Lead {
   lastScoredAt     DateTime?
   matchConfidence  Int?      // 0-100 RF match confidence
   matchMethod      String?   // cnpj_direct, name_exact_city, name_fuzzy_city, etc.
+  recommendedPhone String?
+  recommendedEmail String?
+  recommendedWebsite String?
+  contactsHealthScore Int?
   
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
   analyses         LeadAnalysis[]
   tags             LeadTag[]
+  contacts         LeadContact[]
 
   @@index([cnpj])
   @@index([lastSearchedAt(sort: Desc)])
+}
+
+model LeadContact {
+  id              String              @id @default(cuid())
+  leadId          String
+  type            LeadContactType
+  source          LeadContactSource
+  roleHint        LeadContactRoleHint @default(UNKNOWN)
+  valueRaw        String
+  valueNormalized String
+  confidenceScore Int?                // 0-100
+  isPrimary       Boolean             @default(false)
+  evidence        Json?
+  firstSeenAt     DateTime            @default(now())
+  lastSeenAt      DateTime            @default(now())
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([leadId, type, valueNormalized, source])
+  @@index([leadId])
+  @@index([type])
+  @@index([valueNormalized])
+  @@index([source])
 }
 
 model LeadAnalysis {
@@ -433,6 +522,26 @@ model WebSearchConfig {
 
   @@unique([role])
   @@index([enabled])
+}
+
+// Runtime controls for AI/analyze throughput and fallback behavior
+model AiRuntimeConfig {
+  id                               String   @id @default(cuid())
+  key                              String   @unique @default("default")
+  analyzeRateLimitMax              Int      @default(15)
+  analyzeRateLimitWindowSeconds    Int      @default(60)
+  analyzeBulkheadMaxInFlight       Int      @default(12)
+  analyzeBulkheadAcquireTimeoutMs  Int      @default(12000)
+  aiModelMaxInFlight               Int      @default(4)
+  analyzeAiMaxOutputTokens         Int      @default(16384)
+  aiCircuitBreakerFailureThreshold Int      @default(3)
+  aiCircuitBreakerOpenMs           Int      @default(30000)
+  aiFallbackProvider               String   @default("GEMINI")
+  aiCloudflareModelsLeadAnalysis   String   @default("")
+  aiCloudflareModelsViability      String   @default("")
+  aiCloudflareModelsCompanyAnalysis String  @default("")
+  createdAt                        DateTime @default(now())
+  updatedAt                        DateTime @updatedAt
 }
 
 // Tags de leads para pipeline de vendas
@@ -930,6 +1039,287 @@ model RfCompany {
   @@index([cnaePrincipal])
   @@index([uf])
   @@index([uf, cnaePrincipal])
+  @@index([cnaePrincipal, municipio, uf])
   @@index([municipio])
+  @@index([municipio, uf, bairro])
+  @@index([ddd, telefone])
   @@index([porte])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// AUTO-PROSPECÇÃO — Módulo de prospecção automática de leads
+// ═══════════════════════════════════════════════════════════════════
+
+enum ProspectedLeadStatus {
+  NEW        // Encontrado na busca RF
+  ANALYZING  // IA processando
+  SCORED     // Score calculado
+  COLD       // Score < warmScoreMin — descartado
+  WARM       // warmScoreMin ≤ score < hotScoreMin — nurturing
+  HOT        // score ≥ hotScoreMin — ação imediata
+  EMAILING   // Em sequência de email ativa
+  CRM_SENT   // Enviado ao CRM
+  ENGAGED    // Abriu ou clicou em email
+  CONVERTED  // Virou cliente
+  BOUNCED    // Email inválido / bounce
+  OPTED_OUT  // Opt-out / unsubscribe
+}
+
+enum AutoProspTemplateType {
+  HOT_COLD_INTRO       // D+0: Apresentação — leads quentes
+  HOT_FOLLOW_NO_OPEN   // D+3: Follow-up se não abriu
+  HOT_FOLLOW_OPENED    // D+3: Social proof se abriu mas não clicou
+  HOT_LAST_ATTEMPT     // D+7: Última tentativa + oferta
+  WARM_WEEK1_EDUCATION // S1: Conteúdo educativo — leads mornos
+  WARM_WEEK2_VALUE     // S2: Email de valor / insight
+  WARM_WEEK3_SOCIAL    // S3: Prova social / case
+  WARM_WEEK4_OFFER     // S4: Oferta trial + CTA
+  CUSTOM               // Template personalizado pelo usuário
+}
+
+enum AutoProspRunStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+/// Configuração principal do módulo de Auto-Prospecção (1 por workspace)
+model AutoProspeccaoConfig {
+  id                   String   @id @default(cuid())
+  workspaceId          String   @unique
+
+  isActive             Boolean  @default(false)
+
+  // Agendamento
+  scheduleDays         Json     @default("[1,2,3,4,5]")  // 1=Seg...7=Dom
+  scheduleTimeStart    String   @default("08:00")
+  scheduleTimeEnd      String   @default("20:00")
+  searchIntervalHours  Int      @default(24)
+  analyzeDelayMinutes  Int      @default(30)
+
+  // Limites operacionais
+  maxLeadsPerRun       Int      @default(50)
+  maxEmailsPerDay      Int      @default(200)
+  maxCrmPushPerDay     Int      @default(100)
+
+  // Scoring
+  hotScoreMin          Int      @default(70)
+  warmScoreMin         Int      @default(40)
+
+  // CRM
+  crmAutoSend          Boolean  @default(false)
+  crmProvider          String?  // "rdstation"|"hubspot"|"agendor"|"all"
+  crmOwnerUserId       String?
+
+  // Email
+  emailAutoSend        Boolean  @default(true)
+  emailStepIntervalHours Int    @default(48)
+  defaultSequenceId    String?
+
+  // Blacklist de CNPJs que nunca devem ser contatados
+  blockedCnpjs         Json     @default("[]")
+
+  // WhatsApp — Fase futura
+  whatsappEnabled      Boolean  @default(false)
+
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+/// Perfis de busca pré-definidos usados pelo módulo de auto-prospecção.
+/// isSystem=true = perfis do sistema criados pelo admin; null workspaceId = visível para todos.
+model SearchProfile {
+  id            String    @id @default(cuid())
+  workspaceId   String?   // null → perfil do sistema (visível para todos)
+  isSystem      Boolean   @default(false)
+  isActive      Boolean   @default(true)
+  name          String
+  description   String?
+  priority      Int       @default(0) // ordem de execução (menor = primeiro)
+
+  // Filtros de busca
+  cnae          String?   // CNAE único (ex: "7020400")
+  cnaeList      Json?     // Lista de CNAEs ["7020400","7311400"]
+  uf            Json?     // Lista de UFs ["SP","RJ","MG"]
+  municipio     String?
+  porte         Json?     // ["ME","EPP","DEMAIS"]
+  hasEmail      Boolean?
+  hasPhone      Boolean?
+  minCapital    Float?
+  openedAfter   String?   // Data mínima de abertura YYYYMMDD
+
+  // Histórico de execução
+  lastRunAt     DateTime?
+  nextRunAt     DateTime?
+  totalFound    Int       @default(0)
+  totalHot      Int       @default(0)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  runs   AutoProspeccaoRun[]
+  leads  ProspectedLead[]
+
+  @@index([workspaceId, isActive])
+  @@index([isSystem])
+  @@index([nextRunAt])
+}
+
+/// Lead gerado automaticamente pelo módulo de auto-prospecção.
+/// Deduplica por (workspaceId, cnpj).
+model ProspectedLead {
+  id                String               @id @default(cuid())
+  workspaceId       String
+  searchProfileId   String
+
+  // Dados da empresa (espelho desnormalizado do RfCompany)
+  cnpj              String               @db.VarChar(14)
+  razaoSocial       String
+  nomeFantasia      String?
+  email             String?
+  ddd               String?
+  telefone          String?
+  cnaePrincipal     String?
+  uf                String?
+  municipio         String?
+  porte             String?
+
+  // Score e análise IA
+  score             Int?
+  status            ProspectedLeadStatus @default(NEW)
+  aiAnalysisSummary String?              @db.Text
+  aiScoreFactors    Json?
+
+  // CRM
+  crmProvider       String?
+  crmId             String?
+  crmPushedAt       DateTime?
+
+  // Email sequence
+  emailSequenceId   String?
+
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  searchProfile SearchProfile  @relation(fields: [searchProfileId], references: [id], onDelete: Restrict)
+  emailEvents   ProspectedLeadEmailEvent[]
+
+  @@unique([workspaceId, cnpj])
+  @@index([workspaceId, status])
+  @@index([workspaceId, score(sort: Desc)])
+  @@index([searchProfileId])
+  @@index([createdAt(sort: Desc)])
+}
+
+/// Registro de cada step de email enviado para um ProspectedLead.
+model ProspectedLeadEmailEvent {
+  id         String    @id @default(cuid())
+  leadId     String
+  step       Int       // 1, 2, 3...
+  subject    String
+  templateId String?
+  sentAt     DateTime?
+  openedAt   DateTime?
+  clickedAt  DateTime?
+  bouncedAt  DateTime?
+
+  lead ProspectedLead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([leadId, step])
+}
+
+/// Pool de remetentes para auto-prospecção por workspace.
+/// Permite múltiplos e-mails/domínios com balanceamento round-robin.
+/// provider: "resend" | "smtp"
+model AutoProspSenderPool {
+  id                    String   @id @default(cuid())
+  workspaceId           String
+  label                 String   // Ex: "Domínio Principal", "Backup Gmail"
+  provider              String   // "resend" | "smtp"
+  fromEmail             String   // Ex: "Contato <contato@empresa.com>"
+  isActive              Boolean  @default(true)
+  dailyLimit            Int      @default(200) // limite de envios/dia por remetente
+  sentToday             Int      @default(0)   // resetado pelo cron diário
+  sentTodayResetAt      DateTime @default(now())
+  lastUsedAt            DateTime?
+
+  // Resend
+  resendApiKeyEncrypted String?
+
+  // SMTP
+  smtpHost              String?
+  smtpPort              Int?
+  smtpUser              String?
+  smtpPasswordEncrypted String?
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  workspace             Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, isActive])
+}
+
+/// Templates de email específicos do módulo de auto-prospecção.
+/// isSystem=true = templates do sistema (somente leitura para usuários, podem clonar).
+model AutoProspeccaoTemplate {
+  id              String                @id @default(cuid())
+  name            String
+  type            AutoProspTemplateType
+  subject         String
+  preheader       String?
+  bodyHtml        String                @db.Text
+  bodyText        String?               @db.Text  // Versão plain text (fallback)
+  variables       Json?                 // [{key,label}] variáveis disponíveis
+
+  // Segmentação opcional (null = qualquer segmento)
+  targetCnae      String?   // CNAE alvo (ex: "7020400")
+  targetSegment   String?   // Segmento semântico ("consultorias","agencias","saas")
+
+  isSystem        Boolean   @default(false)  // criado pelo admin da plataforma
+  workspaceId     String?                    // null = sistema; workspace = personalizável
+
+  createdBy       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([type])
+  @@index([isSystem])
+  @@index([workspaceId])
+}
+
+/// Log de cada execução do módulo de auto-prospecção (manual ou cron).
+model AutoProspeccaoRun {
+  id              String             @id @default(cuid())
+  workspaceId     String
+  searchProfileId String?
+  triggeredBy     String             // "cron"|"manual"|userId
+  status          AutoProspRunStatus @default(RUNNING)
+
+  // Métricas da execução
+  leadsFound      Int @default(0)
+  leadsAnalyzed   Int @default(0)
+  leadsHot        Int @default(0)
+  leadsWarm       Int @default(0)
+  leadsCold       Int @default(0)
+  leadsDedupSkip  Int @default(0)
+  crmPushed       Int @default(0)
+  emailsQueued    Int @default(0)
+
+  errorLog        String?   @db.Text
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  searchProfile SearchProfile? @relation(fields: [searchProfileId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, startedAt(sort: Desc)])
+  @@index([status])
 }

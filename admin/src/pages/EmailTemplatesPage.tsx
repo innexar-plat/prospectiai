@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { emailMarketingApi, type EmailTemplateItem, type EmailTemplateCreateBody } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
@@ -39,7 +39,7 @@ export function EmailTemplatesPage() {
   const [formSubject, setFormSubject] = useState('');
   const [formSaving, setFormSaving] = useState(false);
 
-  const load = () => {
+  const load = useCallback(() => {
     setLoading(true);
     emailMarketingApi.templates
       .list({ type: filterType || undefined, status: filterStatus || undefined, limit: 50 })
@@ -49,9 +49,9 @@ export function EmailTemplatesPage() {
       })
       .catch(() => setToast({ type: 'error', message: 'Erro ao carregar templates.' }))
       .finally(() => setLoading(false));
-  };
+  }, [filterStatus, filterType]);
 
-  useEffect(() => { load(); }, [filterType, filterStatus]);
+  useEffect(() => { load(); }, [load]);
 
   const handleDelete = async (id: string, name: string) => {
     if (!(await confirm({ title: 'Excluir template', message: `Excluir template "${name}"? Esta ação não pode ser desfeita.`, confirmLabel: 'Excluir' }))) return;
@@ -82,7 +82,7 @@ export function EmailTemplatesPage() {
       setToast({ type: 'success', message: 'Template criado!' });
       setShowModal(false);
       setFormName(''); setFormSlug(''); setFormSubject('');
-      navigate(`/email-templates/${res.data.id}`);
+      navigate(`${res.data.id}`);
     } catch (err) {
       setToast({ type: 'error', message: err instanceof Error ? err.message : 'Erro ao criar.' });
     } finally {
@@ -179,7 +179,7 @@ export function EmailTemplatesPage() {
                   <td className="px-4 py-3 text-gray-400 text-xs">{new Date(t.updatedAt).toLocaleDateString('pt-BR')}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => navigate(`/email-templates/${t.id}`)} className="p-1.5 rounded-lg hover:bg-violet-50 text-gray-400 hover:text-violet-600" title="Editar">
+                      <button onClick={() => navigate(`${t.id}`)} className="p-1.5 rounded-lg hover:bg-violet-50 text-gray-400 hover:text-violet-600" title="Editar">
                         <Pencil className="w-4 h-4" />
                       </button>
                       <button onClick={() => handleDelete(t.id, t.name)} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600" title="Excluir">

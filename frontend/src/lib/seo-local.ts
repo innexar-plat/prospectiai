@@ -114,15 +114,15 @@ export function getWave1Slugs(): SeoLandingSlug[] {
  */
 export function getSeoTitle(entry: SeoLandingSlug): string {
   if (entry.type === 'cidade' && entry.city) {
-    return `Geração de Leads B2B em ${entry.city} | PrecisionAI`;
+    return `Geração de Leads B2B em ${entry.city} | Precision`;
   }
   if (entry.type === 'cidade-nicho' && entry.city && entry.niche) {
-    return `Prospecção B2B para ${entry.niche} em ${entry.city} | PrecisionAI`;
+    return `Prospecção B2B para ${entry.niche} em ${entry.city} | Precision`;
   }
   if (entry.type === 'bairro' && entry.neighborhood) {
-    return `Lista de Empresas por Bairro: ${entry.neighborhood} | PrecisionAI`;
+    return `Lista de Empresas por Bairro: ${entry.neighborhood} | Precision`;
   }
-  return 'Geração de Leads B2B e Prospecção com IA | PrecisionAI';
+  return 'Geração de Leads B2B e Prospecção com IA | Precision';
 }
 
 /**
@@ -170,13 +170,13 @@ export function getSeoIntro(entry: SeoLandingSlug): string[] {
   if (entry.type === 'cidade' && entry.city) {
     return [
       `A região de ${entry.city} concentra milhares de empresas ativas. Para quem vende B2B, a dúvida é: onde atacar primeiro, com qual mensagem e como priorizar leads.`,
-      `O Precision IA reúne busca por nicho e endereço, análise de concorrência local e sugestões de abordagem com IA. Você filtra por segmento, vê quem tem site e telefone, e exporta listas para seu CRM.`,
+      `O Precision reúne busca por nicho e endereço, análise de concorrência local e sugestões de abordagem com IA. Você filtra por segmento, vê quem tem site e telefone, e exporta listas para seu CRM.`,
     ];
   }
   if (entry.type === 'cidade-nicho' && entry.city && entry.niche) {
     return [
       `Prospectar ${entry.niche} em ${entry.city} exige saber quem já atua na região, quem tem presença digital e onde há espaço para novos fornecedores.`,
-      `Com o Precision IA você mapeia empresas do segmento por área, analisa concorrência e recebe sugestões de primeiro contato (ligação, e-mail, WhatsApp) com base no perfil de cada lead.`,
+      `Com o Precision você mapeia empresas do segmento por área, analisa concorrência e recebe sugestões de primeiro contato (ligação, e-mail, WhatsApp) com base no perfil de cada lead.`,
     ];
   }
   if (entry.type === 'bairro' && entry.neighborhood) {
@@ -186,7 +186,7 @@ export function getSeoIntro(entry: SeoLandingSlug): string[] {
     ];
   }
   return [
-    'O Precision IA combina busca por nicho e região, análise de concorrência local e inteligência comercial para gerar leads B2B qualificados.',
+    'O Precision combina busca por nicho e região, análise de concorrência local e inteligência comercial para gerar leads B2B qualificados.',
   ];
 }
 
@@ -229,7 +229,7 @@ export function getSeoFaq(entry: SeoLandingSlug): SeoFaqItem[] {
     return [
       {
         question: `Como encontrar empresas em ${city} para prospecção B2B?`,
-        answer: `No Precision IA você busca por nicho e região. Informe o segmento (ex.: clínicas, escritórios, comércio) e a área (${city} ou bairros). A ferramenta lista empresas com filtros por site, telefone e exportação em CSV ou JSON.`,
+        answer: `No Precision você busca por nicho e região. Informe o segmento (ex.: clínicas, escritórios, comércio) e a área (${city} ou bairros). A ferramenta lista empresas com filtros por site, telefone e exportação em CSV ou JSON.`,
       },
       {
         question: `A ferramenta usa dados reais para ${city}?`,
@@ -245,7 +245,7 @@ export function getSeoFaq(entry: SeoLandingSlug): SeoFaqItem[] {
     return [
       {
         question: `Como prospectar ${niche} em ${city}?`,
-        answer: `No Precision IA você filtra por segmento "${niche}" e região "${city}". A lista mostra empresas do nicho com opção de ver análise de concorrência, presença digital e sugestão de primeiro contato (ligação, e-mail, WhatsApp).`,
+        answer: `No Precision você filtra por segmento "${niche}" e região "${city}". A lista mostra empresas do nicho com opção de ver análise de concorrência, presença digital e sugestão de primeiro contato (ligação, e-mail, WhatsApp).`,
       },
       {
         question: `A plataforma sugere abordagem para cada lead de ${niche} em ${city}?`,
@@ -253,7 +253,7 @@ export function getSeoFaq(entry: SeoLandingSlug): SeoFaqItem[] {
       },
       {
         question: `Posso trabalhar em equipe na prospecção de ${niche} em ${city}?`,
-        answer: `Sim. O Precision IA tem workspaces: você convida membros, divide listas e acompanha resultados. Exportação e 2FA estão disponíveis nos planos pagos.`,
+        answer: `Sim. O Precision tem workspaces: você convida membros, divide listas e acompanha resultados. Exportação e 2FA estão disponíveis nos planos pagos.`,
       },
     ];
   }
@@ -261,7 +261,7 @@ export function getSeoFaq(entry: SeoLandingSlug): SeoFaqItem[] {
     return [
       {
         question: `Como listar empresas por bairro em ${neighborhood}?`,
-        answer: `No Precision IA você escolhe o bairro (${neighborhood}) e filtra por segmento. A lista mostra empresas com dados de contato e, quando disponível, análise de concorrência e sugestão de abordagem.`,
+        answer: `No Precision você escolhe o bairro (${neighborhood}) e filtra por segmento. A lista mostra empresas com dados de contato e, quando disponível, análise de concorrência e sugestão de abordagem.`,
       },
       {
         question: `Os dados de ${neighborhood} são reais?`,

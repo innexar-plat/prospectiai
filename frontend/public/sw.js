@@ -1,6 +1,6 @@
-// Precision IA Service Worker — Offline Cache + Push Notifications
+// Precision Service Worker — Offline Cache + Push Notifications
 // Cache version is checked dynamically; SW auto-updates because nginx serves sw.js with no-cache.
-const CACHE_NAME = 'prospector-v6';
+const CACHE_NAME = 'precisionia-v7';
 const STATIC_ASSETS = [
     '/',
     '/manifest.json',
@@ -63,12 +63,12 @@ self.addEventListener('fetch', (event) => {
 
 // Push Notification handler
 self.addEventListener('push', (event) => {
-    const data = event.data?.json() ?? { title: 'Precision IA', body: 'Nova notificação' };
+    const data = event.data?.json() ?? { title: 'Precision', body: 'Nova notificação' };
     event.waitUntil(
         self.registration.showNotification(data.title, {
             body: data.body,
-            icon: '/precisionai-icon-192.png',
-            badge: '/precisionai-favicon-32.png',
+            icon: '/precisionai-icon-192.png?v=3',
+            badge: '/precisionai-favicon-32.png?v=3',
             vibrate: [100, 50, 100],
             tag: data.tag || 'default',
             renotify: !!data.tag,

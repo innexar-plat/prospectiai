@@ -7,11 +7,11 @@ import {
   sendTeamInviteEmail,
   sendTeamInviteAccountCreatedEmail,
   sendVerificationEmail,
-  sendEmail,
   sendAffiliateApprovedEmail,
   sendAffiliateConversionEmail,
   sendAffiliateCommissionPaidEmail,
   sendAffiliateCommissionAvailableEmail,
+  sendOAuthWelcomeEmail,
 } from '@/lib/email';
 
 const mockSend = jest.fn();
@@ -24,6 +24,9 @@ jest.mock('@/lib/prisma', () => ({
   prisma: {
     emailConfig: {
       findFirst: jest.fn(),
+    },
+    emailSendLog: {
+      create: jest.fn().mockResolvedValue({ id: 'log1' }),
     },
   },
 }));
@@ -284,6 +287,27 @@ describe('email lib', () => {
       );
       const html = mockSend.mock.calls[0][0].html;
       expect(html).toContain('/affiliate/dashboard');
+    });
+  });
+
+  describe('sendOAuthWelcomeEmail', () => {
+    it('sends email with provider and dashboard CTA', async () => {
+      process.env.RESEND_API_KEY = 're_xxx';
+      process.env.NEXT_PUBLIC_APP_URL = 'https://precisionia.com.br';
+      mockSend.mockResolvedValue({ data: {}, error: null });
+
+      const result = await sendOAuthWelcomeEmail('oauth@x.com', 'OAuth User', 'google');
+
+      expect(result.sent).toBe(true);
+      expect(mockSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: ['oauth@x.com'],
+          subject: 'Bem-vindo ao Precision IA',
+        })
+      );
+      const html = String(mockSend.mock.calls[0][0].html);
+      expect(html).toContain('google');
+      expect(html).toContain('/dashboard');
     });
   });
 

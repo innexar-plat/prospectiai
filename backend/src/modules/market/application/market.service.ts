@@ -11,12 +11,16 @@ import {
 } from '@/modules/search';
 import { scoreAndRankPlaces, type PlaceLikeForScoring } from '@/modules/scoring';
 import { generateCompletionForRole, resolveAiForRole } from '@/lib/ai';
+import { extractJsonFromLlm } from '@/lib/ai/parse-json';
 import { getWebContextForRole } from '@/lib/web-search/resolve';
 import { recordUsageEvent } from '@/lib/usage';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { getWorkspaceIdForUser } from '@/lib/workspace';
 import type { SearchInput } from '@/lib/validations/schemas';
 import type { MarketReportResult, MarketSegment, AiMarketInsights } from '../domain/types';
+import { buildMarketInsightsPrompt } from '@/lib/ai/prompts/intelligence';
+import { normalizeAnalyzeLocale } from '@/lib/i18n/analysis-error-messages';
 
 function getPlaceType(place: Record<string, unknown>): string {
   const primaryType = place.primaryType as string | undefined;
@@ -54,6 +58,7 @@ export { SearchHttpError };
 
 async function generateMarketInsights(
   textQuery: string,
+  locale: string,
   context: {
     totalBusinesses: number;
     segments: MarketSegment[];
@@ -66,52 +71,21 @@ async function generateMarketInsights(
   userId?: string,
 ): Promise<AiMarketInsights | null> {
   try {
+    const resolvedLocale = normalizeAnalyzeLocale(locale);
+    const webQuerySuffix = resolvedLocale === 'en' ? 'market trends' : resolvedLocale === 'es' ? 'tendencias mercado' : 'mercado tendências';
     const webContext = await getWebContextForRole(
       'viability',
-      [`${textQuery} mercado tendências`],
+      [`${textQuery} ${webQuerySuffix}`],
       workspaceId && userId ? { workspaceId, userId } : undefined,
     );
 
-    const segmentsText = context.segments
-      .slice(0, 10)
-      .map((s) => `${s.type}: ${s.count} (avg ${s.avgRating ?? 'n/a'}★)`)
-      .join('; ');
-
-    const basePrompt = `Você é um analista de inteligência de mercado especializado em mercados locais brasileiros.
-Com base nos DADOS REAIS coletados via Google Maps abaixo, gere insights executivos do mercado.
-
-DADOS DO MERCADO:
-- Busca: "${textQuery}"
-- Total de negócios mapeados: ${context.totalBusinesses}
-- Rating médio: ${context.avgRating ?? 'N/A'}
-- Segmentos: ${segmentsText || 'N/A'}
-- % com website: ${context.withWebsitePercent}%
-- % com telefone: ${context.withPhonePercent}%
-- Índice de saturação: ${context.saturationIndex}
-
-Responda EXCLUSIVAMENTE em JSON válido, sem markdown, sem backticks:
-{
-  "executiveSummary": "<parágrafo de 3-4 frases com visão geral executiva do mercado, mencione números>",
-  "marketTrends": ["<tendência 1>", "<tendência 2>", "<tendência 3>"],
-  "opportunities": ["<oportunidade de negócio 1>", "<oportunidade 2>", "<oportunidade 3>"],
-  "recommendations": ["<recomendação estratégica 1>", "<recomendação 2>", "<recomendação 3>", "<recomendação 4>"]
-}
-
-REGRAS:
-- Baseie-se nos dados fornecidos, não invente números
-- executiveSummary: tom executivo, com dados concretos
-- marketTrends: tendências observáveis a partir dos dados
-- opportunities: oportunidades reais para quem vende serviços digitais
-- recommendations: ações estratégicas práticas
-`;
-    const webSuffix = webContext ? '\n\n' + webContext + '\n\n' : '';
-    const prompt = basePrompt + webSuffix;
+    const prompt = buildMarketInsightsPrompt(resolvedLocale, textQuery, context, webContext || undefined);
 
     const { config } = await resolveAiForRole('viability');
     const result = await generateCompletionForRole('viability', {
       prompt,
       jsonMode: true,
-      maxTokens: 2500,
+      maxOutputTokens: 2500,
     });
 
     if (result.usage && workspaceId && userId) {
@@ -129,8 +103,7 @@ REGRAS:
       });
     }
 
-    const cleaned = result.text.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
-    return JSON.parse(cleaned) as AiMarketInsights;
+    return extractJsonFromLlm<AiMarketInsights>(result.text);
   } catch (err) {
     logger.error('Market AI insights generation failed', {
       error: err instanceof Error ? err.message : 'Unknown',
@@ -140,15 +113,19 @@ REGRAS:
 }
 
 export async function runMarketReport(
-  input: { textQuery: string; includedType?: string; pageSize?: number; city?: string; state?: string },
-  userId: string
+  input: { textQuery: string; includedType?: string; pageSize?: number; city?: string; state?: string; country?: string },
+  userId: string,
+  locale = 'pt',
 ): Promise<MarketReportResult> {
+  const resolvedLocale = normalizeAnalyzeLocale(locale);
   const maxPlaces = Math.min(input.pageSize ?? 60, SEARCH_ALL_PAGES_MAX_PLACES);
+  const country = input.country?.trim() || undefined;
   const searchInput: SearchInput = {
     textQuery: input.textQuery,
     includedType: input.includedType,
     city: input.city,
     state: input.state,
+    country,
   };
 
   const result = await runSearchAllPages(searchInput, userId, maxPlaces);
@@ -187,19 +164,12 @@ export async function runMarketReport(
 
   const { scored: topOpportunities, avgRating } = scoreAndRankPlaces(placesForScoring, 15);
 
-  // Get workspace for AI and persistence
-  let workspaceId: string | undefined;
-  const user = await prisma.user.findFirst({
-    where: { id: userId },
-    include: { workspaces: { include: { workspace: true }, take: 1 } },
-  });
-  if (user?.workspaces?.length) {
-    workspaceId = user.workspaces[0].workspace.id;
-  }
+  const workspaceId = await getWorkspaceIdForUser(userId);
 
   // AI insights
   const aiInsights = await generateMarketInsights(
     input.textQuery,
+    resolvedLocale,
     { totalBusinesses: total, segments, withWebsitePercent, withPhonePercent, saturationIndex, avgRating },
     workspaceId,
     userId,
@@ -223,7 +193,7 @@ export async function runMarketReport(
 
   // Persist to IntelligenceReport
   if (workspaceId) {
-    prisma.intelligenceReport.create({
+    await prisma.intelligenceReport.create({
       data: {
         workspaceId,
         userId,

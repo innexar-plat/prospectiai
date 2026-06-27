@@ -30,11 +30,12 @@ export async function GET(req: NextRequest) {
     const typeOk = typeParam ? typeEnum.safeParse(typeParam) : null;
     const type = typeOk?.success ? (typeOk.data as NotificationType) : undefined;
 
-    const { limit = 20, offset = 0 } = parsed.data;
+    const { limit = 20, offset = 0, workspaceId } = parsed.data;
     const safeLimit = Math.min(limit, 100);
     const safeOffset = Math.max(0, offset);
     const where = {
       ...(userId ? { userId } : {}),
+      ...(workspaceId ? { workspaceId } : {}),
       ...(type ? { type } : {}),
     };
     const [items, total] = await Promise.all([

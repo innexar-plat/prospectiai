@@ -242,9 +242,18 @@ export async function forceRefreshRdTokenIfPossible(userId: string): Promise<str
   const user = userRaw as unknown as RdUserRecord;
   if (!user.rdStationRefreshToken) return user.rdStationToken ?? null;
 
-  const refreshed = await refreshRdTokens(user.rdStationRefreshToken);
-  await saveUserRdTokens(userId, refreshed);
-  return refreshed.access_token;
+  try {
+    const refreshed = await refreshRdTokens(user.rdStationRefreshToken);
+    await saveUserRdTokens(userId, refreshed);
+    return refreshed.access_token;
+  } catch (err) {
+    const { logger } = await import('@/lib/logger');
+    logger.warn('RD Station force refresh failed', {
+      userId,
+      error: err instanceof Error ? err.message : 'Unknown',
+    });
+    return user.rdStationToken ?? null;
+  }
 }
 
 export async function saveManualRdToken(userId: string, token: string) {

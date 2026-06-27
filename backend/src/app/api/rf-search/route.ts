@@ -62,6 +62,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    logger.info('RF search request', {
+      requestId,
+      cnaes: effectiveCnaes,
+      uf: uf ?? null,
+      municipio: municipio ?? null,
+      page,
+      pageSize,
+    });
+
     const [companies, total] = await Promise.all([
       prisma.rfCompany.findMany({
         where,
@@ -105,6 +114,14 @@ export async function POST(req: NextRequest) {
     syncRfLeads(companies, cnaeMap).catch((err) =>
       logger.error('RF lead sync error', { error: err instanceof Error ? err.message : 'Unknown' })
     );
+
+    logger.info('RF search result', {
+      requestId,
+      total,
+      returned: results.length,
+      uf: uf ?? null,
+      municipio: municipio ?? null,
+    });
 
     return jsonWithRequestId({
       companies: results,

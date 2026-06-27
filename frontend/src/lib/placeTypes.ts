@@ -326,6 +326,51 @@ export const PLACE_TYPE_CATEGORIES: PlaceTypeCategory[] = [
       { value: 'botanical_garden', label: 'Jardim botânico' },
     ],
   },
+  {
+    label: 'Beleza & Estética',
+    types: [
+      { value: 'beauty_salon', label: 'Salão de beleza' },
+      { value: 'barber_shop', label: 'Barbearia' },
+      { value: 'hair_salon', label: 'Salão de cabelo' },
+      { value: 'hair_care', label: 'Tratamento capilar' },
+      { value: 'spa', label: 'Spa' },
+      { value: 'skin_care_clinic', label: 'Clínica de estética' },
+    ],
+  },
+  {
+    label: 'Agronegócio',
+    types: [
+      { value: 'farm', label: 'Fazenda / Sítio' },
+      { value: 'ranch', label: 'Pecuária / Rancho' },
+    ],
+  },
+  {
+    label: 'Indústria & Manufatura',
+    types: [
+      { value: 'manufacturer', label: 'Indústria / Fabricante' },
+      { value: 'supplier', label: 'Fornecedor' },
+      { value: 'wholesaler', label: 'Atacadista' },
+    ],
+  },
+  {
+    label: 'Construção & Reformas',
+    types: [
+      { value: 'general_contractor', label: 'Construtora / Empreiteira' },
+      { value: 'roofing_contractor', label: 'Telhados' },
+      { value: 'plumber', label: 'Encanador' },
+      { value: 'electrician', label: 'Eletricista' },
+      { value: 'painter', label: 'Pintor' },
+      { value: 'hardware_store', label: 'Material de construção' },
+      { value: 'locksmith', label: 'Chaveiro' },
+    ],
+  },
+  {
+    label: 'Tecnologia',
+    types: [
+      { value: 'electronics_store', label: 'Eletrônicos' },
+      { value: 'cell_phone_store', label: 'Celulares / Assistência' },
+    ],
+  },
 ];
 
 export function getPlaceTypeByValue(value: string): PlaceTypeOption | undefined {

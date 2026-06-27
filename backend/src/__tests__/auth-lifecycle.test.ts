@@ -40,10 +40,10 @@ beforeAll(() => {
 });
 
 describe('Auth Configuration', () => {
-  it('uses JWT strategy with 7-day maxAge', () => {
+  it('uses JWT strategy with 30-day maxAge', () => {
     const session = capturedConfig.session as { strategy: string; maxAge: number };
     expect(session.strategy).toBe('jwt');
-    expect(session.maxAge).toBe(7 * 24 * 60 * 60);
+    expect(session.maxAge).toBe(30 * 24 * 60 * 60);
   });
 
   it('sets httpOnly + secure + sameSite=lax on all cookies', () => {
