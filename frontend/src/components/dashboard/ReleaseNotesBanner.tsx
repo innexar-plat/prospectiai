@@ -6,12 +6,15 @@ import {
   markWhatsNewSeen,
 } from '@/lib/app-version';
 import { useI18n } from '@/lib/i18n';
+import { isPendingCreditsTour } from '@/lib/post-auth-redirect';
+import { wasWelcomeTourDone } from '@/lib/tour-steps';
 
 const BRAND = '#1047da';
 
 export function ReleaseNotesBanner() {
   const { t } = useI18n();
   const [dismissed, setDismissed] = useState(() => hasSeenWhatsNew(APP_VERSION));
+  const tourPending = isPendingCreditsTour() || !wasWelcomeTourDone();
 
   const highlights = useMemo(
     () => [
@@ -22,7 +25,7 @@ export function ReleaseNotesBanner() {
     [t],
   );
 
-  if (dismissed) return null;
+  if (dismissed || tourPending) return null;
 
   const handleDismiss = () => {
     markWhatsNewSeen(APP_VERSION);

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/Input'
 import { Logo } from '@/components/brand/Logo'
 import { useI18n } from '@/lib/i18n'
 import { getActiveMarket } from '@/lib/market'
-import { isCheckoutDone } from '@/lib/post-auth-redirect'
+import { clearCheckoutDone, isCheckoutDone } from '@/lib/post-auth-redirect'
 import { markPostOnboardingVisit } from '@/lib/first-search-hint'
 
 export default function OnboardingPage({ user }: { user: SessionUser | null }) {
@@ -91,6 +91,7 @@ export default function OnboardingPage({ user }: { user: SessionUser | null }) {
                 mainBenefit: mainBenefit.trim() || undefined,
             })
             markPostOnboardingVisit()
+            clearCheckoutDone()
             window.location.href = '/dashboard'
         } catch {
             setSubmitting(false)

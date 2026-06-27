@@ -38,20 +38,25 @@ jest.mock('@/lib/logger', () => ({
   logger: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },
 }));
 
+const mockHeadersGet = jest.fn().mockReturnValue('sig_test');
 jest.mock('next/headers', () => ({
-  headers: jest.fn().mockResolvedValue({ get: () => 'sig_test' }),
+  headers: jest.fn().mockResolvedValue({ get: (...args: unknown[]) => mockHeadersGet(...args) }),
 }));
 
 const { prisma } = require('@/lib/prisma');
 const { rateLimit } = require('@/lib/ratelimit');
 const { isWebhookDuplicate } = require('@/lib/webhook-dedup');
+const { logger } = require('@/lib/logger');
 
-function makeReq(body = '{}') {
-  return new Request('http://x/api/billing/webhook', { method: 'POST', body });
+function makeReq(body = '{}', headers: Record<string, string> = {}) {
+  return new Request('http://x/api/billing/webhook', { method: 'POST', body, headers });
 }
 
 describe('POST /api/billing/webhook (Stripe)', () => {
-  beforeEach(() => { jest.clearAllMocks(); });
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockHeadersGet.mockReturnValue('sig_test');
+  });
 
   it('returns 429 when rate limited', async () => {
     rateLimit.mockResolvedValueOnce({ success: false, remaining: 0, reset: 60 });
@@ -63,6 +68,25 @@ describe('POST /api/billing/webhook (Stripe)', () => {
     mockConstructEvent.mockImplementation(() => { throw new Error('Invalid signature'); });
     const res = await POST(makeReq());
     expect(res.status).toBe(400);
+    expect(logger.error).toHaveBeenCalledWith('Stripe webhook error', expect.objectContaining({ error: 'Invalid signature' }));
+  });
+
+  it('logs warn (not error) for probe requests without stripe-signature', async () => {
+    mockHeadersGet.mockReturnValue(null);
+    mockConstructEvent.mockImplementation(() => { throw new Error('No signatures found'); });
+    const res = await POST(makeReq('{}', { 'user-agent': 'curl/8.0.0' }));
+    expect(res.status).toBe(400);
+    expect(logger.warn).toHaveBeenCalledWith('Stripe webhook probe rejected', expect.any(Object));
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  it('logs warn when stripe-signature header is missing on non-probe requests', async () => {
+    mockHeadersGet.mockReturnValue(null);
+    mockConstructEvent.mockImplementation(() => { throw new Error('No signatures found'); });
+    const res = await POST(makeReq('{}', { 'user-agent': 'Stripe/1.0' }));
+    expect(res.status).toBe(400);
+    expect(logger.warn).toHaveBeenCalledWith('Stripe webhook missing signature', expect.any(Object));
+    expect(logger.error).not.toHaveBeenCalled();
   });
 
   it('returns 200 and skips processing for duplicate events', async () => {
@@ -118,7 +142,7 @@ describe('POST /api/billing/webhook (Stripe)', () => {
     const res = await POST(makeReq());
     expect(res.status).toBe(200);
     expect(prisma.workspace.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { subscriptionId: 'sub_del' }, data: expect.objectContaining({ plan: 'FREE' }) }),
+      expect.objectContaining({ where: { subscriptionId: 'sub_del' }, data: expect.objectContaining({ plan: 'FREE', leadsLimit: 0 }) }),
     );
   });
 

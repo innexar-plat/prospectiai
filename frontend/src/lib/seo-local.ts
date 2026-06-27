@@ -4,7 +4,14 @@
  * Ver .ai/SEO_LOCAL_PLAN.md
  */
 
+import type { Market } from '@/lib/market';
+
 export type SeoLandingType = 'cidade' | 'cidade-nicho' | 'bairro';
+
+/** Local geo SEO landings are BR-only; US market redirects these routes to home. */
+export function isLocalSeoEnabledForMarket(market: Market): boolean {
+  return market === 'BR';
+}
 
 export interface SeoLandingSlug {
   /** Slug da URL (ex: geracao-de-leads-b2b-praia-grande) */

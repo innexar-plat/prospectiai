@@ -8,11 +8,13 @@ jest.mock('@/lib/telegram-alert', () => ({
     alertSuccess: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('ioredis', () => {
-    return jest.fn().mockImplementation(() => ({
+    const MockRedis = jest.fn().mockImplementation(() => ({
+        on: jest.fn(),
         connect: jest.fn().mockResolvedValue(undefined),
         ping: jest.fn().mockResolvedValue('PONG'),
         quit: jest.fn().mockResolvedValue(undefined),
     }));
+    return { __esModule: true, default: MockRedis };
 });
 
 const { GET } = require('@/app/api/health/route');

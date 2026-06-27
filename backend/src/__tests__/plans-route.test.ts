@@ -7,6 +7,12 @@ const { prisma } = require('@/lib/prisma');
 jest.mock('@/auth', () => ({ auth: jest.fn() }));
 jest.mock('@/lib/prisma', () => ({
   prisma: {
+    user: {
+      findUnique: jest.fn().mockResolvedValue({
+        id: 'u1',
+        workspaces: [{ workspace: { plan: 'FREE', subscriptionStatus: null, starterPromoEligible: false } }],
+      }),
+    },
     planConfig: {
       findMany: jest.fn(),
       createMany: jest.fn(),
@@ -50,7 +56,7 @@ describe('GET /api/plans', () => {
         key: 'BASIC',
         name: 'Starter',
         leadsLimit: 100,
-        priceMonthlyBrl: 97,
+        priceMonthlyBrl: 99,
         priceAnnualBrl: 989,
         priceMonthlyUsd: 19,
         priceAnnualUsd: 190,
@@ -65,6 +71,7 @@ describe('GET /api/plans', () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data[0]).toMatchObject({ key: 'BASIC', leadsLimit: 50, currency: 'USD' });
+    expect(data[0].promo).toBeUndefined();
   });
 
   it('seeds defaults and returns when table empty', async () => {

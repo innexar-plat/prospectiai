@@ -22,10 +22,10 @@ import {
     type LucideIcon,
 } from 'lucide-react';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
-import { SUPPORT_EMAIL, SUPPORT_WHATSAPP_URL } from '@/lib/support';
+import { getSupportEmail, getSupportWhatsAppUrl } from '@/lib/support';
 import { clearAllTourFlags } from '@/lib/tour-steps';
 import { useI18n } from '@/lib/i18n';
-import { getActiveMarket } from '@/lib/market';
+import { getActiveMarket, isMarketFeatureEnabled } from '@/lib/market';
 import { FAQ_STRUCTURE, INSTRUCTION_KEYS } from '@/lib/i18n/support-messages';
 
 const LUCIDE_ICONS: Record<string, LucideIcon> = {
@@ -73,7 +73,10 @@ export default function SuportePage() {
     const [searchQuery, setSearchQuery] = useState('');
 
     const market = getActiveMarket();
+    const showBrCrm = isMarketFeatureEnabled('crmBr');
     const contactHoursKey = market === 'US' ? 'page.suporte.contactHours.us' : 'page.suporte.contactHours.br';
+    const supportEmail = getSupportEmail();
+    const supportWhatsAppUrl = getSupportWhatsAppUrl();
 
     const faqGroups = useMemo(
         () =>
@@ -154,7 +157,7 @@ export default function SuportePage() {
                             <p className="text-xs font-semibold text-foreground">{t('page.suporte.retakeTour')}</p>
                         </button>
                         <a
-                            href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(t('page.suporte.linkDocs'))}`}
+                            href={`mailto:${supportEmail}?subject=${encodeURIComponent(t('page.suporte.linkDocs'))}`}
                             className="rounded-xl bg-card border border-border p-3 hover:border-violet-500/30 hover:bg-surface/50 transition-colors text-center"
                         >
                             <FileText size={18} className="mx-auto text-violet-600 dark:text-violet-400 mb-1.5" />
@@ -163,8 +166,8 @@ export default function SuportePage() {
                     </div>
                 </section>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="rounded-2xl bg-card border border-border p-4 flex items-center gap-3 sm:col-span-1">
+                <div className={`grid grid-cols-1 ${showBrCrm ? 'sm:grid-cols-3' : ''} gap-3`}>
+                    <div className={`rounded-2xl bg-card border border-border p-4 flex items-center gap-3 ${showBrCrm ? 'sm:col-span-1' : ''}`}>
                         <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0">
                             <Compass size={20} className="text-violet-600 dark:text-violet-400" />
                         </div>
@@ -173,6 +176,8 @@ export default function SuportePage() {
                             <p className="text-[11px] text-muted">{t('page.suporte.retakeTourDesc')}</p>
                         </div>
                     </div>
+                    {showBrCrm && (
+                    <>
                     <Link
                         to="/integracoes/rdstation"
                         target="_blank"
@@ -205,6 +210,8 @@ export default function SuportePage() {
                             <p className="text-[11px] text-muted">{t('page.suporte.agendorGuideDesc')}</p>
                         </div>
                     </Link>
+                    </>
+                    )}
                 </div>
 
                 <div className="rounded-3xl bg-card border border-border overflow-hidden">
@@ -241,6 +248,7 @@ export default function SuportePage() {
                     )}
                 </div>
 
+                {showBrCrm && (
                 <div className="grid sm:grid-cols-2 gap-4">
                     <div className="rounded-2xl bg-card border border-border p-5 space-y-3">
                         <div className="flex items-center gap-2">
@@ -275,6 +283,7 @@ export default function SuportePage() {
                         <p className="text-[11px] text-muted">{t('support.integr.agendor.note')}</p>
                     </div>
                 </div>
+                )}
 
                 <div className="rounded-3xl bg-card border border-border overflow-hidden">
                     <div className="p-6 border-b border-border">
@@ -370,9 +379,9 @@ export default function SuportePage() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className={`grid grid-cols-1 ${supportWhatsAppUrl ? 'sm:grid-cols-2' : ''} gap-4`}>
                     <a
-                        href={`mailto:${SUPPORT_EMAIL}`}
+                        href={`mailto:${supportEmail}`}
                         className="rounded-2xl bg-card border border-border p-6 flex items-start gap-4 hover:bg-surface/50 transition-colors group"
                     >
                         <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0">
@@ -380,12 +389,13 @@ export default function SuportePage() {
                         </div>
                         <div>
                             <h4 className="font-bold text-foreground group-hover:text-violet-600 dark:text-violet-400 transition-colors">{t('page.suporte.contactEmail')}</h4>
-                            <p className="text-xs text-muted mt-1">{SUPPORT_EMAIL}</p>
+                            <p className="text-xs text-muted mt-1">{supportEmail}</p>
                             <p className="text-[10px] text-muted/60 mt-0.5">{t('page.suporte.contactEmailResponse')}</p>
                         </div>
                     </a>
+                    {supportWhatsAppUrl && (
                     <a
-                        href={SUPPORT_WHATSAPP_URL}
+                        href={supportWhatsAppUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="rounded-2xl bg-card border border-border p-6 flex items-start gap-4 hover:bg-surface/50 transition-colors group"
@@ -401,6 +411,7 @@ export default function SuportePage() {
                             <p className="text-[10px] text-muted/60 mt-0.5">{t(contactHoursKey)}</p>
                         </div>
                     </a>
+                    )}
                 </div>
             </div>
         </>

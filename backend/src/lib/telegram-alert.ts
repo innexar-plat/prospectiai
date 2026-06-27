@@ -12,6 +12,7 @@ const TELEGRAM_API = 'https://api.telegram.org';
 const MAX_MESSAGES_PER_MINUTE = 30;
 const WINDOW_MS = 60_000;
 const MAX_MESSAGE_LENGTH = 4000; // Telegram max ~4096 chars
+const RETRY_DELAY_MS = 2_000;
 
 // Simple sliding window rate limiter
 const timestamps: number[] = [];
@@ -104,32 +105,52 @@ export async function sendTelegramAlert(opts: AlertOptions): Promise<boolean> {
 
     text = truncate(text, MAX_MESSAGE_LENGTH);
 
-    try {
-        const url = `${TELEGRAM_API}/bot${config.token}/sendMessage`;
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: config.chatId,
-                text,
-                parse_mode: 'HTML',
-                disable_web_page_preview: true,
-            }),
-            signal: AbortSignal.timeout(10_000),
-        });
+    return postTelegramMessage(config.token, config.chatId, text);
+}
 
-        if (!res.ok) {
-            const body = await res.text().catch(() => '');
-            process.stderr.write(`[telegram-alert] API error ${res.status}: ${body}\n`);
+function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function postTelegramMessage(token: string, chatId: string, text: string): Promise<boolean> {
+    const url = `${TELEGRAM_API}/bot${token}/sendMessage`;
+    const body = JSON.stringify({
+        chat_id: chatId,
+        text,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+    });
+
+    for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body,
+                signal: AbortSignal.timeout(10_000),
+            });
+
+            if (res.ok) return true;
+
+            const responseBody = await res.text().catch(() => '');
+            if (attempt === 0) {
+                await sleep(RETRY_DELAY_MS);
+                continue;
+            }
+            process.stderr.write(`[telegram-alert] API error ${res.status}: ${responseBody}\n`);
+            return false;
+        } catch (err) {
+            if (attempt === 0) {
+                await sleep(RETRY_DELAY_MS);
+                continue;
+            }
+            process.stderr.write(
+                `[telegram-alert] Send failed: ${err instanceof Error ? err.message : 'Unknown'}\n`
+            );
             return false;
         }
-        return true;
-    } catch (err) {
-        process.stderr.write(
-            `[telegram-alert] Send failed: ${err instanceof Error ? err.message : 'Unknown'}\n`
-        );
-        return false;
     }
+    return false;
 }
 
 // ─── Convenience helpers ─────────────────────────────────────────────────────

@@ -1,11 +1,9 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const nav = [
-  { to: '.', end: true, label: 'Início', icon: LayoutDashboard },
-  { to: 'users', end: false, label: 'Usuários', icon: Users },
-] as const;
+/** Support role has no admin dashboard — only user lookup tools. */
+const nav = [{ to: 'users', end: false, label: 'Usuários', icon: Users }] as const;
 
 export function SupportSidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (

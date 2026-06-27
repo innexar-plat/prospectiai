@@ -3,6 +3,8 @@ import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { renderWithI18n } from '@/test/render-with-i18n';
 import { getLocaleStorageKey } from '@/lib/locale';
 import { getWhatsNewSeenKey } from '@/lib/app-version';
+import { markCheckoutDone } from '@/lib/post-auth-redirect';
+import { markWelcomeTourDone } from '@/lib/tour-steps';
 
 vi.mock('@/lib/app-version', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/app-version')>();
@@ -17,10 +19,13 @@ import { ReleaseNotesBanner } from './ReleaseNotesBanner';
 describe('ReleaseNotesBanner', () => {
   beforeEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
     localStorage.setItem(getLocaleStorageKey(), 'pt');
   });
 
   it('renders current release highlights once for unseen version', () => {
+    markWelcomeTourDone();
+
     renderWithI18n(<ReleaseNotesBanner />);
 
     expect(screen.getByText(/novidades da versão 2\.2\.0/i)).toBeInTheDocument();
@@ -29,6 +34,8 @@ describe('ReleaseNotesBanner', () => {
   });
 
   it('dismisses and persists current version', () => {
+    markWelcomeTourDone();
+
     renderWithI18n(<ReleaseNotesBanner />);
 
     fireEvent.click(screen.getByRole('button', { name: /fechar novidades/i }));
@@ -43,5 +50,27 @@ describe('ReleaseNotesBanner', () => {
     renderWithI18n(<ReleaseNotesBanner />);
 
     expect(screen.queryByText(/novidades da versão 2\.2\.0/i)).not.toBeInTheDocument();
+  });
+
+  it('defers until checkout credits tour is cleared', () => {
+    markCheckoutDone();
+
+    renderWithI18n(<ReleaseNotesBanner />);
+
+    expect(screen.queryByText(/novidades da versão 2\.2\.0/i)).not.toBeInTheDocument();
+  });
+
+  it('defers until welcome tour is completed', () => {
+    renderWithI18n(<ReleaseNotesBanner />);
+
+    expect(screen.queryByText(/novidades da versão 2\.2\.0/i)).not.toBeInTheDocument();
+  });
+
+  it('renders after welcome tour was completed and no checkout tour pending', () => {
+    markWelcomeTourDone();
+
+    renderWithI18n(<ReleaseNotesBanner />);
+
+    expect(screen.getByText(/novidades da versão 2\.2\.0/i)).toBeInTheDocument();
   });
 });

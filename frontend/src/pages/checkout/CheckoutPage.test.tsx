@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor, fireEvent } from '@testing-library/react';
 import CheckoutPage from './CheckoutPage';
 import { renderWithProviders } from '@/test/test-utils';
 import { MARKET_COOKIE } from '@/lib/market';
@@ -26,7 +26,7 @@ const mockPlans = [
   {
     key: 'BASIC',
     name: 'Starter',
-    leadsLimit: 100,
+    leadsLimit: 50,
     priceMonthlyBrl: 99,
     priceAnnualBrl: 990,
     priceMonthlyUsd: 19,
@@ -53,15 +53,22 @@ function renderCheckout(user: SessionUser = baseUser, locale = 'en') {
 
 describe('CheckoutPage', () => {
   const originalHostname = window.location.hostname;
+  let fetchMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     document.cookie = `${MARKET_COOKIE}=;path=/;max-age=0`;
     sessionStorage.clear();
-    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+    fetchMock = vi.fn().mockImplementation((url: string) => {
       if (url.includes('/api/plans')) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve(mockPlans),
+        } as Response);
+      }
+      if (url.includes('/api/billing/checkout')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ url: 'https://checkout.stripe.com/test' }),
         } as Response);
       }
       return Promise.resolve({
@@ -69,7 +76,8 @@ describe('CheckoutPage', () => {
         status: 404,
         json: () => Promise.resolve({ error: 'Not found' }),
       } as Response);
-    }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
   });
 
   afterEach(() => {
@@ -88,8 +96,76 @@ describe('CheckoutPage', () => {
     renderCheckout();
 
     expect(await screen.findByText(/choose your plan/i)).toBeInTheDocument();
-    expect(screen.getByText(/select a plan to get started/i)).toBeInTheDocument();
+    expect(screen.getByText(/secure checkout via stripe/i)).toBeInTheDocument();
+    expect(screen.queryByText(/mercado pago/i)).not.toBeInTheDocument();
     expect(await screen.findByText('Starter')).toBeInTheDocument();
     expect(screen.getAllByText(/subscribe/i).length).toBeGreaterThan(0);
+  });
+
+  it('displays USD prices from plans API on US host', async () => {
+    vi.stubGlobal('location', {
+      ...window.location,
+      hostname: 'precisionai.innexar.app',
+      protocol: 'https:',
+    });
+    renderCheckout();
+
+    expect(await screen.findByText('$19')).toBeInTheDocument();
+    expect(screen.getByText('$49')).toBeInTheDocument();
+    expect(screen.queryByText(/R\$/)).not.toBeInTheDocument();
+  });
+
+  it('does not show BR starter promo banner on US host', async () => {
+    vi.stubGlobal('location', {
+      ...window.location,
+      hostname: 'precisionai.innexar.app',
+      protocol: 'https:',
+    });
+    renderCheckout({
+      ...baseUser,
+      starterPromoEligible: true,
+      starterPromo: {
+        eligible: true,
+        id: 'starter-6m',
+        planId: 'STARTER_PROMO_BR',
+        planKey: 'BASIC',
+        priceMonthlyBrl: 59,
+        regularPriceMonthlyBrl: 99,
+        months: 6,
+      },
+    });
+
+    await screen.findByText('Starter');
+    expect(screen.queryByText(/R\$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/promo/i)).not.toBeInTheDocument();
+  });
+
+  it('starts Stripe checkout with en locale for US market', async () => {
+    vi.stubGlobal('location', {
+      ...window.location,
+      hostname: 'precisionai.innexar.app',
+      protocol: 'https:',
+      href: 'https://precisionai.innexar.app/checkout',
+      assign: vi.fn(),
+    });
+    renderCheckout();
+
+    const subscribeButtons = await screen.findAllByRole('button', { name: /subscribe/i });
+    fireEvent.click(subscribeButtons[0]);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('/api/billing/checkout'),
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.stringContaining('"locale":"en"'),
+        }),
+      );
+    });
+    const checkoutBody = JSON.parse(
+      (fetchMock.mock.calls.find((c) => String(c[0]).includes('/api/billing/checkout'))?.[1] as RequestInit)?.body as string,
+    );
+    expect(checkoutBody).toMatchObject({ planId: 'BASIC', interval: 'monthly', locale: 'en' });
+    expect(checkoutBody.promoCode).toBeUndefined();
   });
 });

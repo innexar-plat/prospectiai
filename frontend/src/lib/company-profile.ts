@@ -71,3 +71,20 @@ export function toOptionalInteger(value: string): number | undefined {
     if (parsed == null) return undefined;
     return Math.round(parsed);
 }
+
+const KM_PER_MILE = 1.60934;
+
+/** Display operation radius: km for BR, miles for US (stored as km in API). */
+export function formatOperationRadiusForDisplay(km: number | null | undefined, market: 'BR' | 'US'): string {
+    if (km == null) return '';
+    if (market === 'US') return String(Math.round(km / KM_PER_MILE));
+    return String(km);
+}
+
+/** Parse form radius back to km for API storage. */
+export function parseOperationRadiusToKm(value: string, market: 'BR' | 'US'): number | undefined {
+    const parsed = toOptionalInteger(value);
+    if (parsed == null) return undefined;
+    if (market === 'US') return Math.round(parsed * KM_PER_MILE);
+    return parsed;
+}

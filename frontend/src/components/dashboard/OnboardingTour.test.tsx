@@ -77,4 +77,23 @@ describe('OnboardingTour', () => {
       expect(screen.getByText('Step 2 of 2')).toBeInTheDocument();
     }, { timeout: 2000 });
   });
+
+  it('prefers a visible duplicate tour target on mobile', async () => {
+    document.body.innerHTML = `
+      <a data-tour="header-credits" style="display:none">Hidden credits</a>
+      <a data-tour="header-credits">Visible credits</a>
+    `;
+
+    const creditSteps = [
+      { target: 'header-credits', title: 'Credits', body: 'Credits body', placement: 'bottom' as const },
+    ];
+
+    render(
+      <OnboardingTour sectionId="checkout-credits" steps={creditSteps} onComplete={vi.fn()} onSkip={vi.fn()} />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Credits')).toBeInTheDocument();
+    }, { timeout: 2000 });
+  });
 });

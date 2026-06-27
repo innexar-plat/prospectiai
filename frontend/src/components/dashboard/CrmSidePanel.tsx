@@ -4,6 +4,7 @@ import { X, Loader2, AlertTriangle, Zap, PencilLine, Send, Globe, Phone, MapPin,
 import type { Place, PlaceDetail, Analysis } from '@/lib/api';
 import { integrationsApi } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { isMarketFeatureEnabled } from '@/lib/market';
 
 type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
@@ -825,9 +826,17 @@ function DrawerContent({ provider, place, analysis, analyzing, onClose, onSucces
 
 export function CrmSidePanel({ place, analysis, analyzing, onSuccess, onError, onWarning, embed = false }: CrmSidePanelProps) {
   const { t } = useI18n();
+  const showBrCrm = isMarketFeatureEnabled('crmBr');
   const [activeProvider, setActiveProvider] = useState<CrmProvider | null>(null);
   const toggleProvider = (provider: CrmProvider) => setActiveProvider((c) => (c === provider ? null : provider));
   const handleClose = () => setActiveProvider(null);
+
+  useEffect(() => {
+    if (!activeProvider) return;
+    if (!showBrCrm && (activeProvider === 'rd' || activeProvider === 'agendor')) {
+      setActiveProvider(null);
+    }
+  }, [activeProvider, showBrCrm]);
 
   useEffect(() => {
     if (!activeProvider) return;
@@ -849,9 +858,13 @@ export function CrmSidePanel({ place, analysis, analyzing, onSuccess, onError, o
               <span>CRM</span>
             </span>
           )}
-          <CrmLogoButton provider="rd" active={activeProvider === 'rd'} onClick={() => toggleProvider('rd')} compact={embed} />
           <CrmLogoButton provider="hubspot" active={activeProvider === 'hubspot'} onClick={() => toggleProvider('hubspot')} compact={embed} />
-          <CrmLogoButton provider="agendor" active={activeProvider === 'agendor'} onClick={() => toggleProvider('agendor')} compact={embed} />
+          {showBrCrm && (
+            <>
+              <CrmLogoButton provider="rd" active={activeProvider === 'rd'} onClick={() => toggleProvider('rd')} compact={embed} />
+              <CrmLogoButton provider="agendor" active={activeProvider === 'agendor'} onClick={() => toggleProvider('agendor')} compact={embed} />
+            </>
+          )}
         </div>
       </div>
 

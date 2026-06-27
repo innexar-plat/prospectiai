@@ -29,6 +29,16 @@ describe('tour-steps', () => {
     it('getWelcomeTourSteps returns 12 steps for US market', () => {
       const steps = getWelcomeTourSteps(mockT, 'US');
       expect(steps.length).toBe(12);
+      const advancedStep = steps.find((s) => s.title === 'common.tour.welcome.6.title');
+      expect(advancedStep?.body).toBe('common.tour.welcome.6.body.us');
+      expect(advancedStep?.icon).toBe('🌐');
+    });
+
+    it('getWelcomeTourSteps uses BR advanced filters copy for BR market', () => {
+      const steps = getWelcomeTourSteps(mockT, 'BR');
+      const advancedStep = steps.find((s) => s.title === 'common.tour.welcome.6.title');
+      expect(advancedStep?.body).toBe('common.tour.welcome.6.body.br');
+      expect(advancedStep?.icon).toBe('🏷️');
     });
 
     it('getWelcomeTourSteps returns 12 steps for BR market', () => {

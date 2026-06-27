@@ -7,10 +7,25 @@ const US_BASE = 'https://precisionai.innexar.app';
 const BR_BASE = 'https://precisionia.com.br';
 
 describe('app-origins', () => {
-    it('allows redirect to US origin after sign-in on US domain', () => {
+    it('keeps same-market absolute redirect URL', () => {
         const url = 'https://precisionai.innexar.app/dashboard/planos';
         expect(isAllowedAppOrigin(url)).toBe(true);
-        expect(resolveAuthRedirectUrl(url, BR_BASE)).toBe(url);
+        expect(resolveAuthRedirectUrl(url, US_BASE)).toBe(url);
+    });
+
+    it('rewrites sibling market absolute URL to baseUrl origin', () => {
+        const url = 'https://precisionai.innexar.app/dashboard/planos';
+        expect(resolveAuthRedirectUrl(url, BR_BASE)).toBe(
+            'https://precisionia.com.br/dashboard/planos',
+        );
+        expect(resolveAuthRedirectUrl(url, BR_BASE)).not.toBe(url);
+    });
+
+    it('rewrites US absolute URL to US base when signing in on US', () => {
+        const brUrl = 'https://precisionia.com.br/onboarding';
+        expect(resolveAuthRedirectUrl(brUrl, US_BASE)).toBe(
+            'https://precisionai.innexar.app/onboarding',
+        );
     });
 
     it('keeps relative paths on baseUrl', () => {

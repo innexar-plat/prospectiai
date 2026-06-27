@@ -1,7 +1,8 @@
 import { prisma } from '@/lib/prisma';
 import { PLANS } from '@/lib/billing-config';
 import { logger } from '@/lib/logger';
-import { isTrialEnabled } from '@/lib/market';
+import { isTrialEnabled, MARKET, type Market } from '@/lib/market';
+import { classifyWorkspaceMarket } from '@/lib/admin-market-stats';
 
 /** Trial duration in calendar days for new workspaces. */
 export const TRIAL_DAYS = 7;
@@ -38,7 +39,24 @@ type TrialWorkspace = {
     subscriptionStatus?: string | null;
     currentPeriodEnd?: Date | null;
     leadsLimit?: number | null;
+    subscriptionId?: string | null;
+    cnpj?: string | null;
+    billingCycle?: string | null;
 };
+
+function resolveTrialGateMarket(workspace: TrialWorkspace, market?: Market): Market {
+    if (market) return market;
+    const bucket = classifyWorkspaceMarket({
+        plan: workspace.plan ?? 'FREE',
+        subscriptionId: workspace.subscriptionId ?? null,
+        subscriptionStatus: workspace.subscriptionStatus ?? null,
+        leadsLimit: workspace.leadsLimit ?? 0,
+        billingCycle: workspace.billingCycle ?? null,
+        cnpj: workspace.cnpj ?? null,
+    });
+    if (bucket === 'US') return 'US';
+    return MARKET;
+}
 
 export function isTrialExpired(workspace: TrialWorkspace): boolean {
     if (workspace.subscriptionStatus === TRIAL_EXPIRED_STATUS) return true;
@@ -108,19 +126,36 @@ export async function runTrialExpiryJob(): Promise<number> {
     return expired.length;
 }
 
-export function assertWorkspaceCanUseProduct(workspace: TrialWorkspace): { ok: true } | { ok: false; code: string; message: string } {
-    if (!isTrialEnabled() && workspace.plan === 'FREE' && (workspace.leadsLimit ?? 0) <= 0) {
+const TRIAL_GATE_MESSAGES = {
+    US: {
+        subscriptionRequired: 'Subscribe to a plan to start prospecting.',
+        trialExpired: 'Your trial has ended. Choose a plan to continue.',
+    },
+    BR: {
+        subscriptionRequired: 'Assine um plano para começar a prospectar.',
+        trialExpired: 'Seu período de teste encerrou. Escolha um plano para continuar.',
+    },
+} as const;
+
+export function assertWorkspaceCanUseProduct(
+    workspace: TrialWorkspace,
+    market?: Market,
+): { ok: true } | { ok: false; code: string; message: string } {
+    const resolvedMarket = resolveTrialGateMarket(workspace, market);
+    const messages = TRIAL_GATE_MESSAGES[resolvedMarket === 'US' ? 'US' : 'BR'];
+
+    if (!isTrialEnabled(resolvedMarket) && workspace.plan === 'FREE' && (workspace.leadsLimit ?? 0) <= 0) {
         return {
             ok: false,
             code: 'SUBSCRIPTION_REQUIRED',
-            message: 'Subscribe to a plan to start prospecting.',
+            message: messages.subscriptionRequired,
         };
     }
     if (workspace.plan === 'TRIAL' && isTrialExpired(workspace)) {
         return {
             ok: false,
             code: 'TRIAL_EXPIRED',
-            message: 'Seu período de teste encerrou. Escolha um plano para continuar.',
+            message: messages.trialExpired,
         };
     }
     return { ok: true };

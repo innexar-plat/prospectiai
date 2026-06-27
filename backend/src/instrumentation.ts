@@ -15,23 +15,28 @@ export async function register() {
       process.exit(1);
     }
 
-    // Notify Telegram that the server started
+    // Notify Telegram that the server started (delayed + non-blocking)
     const version = process.env.npm_package_version || 'unknown';
-    alertSuccess(
-      'Server Started',
-      `PrecisionAI backend iniciado com sucesso`,
-      {
-        nodeEnv: process.env.NODE_ENV || 'unknown',
-        version,
-        ...(warnings.length > 0 ? { missingOptional: warnings.join(', ') } : {}),
-      }
-    ).catch(() => {});
-
-    if (warnings.length > 0) {
-      alertWarning(
-        'Env vars opcionais ausentes',
-        `Variáveis recomendadas não configuradas: ${warnings.join(', ')}`,
+    const startupWarnings = [...warnings];
+    const notifyStartup = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 5_000));
+      await alertSuccess(
+        'Server Started',
+        `PrecisionAI backend iniciado com sucesso`,
+        {
+          nodeEnv: process.env.NODE_ENV || 'unknown',
+          version,
+          ...(startupWarnings.length > 0 ? { missingOptional: startupWarnings.join(', ') } : {}),
+        }
       ).catch(() => {});
-    }
+
+      if (startupWarnings.length > 0) {
+        await alertWarning(
+          'Env vars opcionais ausentes',
+          `Variáveis recomendadas não configuradas: ${startupWarnings.join(', ')}`,
+        ).catch(() => {});
+      }
+    };
+    notifyStartup().catch(() => {});
   }
 }

@@ -320,7 +320,31 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
             </div>
             <CommandPaletteTrigger />
 
-            {/* Credits badge */}
+            {/* Credits badge — mobile */}
+            <Link
+              to="/dashboard/planos"
+              data-tour="header-credits"
+              className={cn(
+                'flex sm:hidden items-center gap-1 px-2 py-1.5 rounded-lg transition-all text-[11px] font-bold min-h-[36px]',
+                userNeedsSubscription
+                  ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white'
+                  : 'bg-violet-600/10 text-violet-500',
+              )}
+              title={
+                userNeedsSubscription
+                  ? t('dash.credits.tooltipSubscribe')
+                  : t('dash.credits.tooltip', { used: user.leadsUsed, limit: user.leadsLimit })
+              }
+            >
+              <Sparkles size={12} />
+              {userNeedsSubscription ? (
+                <span className="max-w-[7rem] truncate">{t('dash.credits.subscribeCta', { count: US_STARTER_CREDITS })}</span>
+              ) : (
+                <span className="tabular-nums">{formatCreditCount(remainingCredits, dateLocale)}</span>
+              )}
+            </Link>
+
+            {/* Credits badge — desktop */}
             <Link
               to="/dashboard/planos"
               data-tour="header-credits"

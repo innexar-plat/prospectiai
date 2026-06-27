@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getMarketConfig, getRequestMarket, isTrialEnabled } from '@/lib/market';
+import { getMarketConfig, getMarketLeadsLimit, getRequestMarket, isTrialEnabled } from '@/lib/market';
 import { TRIAL_DAYS } from '@/lib/trial';
 import { PUBLIC_PLAN_KEYS, type PlanType, PLANS as BILLING_PLANS } from '@/lib/billing-config';
 import { getMarketPlanPrices } from '@/lib/billing-prices';
@@ -45,9 +45,9 @@ export async function GET(req: Request) {
             }
             : { enabled: false },
         starterPlan: {
-            key: 'BASIC',
-            priceUsd: 19,
-            credits: 50,
+            key: 'BASIC' as const,
+            priceUsd: getMarketPlanPrices('BASIC', 'monthly', config.market).primary,
+            credits: getMarketLeadsLimit('BASIC', config.market),
         },
         plans: publicPlans,
         supportedLocales: ['pt', 'en', 'es'] as const,

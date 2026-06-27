@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useToast } from '@/contexts/ToastContext';
 import { integrationsApi, type SessionUser } from '@/lib/api';
+import { resolveRdOAuthErrorMessage } from '@/lib/integrations-rd';
+import { isMarketFeatureEnabled } from '@/lib/market';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 
@@ -94,6 +96,7 @@ export default function IntegracoesPage() {
     const [hubspotDisconnecting, setHubspotDisconnecting] = useState(false);
     const [hubspotStatus, setHubspotStatus] = useState<'connected' | 'not_connected'>('not_connected');
     const [checkingStatus, setCheckingStatus] = useState(true);
+    const showBrCrm = isMarketFeatureEnabled('crmBr');
 
     const statusLabel = (status: 'connected' | 'not_connected' | 'coming_soon') =>
         status === 'connected' ? t('common.connected') : status === 'coming_soon' ? t('common.comingSoon') : t('common.notConnected');
@@ -105,7 +108,7 @@ export default function IntegracoesPage() {
         if (rdResult === 'connected') {
             addToast('success', t('page.integracoes.toast.rdConnected'));
         } else if (rdResult === 'error') {
-            addToast('error', t('page.integracoes.toast.rdError'));
+            addToast('error', resolveRdOAuthErrorMessage(searchParams.get('reason'), t));
         }
 
         const hubspotResult = searchParams.get('hubspot');
@@ -126,7 +129,11 @@ export default function IntegracoesPage() {
     useEffect(() => {
         let cancelled = false;
         setCheckingStatus(true);
-        Promise.allSettled([integrationsApi.rdStationTest(), integrationsApi.agendorTest(), integrationsApi.hubspotTest()])
+        Promise.allSettled([
+            showBrCrm ? integrationsApi.rdStationTest() : Promise.resolve({ ok: false }),
+            showBrCrm ? integrationsApi.agendorTest() : Promise.resolve({ ok: false, source: null }),
+            integrationsApi.hubspotTest(),
+        ])
             .then(([rdRes, agendorRes, hubspotRes]) => {
                 if (cancelled) return;
 
@@ -156,7 +163,7 @@ export default function IntegracoesPage() {
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [showBrCrm]);
 
     const handleConnectOAuth = async () => {
         setRdConnecting(true);
@@ -260,7 +267,8 @@ export default function IntegracoesPage() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className={`grid grid-cols-1 ${showBrCrm ? 'lg:grid-cols-2' : ''} gap-6`}>
+                    {showBrCrm && (
                     <ProviderCard
                         name=""
                         description={t('page.integracoes.rdDesc')}
@@ -292,6 +300,7 @@ export default function IntegracoesPage() {
                             </p>
                         </div>
                     </ProviderCard>
+                    )}
 
                     <ProviderCard
                         name="HubSpot CRM"
@@ -325,6 +334,7 @@ export default function IntegracoesPage() {
                         </div>
                     </ProviderCard>
 
+                    {showBrCrm && (
                     <ProviderCard
                         name=""
                         description={t('page.integracoes.agendorDesc')}
@@ -377,6 +387,7 @@ export default function IntegracoesPage() {
                             )}
                         </div>
                     </ProviderCard>
+                    )}
                 </div>
 
                 {user.plan === 'FREE' && (

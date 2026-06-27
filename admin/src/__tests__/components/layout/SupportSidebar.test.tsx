@@ -11,7 +11,7 @@ describe('SupportSidebar', () => {
       </MemoryRouter>
     );
     expect(screen.getByText('Painel Suporte')).toBeInTheDocument();
-    expect(screen.getByText('Início')).toBeInTheDocument();
     expect(screen.getByText('Usuários')).toBeInTheDocument();
+    expect(screen.queryByText('Início')).not.toBeInTheDocument();
   });
 });

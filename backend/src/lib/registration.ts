@@ -10,6 +10,12 @@ export function buildRegistrationUserData(_market: Market = MARKET) {
     };
 }
 
+export function defaultWorkspaceName(market: Market = MARKET, personName?: string | null): string {
+    const trimmed = personName?.trim();
+    if (trimmed) return `${trimmed} - Workspace`;
+    return market === 'US' ? 'My Workspace' : 'Meu Workspace';
+}
+
 export function buildRegistrationWorkspaceData(name: string, _market: Market = MARKET) {
     return {
         name,

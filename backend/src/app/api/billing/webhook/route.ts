@@ -18,6 +18,30 @@ import {
 
 type SubscriptionWithPeriod = Stripe.Subscription & { current_period_end: number };
 
+const PROBE_USER_AGENT = /curl|healthcheck|kube-probe|ELB-HealthChecker|Go-http-client/i;
+
+function isWebhookProbeRequest(req: Request): boolean {
+    const userAgent = req.headers.get('user-agent') ?? '';
+    return PROBE_USER_AGENT.test(userAgent);
+}
+
+async function logWebhookVerificationFailure(
+    req: Request,
+    signature: string | null,
+    err: unknown,
+): Promise<void> {
+    const { logger } = await import('@/lib/logger');
+    const payload = { error: err instanceof Error ? err.message : 'Unknown' };
+    if (signature) {
+        logger.error('Stripe webhook error', payload);
+        return;
+    }
+    const message = isWebhookProbeRequest(req)
+        ? 'Stripe webhook probe rejected'
+        : 'Stripe webhook missing signature';
+    logger.warn(message, payload);
+}
+
 function periodEnd(sub: SubscriptionWithPeriod): Date {
     return new Date(sub.current_period_end * 1000);
 }
@@ -111,7 +135,7 @@ async function handleSubscriptionDeleted(subscription: SubscriptionWithPeriod): 
         data: {
             subscriptionStatus: 'canceled',
             plan: 'FREE',
-            leadsLimit: PLANS.FREE.leadsLimit,
+            leadsLimit: getMarketLeadsLimit('FREE', 'US'),
             gracePeriodEnd: null,
         },
     });
@@ -183,18 +207,17 @@ export async function POST(req: Request) {
 
     const body = await req.text();
     const headersList = await headers();
-    const signature = headersList.get('stripe-signature') as string;
+    const signature = headersList.get('stripe-signature');
 
     let event: Stripe.Event;
     try {
         event = stripe.webhooks.constructEvent(
             body,
-            signature,
+            signature ?? '',
             process.env.STRIPE_WEBHOOK_SECRET!
         );
     } catch (err: unknown) {
-        const { logger } = await import('@/lib/logger');
-        logger.error('Stripe webhook error', { error: err instanceof Error ? err.message : 'Unknown' });
+        await logWebhookVerificationFailure(req, signature, err);
         return NextResponse.json({ error: 'Webhook Error' }, { status: 400 });
     }
 

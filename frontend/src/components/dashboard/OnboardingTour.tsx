@@ -128,14 +128,26 @@ export function OnboardingTour({ sectionId, steps, onComplete, onSkip }: Props) 
     };
   }, []);
 
+  const findTourTarget = useCallback((target: string) => {
+    const matches = document.querySelectorAll<HTMLElement>(`[data-tour="${target}"]`);
+    if (matches.length === 0) return null;
+    if (matches.length === 1) return matches[0];
+    return (
+      Array.from(matches).find((el) => {
+        const { width, height } = el.getBoundingClientRect();
+        return width > 0 && height > 0;
+      }) ?? matches[0]
+    );
+  }, []);
+
   const measureTarget = useCallback((target: string | null) => {
     if (!target) {
       setRect(null);
       return;
     }
-    const el = document.querySelector<HTMLElement>(`[data-tour="${target}"]`);
+    const el = findTourTarget(target);
     setRect(el ? el.getBoundingClientRect() : null);
-  }, []);
+  }, [findTourTarget]);
 
   useEffect(() => {
     if (!step) return;
@@ -149,7 +161,7 @@ export function OnboardingTour({ sectionId, steps, onComplete, onSkip }: Props) 
       return () => clearTimeout(timer);
     }
 
-    const el = document.querySelector<HTMLElement>(`[data-tour="${step.target}"]`);
+    const el = findTourTarget(step.target);
     if (!el) {
       setRect(null);
       const timer = setTimeout(() => setTipVisible(true), 80);
@@ -168,7 +180,7 @@ export function OnboardingTour({ sectionId, steps, onComplete, onSkip }: Props) 
     }, isMobile ? 450 : 350);
 
     return () => clearTimeout(timer);
-  }, [step, idx, isMobile, measureTarget]);
+  }, [step, idx, isMobile, measureTarget, findTourTarget]);
 
   useEffect(() => {
     if (!step?.target) return;

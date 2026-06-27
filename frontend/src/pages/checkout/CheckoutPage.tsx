@@ -126,6 +126,7 @@ export default function CheckoutPage({ user }: { user: SessionUser }) {
     const isUs = currency === 'USD';
 
     const effectivePromo = useMemo(() => {
+        if (currency === 'USD') return null;
         if (promoState?.eligible) return promoState;
         if (user.starterPromoEligible && user.starterPromo?.eligible) {
             return {
@@ -139,7 +140,7 @@ export default function CheckoutPage({ user }: { user: SessionUser }) {
             } satisfies PromoValidateResponse;
         }
         return null;
-    }, [promoState, user.starterPromo, user.starterPromoEligible]);
+    }, [currency, promoState, user.starterPromo, user.starterPromoEligible]);
 
     useEffect(() => {
         const expectedLocale = market === 'BR' ? 'pt' : 'en';

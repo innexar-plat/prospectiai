@@ -89,8 +89,10 @@ export function IntelligenceErrorBanner({
 }
 
 export function IntelligenceLoadingSkeleton({ statCount = 4 }: { statCount?: number }) {
+  const { t } = useI18n();
+
   return (
-    <div className="space-y-5 min-w-0" aria-busy="true" aria-label="Loading">
+    <div className="space-y-5 min-w-0" aria-busy="true" aria-label={t('common.loading')}>
       <div className={INTELLIGENCE_STAT_GRID_CLASS}>
         {Array.from({ length: statCount }, (_, i) => (
           <div

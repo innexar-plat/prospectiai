@@ -66,17 +66,22 @@ describe("PATCH /api/leads/[id]", () => {
   });
   it("returns 404 when lead not found", async () => {
     auth.mockResolvedValue({ user: { id: "u1" }, expires: "" });
-    prisma.leadAnalysis.findUnique.mockResolvedValue(null);
+    prisma.user.findUnique.mockResolvedValue({ workspaces: [{ workspaceId: "w1" }] });
+    prisma.leadAnalysis.findFirst.mockResolvedValue(null);
     const req = new Request("http://x", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "CONTACTED" }) });
     const res = await PATCH(req, { params: Promise.resolve({ id: "la1" }) });
     expect(res.status).toBe(404);
   });
   it("returns 200 when update succeeds", async () => {
     auth.mockResolvedValue({ user: { id: "u1" }, expires: "" });
-    prisma.leadAnalysis.findUnique.mockResolvedValue({ id: "la1", status: "NEW", leadId: "lead1", workspaceId: "w1" });
+    prisma.user.findUnique.mockResolvedValue({ workspaces: [{ workspaceId: "w1" }] });
+    prisma.leadAnalysis.findFirst.mockResolvedValue({ id: "la1", status: "NEW", leadId: "lead1", workspaceId: "w1" });
     prisma.leadAnalysis.update.mockResolvedValue({ id: "la1", status: "CONTACTED" });
     const req = new Request("http://x", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "CONTACTED" }) });
     const res = await PATCH(req, { params: Promise.resolve({ id: "la1" }) });
     expect(res.status).toBe(200);
+    expect(prisma.leadAnalysis.update).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "la1", workspaceId: "w1" } }),
+    );
   });
 });

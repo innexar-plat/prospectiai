@@ -22,6 +22,9 @@ export default function SignUpPage() {
     const { t } = useI18n();
     const [searchParams] = useSearchParams();
     const callbackUrlParam = searchParams.get('callbackUrl');
+    const signinTo = callbackUrlParam
+        ? `/auth/signin?callbackUrl=${encodeURIComponent(callbackUrlParam)}`
+        : '/auth/signin';
     const trialEnabled = isTrialEnabled();
     const [name, setName] = useState('')
     const [email, setEmail] = useState('')
@@ -234,7 +237,7 @@ export default function SignUpPage() {
 
             <p className="mt-4 text-center text-xs text-muted">
                 {t('auth.hasAccount')}{' '}
-                <Link to="/auth/signin" className="text-violet-500 hover:text-violet-600 dark:text-violet-400 font-bold hover:underline">
+                <Link to={signinTo} className="text-violet-500 hover:text-violet-600 dark:text-violet-400 font-bold hover:underline">
                     {t('auth.signIn')}
                 </Link>
             </p>

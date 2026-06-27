@@ -7,7 +7,7 @@ import type { PromoValidateResponse, SessionUser } from '@/lib/api';
 import { billingApi, plansApi, type PlanFromApi } from '@/lib/api';
 import { getPlanDisplayName, isTrialExpiredUser } from '@/lib/billing-config';
 import { getAffiliateRef } from '@/lib/affiliate-ref';
-import { SUPPORT_WHATSAPP_URL } from '@/lib/support';
+import { getSupportEmail, getSupportWhatsAppUrl } from '@/lib/support';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/contexts/ToastContext';
 import { useI18n } from '@/lib/i18n';
@@ -120,6 +120,8 @@ function PlanosCurrentPlanCard({
     const trialDaysSuffix = user.trialDaysRemaining != null
         ? t('dash.planos.trialDays', { count: user.trialDaysRemaining, plural: user.trialDaysRemaining === 1 ? '' : 's' })
         : '';
+    const supportWhatsAppUrl = getSupportWhatsAppUrl();
+    const supportEmail = getSupportEmail();
 
     return (
         <div className="rounded-3xl bg-card border border-border p-6 sm:p-8">
@@ -176,12 +178,12 @@ function PlanosCurrentPlanCard({
                         <p className="text-xs text-muted mt-3">
                             {t('dash.planos.cancelSupport')}{' '}
                             <a
-                                href={SUPPORT_WHATSAPP_URL}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                                href={supportWhatsAppUrl ?? `mailto:${supportEmail}`}
+                                target={supportWhatsAppUrl ? '_blank' : undefined}
+                                rel={supportWhatsAppUrl ? 'noopener noreferrer' : undefined}
                                 className="text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 underline underline-offset-2 inline-flex items-center gap-1"
                             >
-                                <MessageCircle size={12} />
+                                {supportWhatsAppUrl && <MessageCircle size={12} />}
                                 {t('dash.planos.contactSupport')}
                             </a>.
                         </p>
@@ -445,6 +447,7 @@ export default function PlanosPage() {
     const promoToken = searchParams.get('token');
 
     const effectivePromo = useMemo(() => {
+        if (currency === 'USD') return null;
         if (promoState?.eligible) return promoState;
         if (user.starterPromoEligible && user.starterPromo?.eligible) {
             return {
@@ -458,7 +461,7 @@ export default function PlanosPage() {
             } satisfies PromoValidateResponse;
         }
         return null;
-    }, [promoState, user.starterPromo, user.starterPromoEligible]);
+    }, [currency, promoState, user.starterPromo, user.starterPromoEligible]);
 
     const featureMatrix = useMemo(() => buildFeatureMatrix(t), [t]);
     const numberLocale = getDateLocale(locale);

@@ -66,11 +66,7 @@ export async function PATCH(
         }
         const { status, isFavorite, conversionReason, dealValue, lostReason } = parsed.data;
 
-        // Get current state for event tracking
-        const current = await prisma.leadAnalysis.findUnique({
-            where: { id, userId: session.user.id },
-            select: { status: true, leadId: true, workspaceId: true },
-        });
+        const current = await findLeadAnalysisForUser(id, session.user.id);
         if (!current) {
             return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
         }
@@ -88,8 +84,17 @@ export async function PATCH(
         if (status === 'CONVERTED' && current.status !== 'CONVERTED') data.convertedAt = new Date();
         if (status === 'LOST' && current.status !== 'LOST') data.lostAt = new Date();
 
+        const userWithWorkspace = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            include: { workspaces: { take: 1 } },
+        });
+        const workspaceId = userWithWorkspace?.workspaces[0]?.workspaceId;
+        const updateWhere = workspaceId
+            ? { id, workspaceId }
+            : { id, userId: session.user.id };
+
         const updated = await prisma.leadAnalysis.update({
-            where: { id, userId: session.user.id },
+            where: updateWhere,
             data,
         });
 

@@ -9,7 +9,7 @@ describe('Billing Plans', () => {
     });
 
     it('should have BRL prices for all paid plans', () => {
-        expect(PLANS.BASIC.monthly.price_brl).toBe(97);
+        expect(PLANS.BASIC.monthly.price_brl).toBe(99);
         expect(PLANS.PRO.monthly.price_brl).toBe(297);
         expect(PLANS.BUSINESS.monthly.price_brl).toBe(797);
     });

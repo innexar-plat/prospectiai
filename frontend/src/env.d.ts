@@ -3,8 +3,12 @@
 
 interface ImportMetaEnv {
     readonly VITE_GA_MEASUREMENT_ID?: string;
+    readonly VITE_GA_MEASUREMENT_ID_US?: string;
     readonly VITE_GOOGLE_ADS_CONVERSION_ID?: string;
     readonly VITE_GOOGLE_ADS_CONVERSION_LABEL?: string;
+    readonly VITE_GOOGLE_ADS_CONVERSION_ID_US?: string;
+    readonly VITE_GOOGLE_ADS_CONVERSION_LABEL_US?: string;
+    readonly VITE_MARKET?: string;
 }
 
 interface ImportMeta {

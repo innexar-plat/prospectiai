@@ -12,9 +12,17 @@ import {
   getSeoLocalBlock,
   getSeoFaq,
   getRelatedSeoSlugs,
+  isLocalSeoEnabledForMarket,
 } from './seo-local';
 
 describe('seo-local', () => {
+  describe('isLocalSeoEnabledForMarket', () => {
+    it('enables local SEO only for BR', () => {
+      expect(isLocalSeoEnabledForMarket('BR')).toBe(true);
+      expect(isLocalSeoEnabledForMarket('US')).toBe(false);
+    });
+  });
+
   describe('slugCidade', () => {
     it('returns base plus city slug', () => {
       expect(slugCidade('praia-grande')).toBe('geracao-de-leads-b2b-praia-grande');

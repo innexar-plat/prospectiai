@@ -82,6 +82,24 @@ describe('provisionOauthUserWithWorkspace', () => {
     await provisionOauthUserWithWorkspace({ email: 'us@x.com', name: 'Bob' }, 'US');
   });
 
+  it('uses My Workspace default name for US OAuth without display name', async () => {
+    prisma.$transaction.mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        user: { create: jest.fn().mockResolvedValue({ id: 'u4', email: 'anon@x.com' }) },
+        workspace: {
+          create: jest.fn().mockImplementation((args: { data: { name: string } }) => {
+            expect(args.data.name).toBe('My Workspace');
+            return Promise.resolve({ id: 'w4', plan: 'FREE' });
+          }),
+        },
+        workspaceMember: { create: jest.fn().mockResolvedValue({}) },
+      };
+      return cb(tx);
+    });
+
+    await provisionOauthUserWithWorkspace({ email: 'anon@x.com' }, 'US');
+  });
+
   it('attaches affiliate referral when affiliate_ref cookie is present', async () => {
     headers.mockResolvedValue({
       get: (name: string) => (name === 'cookie' ? 'affiliate_ref=PARTNER1' : null),

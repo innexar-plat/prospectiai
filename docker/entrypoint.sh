@@ -11,8 +11,10 @@ if [ -z "$DATABASE_URL" ]; then
     exit 1
 fi
 if [ -z "$NEXTAUTH_URL" ] && [ -z "$AUTH_URL" ]; then
-    echo "FATAL: NEXTAUTH_URL or AUTH_URL must be set (public app URL)."
-    exit 1
+    if [ "$AUTH_TRUST_HOST" != "true" ]; then
+        echo "FATAL: NEXTAUTH_URL or AUTH_URL must be set (public app URL), or set AUTH_TRUST_HOST=true for multi-domain host-based auth."
+        exit 1
+    fi
 fi
 
 if command -v prisma >/dev/null 2>&1; then

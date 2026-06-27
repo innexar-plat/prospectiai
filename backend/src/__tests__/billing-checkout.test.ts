@@ -182,4 +182,33 @@ describe('POST /api/billing/checkout', () => {
       }),
     );
   });
+
+  it('rejects BR Starter promo on US market', async () => {
+    const res = await POST(
+      checkoutRequest(
+        { planId: 'STARTER_PROMO_BR', interval: 'monthly', promoCode: 'starter-6m' },
+        { host: 'precisionai.innexar.app', 'X-Prospector-Market': 'US' },
+      ),
+    );
+    expect(res.status).toBe(403);
+    expect(await res.json()).toMatchObject({ error: 'Promo not eligible for this account' });
+    expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
+    expect(preference.create).not.toHaveBeenCalled();
+  });
+
+  it('passes planId metadata to Stripe subscription_data for webhook sync', async () => {
+    const res = await POST(
+      checkoutRequest(
+        { planId: 'PRO', interval: 'monthly', locale: 'en' },
+        { host: 'precisionai.innexar.app', 'X-Prospector-Market': 'US' },
+      ),
+    );
+    expect(res.status).toBe(200);
+    const stripeArgs = stripe.checkout.sessions.create.mock.calls[0][0];
+    expect(stripeArgs.subscription_data).toEqual(
+      expect.objectContaining({
+        metadata: expect.objectContaining({ userId: 'u1', planId: 'PRO', interval: 'monthly' }),
+      }),
+    );
+  });
 });

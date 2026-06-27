@@ -1,4 +1,4 @@
-import { buildRegistrationUserData, buildRegistrationWorkspaceData } from '@/lib/registration';
+import { buildRegistrationUserData, buildRegistrationWorkspaceData, defaultWorkspaceName } from '@/lib/registration';
 
 describe('registration', () => {
     const originalMarket = process.env.MARKET;
@@ -29,5 +29,11 @@ describe('registration', () => {
         expect(ws.plan).toBe('FREE');
         expect(ws.leadsLimit).toBe(0);
         expect(ws.subscriptionStatus).toBe('inactive');
+    });
+
+    it('defaultWorkspaceName is market-aware', () => {
+        expect(defaultWorkspaceName('BR')).toBe('Meu Workspace');
+        expect(defaultWorkspaceName('US')).toBe('My Workspace');
+        expect(defaultWorkspaceName('US', 'Jane')).toBe('Jane - Workspace');
     });
 });

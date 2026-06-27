@@ -18,7 +18,15 @@ export function resolveAuthRedirectUrl(url: string, baseUrl: string): string {
     const base = baseUrl.replace(/\/$/, '');
 
     if (url.startsWith('http') && isAllowedAppOrigin(url)) {
-        return url;
+        try {
+            const parsed = new URL(url);
+            const baseOrigin = new URL(base).origin;
+            if (parsed.origin === baseOrigin) return url;
+            const path = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+            return `${base}${path}`;
+        } catch {
+            return base;
+        }
     }
 
     if (url.startsWith('/')) {

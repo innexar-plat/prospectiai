@@ -224,7 +224,7 @@ export const LANDING_MESSAGES: Record<string, Record<string, string>> = {
         'footer.a11y': "Accessibility",
         'a11y.skipToContent': "Skip to content",
         'results.export': "Export",
-        'footer.copy': "© {year} Innexar Estúdio Digital. All rights reserved.",
+        'footer.copy': "© {year} Innexar. All rights reserved.",
         'billing.title': "Plans and pricing",
         'billing.subtitle': "Choose the right plan for your team. Credits renew every month.",
         'billing.monthlyLabel': "Monthly",

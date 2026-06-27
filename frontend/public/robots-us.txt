@@ -1,0 +1,35 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /auth/
+Disallow: /onboarding
+Disallow: /checkout
+
+# AI crawlers — explicitly allowed
+User-agent: GPTBot
+Allow: /
+Disallow: /dashboard
+Disallow: /auth/
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+Sitemap: https://precisionai.innexar.app/sitemap.xml

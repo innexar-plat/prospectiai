@@ -213,6 +213,7 @@ async function executeStripeCheckout(
             },
         ],
         mode: 'subscription',
+        subscription_data: { metadata },
         success_url: `${base}/${localeSegment}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${base}/dashboard/planos`,
         metadata,

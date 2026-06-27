@@ -43,7 +43,7 @@
     rel="stylesheet" media="print" onload="this.media='all'" />
   <noscript><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;900&display=swap" rel="stylesheet" /></noscript>
   <!-- PWA -->
-  <link rel="manifest" href="/manifest.json">
+  <link rel="manifest" href="/manifest.json" id="pwa-manifest">
   <meta name="theme-color" content="#1047da">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -52,19 +52,37 @@
   <script>
     (function () {
       var host = location.hostname;
-      if (!/(^|\.)precisionai\.innexar\.app$/i.test(host)) return;
+      var isUs = /(^|\.)precisionai\.innexar\.app$/i.test(host);
+      if (!isUs) return;
       var origin = 'https://precisionai.innexar.app';
+      var title = 'Precision — B2B Lead Generation & Prospecting with AI';
+      var description = 'Find and qualify B2B companies by niche and location. AI-powered prospecting, lead scoring, and CRM export. Start at $19/mo.';
       document.documentElement.lang = 'en';
+      document.title = title;
       var patch = function (sel, attr, val) {
         var el = document.querySelector(sel);
         if (el) el.setAttribute(attr, val);
       };
+      var setMeta = function (name, content, isProperty) {
+        var sel = isProperty ? 'meta[property="' + name + '"]' : 'meta[name="' + name + '"]';
+        patch(sel, 'content', content);
+      };
+      setMeta('description', description);
+      setMeta('keywords', 'B2B lead generation, B2B prospecting, find companies to sell to, sales intelligence, AI prospecting, local business leads, CRM export');
       patch('link[rel="canonical"]', 'href', origin + '/');
-      patch('meta[property="og:url"]', 'content', origin + '/');
-      patch('meta[name="twitter:url"]', 'content', origin + '/');
-      patch('meta[property="og:locale"]', 'content', 'en_US');
-      patch('meta[property="og:image"]', 'content', origin + '/og-image-precisionia.png?v=20260420-2');
-      patch('meta[name="twitter:image"]', 'content', origin + '/og-image-precisionia.png?v=20260420-2');
+      setMeta('og:url', origin + '/', true);
+      setMeta('og:title', title, true);
+      setMeta('og:description', description, true);
+      setMeta('og:locale', 'en_US', true);
+      setMeta('og:image', origin + '/og-image-precisionia.png?v=20260420-2', true);
+      setMeta('twitter:url', origin + '/');
+      setMeta('twitter:title', title);
+      setMeta('twitter:description', description);
+      setMeta('twitter:image', origin + '/og-image-precisionia.png?v=20260420-2');
+      ['geo.region', 'geo.placename', 'geo.position', 'ICBM'].forEach(function (name) {
+        var el = document.querySelector('meta[name="' + name + '"]');
+        if (el) el.remove();
+      });
       var hreflangPt = document.querySelector('link[hreflang="pt-BR"]');
       if (hreflangPt) hreflangPt.remove();
       var hreflangDefault = document.querySelector('link[hreflang="x-default"]');
@@ -77,6 +95,39 @@
         document.head.appendChild(hreflangEn);
       }
       hreflangEn.setAttribute('href', origin + '/');
+      var manifest = document.getElementById('pwa-manifest');
+      if (manifest) manifest.setAttribute('href', '/manifest-us.json');
+      var orgLd = document.querySelector('script[type="application/ld+json"]');
+      if (orgLd) {
+        orgLd.textContent = JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'Organization',
+          name: 'Precision',
+          alternateName: 'Precision AI',
+          url: origin,
+          logo: origin + '/brands/precision-logo.png',
+          description: 'AI-powered B2B prospecting platform. Find companies by niche and location, score leads, and export to CRM.',
+          address: { '@type': 'PostalAddress', addressCountry: 'US' },
+          contactPoint: {
+            '@type': 'ContactPoint',
+            contactType: 'customer service',
+            email: 'support@precisionai.innexar.app',
+            availableLanguage: ['English', 'Spanish', 'Portuguese'],
+          },
+          foundingDate: '2025',
+          knowsAbout: ['B2B lead generation', 'sales prospecting', 'sales intelligence', 'AI prospecting'],
+        });
+      }
+      var siteLd = document.querySelectorAll('script[type="application/ld+json"]')[1];
+      if (siteLd) {
+        siteLd.textContent = JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'WebSite',
+          name: 'Precision',
+          url: origin,
+          inLanguage: 'en-US',
+        });
+      }
     })();
   </script>
   <!-- hreflang -->
@@ -84,15 +135,31 @@
   <link rel="alternate" hreflang="x-default" href="https://precisionia.com.br/" />
   <!-- AI discoverability — llms.txt spec -->
   <link rel="llms-txt" href="/llms.txt" />
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=%VITE_GOOGLE_ADS_CONVERSION_ID%"></script>
+  <!-- Google tag (gtag.js) — market-specific IDs with BR fallback -->
   <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    window.gtag = window.gtag || gtag;
-    gtag('js', new Date());
-    gtag('config', '%VITE_GOOGLE_ADS_CONVERSION_ID%');
-    gtag('config', '%VITE_GA_MEASUREMENT_ID%');
+    (function () {
+      var isUs = /(^|\.)precisionai\.innexar\.app$/i.test(location.hostname);
+      var gaBr = '%VITE_GA_MEASUREMENT_ID%';
+      var gaUs = '%VITE_GA_MEASUREMENT_ID_US%';
+      var adsBr = '%VITE_GOOGLE_ADS_CONVERSION_ID%';
+      var adsUs = '%VITE_GOOGLE_ADS_CONVERSION_ID_US%';
+      var gaId = (isUs && gaUs && gaUs.indexOf('VITE_') === -1) ? gaUs : gaBr;
+      var adsId = (isUs && adsUs && adsUs.indexOf('VITE_') === -1) ? adsUs : adsBr;
+      if (!gaId && !adsId) return;
+      var primaryId = adsId || gaId;
+      window.__PRECISION_GA_ID__ = gaId;
+      window.__PRECISION_ADS_ID__ = adsId;
+      var s = document.createElement('script');
+      s.async = true;
+      s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(primaryId);
+      document.head.appendChild(s);
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      window.gtag = window.gtag || gtag;
+      gtag('js', new Date());
+      if (adsId) gtag('config', adsId);
+      if (gaId) gtag('config', gaId);
+    })();
   </script>
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"Organization","name":"Precision","alternateName":"Precision","url":"https://precisionia.com.br","logo":"https://precisionia.com.br/brands/precision-logo.png","description":"Plataforma de prospecção B2B com inteligência artificial. Encontre empresas para vender por nicho e região.","address":{"@type":"PostalAddress","addressLocality":"São Paulo","addressRegion":"SP","addressCountry":"BR"},"sameAs":["https://precisionia.com.br/blog"],"contactPoint":{"@type":"ContactPoint","contactType":"customer service","email":"suporte@precisionia.com.br","availableLanguage":["Portuguese","English"]},"foundingDate":"2025","numberOfEmployees":{"@type":"QuantitativeValue","minValue":1,"maxValue":10},"knowsAbout":["prospecção B2B","geração de leads","inteligência comercial","vendas B2B","prospecção de clientes"]}

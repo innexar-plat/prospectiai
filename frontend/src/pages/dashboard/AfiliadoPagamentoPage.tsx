@@ -9,9 +9,11 @@ import { Input } from '@/components/ui/Input';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useToast } from '@/contexts/ToastContext';
 import { useI18n } from '@/lib/i18n';
+import { isMarketFeatureEnabled } from '@/lib/market';
 
 export default function AfiliadoPagamentoPage() {
   const { t } = useI18n();
+  const showPixPayout = isMarketFeatureEnabled('mercadoPago');
   useOutletContext<{ user: SessionUser }>();
   const [payoutType, setPayoutType] = useState<'PIX' | 'BANK_TRANSFER'>('PIX');
   const [payoutPayload, setPayoutPayload] = useState('');
@@ -20,9 +22,14 @@ export default function AfiliadoPagamentoPage() {
 
   useEffect(() => {
     affiliateApi.me().then((a) => {
-      if (a.payoutType) setPayoutType(a.payoutType as 'PIX' | 'BANK_TRANSFER');
+      if (a.payoutType) {
+        const type = a.payoutType as 'PIX' | 'BANK_TRANSFER';
+        setPayoutType(showPixPayout ? type : 'BANK_TRANSFER');
+      } else if (!showPixPayout) {
+        setPayoutType('BANK_TRANSFER');
+      }
     }).catch(() => {});
-  }, []);
+  }, [showPixPayout]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +59,7 @@ export default function AfiliadoPagamentoPage() {
               onChange={(e) => setPayoutType(e.target.value as 'PIX' | 'BANK_TRANSFER')}
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
             >
-              <option value="PIX">{t('page.afiliadoPagamento.pix')}</option>
+              {showPixPayout && <option value="PIX">{t('page.afiliadoPagamento.pix')}</option>}
               <option value="BANK_TRANSFER">{t('page.afiliadoPagamento.bankTransfer')}</option>
             </select>
           </div>

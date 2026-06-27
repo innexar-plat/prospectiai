@@ -8,7 +8,7 @@ import { registerSchema, formatZodError } from "@/lib/validations/schemas"
 import { logger } from "@/lib/logger"
 import { attachReferralOnSignup } from "@/lib/affiliate"
 import { notifyNewSignup } from '@/lib/telegram-business-alerts'
-import { buildRegistrationUserData, buildRegistrationWorkspaceData } from '@/lib/registration'
+import { buildRegistrationUserData, buildRegistrationWorkspaceData, defaultWorkspaceName } from '@/lib/registration'
 import { getRequestLocale } from '@/lib/i18n/locale'
 import { getRequestMarket } from '@/lib/market'
 import { getSiteUrlFromRequest } from '@/lib/site-url'
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
         const hashedPassword = await bcrypt.hash(password, 10)
 
         const regUser = buildRegistrationUserData(market)
-        const workspaceName = (name && name.trim()) ? `${name.trim()} - Workspace` : "Meu Workspace"
+        const workspaceName = defaultWorkspaceName(market, name)
 
         const result = await prisma.$transaction(async (tx) => {
             const user = await tx.user.create({

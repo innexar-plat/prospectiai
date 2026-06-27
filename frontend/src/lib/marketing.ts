@@ -1,12 +1,19 @@
+import { getActiveMarket } from '@/lib/market';
+
 const FREE_SIGNUP_SESSION_KEY = 'precision_free_signup_conversion_tracked';
 const FREE_SIGNUP_PENDING_SESSION_KEY = 'precision_free_signup_conversion_pending';
 
 const rawGoogleAdsId = import.meta.env.VITE_GOOGLE_ADS_CONVERSION_ID?.trim();
 const rawGoogleAdsLabel = import.meta.env.VITE_GOOGLE_ADS_CONVERSION_LABEL?.trim();
+const rawGoogleAdsIdUs = import.meta.env.VITE_GOOGLE_ADS_CONVERSION_ID_US?.trim();
+const rawGoogleAdsLabelUs = import.meta.env.VITE_GOOGLE_ADS_CONVERSION_LABEL_US?.trim();
 
 function getGoogleAdsSendTo(): string | null {
-    if (!rawGoogleAdsId || !rawGoogleAdsLabel) return null;
-    return `${rawGoogleAdsId}/${rawGoogleAdsLabel}`;
+    const isUs = getActiveMarket() === 'US';
+    const adsId = (isUs && rawGoogleAdsIdUs) ? rawGoogleAdsIdUs : rawGoogleAdsId;
+    const adsLabel = (isUs && rawGoogleAdsLabelUs) ? rawGoogleAdsLabelUs : rawGoogleAdsLabel;
+    if (!adsId || !adsLabel) return null;
+    return `${adsId}/${adsLabel}`;
 }
 
 function markFreeSignupTracked(): void {
@@ -117,7 +124,7 @@ export async function trackFreeSignupConversion(method = 'account_created'): Pro
         gtag('event', 'conversion', {
             send_to: sendTo,
             value: 1,
-            currency: 'BRL',
+            currency: getActiveMarket() === 'US' ? 'USD' : 'BRL',
             transaction_id: `free_signup_${Date.now()}`,
             event_callback: done,
         });

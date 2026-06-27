@@ -7,8 +7,17 @@ import { searchApi, workspaceProfileApi, type WorkspaceProfile } from '@/lib/api
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/contexts/ToastContext';
 import { getStatesByCountry } from '@/lib/locationData';
-import { getActiveMarket, getMarketConfig } from '@/lib/market';
-import { fetchAddressByCep, formatCnpj, formatPostalCode, normalizeCnpj, normalizePostalCode, toOptionalInteger, toOptionalNumber } from '@/lib/company-profile';
+import { getActiveMarket, getMarketConfig, isMarketFeatureEnabled } from '@/lib/market';
+import {
+  fetchAddressByCep,
+  formatCnpj,
+  formatOperationRadiusForDisplay,
+  formatPostalCode,
+  normalizeCnpj,
+  normalizePostalCode,
+  parseOperationRadiusToKm,
+  toOptionalNumber,
+} from '@/lib/company-profile';
 import { useI18n } from '@/lib/i18n';
 
 type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
@@ -48,7 +57,7 @@ const emptyProfile: CompanyProfileFormState = {
   knownCompetitors: '',
 };
 
-function profileToForm(profile: WorkspaceProfile): CompanyProfileFormState {
+function profileToForm(profile: WorkspaceProfile, market: ReturnType<typeof getActiveMarket>): CompanyProfileFormState {
   return {
     companyName: profile.companyName ?? '',
     legalName: profile.legalName ?? '',
@@ -76,7 +85,7 @@ function profileToForm(profile: WorkspaceProfile): CompanyProfileFormState {
     logoUrl: profile.logoUrl ?? '',
     serviceModel: profile.serviceModel ?? '',
     averageTicket: profile.averageTicket != null ? String(profile.averageTicket) : '',
-    operationRadiusKm: profile.operationRadiusKm != null ? String(profile.operationRadiusKm) : '',
+    operationRadiusKm: formatOperationRadiusForDisplay(profile.operationRadiusKm, market),
     knownCompetitors: profile.knownCompetitors ?? '',
   };
 }
@@ -100,6 +109,7 @@ function EmpresaPerfilForm({
   loadingPostalCode,
   citySuggestions,
   stateOptions,
+  showBrazilFields,
   onChange,
   onLookupCnpj,
   onLookupPostalCode,
@@ -112,6 +122,7 @@ function EmpresaPerfilForm({
   loadingPostalCode: boolean;
   citySuggestions: string[];
   stateOptions: readonly { value: string; label: string }[];
+  showBrazilFields: boolean;
   onChange: (key: keyof WorkspaceProfile, value: string) => void;
   onLookupCnpj: () => void;
   onLookupPostalCode: () => void;
@@ -135,16 +146,20 @@ function EmpresaPerfilForm({
       <section className="space-y-4">
         <div>
           <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">{t('page.empresaPerfil.section.identification')}</h3>
-          <p className="text-xs text-muted mt-1">{t('page.empresaPerfil.section.identificationDesc')}</p>
+          <p className="text-xs text-muted mt-1">
+            {t(showBrazilFields ? 'page.empresaPerfil.section.identificationDesc' : 'page.empresaPerfil.section.identificationDescUs')}
+          </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div>
-            <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">{t('page.empresaPerfil.label.cnpj')}</label>
-            <div className="flex gap-2">
-              <input value={form.cnpj} onChange={(e) => onChange('cnpj', formatCnpj(e.target.value))} placeholder={t('page.empresaPerfil.placeholder.cnpj')} className="w-full h-11 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted/50 focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-colors" />
-              <Button type="button" variant="secondary" onClick={onLookupCnpj} disabled={loadingCnpj} icon={loadingCnpj ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}>{t('page.empresaPerfil.lookupCnpj')}</Button>
+          {showBrazilFields && (
+            <div>
+              <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">{t('page.empresaPerfil.label.cnpj')}</label>
+              <div className="flex gap-2">
+                <input value={form.cnpj} onChange={(e) => onChange('cnpj', formatCnpj(e.target.value))} placeholder={t('page.empresaPerfil.placeholder.cnpj')} className="w-full h-11 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted/50 focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-colors" />
+                <Button type="button" variant="secondary" onClick={onLookupCnpj} disabled={loadingCnpj} icon={loadingCnpj ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}>{t('page.empresaPerfil.lookupCnpj')}</Button>
+              </div>
             </div>
-          </div>
+          )}
           <div>
             <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">{t('page.empresaPerfil.label.companyName')}</label>
             <input value={form.companyName} onChange={(e) => onChange('companyName', e.target.value)} placeholder={t('page.empresaPerfil.placeholder.companyName')} className="w-full h-11 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted/50 focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-colors" />
@@ -157,14 +172,18 @@ function EmpresaPerfilForm({
             <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">{t('page.empresaPerfil.label.tradeName')}</label>
             <input value={form.tradeName} onChange={(e) => onChange('tradeName', e.target.value)} placeholder={t('page.empresaPerfil.placeholder.tradeName')} className="w-full h-11 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted/50 focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-colors" />
           </div>
-          <div>
-            <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">{t('page.empresaPerfil.label.cnaeCode')}</label>
-            <input value={form.primaryCnaeCode} onChange={(e) => onChange('primaryCnaeCode', e.target.value)} placeholder={t('page.empresaPerfil.placeholder.cnaeCode')} className="w-full h-11 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted/50 focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-colors" />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">{t('page.empresaPerfil.label.cnaeDesc')}</label>
-            <input value={form.primaryCnaeDescription} onChange={(e) => onChange('primaryCnaeDescription', e.target.value)} placeholder={t('page.empresaPerfil.placeholder.cnaeDesc')} className="w-full h-11 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted/50 focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-colors" />
-          </div>
+          {showBrazilFields && (
+            <>
+              <div>
+                <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">{t('page.empresaPerfil.label.cnaeCode')}</label>
+                <input value={form.primaryCnaeCode} onChange={(e) => onChange('primaryCnaeCode', e.target.value)} placeholder={t('page.empresaPerfil.placeholder.cnaeCode')} className="w-full h-11 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted/50 focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-colors" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">{t('page.empresaPerfil.label.cnaeDesc')}</label>
+                <input value={form.primaryCnaeDescription} onChange={(e) => onChange('primaryCnaeDescription', e.target.value)} placeholder={t('page.empresaPerfil.placeholder.cnaeDesc')} className="w-full h-11 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted/50 focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-colors" />
+              </div>
+            </>
+          )}
           <div>
             <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">{t('page.empresaPerfil.label.companySize')}</label>
             <input value={form.companySize} onChange={(e) => onChange('companySize', e.target.value)} placeholder={t('page.empresaPerfil.placeholder.companySize')} className="w-full h-11 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted/50 focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-colors" />
@@ -223,14 +242,18 @@ function EmpresaPerfilForm({
       <section className="space-y-4">
         <div>
           <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">{t('page.empresaPerfil.section.address')}</h3>
-          <p className="text-xs text-muted mt-1">{t('page.empresaPerfil.section.addressDesc')}</p>
+          <p className="text-xs text-muted mt-1">
+            {t(showBrazilFields ? 'page.empresaPerfil.section.addressDesc' : 'page.empresaPerfil.section.addressDescUs')}
+          </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
             <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-2">{t('page.empresaPerfil.label.postalCode')}</label>
             <div className="flex gap-2">
               <input value={form.postalCode} onChange={(e) => onChange('postalCode', formatPostalCode(e.target.value))} placeholder={t('page.empresaPerfil.placeholder.postalCode')} className="w-full h-11 bg-surface border border-border rounded-xl px-4 text-sm text-foreground placeholder:text-muted/50 focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-colors" />
-              <Button type="button" variant="secondary" onClick={onLookupPostalCode} disabled={loadingPostalCode} icon={loadingPostalCode ? <Loader2 size={16} className="animate-spin" /> : <MapPinned size={16} />}>{t('page.empresaPerfil.lookupCep')}</Button>
+              {showBrazilFields && (
+                <Button type="button" variant="secondary" onClick={onLookupPostalCode} disabled={loadingPostalCode} icon={loadingPostalCode ? <Loader2 size={16} className="animate-spin" /> : <MapPinned size={16} />}>{t('page.empresaPerfil.lookupCep')}</Button>
+              )}
             </div>
           </div>
           <div>
@@ -321,6 +344,7 @@ export default function EmpresaPerfilPage() {
   const { addToast } = useToast();
   const { t } = useI18n();
   const market = getActiveMarket();
+  const showBrazilFields = isMarketFeatureEnabled('cnae');
   const profileCountry = getMarketConfig(market).defaultCountry;
   const stateOptions = useMemo(
     () => getStatesByCountry(profileCountry).filter((state) => state.value !== 'Todos'),
@@ -339,7 +363,7 @@ export default function EmpresaPerfilPage() {
     workspaceProfileApi
       .get()
       .then((profile) => {
-        if (!cancelled) setForm(profileToForm(profile));
+        if (!cancelled) setForm(profileToForm(profile, market));
       })
       .catch((err: unknown) => {
         if (!cancelled) addToast('error', getProfileLoadErrorMessage(err, t));
@@ -461,9 +485,13 @@ export default function EmpresaPerfilPage() {
         companyName: form.companyName || undefined,
         legalName: form.legalName || undefined,
         tradeName: form.tradeName || undefined,
-        cnpj: normalizeCnpj(form.cnpj) || undefined,
-        primaryCnaeCode: form.primaryCnaeCode || undefined,
-        primaryCnaeDescription: form.primaryCnaeDescription || undefined,
+        ...(showBrazilFields
+          ? {
+              cnpj: normalizeCnpj(form.cnpj) || undefined,
+              primaryCnaeCode: form.primaryCnaeCode || undefined,
+              primaryCnaeDescription: form.primaryCnaeDescription || undefined,
+            }
+          : {}),
         companySize: form.companySize || undefined,
         foundingDate: form.foundingDate || undefined,
         productService: form.productService || undefined,
@@ -484,7 +512,7 @@ export default function EmpresaPerfilPage() {
         logoUrl: form.logoUrl || undefined,
         serviceModel: form.serviceModel || undefined,
         averageTicket: toOptionalNumber(form.averageTicket),
-        operationRadiusKm: toOptionalInteger(form.operationRadiusKm),
+        operationRadiusKm: parseOperationRadiusToKm(form.operationRadiusKm, market),
         knownCompetitors: form.knownCompetitors || undefined,
       });
       window.dispatchEvent(new Event('refresh-user'));
@@ -519,7 +547,7 @@ export default function EmpresaPerfilPage() {
         breadcrumb={t('page.empresaPerfil.breadcrumb')}
       />
       <div className="p-6 sm:p-8 max-w-3xl mx-auto w-full">
-        <EmpresaPerfilForm form={form} saving={saving} loadingCnpj={loadingCnpj} loadingPostalCode={loadingPostalCode} citySuggestions={citySuggestions} stateOptions={stateOptions} onChange={handleChange} onLookupCnpj={handleLookupCnpj} onLookupPostalCode={handleLookupPostalCode} onSave={handleSave} t={t} />
+        <EmpresaPerfilForm form={form} saving={saving} loadingCnpj={loadingCnpj} loadingPostalCode={loadingPostalCode} citySuggestions={citySuggestions} stateOptions={stateOptions} showBrazilFields={showBrazilFields} onChange={handleChange} onLookupCnpj={handleLookupCnpj} onLookupPostalCode={handleLookupPostalCode} onSave={handleSave} t={t} />
       </div>
     </>
   );

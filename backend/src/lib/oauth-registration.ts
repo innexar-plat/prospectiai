@@ -1,6 +1,6 @@
 import { headers } from 'next/headers';
 import { getRequestMarket, MARKET, type Market } from '@/lib/market';
-import { buildRegistrationUserData, buildRegistrationWorkspaceData } from '@/lib/registration';
+import { buildRegistrationUserData, buildRegistrationWorkspaceData, defaultWorkspaceName } from '@/lib/registration';
 import { attachReferralOnSignup, parseAffiliateRefFromCookie } from '@/lib/affiliate';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
@@ -40,11 +40,6 @@ type OAuthUserInput = {
     image?: string | null;
 };
 
-function workspaceNameFromUser(name: string | null | undefined): string {
-    const trimmed = name?.trim();
-    return trimmed ? `${trimmed} - Workspace` : 'Meu Workspace';
-}
-
 /**
  * Creates OAuth user with market-specific plan data and default workspace (first login).
  */
@@ -54,7 +49,7 @@ export async function provisionOauthUserWithWorkspace(
 ): Promise<Prisma.UserGetPayload<object>> {
     const { id: _id, ...rest } = data;
     const regUser = buildRegistrationUserData(market);
-    const workspaceName = workspaceNameFromUser(rest.name);
+    const workspaceName = defaultWorkspaceName(market, rest.name);
 
     const user = await prisma.$transaction(async (tx) => {
         const created = await tx.user.create({

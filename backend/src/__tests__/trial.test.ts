@@ -54,6 +54,28 @@ describe('trial', () => {
         if (!result.ok) expect(result.code).toBe('TRIAL_EXPIRED');
     });
 
+    it('assertWorkspaceCanUseProduct blocks US FREE without subscription', () => {
+        const result = assertWorkspaceCanUseProduct({
+            plan: 'FREE',
+            subscriptionStatus: 'inactive',
+            leadsLimit: 0,
+        });
+        expect(result.ok).toBe(false);
+        if (!result.ok) {
+            expect(result.code).toBe('SUBSCRIPTION_REQUIRED');
+            expect(result.message).toContain('Subscribe');
+        }
+    });
+
+    it('assertWorkspaceCanUseProduct allows BR FREE with legacy credits', () => {
+        const result = assertWorkspaceCanUseProduct({
+            plan: 'FREE',
+            subscriptionStatus: 'inactive',
+            leadsLimit: 10,
+        });
+        expect(result.ok).toBe(true);
+    });
+
     it('TRIAL_DAYS is 7', () => {
         expect(TRIAL_DAYS).toBe(7);
     });

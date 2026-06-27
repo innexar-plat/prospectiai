@@ -62,4 +62,24 @@ describe('sendTelegramAlert', () => {
         expect(ok).toBe(false);
         expect(global.fetch).not.toHaveBeenCalled();
     });
+
+    it('retries once after fetch failure', async () => {
+        jest.useFakeTimers();
+        (global.fetch as jest.Mock)
+            .mockRejectedValueOnce(new Error('network down'))
+            .mockResolvedValueOnce({ ok: true });
+
+        const promise = sendTelegramAlert({
+            level: 'info',
+            title: 'retry-test',
+            message: 'hello',
+        });
+
+        await jest.advanceTimersByTimeAsync(2_000);
+        const ok = await promise;
+
+        expect(ok).toBe(true);
+        expect(global.fetch).toHaveBeenCalledTimes(2);
+        jest.useRealTimers();
+    });
 });

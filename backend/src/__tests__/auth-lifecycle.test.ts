@@ -121,6 +121,22 @@ describe('Auth Callbacks', () => {
     const result = await callbacks().redirect({ url: 'https://evil.com/phish', baseUrl: 'https://precisionia.com.br' });
     expect(result).toBe('https://precisionia.com.br');
   });
+
+  it('redirect callback rewrites sibling market URL to baseUrl', async () => {
+    const result = await callbacks().redirect({
+      url: 'https://precisionai.innexar.app/dashboard',
+      baseUrl: 'https://precisionia.com.br',
+    });
+    expect(result).toBe('https://precisionia.com.br/dashboard');
+  });
+
+  it('redirect callback keeps US user on US domain', async () => {
+    const result = await callbacks().redirect({
+      url: 'https://precisionia.com.br/checkout',
+      baseUrl: 'https://precisionai.innexar.app',
+    });
+    expect(result).toBe('https://precisionai.innexar.app/checkout');
+  });
 });
 
 describe('Credentials Provider', () => {

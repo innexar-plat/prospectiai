@@ -120,6 +120,15 @@ describe('post-auth-redirect', () => {
             vi.stubGlobal('location', { ...window.location, hostname: 'precisionia.com.br', protocol: 'https:' });
             expect(getSignupCallbackPath(null)).toBe('/checkout');
             expect(getSignupCallbackPath('/accept-invite?token=abc')).toBe('/accept-invite?token=abc');
+            expect(getSignupCallbackPath('https://precisionia.com.br/dashboard')).toBe('/dashboard');
+            expect(getSignupCallbackPath('https://precisionai.innexar.app/checkout')).toBe('/checkout');
+        });
+
+        it('clears checkout flag without removing pending credits tour', () => {
+            markCheckoutDone();
+            clearCheckoutDone();
+            expect(isCheckoutDone()).toBe(false);
+            expect(isPendingCreditsTour()).toBe(true);
         });
 
         it('returns relative paths only (stays on current market domain)', () => {

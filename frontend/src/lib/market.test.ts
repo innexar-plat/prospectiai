@@ -3,6 +3,7 @@ import {
     MARKET_COOKIE,
     getActiveMarket,
     getMarketConfig,
+    isMarketFeatureEnabled,
     isTrialEnabled,
     needsSubscription,
     persistMarket,
@@ -25,6 +26,11 @@ describe('market', () => {
         expect(getActiveMarket()).toBe('US');
         expect(getMarketConfig().currency).toBe('USD');
         expect(isTrialEnabled()).toBe(false);
+    });
+
+    it('detects US market from subdomain of precisionai.innexar.app', () => {
+        vi.stubGlobal('location', { ...window.location, hostname: 'www.precisionai.innexar.app', protocol: 'https:' });
+        expect(getActiveMarket()).toBe('US');
     });
 
     it('detects BR market from precisionia.com.br hostname', () => {
@@ -71,5 +77,17 @@ describe('market', () => {
         vi.stubGlobal('location', { ...window.location, hostname: 'precisionia.com.br', protocol: 'https:' });
         expect(needsSubscription({ plan: 'FREE', leadsLimit: 0 })).toBe(true);
         expect(needsSubscription({ plan: 'FREE', leadsLimit: 50 })).toBe(false);
+    });
+
+    it('US market disables BR-only CRM and PIX affiliate payout', () => {
+        vi.stubGlobal('location', { ...window.location, hostname: 'precisionai.innexar.app', protocol: 'https:' });
+        expect(isMarketFeatureEnabled('crmBr')).toBe(false);
+        expect(isMarketFeatureEnabled('mercadoPago')).toBe(false);
+    });
+
+    it('BR market enables BR CRM and PIX affiliate payout', () => {
+        vi.stubGlobal('location', { ...window.location, hostname: 'precisionia.com.br', protocol: 'https:' });
+        expect(isMarketFeatureEnabled('crmBr')).toBe(true);
+        expect(isMarketFeatureEnabled('mercadoPago')).toBe(true);
     });
 });

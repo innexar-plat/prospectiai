@@ -3,9 +3,10 @@ import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { onboardingCompleteSchema, formatZodError } from "@/lib/validations/schemas"
 import { logger } from "@/lib/logger"
-import { buildTrialWorkspaceData } from "@/lib/trial"
+import { buildRegistrationWorkspaceData } from '@/lib/registration'
+import { getRequestMarket } from '@/lib/market'
 
-async function ensureWorkspaceMembership(userId: string) {
+async function ensureWorkspaceMembership(userId: string, market: ReturnType<typeof getRequestMarket>) {
     let membership = await prisma.workspaceMember.findFirst({
         where: { userId },
         select: { workspaceId: true },
@@ -21,7 +22,7 @@ async function ensureWorkspaceMembership(userId: string) {
             : "Meu Workspace";
         await prisma.$transaction(async (tx) => {
             const workspace = await tx.workspace.create({
-                data: buildTrialWorkspaceData(workspaceName),
+                data: buildRegistrationWorkspaceData(workspaceName, market),
             });
             await tx.workspaceMember.create({
                 data: { userId, workspaceId: workspace.id, role: "OWNER" },
@@ -56,7 +57,8 @@ export async function POST(req: Request) {
         }
         const { companyName, productService, targetAudience, mainBenefit } = parsed.data
 
-        const membership = await ensureWorkspaceMembership(session.user.id);
+        const market = getRequestMarket(req);
+        const membership = await ensureWorkspaceMembership(session.user.id, market);
         if (!membership) {
             return NextResponse.json({ error: "Workspace membership not found" }, { status: 500 });
         }

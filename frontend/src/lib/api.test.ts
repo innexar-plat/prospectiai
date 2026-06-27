@@ -190,6 +190,17 @@ describe('api', () => {
       vi.unstubAllGlobals();
     });
 
+    it('initiateOAuthSignIn rewrites cross-market callback to current origin', async () => {
+      const mockLocation = { ...window.location, origin: 'https://precisionai.innexar.app', href: '' };
+      vi.stubGlobal('window', { ...window, location: mockLocation });
+      await authApi.initiateOAuthSignIn('google', 'https://precisionia.com.br/checkout');
+      expect(mockLocation.href).toContain(
+        encodeURIComponent('https://precisionai.innexar.app/checkout'),
+      );
+      expect(mockLocation.href).not.toContain('precisionia.com.br');
+      vi.unstubAllGlobals();
+    });
+
     it('signOut fetches CSRF then POSTs signout', async () => {
       vi.stubGlobal('window', { ...window, location: { ...window.location, origin: 'https://app.example.com' } });
       mockFetch

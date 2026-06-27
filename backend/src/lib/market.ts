@@ -145,7 +145,7 @@ const US_CONFIG: MarketConfig = {
         crmBr: false,
     },
     planOverrides: {
-        leadsLimit: { BASIC: 50 },
+        leadsLimit: { FREE: 0, BASIC: 50 },
         usdPrices: { BASIC: 19, PRO: 49, BUSINESS: 99, SCALE: 249 },
     },
 };
