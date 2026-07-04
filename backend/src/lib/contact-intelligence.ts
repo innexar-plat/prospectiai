@@ -20,9 +20,7 @@ interface LeadContactRow {
   updatedAt: Date;
 }
 
-// Avoid hard dependency on generated Prisma model typing so editor stale cache
-// does not break development before TS server refresh/regenerate.
-const leadContactRepo = (prisma as unknown as {
+const leadContactRepo = (prisma as typeof prisma & {
   leadContact: {
     count: (args: unknown) => Promise<number>;
     findMany: (args: unknown) => Promise<LeadContactRow[]>;
@@ -303,7 +301,7 @@ export async function setPrimaryContact(
   const previousPrimary = await leadContactRepo.findFirst({
     where: { leadId, type: contact.type, isPrimary: true },
     select: { id: true },
-  } as unknown as Parameters<typeof leadContactRepo.findFirst>[0]);
+  });
 
   await leadContactRepo.updateMany({
     where: { leadId, type: contact.type },

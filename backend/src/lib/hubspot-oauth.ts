@@ -174,7 +174,7 @@ export async function getValidHubspotAccessToken(userId: string): Promise<string
   const userRaw = await prisma.user.findUnique({ where: { id: userId } });
   if (!userRaw) return null;
 
-  const user = userRaw as unknown as HubspotUserRecord;
+  const user = userRaw as HubspotUserRecord;
   if (!user.hubspotToken) return null;
 
   if (!isExpiringSoon(user.hubspotTokenExpiresAt)) {
@@ -186,7 +186,7 @@ export async function getValidHubspotAccessToken(userId: string): Promise<string
   }
 
   // Use optimistic locking: re-read and check if another request already refreshed
-  const freshUser = await prisma.user.findUnique({ where: { id: userId } }) as unknown as HubspotUserRecord | null;
+  const freshUser = await prisma.user.findUnique({ where: { id: userId } }) as HubspotUserRecord | null;
   if (freshUser?.hubspotTokenExpiresAt && !isExpiringSoon(freshUser.hubspotTokenExpiresAt)) {
     return freshUser.hubspotToken ?? null;
   }
@@ -210,7 +210,7 @@ export async function forceRefreshHubspotTokenIfPossible(userId: string): Promis
   const userRaw = await prisma.user.findUnique({ where: { id: userId } });
   if (!userRaw) return null;
 
-  const user = userRaw as unknown as HubspotUserRecord;
+  const user = userRaw as HubspotUserRecord;
   if (!user.hubspotRefreshToken) return user.hubspotToken ?? null;
 
   const refreshed = await refreshHubspotTokens(user.hubspotRefreshToken);

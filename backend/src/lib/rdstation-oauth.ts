@@ -203,7 +203,7 @@ export async function getValidRdStationAccessToken(userId: string): Promise<stri
   const userRaw = await prisma.user.findUnique({ where: { id: userId } });
   if (!userRaw) return null;
 
-  const user = userRaw as unknown as RdUserRecord;
+  const user = userRaw as RdUserRecord;
   if (!user.rdStationToken) return null;
 
   if (!isExpiringSoon(user.rdStationTokenExpiresAt)) {
@@ -215,7 +215,7 @@ export async function getValidRdStationAccessToken(userId: string): Promise<stri
   }
 
   // Use optimistic locking: re-read and check if another request already refreshed
-  const freshUser = await prisma.user.findUnique({ where: { id: userId } }) as unknown as RdUserRecord | null;
+  const freshUser = await prisma.user.findUnique({ where: { id: userId } }) as RdUserRecord | null;
   if (freshUser?.rdStationTokenExpiresAt && !isExpiringSoon(freshUser.rdStationTokenExpiresAt)) {
     return freshUser.rdStationToken ?? null;
   }
@@ -239,7 +239,7 @@ export async function forceRefreshRdTokenIfPossible(userId: string): Promise<str
   const userRaw = await prisma.user.findUnique({ where: { id: userId } });
   if (!userRaw) return null;
 
-  const user = userRaw as unknown as RdUserRecord;
+  const user = userRaw as RdUserRecord;
   if (!user.rdStationRefreshToken) return user.rdStationToken ?? null;
 
   try {

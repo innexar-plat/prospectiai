@@ -55,8 +55,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
         return NextResponse.json({ error: 'Invalid planId in metadata' }, { status: 400 });
     }
 
-    const raw = await stripe.subscriptions.retrieve(session.subscription as string);
-    const subscription = raw as unknown as SubscriptionWithPeriod;
+    const subscription = await stripe.subscriptions.retrieve(session.subscription as string) as Stripe.Subscription as SubscriptionWithPeriod;
     const plan = PLANS[planId];
     const userWithWorkspace = await prisma.user.findUnique({
         where: { id: userId },
@@ -234,7 +233,7 @@ export async function POST(req: Request) {
     }
 
     if (event.type === 'customer.subscription.deleted' || event.type === 'customer.subscription.updated') {
-        const subscription = event.data.object as unknown as SubscriptionWithPeriod;
+        const subscription = event.data.object as SubscriptionWithPeriod;
         if (event.type === 'customer.subscription.deleted') {
             await handleSubscriptionDeleted(subscription);
         } else {
