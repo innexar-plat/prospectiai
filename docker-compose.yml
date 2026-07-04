@@ -31,6 +31,10 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128m
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
       interval: 30s
@@ -179,9 +183,15 @@ services:
     ports:
       - "127.0.0.1:3010:4000"
     depends_on:
-      - redis
-      - db
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4000/api/health || exit 1"]
       interval: 30s
@@ -195,6 +205,9 @@ services:
   redis:
     image: redis:7-alpine
     container_name: prospector-redis
+    command: redis-server /usr/local/etc/redis/redis.conf --requirepass "${REDIS_PASSWORD}"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
     logging:
       driver: json-file
       options:
@@ -202,7 +215,18 @@ services:
         max-file: "3"
     volumes:
       - redis-data:/data
+      - ./docker/redis.conf:/usr/local/etc/redis/redis.conf:ro
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 768m
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     networks:
       - prospector-net
 
@@ -214,13 +238,13 @@ services:
     command:
       - "postgres"
       - "-c"
-      - "shared_buffers=4GB"
+      - "shared_buffers=2GB"
       - "-c"
-      - "effective_cache_size=14GB"
+      - "effective_cache_size=6GB"
       - "-c"
-      - "work_mem=64MB"
+      - "work_mem=32MB"
       - "-c"
-      - "maintenance_work_mem=1GB"
+      - "maintenance_work_mem=512MB"
       - "-c"
       - "random_page_cost=1.1"
       - "-c"
@@ -234,11 +258,11 @@ services:
       - "-c"
       - "max_connections=200"
       - "-c"
-      - "wal_buffers=64MB"
+      - "wal_buffers=32MB"
       - "-c"
-      - "max_wal_size=4GB"
+      - "max_wal_size=2GB"
       - "-c"
-      - "min_wal_size=1GB"
+      - "min_wal_size=512MB"
       - "-c"
       - "checkpoint_completion_target=0.9"
       - "-c"
@@ -261,6 +285,16 @@ services:
     ports:
       - "127.0.0.1:5434:5432"
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 4g
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     networks:
       prospector-net:
         aliases:
