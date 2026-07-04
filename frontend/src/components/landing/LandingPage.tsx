@@ -138,7 +138,8 @@ const LANDING_FAQ = [
 function InfiniteMarquee({ items, speed = 30, reverse = false }: { items: readonly { name: string; logo: string }[]; speed?: number; reverse?: boolean }) {
     const doubled = [...items, ...items];
     return (
-        <div className="overflow-hidden relative">
+        <div className="overflow-hidden relative" aria-hidden="true">
+            <span className="sr-only">{items.map(i => i.name).join(', ')}</span>
             <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
             <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
             <div
@@ -254,7 +255,7 @@ export default function LandingPage({ onViewPlans, t }: { locale: string; onView
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide animation-delay-300 animation-fill-both">
                         <Link
                             to="/auth/signup"
-                            className="inline-flex items-center justify-center font-bold rounded-2xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-violet-500/50 active:scale-95 bg-[#7c3aed] text-white shadow-[0_4px_14px_0_rgba(124,58,237,0.3)] hover:bg-[#6d28d9] hover:shadow-[0_6px_20px_rgba(109,40,217,0.4)] hover:-translate-y-0.5 w-full sm:w-auto h-16 px-10 text-lg group"
+                            className="inline-flex items-center justify-center font-bold rounded-2xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-violet-500/50 motion-safe:active:scale-95 bg-[#7c3aed] text-white shadow-[0_4px_14px_0_rgba(124,58,237,0.3)] hover:bg-[#6d28d9] hover:shadow-[0_6px_20px_rgba(109,40,217,0.4)] hover:-translate-y-0.5 w-full sm:w-auto h-16 px-10 text-lg group"
                         >
                             <Rocket size={20} className="mr-2 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" aria-hidden />
                             Testar agora — 10 créditos grátis
@@ -683,7 +684,7 @@ export default function LandingPage({ onViewPlans, t }: { locale: string; onView
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                         <Link
                             to="/auth/signup"
-                            className="inline-flex items-center justify-center font-bold rounded-2xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-violet-500/50 active:scale-95 bg-[#7c3aed] text-white shadow-[0_4px_14px_0_rgba(124,58,237,0.3)] hover:bg-[#6d28d9] hover:shadow-[0_6px_20px_rgba(109,40,217,0.4)] hover:-translate-y-0.5 h-14 px-10 text-base w-full sm:w-auto"
+                            className="inline-flex items-center justify-center font-bold rounded-2xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-violet-500/50 motion-safe:active:scale-95 bg-[#7c3aed] text-white shadow-[0_4px_14px_0_rgba(124,58,237,0.3)] hover:bg-[#6d28d9] hover:shadow-[0_6px_20px_rgba(109,40,217,0.4)] hover:-translate-y-0.5 h-14 px-10 text-base w-full sm:w-auto"
                         >
                             <Rocket size={18} className="mr-2" aria-hidden />
                             Criar conta grátis
@@ -715,7 +716,7 @@ export default function LandingPage({ onViewPlans, t }: { locale: string; onView
                             </p>
                             <Link
                                 to="/auth/signup"
-                                className="inline-flex items-center justify-center font-bold rounded-2xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-violet-500/50 active:scale-95 bg-white text-violet-600 h-16 px-12 text-xl hover:bg-white/90 hover:scale-105 shadow-lg"
+                                className="inline-flex items-center justify-center font-bold rounded-2xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-violet-500/50 motion-safe:active:scale-95 bg-white text-violet-600 h-16 px-12 text-xl hover:bg-white/90 hover:scale-105 shadow-lg"
                             >
                                 <ArrowRight size={20} className="mr-2" />
                                 Começar agora — é grátis

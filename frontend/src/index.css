@@ -10,7 +10,7 @@
   --theme-card: #ffffff;
   --theme-surface: #e6e4ef;
   --theme-text: #1e1b2e;
-  --theme-muted: #4a4860;
+  --theme-muted: #3a3850;
   --theme-border: #d4d0e0;
   --theme-scroll-track: #e6e4ef;
   --theme-scroll-thumb: #9b97b0;
@@ -260,7 +260,7 @@
 }
 
 .btn {
-  @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-semibold transition-all duration-300 active:scale-95;
+  @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-semibold transition-all duration-300 motion-safe:active:scale-95;
 }
 
 .input-field {
@@ -294,4 +294,14 @@
 *:focus-visible {
   outline: 2px solid color-mix(in oklab, #8b5cf6 60%, transparent);
   outline-offset: 2px;
+}
+
+/* Reduce motion for vestibular / motion sensitivity */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

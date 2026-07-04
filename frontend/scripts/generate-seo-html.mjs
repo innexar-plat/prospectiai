@@ -52,7 +52,9 @@ function getBrIndexableRoutes() {
     { path: 'integracoes/rdstation', title: 'Integração Precision + RD Station CRM', description: 'Conecte o Precision ao RD Station CRM e envie leads prospectados direto para seu funil de vendas.', priority: '0.7', changefreq: 'monthly' },
     { path: 'integracoes/agendor', title: 'Integração Precision + Agendor CRM', description: 'Conecte o Precision ao Agendor e envie leads prospectados direto para seu CRM.', priority: '0.7', changefreq: 'monthly' },
     { path: 'integracoes/hubspot', title: 'Integração Precision + HubSpot CRM', description: 'Conecte o Precision ao HubSpot CRM via OAuth e envie leads prospectados direto para seu funil de vendas.', priority: '0.7', changefreq: 'monthly' },
+    { path: 'pricing', title: 'Preços | Precision — Planos de Prospecção B2B', description: 'Planos acessíveis para prospecção B2B com IA. A partir de R$ 49/mês com 50 créditos. Score IA, exportação para CRM e workspace de equipe.', priority: '0.9', changefreq: 'weekly' },
   ];
+
   const blogPosts = [
     { slug: 'como-encontrar-empresas-para-vender', title: 'Como Encontrar Empresas para Vender', desc: 'Guia completo: 7 estratégias para encontrar empresas ideais e vender mais em 2026.' },
     { slug: 'como-prospectar-clientes-b2b', title: 'Como Prospectar Clientes B2B', desc: 'Aprenda técnicas de prospecção B2B que realmente funcionam para gerar leads qualificados.' },

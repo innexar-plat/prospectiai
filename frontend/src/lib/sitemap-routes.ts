@@ -111,6 +111,13 @@ function getBrCoreRoutes(): SitemapRoute[] {
       priority: '0.7',
       changefreq: 'monthly',
     },
+    {
+      path: 'pricing',
+      title: 'Preços | Precision — Planos de Prospecção B2B',
+      description: 'Planos acessíveis para prospecção B2B com IA. A partir de R$ 49/mês com 50 créditos. Score IA, exportação para CRM e workspace de equipe.',
+      priority: '0.9',
+      changefreq: 'weekly',
+    },
   ];
 
   for (const bp of BLOG_POSTS) {

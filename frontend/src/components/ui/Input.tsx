@@ -27,11 +27,13 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
                                 : "",
                             className
                         )}
+                        aria-invalid={!!error}
+                        aria-describedby={error && props.name ? `error-${props.name}` : undefined}
                         {...props}
                     />
                 </div>
                 {error && (
-                    <p className="mt-1.5 ml-1 text-xs font-medium text-red-800 dark:text-red-400">{error}</p>
+                    <p id={props.name ? `error-${props.name}` : undefined} className="mt-1.5 ml-1 text-xs font-medium text-red-800 dark:text-red-400">{error}</p>
                 )}
             </div>
         );

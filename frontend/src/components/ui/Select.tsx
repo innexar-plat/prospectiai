@@ -21,6 +21,8 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
                                 : "border-border hover:border-primary/50 focus-visible:border-primary focus-visible:ring-primary/20",
                             className
                         )}
+                        aria-invalid={!!error}
+                        aria-describedby={error && props.name ? `error-${props.name}` : undefined}
                         {...props}
                     >
                         {children}
@@ -30,7 +32,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
                     </div>
                 </div>
                 {error && (
-                    <p className="mt-1 text-xs text-danger">{error}</p>
+                    <p id={props.name ? `error-${props.name}` : undefined} className="mt-1 text-xs text-danger">{error}</p>
                 )}
             </div>
         );
