@@ -133,10 +133,50 @@ function HeaderMobileNav({
     onNavigate: (path: string) => void;
     onCloseMenu: () => void;
 }) {
+    const dialogRef = React.useRef<HTMLDivElement>(null);
+
+    React.useEffect(() => {
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onCloseMenu();
+        };
+        document.addEventListener('keydown', handleEscape);
+        return () => document.removeEventListener('keydown', handleEscape);
+    }, [onCloseMenu]);
+
+    React.useEffect(() => {
+        const dialog = dialogRef.current;
+        if (!dialog) return;
+        const focusable = dialog.querySelectorAll<HTMLElement>('a[href], button, [tabindex]:not([tabindex="-1"])');
+        if (focusable.length) focusable[0]?.focus();
+    }, []);
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key !== 'Tab') return;
+        const dialog = dialogRef.current;
+        if (!dialog) return;
+        const focusable = dialog.querySelectorAll<HTMLElement>('a[href], button, [tabindex]:not([tabindex="-1"])');
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+        }
+    };
+
     return (
         <div className="fixed inset-0 z-[99999] md:hidden" style={{ isolation: 'isolate' }}>
             <div className="absolute inset-0 bg-black/50 touch-manipulation" onClick={onCloseMenu} onTouchEnd={(e) => { e.preventDefault(); onCloseMenu(); }} aria-hidden role="presentation" />
-            <div className="absolute left-4 right-4 top-[calc(68px+max(0.25rem,env(safe-area-inset-top))+0.5rem)] max-h-[calc(100vh-6rem)] overflow-y-auto animate-in slide-in-from-top-2 duration-200 rounded-3xl shadow-2xl border border-border bg-card backdrop-blur-2xl p-6 flex flex-col gap-6" role="dialog" aria-label="Menu">
+            <div
+                ref={dialogRef}
+                className="absolute left-4 right-4 top-[calc(68px+max(0.25rem,env(safe-area-inset-top))+0.5rem)] max-h-[calc(100vh-6rem)] overflow-y-auto animate-in slide-in-from-top-2 duration-200 rounded-3xl shadow-2xl border border-border bg-card backdrop-blur-2xl p-6 flex flex-col gap-6"
+                role="dialog"
+                aria-label="Menu"
+                onKeyDown={handleKeyDown}
+            >
                 <HeaderNavLinks locale={locale} onPlansClick={onPlansClick} onCloseMenu={onCloseMenu} variant="mobile" t={t} />
                 <div className="flex flex-col gap-2">
                     <span className="text-[10px] font-black tracking-widest text-muted uppercase">Idioma</span>

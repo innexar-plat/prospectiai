@@ -133,8 +133,18 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
         setAvatarDropdownOpen(false);
       }
     };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setNotifDropdownOpen(false);
+        setAvatarDropdownOpen(false);
+      }
+    };
     document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   // Subscribe to Web Push after permission is granted
@@ -406,6 +416,18 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
                   className="absolute right-0 top-full mt-1 w-[320px] max-h-[400px] overflow-hidden rounded-xl border border-border bg-card shadow-xl z-50 flex flex-col"
                   role="dialog"
                   aria-label={t('dash.a11y.notifList')}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      const buttons = e.currentTarget.querySelectorAll<HTMLButtonElement>('ul button');
+                      if (!buttons.length) return;
+                      const currentIndex = Array.from(buttons).findIndex(btn => btn === document.activeElement);
+                      const nextIndex = e.key === 'ArrowDown'
+                        ? Math.min(currentIndex + 1, buttons.length - 1)
+                        : Math.max(currentIndex - 1, 0);
+                      buttons[nextIndex]?.focus();
+                    }
+                  }}
                 >
                   <div className="shrink-0 flex items-center justify-between px-3 py-2 border-b border-border">
                     <span className="font-medium text-sm">{t('dash.notif.title')}</span>
@@ -498,6 +520,18 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
                   className="absolute right-0 top-full mt-1 w-56 rounded-xl border border-border bg-card shadow-xl z-50 py-1"
                   role="menu"
                   aria-label={t('dash.menu.account')}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      const items = e.currentTarget.querySelectorAll<HTMLButtonElement | HTMLAnchorElement>('[role="menuitem"]');
+                      if (!items.length) return;
+                      const currentIndex = Array.from(items).findIndex(el => el === document.activeElement);
+                      const nextIndex = e.key === 'ArrowDown'
+                        ? Math.min(currentIndex + 1, items.length - 1)
+                        : Math.max(currentIndex - 1, 0);
+                      items[nextIndex]?.focus();
+                    }
+                  }}
                 >
                   <div className="px-3 py-2 border-b border-border">
                     <p className="font-medium text-sm text-foreground truncate">{user.name || t('dash.greeting.defaultUser')}</p>

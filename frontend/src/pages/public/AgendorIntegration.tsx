@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { Logo } from '@/components/brand/Logo';
 import LegalFooterLinks from '@/components/legal/LegalFooterLinks';
+import SeoMeta from '@/components/layout/SeoMeta';
+import BreadcrumbJsonLd from '@/components/layout/BreadcrumbJsonLd';
 import {
   ArrowRight,
   CheckCircle2,
@@ -90,6 +92,15 @@ export default function AgendorIntegration() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <SeoMeta
+        title="Integração Precision + Agendor CRM"
+        description="Conecte o Precision ao Agendor e envie leads prospectados direto para seu CRM. Integração com token de API, upsert de contatos e negociações enriquecidas."
+        path="/integracoes/agendor"
+      />
+      <BreadcrumbJsonLd items={[
+        { name: 'Início', path: '/' },
+        { name: 'Integração Agendor', path: '/integracoes/agendor' },
+      ]} />
       {/* ── Header ─────────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-border">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">

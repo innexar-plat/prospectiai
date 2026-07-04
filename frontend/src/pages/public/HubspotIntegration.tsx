@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, Handshake, BrainCircuit, BarChart3, Users, MessageSquare, Target, Shield, Zap } from 'lucide-react';
 import { Logo } from '@/components/brand/Logo';
+import SeoMeta from '@/components/layout/SeoMeta';
+import BreadcrumbJsonLd from '@/components/layout/BreadcrumbJsonLd';
 
 function Feature({ icon: Icon, title, desc }: { icon: React.ElementType; title: string; desc: string }) {
   return (
@@ -17,6 +19,15 @@ function Feature({ icon: Icon, title, desc }: { icon: React.ElementType; title: 
 export default function HubspotIntegration() {
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <SeoMeta
+        title="Integração Precision + HubSpot CRM"
+        description="Conecte o Precision ao HubSpot CRM via OAuth e envie leads prospectados direto para seu funil de vendas. Integração nativa com pipeline, stage e owner."
+        path="/integracoes/hubspot"
+      />
+      <BreadcrumbJsonLd items={[
+        { name: 'Início', path: '/' },
+        { name: 'Integração HubSpot', path: '/integracoes/hubspot' },
+      ]} />
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-border">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
           <Link to="/" className="inline-flex items-center shrink-0">

@@ -4,31 +4,54 @@ Disallow: /dashboard
 Disallow: /auth/
 Disallow: /onboarding
 
-# AI crawlers — explicitly allowed
+# AI crawlers — explicitly allowed (keep in sync with Cloudflare AI Audit allowlist)
 User-agent: GPTBot
 Allow: /
 Disallow: /dashboard
 Disallow: /auth/
+Disallow: /onboarding
 
 User-agent: ChatGPT-User
 Allow: /
+Disallow: /dashboard
+Disallow: /auth/
+Disallow: /onboarding
 
 User-agent: Google-Extended
 Allow: /
+Disallow: /dashboard
+Disallow: /auth/
+Disallow: /onboarding
 
 User-agent: PerplexityBot
 Allow: /
+Disallow: /dashboard
+Disallow: /auth/
+Disallow: /onboarding
 
 User-agent: ClaudeBot
 Allow: /
+Disallow: /dashboard
+Disallow: /auth/
+Disallow: /onboarding
 
 User-agent: Amazonbot
 Allow: /
+Disallow: /dashboard
+Disallow: /auth/
+Disallow: /onboarding
 
 User-agent: anthropic-ai
 Allow: /
+Disallow: /dashboard
+Disallow: /auth/
+Disallow: /onboarding
 
 User-agent: Bytespider
 Allow: /
+Disallow: /dashboard
+Disallow: /auth/
+Disallow: /onboarding
 
 Sitemap: https://precisionia.com.br/sitemap.xml
+Sitemap: https://precisionai.innexar.app/sitemap.xml

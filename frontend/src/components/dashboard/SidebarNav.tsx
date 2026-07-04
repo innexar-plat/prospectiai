@@ -7,7 +7,7 @@ import type { SessionUser } from '@/lib/api';
 import { getPlanDisplayName } from '@/lib/billing-config';
 import { isMarketFeatureEnabled, needsSubscription, US_STARTER_CREDITS } from '@/lib/market';
 import { formatCreditUsage } from '@/lib/credits-display';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { APP_VERSION } from '@/lib/version';
 import { useI18n } from '@/lib/i18n';
@@ -401,16 +401,7 @@ export function SidebarNav({
         {renderContent(sidebarCollapsed, true)}
       </aside>
       {mobileOpen && onMobileClose && typeof document !== 'undefined' && createPortal(
-        <>
-          <div
-            className="fixed inset-0 bg-black/50 md:hidden touch-manipulation"
-            style={{ zIndex: 9998 }}
-            onClick={onMobileClose}
-            onTouchEnd={(e) => { e.preventDefault(); onMobileClose(); }}
-            onKeyDown={(e) => e.key === 'Escape' && onMobileClose()}
-            aria-hidden
-            role="presentation"
-          />
+        <MobileSidebarWrapper onClose={onMobileClose}>
           <aside
             className="fixed left-0 top-0 bottom-0 w-64 max-w-[85vw] flex flex-col border-r border-violet-500/15 bg-gradient-to-b from-card via-card to-card/98 backdrop-blur-xl shadow-2xl shadow-violet-900/10 md:hidden animate-in slide-in-from-left-2 duration-200"
             style={{ zIndex: 9999 }}
@@ -418,7 +409,7 @@ export function SidebarNav({
           >
             {renderContent(false, false)}
           </aside>
-        </>,
+        </MobileSidebarWrapper>,
         document.body
       )}
 
@@ -463,5 +454,55 @@ export function SidebarNav({
         document.body
       )}
     </>
+  );
+}
+
+function MobileSidebarWrapper({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
+
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+    const focusable = wrapper.querySelectorAll<HTMLElement>('a[href], button, [tabindex]:not([tabindex="-1"])');
+    if (focusable.length) focusable[0]?.focus();
+  }, []);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key !== 'Tab') return;
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+    const focusable = wrapper.querySelectorAll<HTMLElement>('a[href], button, [tabindex]:not([tabindex="-1"])');
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }, []);
+
+  return (
+    <div ref={wrapperRef} onKeyDown={handleKeyDown}>
+      <div
+        className="fixed inset-0 bg-black/50 md:hidden touch-manipulation"
+        style={{ zIndex: 9998 }}
+        onClick={onClose}
+        onTouchEnd={(e) => { e.preventDefault(); onClose(); }}
+        aria-hidden
+        role="presentation"
+      />
+      {children}
+    </div>
   );
 }

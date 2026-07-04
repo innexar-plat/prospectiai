@@ -69,6 +69,9 @@ Traefik (external) → frontend (Nginx :80) → backend (Next.js :4000) → Post
 | `frontend/src/lib/i18n/bundles/{pt,en}.ts` | i18n strings (BR/US markets) |
 | `frontend/src/lib/api.ts` | **1.7K lines** — all API clients and types (to be split) |
 | `frontend/src/lib/sitemap-routes.ts` | SEO route definitions (keep synced with SEO script) |
+| `frontend/src/components/layout/SeoMeta.tsx` | Reusable SEO meta tags component (OG, description, canonical) |
+| `frontend/src/components/layout/BreadcrumbJsonLd.tsx` | Schema.org BreadcrumbList JSON-LD component |
+| `frontend/public/robots.txt` | Robots rules with AI crawlers (GPTBot, ClaudeBot, etc.) |
 | `frontend/src/index.css` | CSS variables, theme tokens, reduced-motion |
 | `frontend/src/lib/utils.ts` | `cn()` — currently just `.join(' ')`, twMerge available |
 | `backend/src/modules/search/application/search.service.ts` | **2K lines** — monolithic (to be refactored) |

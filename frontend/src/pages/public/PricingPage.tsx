@@ -5,6 +5,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Check, Sparkles } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import CookieConsent from '@/components/legal/CookieConsent';
+import SeoMeta from '@/components/layout/SeoMeta';
+import BreadcrumbJsonLd from '@/components/layout/BreadcrumbJsonLd';
 import { useI18n } from '@/lib/i18n';
 import { PLANS, PUBLIC_PLAN_KEYS, type PlanType } from '@/lib/billing-config';
 import { getActiveMarket, getMarketConfig, isTrialEnabled, US_STARTER_CREDITS } from '@/lib/market';
@@ -39,8 +41,25 @@ export default function PricingPage({ locale: initialLocale }: { locale: string 
 
     const goSignup = () => navigate('/auth/signup');
 
+    const market = getActiveMarket();
+    const seoTitle = market === 'US'
+        ? t('billing.title')
+        : 'Preços | Precision — Planos de Prospecção B2B';
+    const seoDesc = market === 'US'
+        ? 'Precision pricing: Starter plan at $19/mo with 50 credits. AI prospecting, lead scoring, and team workspaces.'
+        : 'Planos acessíveis para prospecção B2B com IA. A partir de R$ 49/mês com 50 créditos. Score IA, exportação para CRM e workspace de equipe.';
+
     return (
         <div className="min-h-screen flex flex-col bg-background">
+            <SeoMeta
+                title={seoTitle}
+                description={seoDesc}
+                path={`/${locale === 'pt' ? '' : locale + '/'}pricing`}
+            />
+            <BreadcrumbJsonLd items={[
+                { name: 'Início', path: '/' },
+                { name: seoTitle, path: `/${locale === 'pt' ? '' : locale + '/'}pricing` },
+            ]} />
             <Header
                 session={null}
                 locale={locale}

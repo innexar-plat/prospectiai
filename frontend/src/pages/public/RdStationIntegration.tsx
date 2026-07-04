@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { Logo } from '@/components/brand/Logo';
 import LegalFooterLinks from '@/components/legal/LegalFooterLinks';
+import SeoMeta from '@/components/layout/SeoMeta';
+import BreadcrumbJsonLd from '@/components/layout/BreadcrumbJsonLd';
 import {
   ArrowRight,
   CheckCircle2,
@@ -70,6 +72,15 @@ function Step({ n, title, desc }: { n: number; title: string; desc: string }) {
 export default function RdStationIntegration() {
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <SeoMeta
+        title="Integração Precision + RD Station CRM"
+        description="Conecte o Precision ao RD Station CRM e envie leads prospectados direto para seu funil de vendas. Integração nativa com OAuth, pipeline e campos customizados."
+        path="/integracoes/rdstation"
+      />
+      <BreadcrumbJsonLd items={[
+        { name: 'Início', path: '/' },
+        { name: 'Integração RD Station', path: '/integracoes/rdstation' },
+      ]} />
       {/* ── Header ─────────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-border">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
