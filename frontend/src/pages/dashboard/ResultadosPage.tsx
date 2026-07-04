@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import { AlertCircle, Download, Loader2, BookmarkPlus, BookmarkCheck, Sparkles, GitCompare, Star, Globe, Phone, MapPin, Info, Mail } from 'lucide-react';
+import { Skeleton } from '@/components/ui/Skeleton';
 import type { LeadAnalysisListItem, SessionUser } from '@/lib/api';
 import { searchApi, leadsApi, analyzeStream } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
@@ -381,10 +382,28 @@ export default function ResultadosPage() {
 
   if (loading) {
     return (
-      <div className="p-8 max-w-7xl mx-auto w-full">
-        <div className="rounded-2xl bg-card border border-border p-12 flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" aria-hidden />
-          <p className="text-muted font-medium">{t('page.resultados.loading')}</p>
+      <div className="p-8 max-w-7xl mx-auto w-full space-y-4">
+        <Skeleton className="h-8 w-64 rounded-lg" />
+        <Skeleton className="h-4 w-96 rounded-lg mb-6" />
+        <div className="rounded-[2.4rem] bg-card border border-border overflow-hidden shadow-sm divide-y divide-border">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="p-4 sm:px-5 sm:py-4 flex items-center gap-4">
+              <Skeleton className="w-4 h-4 rounded shrink-0" />
+              <div className="flex-1 min-w-0">
+                <Skeleton className="h-5 w-3/5 mb-2" />
+                <Skeleton className="h-3 w-4/5 mb-2" />
+                <div className="flex gap-2 mt-2">
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Skeleton className="w-12 h-12 rounded-full" />
+                <Skeleton className="w-8 h-8 rounded-lg" />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );

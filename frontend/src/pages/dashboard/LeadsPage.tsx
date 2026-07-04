@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Target, Loader2, ArrowRight, ExternalLink, Download, Star, Copy, Check, MessageCircle, X } from 'lucide-react';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { leadsApi, type LeadAnalysisListItem, type SessionUser } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
@@ -124,8 +125,27 @@ function LeadsListContent({
 }) {
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 size={32} className="animate-spin text-violet-600 dark:text-violet-400" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="bg-card w-full p-6 border border-border rounded-3xl shadow-sm">
+            <div className="flex justify-between items-start w-full mb-4">
+              <div className="flex-1">
+                <Skeleton className="h-5 w-3/4 mb-2" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+              <Skeleton className="w-12 h-12 rounded-full shrink-0 ml-2" />
+            </div>
+            <div className="flex gap-2 mb-4">
+              <Skeleton className="h-6 w-16 rounded-lg" />
+              <Skeleton className="h-6 w-16 rounded-lg" />
+            </div>
+            <Skeleton className="h-8 w-full rounded-lg mb-4" />
+            <div className="pt-4 border-t border-border flex items-center justify-between">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+          </div>
+        ))}
       </div>
     );
   }

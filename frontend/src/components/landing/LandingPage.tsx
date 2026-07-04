@@ -98,6 +98,10 @@ const CRM_INTEGRATIONS = [
 
 const LANDING_FAQ = [
     {
+        q: 'O que é o Precision?',
+        a: 'Precision é uma plataforma de prospecção B2B com inteligência artificial. Ela encontra empresas por nicho e região, analisa o potencial de cada lead com score IA, gera scripts de abordagem prontos e oferece inteligência de mercado — tudo em um só lugar.'
+    },
+    {
         q: 'Preciso de conhecimento técnico para usar?',
         a: 'Não. A plataforma foi projetada para vendedores e equipes comerciais. Basta digitar o nicho, a região e clicar em buscar — a IA faz o resto.'
     },
@@ -110,6 +114,10 @@ const LANDING_FAQ = [
         a: 'Usamos as IAs mais modernas do mercado. Os dados vêm de fontes oficiais: Google Places (avaliações, localização), Receita Federal (27M empresas, CNPJ, CNAE, porte), Reclame Aqui e Jus Brasil.'
     },
     {
+        q: 'Preciso de cartão de crédito para testar?',
+        a: 'Não. O plano gratuito oferece 10 créditos/mês sem cartão de crédito. Dá para buscar empresas, analisar leads com IA e validar o fluxo completo antes de assinar qualquer plano.'
+    },
+    {
         q: 'Posso integrar com o CRM que já uso?',
         a: 'Sim. Integramos nativamente com RD Station (OAuth), Agendor (Token API) e HubSpot. Também exportamos em CSV e JSON.'
     },
@@ -120,10 +128,6 @@ const LANDING_FAQ = [
     {
         q: 'Posso cancelar a qualquer momento?',
         a: 'Sim, sem multa e sem burocracia. Cancele direto na plataforma. Seu plano continua ativo até o fim do período pago.'
-    },
-    {
-        q: 'Como funciona o plano gratuito?',
-        a: 'Você recebe 10 créditos/mês para testar a plataforma sem cartão de crédito. Dá para buscar empresas, analisar os melhores leads com IA e validar o fluxo antes de assinar.'
     },
     {
         q: 'O sistema é seguro?',
@@ -258,14 +262,14 @@ export default function LandingPage({ onViewPlans, t }: { locale: string; onView
                             className="inline-flex items-center justify-center font-bold rounded-2xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-violet-500/50 motion-safe:active:scale-95 bg-[#7c3aed] text-white shadow-[0_4px_14px_0_rgba(124,58,237,0.3)] hover:bg-[#6d28d9] hover:shadow-[0_6px_20px_rgba(109,40,217,0.4)] hover:-translate-y-0.5 w-full sm:w-auto h-16 px-10 text-lg group"
                         >
                             <Rocket size={20} className="mr-2 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" aria-hidden />
-                            Testar agora — 10 créditos grátis
+                            {t('landing.ctaHero')}
                         </Link>
                         <Button onClick={onViewPlans} variant="secondary" size="lg" className="w-full sm:w-auto h-16 px-10 text-lg">
                             {t('landing.ctaPlans')}
                         </Button>
                     </div>
                     <p className="mt-4 text-sm text-muted animate-fade animation-delay-400 animation-fill-both">
-                        Sem cartão de crédito · Cancele quando quiser ·{' '}
+                        A partir de $19/mês · Sem cartão de crédito · Cancele quando quiser ·{' '}
                         <Link to="/auth/afiliado/cadastro" className="font-semibold underline decoration-violet-500/50 hover:decoration-violet-500 transition-colors">
                             Seja um afiliado
                         </Link>

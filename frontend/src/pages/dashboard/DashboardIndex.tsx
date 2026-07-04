@@ -11,6 +11,7 @@ import {
   Camera, Sofa, PartyPopper, Banknote, Activity, Waves, Utensils,
   CircleDot, Info,
 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { leadsApi, searchApi, type LeadStats, type SearchHistoryItem } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
@@ -1275,9 +1276,9 @@ export default function DashboardIndex() {
             {t('dash.filters.configureHint')}
           </span>
           {loading ? (
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
-              <p className="text-xs font-medium text-foreground animate-pulse">{LOADING_STEPS[loadingStep]}</p>
+            <div className="flex items-center gap-3">
+              <Skeleton className="w-8 h-8 rounded-full" />
+              <Skeleton className="h-4 w-48 rounded" />
             </div>
           ) : (
             <Button
