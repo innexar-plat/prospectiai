@@ -101,7 +101,7 @@
         "transform": "lodash/{{member}}"
       }
     },
-    "outputFileTracingRoot": "/opt/prospector-ai",
+    "outputFileTracingRoot": "/srv/innexar/production/prospector-ai",
     "cacheComponents": false,
     "cacheLife": {
       "default": {
@@ -294,11 +294,11 @@
     "bundlePagesRouterDependencies": false,
     "configFileName": "next.config.ts",
     "turbopack": {
-      "root": "/opt/prospector-ai"
+      "root": "/srv/innexar/production/prospector-ai"
     },
     "distDirRoot": ".next"
   },
-  "appDir": "/opt/prospector-ai/backend",
+  "appDir": "/srv/innexar/production/prospector-ai/backend",
   "relativeAppDir": "backend",
   "files": [
     ".next/routes-manifest.json",

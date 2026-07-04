@@ -1,12 +1,12 @@
-module.exports=[79861,e=>{"use strict";let t=[];function r(e){return e.replace(/([_*\[\]()~`>#+\-=|{}.!\\])/g,"\\$1")}let n={critical:"🔴",warning:"🟡",info:"🔵",success:"✅"},i={critical:"CRITICAL",warning:"WARNING",info:"INFO",success:"SUCCESS"};async function l(e){var l;let a,s,c=(a=process.env.TELEGRAM_BOT_TOKEN?.trim(),s=process.env.TELEGRAM_CHAT_ID?.trim(),a&&s?{token:a,chatId:s}:null);if(!c)return!1;if(!e.force&&function(){let e=Date.now();for(;t.length>0&&t[0]<e-6e4;)t.shift();return t.length>=30||(t.push(e),!1)}())return process.stderr.write(`[telegram-alert] Rate limited, dropping: ${e.title}
-`),!1;let o=n[e.level],u=i[e.level],f=new Date().toISOString().replace("T"," ").replace(/\.\d+Z$/," UTC"),g=`${o} *${r(u)}* — ${r(e.title)}
+module.exports=[79861,e=>{"use strict";let t=[];function r(e){return e.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}let n={critical:"🔴",warning:"🟡",info:"🔵",success:"✅"},i={critical:"CRITICAL",warning:"WARNING",info:"INFO",success:"SUCCESS"};async function a(e){var a;let l,s,o=(l=process.env.TELEGRAM_BOT_TOKEN?.trim(),s=process.env.TELEGRAM_CHAT_ID?.trim(),l&&s?{token:l,chatId:s}:null);if(!o)return!1;if(!e.force&&function(){let e=Date.now();for(;t.length>0&&t[0]<e-6e4;)t.shift();return t.length>=30||(t.push(e),!1)}())return process.stderr.write(`[telegram-alert] Rate limited, dropping: ${e.title}
+`),!1;let u=n[e.level],f=i[e.level],g=new Date().toISOString().replace("T"," ").replace(/\.\d+Z$/," UTC"),p=`${u} <b>${r(f)}</b> — ${r(e.title)}
 
-`;if(g+=`${r(e.message)}
-`,e.meta&&Object.keys(e.meta).length>0)for(let[t,n]of(g+="\n",Object.entries(e.meta)))null!=n&&(g+=`• *${r(t)}*: \`${r(String(n))}\`
-`);g+=`
-🕐 ${r(f)}`,g+=`
-🏷 ${r("PrecisionAI")}`,g=(l=g).length<=4e3?l:l.slice(0,3980)+"\n\n… (truncado)";try{let e=`https://api.telegram.org/bot${c.token}/sendMessage`,t=await fetch(e,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({chat_id:c.chatId,text:g,parse_mode:"MarkdownV2",disable_web_page_preview:!0}),signal:AbortSignal.timeout(1e4)});if(!t.ok){let e=await t.text().catch(()=>"");return process.stderr.write(`[telegram-alert] API error ${t.status}: ${e}
-`),!1}return!0}catch(e){return process.stderr.write(`[telegram-alert] Send failed: ${e instanceof Error?e.message:"Unknown"}
-`),!1}}function a(e,t,r){return l({level:"critical",title:e,message:t,meta:r,force:!0})}function s(e,t,r){return l({level:"warning",title:e,message:t,meta:r})}function c(e,t,r){return l({level:"info",title:e,message:t,meta:r})}function o(e,t,r){return l({level:"success",title:e,message:t,meta:r})}e.s(["alertCritical",()=>a,"alertInfo",()=>c,"alertSuccess",()=>o,"alertWarning",()=>s,"sendTelegramAlert",()=>l])}];
+`;if(p+=`${r(e.message)}
+`,e.meta&&Object.keys(e.meta).length>0)for(let[t,n]of(p+="\n",Object.entries(e.meta)))null!=n&&(p+=`• <b>${r(t)}</b>: <code>${r(String(n))}</code>
+`);return p+=`
+🕐 ${r(g)}`,p+=`
+🏷 ${r("PrecisionAI")}`,p=(a=p).length<=4e3?a:a.slice(0,3980)+"\n\n… (truncado)",c(o.token,o.chatId,p)}function l(e){return new Promise(t=>setTimeout(t,e))}async function c(e,t,r){let n=`https://api.telegram.org/bot${e}/sendMessage`,i=JSON.stringify({chat_id:t,text:r,parse_mode:"HTML",disable_web_page_preview:!0});for(let e=0;e<2;e++)try{let t=await fetch(n,{method:"POST",headers:{"Content-Type":"application/json"},body:i,signal:AbortSignal.timeout(1e4)});if(t.ok)return!0;let r=await t.text().catch(()=>"");if(0===e){await l(2e3);continue}process.stderr.write(`[telegram-alert] API error ${t.status}: ${r}
+`);break}catch(t){if(0===e){await l(2e3);continue}process.stderr.write(`[telegram-alert] Send failed: ${t instanceof Error?t.message:"Unknown"}
+`);break}return!1}function s(e,t,r){return a({level:"critical",title:e,message:t,meta:r,force:!0})}function o(e,t,r){return a({level:"warning",title:e,message:t,meta:r})}function u(e,t,r){return a({level:"info",title:e,message:t,meta:r})}function f(e,t,r){return a({level:"success",title:e,message:t,meta:r})}e.s(["alertCritical",()=>s,"alertInfo",()=>u,"alertSuccess",()=>f,"alertWarning",()=>o,"escapeHtml",()=>r,"sendTelegramAlert",()=>a])}];
 
 //# sourceMappingURL=backend_src_lib_telegram-alert_ts_bdbc18c1._.js.map

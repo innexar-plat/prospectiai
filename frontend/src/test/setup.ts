@@ -1,9 +1,10 @@
 import { expect, afterEach, beforeEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import * as matchers from '@testing-library/jest-dom/matchers';
+import * as axeMatchers from 'vitest-axe/matchers';
 import { getLocaleStorageKey } from '@/lib/locale';
 
-expect.extend(matchers);
+expect.extend({ ...matchers, ...axeMatchers });
 
 beforeEach(() => {
     localStorage.setItem(getLocaleStorageKey(), 'pt');

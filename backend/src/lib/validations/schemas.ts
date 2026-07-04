@@ -254,10 +254,16 @@ export const adminResetPasswordSchema = z.object({
   message: 'Either sendEmail true or temporaryPassword (min 8 chars) is required',
 });
 
+/** PATCH /api/admin/users/[id] */
+export const adminUserUpdateSchema = z.object({
+  market: z.enum(['BR', 'US']).optional(),
+});
+
 /** PATCH /api/admin/workspaces/[id] */
 export const adminWorkspaceUpdateSchema = z.object({
   plan: z.enum(['FREE', 'TRIAL', 'BASIC', 'PRO', 'BUSINESS', 'SCALE']).optional(),
   leadsLimit: z.coerce.number().int().min(0).optional(),
+  market: z.enum(['BR', 'US']).optional(),
 });
 
 /** POST /api/team/invite */

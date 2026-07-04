@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { axe } from 'vitest-axe';
 import { Input } from './Input';
 
 describe('Input', () => {
@@ -22,5 +23,11 @@ describe('Input', () => {
   it('renders icon when provided', () => {
     const { container } = render(<Input icon={<span data-testid="icon">I</span>} />);
     expect(container.querySelector('[data-testid="icon"]')).toBeInTheDocument();
+  });
+
+  it('has no a11y violations', async () => {
+    const { container } = render(<Input placeholder="Name" />);
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

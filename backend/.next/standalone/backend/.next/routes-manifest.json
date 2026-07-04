@@ -104,6 +104,94 @@
       "namedRegex": "^/api/admin/ai\\-config/(?<nxtPid>[^/]+?)/test(?:/)?$"
     },
     {
+      "page": "/api/admin/auto-prospeccao/search-profiles/[id]",
+      "regex": "^/api/admin/auto\\-prospeccao/search\\-profiles/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/auto\\-prospeccao/search\\-profiles/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/admin/auto-prospeccao/sender-pool/[id]",
+      "regex": "^/api/admin/auto\\-prospeccao/sender\\-pool/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/auto\\-prospeccao/sender\\-pool/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/admin/auto-prospeccao/sender-pool/[id]/test",
+      "regex": "^/api/admin/auto\\-prospeccao/sender\\-pool/([^/]+?)/test(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/auto\\-prospeccao/sender\\-pool/(?<nxtPid>[^/]+?)/test(?:/)?$"
+    },
+    {
+      "page": "/api/admin/auto-prospeccao/templates/[id]",
+      "regex": "^/api/admin/auto\\-prospeccao/templates/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/auto\\-prospeccao/templates/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/admin/auto-prospeccao/workspaces/[id]/toggle",
+      "regex": "^/api/admin/auto\\-prospeccao/workspaces/([^/]+?)/toggle(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/auto\\-prospeccao/workspaces/(?<nxtPid>[^/]+?)/toggle(?:/)?$"
+    },
+    {
+      "page": "/api/admin/email-marketing/campaigns/[id]",
+      "regex": "^/api/admin/email\\-marketing/campaigns/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/email\\-marketing/campaigns/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/admin/email-marketing/campaigns/[id]/cancel",
+      "regex": "^/api/admin/email\\-marketing/campaigns/([^/]+?)/cancel(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/email\\-marketing/campaigns/(?<nxtPid>[^/]+?)/cancel(?:/)?$"
+    },
+    {
+      "page": "/api/admin/email-marketing/campaigns/[id]/recipients",
+      "regex": "^/api/admin/email\\-marketing/campaigns/([^/]+?)/recipients(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/email\\-marketing/campaigns/(?<nxtPid>[^/]+?)/recipients(?:/)?$"
+    },
+    {
+      "page": "/api/admin/email-marketing/campaigns/[id]/send",
+      "regex": "^/api/admin/email\\-marketing/campaigns/([^/]+?)/send(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/email\\-marketing/campaigns/(?<nxtPid>[^/]+?)/send(?:/)?$"
+    },
+    {
+      "page": "/api/admin/email-marketing/templates/[id]",
+      "regex": "^/api/admin/email\\-marketing/templates/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/email\\-marketing/templates/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/admin/email-marketing/templates/[id]/preview",
+      "regex": "^/api/admin/email\\-marketing/templates/([^/]+?)/preview(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/email\\-marketing/templates/(?<nxtPid>[^/]+?)/preview(?:/)?$"
+    },
+    {
       "page": "/api/admin/plans/[id]",
       "regex": "^/api/admin/plans/([^/]+?)(?:/)?$",
       "routeKeys": {
@@ -118,6 +206,14 @@
         "nxtPid": "nxtPid"
       },
       "namedRegex": "^/api/admin/users/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/admin/users/[id]/force-logout",
+      "regex": "^/api/admin/users/([^/]+?)/force\\-logout(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/users/(?<nxtPid>[^/]+?)/force\\-logout(?:/)?$"
     },
     {
       "page": "/api/admin/users/[id]/reset-password",
@@ -152,6 +248,70 @@
       "namedRegex": "^/api/auth/(?<nxtPnextauth>.+?)(?:/)?$"
     },
     {
+      "page": "/api/auto-prospeccao/leads/[id]",
+      "regex": "^/api/auto\\-prospeccao/leads/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/auto\\-prospeccao/leads/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/auto-prospeccao/leads/[id]/discard",
+      "regex": "^/api/auto\\-prospeccao/leads/([^/]+?)/discard(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/auto\\-prospeccao/leads/(?<nxtPid>[^/]+?)/discard(?:/)?$"
+    },
+    {
+      "page": "/api/auto-prospeccao/leads/[id]/push-crm",
+      "regex": "^/api/auto\\-prospeccao/leads/([^/]+?)/push\\-crm(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/auto\\-prospeccao/leads/(?<nxtPid>[^/]+?)/push\\-crm(?:/)?$"
+    },
+    {
+      "page": "/api/auto-prospeccao/profiles/[id]",
+      "regex": "^/api/auto\\-prospeccao/profiles/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/auto\\-prospeccao/profiles/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/auto-prospeccao/profiles/[id]/toggle",
+      "regex": "^/api/auto\\-prospeccao/profiles/([^/]+?)/toggle(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/auto\\-prospeccao/profiles/(?<nxtPid>[^/]+?)/toggle(?:/)?$"
+    },
+    {
+      "page": "/api/auto-prospeccao/runs/[id]",
+      "regex": "^/api/auto\\-prospeccao/runs/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/auto\\-prospeccao/runs/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/auto-prospeccao/team/[memberId]/toggle",
+      "regex": "^/api/auto\\-prospeccao/team/([^/]+?)/toggle(?:/)?$",
+      "routeKeys": {
+        "nxtPmemberId": "nxtPmemberId"
+      },
+      "namedRegex": "^/api/auto\\-prospeccao/team/(?<nxtPmemberId>[^/]+?)/toggle(?:/)?$"
+    },
+    {
+      "page": "/api/auto-prospeccao/templates/[id]",
+      "regex": "^/api/auto\\-prospeccao/templates/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/auto\\-prospeccao/templates/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
       "page": "/api/intelligence/history/[id]",
       "regex": "^/api/intelligence/history/([^/]+?)(?:/)?$",
       "routeKeys": {
@@ -168,12 +328,36 @@
       "namedRegex": "^/api/leads/(?<nxtPid>[^/]+?)(?:/)?$"
     },
     {
+      "page": "/api/leads/[id]/contact-intelligence",
+      "regex": "^/api/leads/([^/]+?)/contact\\-intelligence(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/leads/(?<nxtPid>[^/]+?)/contact\\-intelligence(?:/)?$"
+    },
+    {
+      "page": "/api/leads/[id]/contact-intelligence/primary",
+      "regex": "^/api/leads/([^/]+?)/contact\\-intelligence/primary(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/leads/(?<nxtPid>[^/]+?)/contact\\-intelligence/primary(?:/)?$"
+    },
+    {
       "page": "/api/leads/[id]/events",
       "regex": "^/api/leads/([^/]+?)/events(?:/)?$",
       "routeKeys": {
         "nxtPid": "nxtPid"
       },
       "namedRegex": "^/api/leads/(?<nxtPid>[^/]+?)/events(?:/)?$"
+    },
+    {
+      "page": "/api/leads/[id]/relations",
+      "regex": "^/api/leads/([^/]+?)/relations(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/leads/(?<nxtPid>[^/]+?)/relations(?:/)?$"
     },
     {
       "page": "/api/notifications/[id]",
@@ -230,6 +414,14 @@
         "nxtPid": "nxtPid"
       },
       "namedRegex": "^/api/support/users/(?<nxtPid>[^/]+?)/reset\\-password(?:/)?$"
+    },
+    {
+      "page": "/api/track/email/open/[eventId]",
+      "regex": "^/api/track/email/open/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPeventId": "nxtPeventId"
+      },
+      "namedRegex": "^/api/track/email/open/(?<nxtPeventId>[^/]+?)(?:/)?$"
     }
   ],
   "staticRoutes": [
@@ -270,10 +462,46 @@
       "namedRegex": "^/api/admin/ai\\-config(?:/)?$"
     },
     {
+      "page": "/api/admin/ai-config/runtime",
+      "regex": "^/api/admin/ai\\-config/runtime(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/ai\\-config/runtime(?:/)?$"
+    },
+    {
       "page": "/api/admin/audit-logs",
       "regex": "^/api/admin/audit\\-logs(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/admin/audit\\-logs(?:/)?$"
+    },
+    {
+      "page": "/api/admin/auto-prospeccao/config",
+      "regex": "^/api/admin/auto\\-prospeccao/config(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/auto\\-prospeccao/config(?:/)?$"
+    },
+    {
+      "page": "/api/admin/auto-prospeccao/search-profiles",
+      "regex": "^/api/admin/auto\\-prospeccao/search\\-profiles(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/auto\\-prospeccao/search\\-profiles(?:/)?$"
+    },
+    {
+      "page": "/api/admin/auto-prospeccao/sender-pool",
+      "regex": "^/api/admin/auto\\-prospeccao/sender\\-pool(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/auto\\-prospeccao/sender\\-pool(?:/)?$"
+    },
+    {
+      "page": "/api/admin/auto-prospeccao/templates",
+      "regex": "^/api/admin/auto\\-prospeccao/templates(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/auto\\-prospeccao/templates(?:/)?$"
+    },
+    {
+      "page": "/api/admin/auto-prospeccao/workspaces",
+      "regex": "^/api/admin/auto\\-prospeccao/workspaces(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/auto\\-prospeccao/workspaces(?:/)?$"
     },
     {
       "page": "/api/admin/commissions",
@@ -310,6 +538,48 @@
       "regex": "^/api/admin/email/test(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/admin/email/test(?:/)?$"
+    },
+    {
+      "page": "/api/admin/email-logs",
+      "regex": "^/api/admin/email\\-logs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/email\\-logs(?:/)?$"
+    },
+    {
+      "page": "/api/admin/email-marketing/audience-count",
+      "regex": "^/api/admin/email\\-marketing/audience\\-count(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/email\\-marketing/audience\\-count(?:/)?$"
+    },
+    {
+      "page": "/api/admin/email-marketing/campaigns",
+      "regex": "^/api/admin/email\\-marketing/campaigns(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/email\\-marketing/campaigns(?:/)?$"
+    },
+    {
+      "page": "/api/admin/email-marketing/stats",
+      "regex": "^/api/admin/email\\-marketing/stats(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/email\\-marketing/stats(?:/)?$"
+    },
+    {
+      "page": "/api/admin/email-marketing/templates",
+      "regex": "^/api/admin/email\\-marketing/templates(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/email\\-marketing/templates(?:/)?$"
+    },
+    {
+      "page": "/api/admin/email-marketing/weekly-report",
+      "regex": "^/api/admin/email\\-marketing/weekly\\-report(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/email\\-marketing/weekly\\-report(?:/)?$"
+    },
+    {
+      "page": "/api/admin/email-marketing/weekly-report/preview",
+      "regex": "^/api/admin/email\\-marketing/weekly\\-report/preview(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/email\\-marketing/weekly\\-report/preview(?:/)?$"
     },
     {
       "page": "/api/admin/integrations/agendor/observability",
@@ -370,6 +640,12 @@
       "regex": "^/api/admin/stats(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/admin/stats(?:/)?$"
+    },
+    {
+      "page": "/api/admin/stats/history",
+      "regex": "^/api/admin/stats/history(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/stats/history(?:/)?$"
     },
     {
       "page": "/api/admin/users",
@@ -474,10 +750,22 @@
       "namedRegex": "^/api/auth/forgot\\-password(?:/)?$"
     },
     {
+      "page": "/api/auth/logout",
+      "regex": "^/api/auth/logout(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/auth/logout(?:/)?$"
+    },
+    {
       "page": "/api/auth/register",
       "regex": "^/api/auth/register(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/auth/register(?:/)?$"
+    },
+    {
+      "page": "/api/auth/resend-verification",
+      "regex": "^/api/auth/resend\\-verification(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/auth/resend\\-verification(?:/)?$"
     },
     {
       "page": "/api/auth/reset-password",
@@ -496,6 +784,48 @@
       "regex": "^/api/auth/verify\\-email(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/auth/verify\\-email(?:/)?$"
+    },
+    {
+      "page": "/api/auto-prospeccao/config",
+      "regex": "^/api/auto\\-prospeccao/config(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/auto\\-prospeccao/config(?:/)?$"
+    },
+    {
+      "page": "/api/auto-prospeccao/leads",
+      "regex": "^/api/auto\\-prospeccao/leads(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/auto\\-prospeccao/leads(?:/)?$"
+    },
+    {
+      "page": "/api/auto-prospeccao/profiles",
+      "regex": "^/api/auto\\-prospeccao/profiles(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/auto\\-prospeccao/profiles(?:/)?$"
+    },
+    {
+      "page": "/api/auto-prospeccao/runs",
+      "regex": "^/api/auto\\-prospeccao/runs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/auto\\-prospeccao/runs(?:/)?$"
+    },
+    {
+      "page": "/api/auto-prospeccao/stats",
+      "regex": "^/api/auto\\-prospeccao/stats(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/auto\\-prospeccao/stats(?:/)?$"
+    },
+    {
+      "page": "/api/auto-prospeccao/templates",
+      "regex": "^/api/auto\\-prospeccao/templates(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/auto\\-prospeccao/templates(?:/)?$"
+    },
+    {
+      "page": "/api/auto-prospeccao/trigger",
+      "regex": "^/api/auto\\-prospeccao/trigger(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/auto\\-prospeccao/trigger(?:/)?$"
     },
     {
       "page": "/api/billing/apply-pending-plans",
@@ -528,6 +858,12 @@
       "namedRegex": "^/api/billing/process\\-payment(?:/)?$"
     },
     {
+      "page": "/api/billing/promo/validate",
+      "regex": "^/api/billing/promo/validate(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/billing/promo/validate(?:/)?$"
+    },
+    {
       "page": "/api/billing/schedule-downgrade",
       "regex": "^/api/billing/schedule\\-downgrade(?:/)?$",
       "routeKeys": {},
@@ -546,6 +882,12 @@
       "namedRegex": "^/api/billing/webhook/mercadopago(?:/)?$"
     },
     {
+      "page": "/api/cnae",
+      "regex": "^/api/cnae(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cnae(?:/)?$"
+    },
+    {
       "page": "/api/company-analysis",
       "regex": "^/api/company\\-analysis(?:/)?$",
       "routeKeys": {},
@@ -558,16 +900,76 @@
       "namedRegex": "^/api/competitors(?:/)?$"
     },
     {
+      "page": "/api/config/public",
+      "regex": "^/api/config/public(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/config/public(?:/)?$"
+    },
+    {
       "page": "/api/cron/affiliate-approve-commissions",
       "regex": "^/api/cron/affiliate\\-approve\\-commissions(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/cron/affiliate\\-approve\\-commissions(?:/)?$"
     },
     {
+      "page": "/api/cron/auto-prospeccao/analyze",
+      "regex": "^/api/cron/auto\\-prospeccao/analyze(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/auto\\-prospeccao/analyze(?:/)?$"
+    },
+    {
+      "page": "/api/cron/auto-prospeccao/crm-push",
+      "regex": "^/api/cron/auto\\-prospeccao/crm\\-push(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/auto\\-prospeccao/crm\\-push(?:/)?$"
+    },
+    {
+      "page": "/api/cron/auto-prospeccao/email-sequence",
+      "regex": "^/api/cron/auto\\-prospeccao/email\\-sequence(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/auto\\-prospeccao/email\\-sequence(?:/)?$"
+    },
+    {
+      "page": "/api/cron/auto-prospeccao/reset-sender-counts",
+      "regex": "^/api/cron/auto\\-prospeccao/reset\\-sender\\-counts(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/auto\\-prospeccao/reset\\-sender\\-counts(?:/)?$"
+    },
+    {
+      "page": "/api/cron/auto-prospeccao/search",
+      "regex": "^/api/cron/auto\\-prospeccao/search(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/auto\\-prospeccao/search(?:/)?$"
+    },
+    {
+      "page": "/api/cron/br-trial-reactivation",
+      "regex": "^/api/cron/br\\-trial\\-reactivation(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/br\\-trial\\-reactivation(?:/)?$"
+    },
+    {
+      "page": "/api/cron/campaign-processor",
+      "regex": "^/api/cron/campaign\\-processor(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/campaign\\-processor(?:/)?$"
+    },
+    {
       "page": "/api/cron/grace-period",
       "regex": "^/api/cron/grace\\-period(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/cron/grace\\-period(?:/)?$"
+    },
+    {
+      "page": "/api/cron/trial-expiry",
+      "regex": "^/api/cron/trial\\-expiry(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/trial\\-expiry(?:/)?$"
+    },
+    {
+      "page": "/api/cron/weekly-report",
+      "regex": "^/api/cron/weekly\\-report(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/weekly\\-report(?:/)?$"
     },
     {
       "page": "/api/details",
@@ -792,6 +1194,12 @@
       "namedRegex": "^/api/ready(?:/)?$"
     },
     {
+      "page": "/api/rf-search",
+      "regex": "^/api/rf\\-search(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/rf\\-search(?:/)?$"
+    },
+    {
       "page": "/api/search",
       "regex": "^/api/search(?:/)?$",
       "routeKeys": {},
@@ -888,16 +1296,34 @@
       "namedRegex": "^/api/team/role(?:/)?$"
     },
     {
+      "page": "/api/unsubscribe",
+      "regex": "^/api/unsubscribe(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/unsubscribe(?:/)?$"
+    },
+    {
       "page": "/api/user/account",
       "regex": "^/api/user/account(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/user/account(?:/)?$"
     },
     {
+      "page": "/api/user/change-password",
+      "regex": "^/api/user/change\\-password(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/user/change\\-password(?:/)?$"
+    },
+    {
       "page": "/api/user/export",
       "regex": "^/api/user/export(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/user/export(?:/)?$"
+    },
+    {
+      "page": "/api/user/heartbeat",
+      "regex": "^/api/user/heartbeat(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/user/heartbeat(?:/)?$"
     },
     {
       "page": "/api/user/me",
@@ -946,6 +1372,12 @@
       "regex": "^/api/workspace/current/profile(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/workspace/current/profile(?:/)?$"
+    },
+    {
+      "page": "/api/workspace/current/profile/cnpj",
+      "regex": "^/api/workspace/current/profile/cnpj(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/workspace/current/profile/cnpj(?:/)?$"
     }
   ],
   "dataRoutes": [],

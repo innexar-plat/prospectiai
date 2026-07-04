@@ -60,9 +60,10 @@ export async function PATCH(
     }
     const workspace = await prisma.workspace.findUnique({ where: { id } });
     if (!workspace) return NextResponse.json({ error: 'Workspace not found' }, { status: 404 });
-    const { plan, leadsLimit } = parsed.data;
-    const data: { plan?: (typeof parsed.data)['plan']; leadsLimit?: number } = {};
+    const { plan, leadsLimit, market } = parsed.data;
+    const data: { plan?: (typeof parsed.data)['plan']; leadsLimit?: number; market?: string } = {};
     if (plan != null) data.plan = plan;
+    if (market != null) data.market = market;
     if (leadsLimit !== undefined) {
         data.leadsLimit = leadsLimit;
     } else if (plan != null) {

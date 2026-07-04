@@ -100,6 +100,21 @@ export function WorkspaceDetailPage() {
       .finally(() => setActionLoading(false));
   };
 
+  const handleMarketChange = (newMarket: string) => {
+    if (!id || !workspace) return;
+    setActionLoading(true);
+    setActionError(null);
+    adminApi
+      .updateWorkspace(id, { market: newMarket })
+      .then((updated) => {
+        setWorkspace(updated);
+        setToast('Região atualizada com sucesso.');
+        setTimeout(() => setToast(null), 5000);
+      })
+      .catch((err) => setActionError(err instanceof Error ? err.message : 'Erro ao atualizar região'))
+      .finally(() => setActionLoading(false));
+  };
+
   if (!id) {
     return <div className="text-gray-500">ID não informado.</div>;
   }
@@ -186,6 +201,18 @@ export function WorkspaceDetailPage() {
           <div>
             <p className="text-gray-500">Leads usados / limite</p>
             <p className="text-gray-900">{workspace.leadsUsed} / {workspace.leadsLimit}</p>
+          </div>
+          <div>
+            <p className="text-gray-500">Região (Market)</p>
+            <select
+              value={workspace.market ?? 'BR'}
+              onChange={(e) => handleMarketChange(e.target.value)}
+              disabled={actionLoading}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-violet-500 focus:ring-violet-500 sm:text-sm bg-gray-50 text-gray-900 p-1 border"
+            >
+              <option value="BR">Brasil (BR)</option>
+              <option value="US">Estados Unidos (US)</option>
+            </select>
           </div>
           <div>
             <p className="text-gray-500">Membros</p>

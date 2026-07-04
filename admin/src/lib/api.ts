@@ -115,9 +115,15 @@ export interface ResetPasswordBody {
 export interface WorkspaceUpdateBody {
   plan?: 'FREE' | 'TRIAL' | 'BASIC' | 'PRO' | 'BUSINESS' | 'SCALE';
   leadsLimit?: number;
+  market?: string;
+}
+
+export interface UserUpdateBody {
+  market?: string;
 }
 
 export interface AdminUserDetail extends AdminUserListItem {
+  market?: string;
   leadsUsed: number;
   leadsLimit: number;
   companyName: string | null;
@@ -131,6 +137,7 @@ export interface AdminUserDetail extends AdminUserListItem {
 export interface AdminWorkspaceListItem {
   id: string;
   name: string | null;
+  market?: string;
   plan: string;
   leadsUsed: number;
   leadsLimit: number;
@@ -435,6 +442,12 @@ export const adminApi = {
     request<AdminListResponse<AdminWorkspaceListItem>>(`/admin/workspaces${buildQuery(params)}`),
 
   workspace: (id: string) => request<AdminWorkspaceDetail>(`/admin/workspaces/${id}`),
+
+  updateUser: (id: string, body: UserUpdateBody) =>
+    request<AdminUserDetail>(`/admin/users/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
 
   resetPassword: (userId: string, body: ResetPasswordBody) =>
     request<{ message: string; devToken?: string }>(`/admin/users/${userId}/reset-password`, {

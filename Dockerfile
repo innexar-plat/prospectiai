@@ -41,9 +41,6 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Prisma CLI for migrate deploy on startup (pin to 6.x to match schema format)
-RUN npm install -g prisma@6
-
 # Standalone output for backend will be in backend/.next/standalone
 COPY --from=builder --chown=nextjs:nodejs /app/backend/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/backend/.next/static ./backend/.next/static
@@ -52,7 +49,14 @@ COPY --from=builder --chown=nextjs:nodejs /app/backend/prisma ./prisma
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+# Install Prisma CLI locally (owned by nextjs, not root global)
+RUN mkdir -p /app/prisma-cli && chown nextjs:nodejs /app/prisma-cli
+
 USER nextjs
+
+# Pin Prisma CLI to 6.x to match schema format (local install, user-owned)
+RUN cd /app/prisma-cli && npm init -y --scope=prisma-cli && npm install prisma@6
+ENV PATH="/app/prisma-cli/node_modules/.bin:$PATH"
 
 EXPOSE 4000
 

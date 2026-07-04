@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "2.0.0",
+  "version": "2.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev -p 4000",
@@ -10,9 +10,14 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:e2e": "playwright test",
+    "load:search": "node scripts/load-search.mjs",
+    "load:search:v1": "SEARCH_PATH=/api/v1/search node scripts/load-search.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.61",
+    "@ai-sdk/openai": "^3.0.52",
+    "@ai-sdk/openai-compatible": "^2.0.41",
     "@auth/core": "^0.37.2",
     "@auth/prisma-adapter": "^2.11.1",
     "@google/generative-ai": "^0.24.1",
@@ -20,9 +25,11 @@
     "@prisma/client": "^6.19.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
+    "ai": "^6.0.157",
     "bcryptjs": "^3.0.3",
     "ioredis": "^5.9.3",
     "jest": "^30.2.0",
+    "jsonrepair": "^3.13.3",
     "lodash": "^4.17.23",
     "mercadopago": "^2.12.0",
     "next": "16.1.6",
@@ -39,6 +46,7 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "@types/jest": "^30.0.0",
     "@types/lodash": "^4.17.23",
     "@types/node": "^20",
     "@types/nodemailer": "^7.0.11",

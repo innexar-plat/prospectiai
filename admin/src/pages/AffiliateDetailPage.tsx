@@ -6,7 +6,10 @@ import { useConfirm } from '@/lib/useConfirm';
 
 type TabId = 'overview' | 'referrals' | 'commissions';
 
-function affiliateSignupLink(code: string): string {
+function affiliateSignupLink(code: string, market: 'BR' | 'US' = 'BR'): string {
+  if (market === 'US') {
+    return `https://precisionai.innexar.app/api/affiliate/click?ref=${encodeURIComponent(code)}`;
+  }
   const base = typeof window !== 'undefined' ? window.location.origin : '';
   return `${base}/api/affiliate/click?ref=${encodeURIComponent(code)}`;
 }
@@ -26,7 +29,6 @@ export function AffiliateDetailPage() {
   const [notes, setNotes] = useState('');
   const [payingCommissionId, setPayingCommissionId] = useState<string | null>(null);
   const [proofUrlForPay, setProofUrlForPay] = useState('');
-  const [copiedLink, setCopiedLink] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const { confirm, ConfirmDialog } = useConfirm();
 
@@ -50,12 +52,20 @@ export function AffiliateDetailPage() {
     }).catch(() => {});
   }, [id]);
 
-  const copyLink = () => {
+  const [copiedLinkBR, setCopiedLinkBR] = useState(false);
+  const [copiedLinkUS, setCopiedLinkUS] = useState(false);
+
+  const copyLink = (market: 'BR' | 'US') => {
     if (!affiliate) return;
-    const url = affiliateSignupLink(affiliate.code);
+    const url = affiliateSignupLink(affiliate.code, market);
     void navigator.clipboard.writeText(url).then(() => {
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2000);
+      if (market === 'BR') {
+        setCopiedLinkBR(true);
+        setTimeout(() => setCopiedLinkBR(false), 2000);
+      } else {
+        setCopiedLinkUS(true);
+        setTimeout(() => setCopiedLinkUS(false), 2000);
+      }
     });
   };
 
@@ -166,13 +176,22 @@ export function AffiliateDetailPage() {
       )}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
         <h1 className="text-xl font-semibold text-gray-900">Afiliado: {affiliate.code}</h1>
-        <button
-          type="button"
-          onClick={copyLink}
-          className="text-xs px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100"
-        >
-          {copiedLink ? 'Copiado' : 'Copiar link'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => copyLink('BR')}
+            className="text-xs px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100"
+          >
+            {copiedLinkBR ? 'Copiado (BR)' : 'Copiar link (BR)'}
+          </button>
+          <button
+            type="button"
+            onClick={() => copyLink('US')}
+            className="text-xs px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100"
+          >
+            {copiedLinkUS ? 'Copiado (US)' : 'Copiar link (US)'}
+          </button>
+        </div>
       </div>
       <nav className="border-b border-gray-200 mb-6" aria-label="Abas">
         <div className="flex gap-1">

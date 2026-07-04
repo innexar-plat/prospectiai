@@ -2,6 +2,7 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 concurrency:
@@ -56,8 +57,8 @@ jobs:
         run: |
           (cd backend && npx prisma generate && npm run test)
 
-      - name: Frontend tests
-        run: npm run test -w frontend
+      - name: Frontend tests (with coverage)
+        run: npm run test:coverage -w frontend
 
       - name: Admin tests
         run: npm run test -w admin

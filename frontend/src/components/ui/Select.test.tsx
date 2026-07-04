@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { axe } from 'vitest-axe';
 import { Select } from './Select';
 
 describe('Select', () => {
@@ -24,5 +25,11 @@ describe('Select', () => {
     const ref = { current: null as HTMLSelectElement | null };
     render(<Select ref={ref}><option value="1">1</option></Select>);
     expect(ref.current).toBeInstanceOf(HTMLSelectElement);
+  });
+
+  it('has no a11y violations', async () => {
+    const { container } = render(<Select aria-label="Choose"><option value="a">A</option></Select>);
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

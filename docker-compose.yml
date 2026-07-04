@@ -187,6 +187,8 @@ services:
         condition: service_healthy
       db:
         condition: service_healthy
+      pgbouncer:
+        condition: service_healthy
     restart: unless-stopped
     deploy:
       resources:
@@ -223,6 +225,39 @@ services:
           memory: 768m
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - prospector-net
+
+  # ── PgBouncer: connection pooler para PostgreSQL ──────────────────────────────
+  pgbouncer:
+    image: bitnami/pgbouncer:latest
+    container_name: prospector-pgbouncer
+    environment:
+      - POSTGRESQL_HOST=db
+      - POSTGRESQL_PORT=5432
+      - POSTGRESQL_USERNAME=${POSTGRES_USER}
+      - POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRESQL_DATABASE=${POSTGRES_DB:-prospector_db}
+      - PGBOUNCER_POOL_MODE=transaction
+      - PGBOUNCER_DEFAULT_POOL_SIZE=25
+      - PGBOUNCER_MAX_CLIENT_CONN=100
+      - PGBOUNCER_IGNORE_STARTUP_PARAMETERS=extra_float_digits
+    ports:
+      - "127.0.0.1:6432:5432"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 30s
       timeout: 5s
       retries: 3

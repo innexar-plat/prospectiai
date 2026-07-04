@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { axe } from 'vitest-axe';
 import { Card, CardHeader, CardTitle, CardDescription } from './Card';
 
 describe('Card', () => {
@@ -38,5 +39,18 @@ describe('CardDescription', () => {
   it('renders text', () => {
     render(<CardDescription>Desc</CardDescription>);
     expect(screen.getByText('Desc')).toBeInTheDocument();
+  });
+});
+
+describe('Card a11y', () => {
+  it('has no a11y violations', async () => {
+    const { container } = render(
+      <Card>
+        <CardTitle>Title</CardTitle>
+        <CardDescription>Desc</CardDescription>
+      </Card>
+    );
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

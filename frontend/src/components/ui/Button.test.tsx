@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { axe } from 'vitest-axe';
 import { Button } from './Button';
 
 describe('Button', () => {
@@ -24,5 +25,11 @@ describe('Button', () => {
     render(<Button ref={ref} data-testid="btn">X</Button>);
     expect(ref.current).toBeInstanceOf(HTMLButtonElement);
     expect(screen.getByTestId('btn')).toBeInTheDocument();
+  });
+
+  it('has no a11y violations', async () => {
+    const { container } = render(<Button>Accessible</Button>);
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });
