@@ -13,4 +13,12 @@ describe('cn', () => {
   it('returns empty string when all falsy', () => {
     expect(cn(undefined, null, false)).toBe('');
   });
+
+  it('merges conflicting tailwind classes (last wins)', () => {
+    expect(cn('px-4', 'px-6')).toBe('px-6');
+  });
+
+  it('accepts objects and arrays (clsx)', () => {
+    expect(cn('a', { b: true, c: false }, ['d', 'e'])).toBe('a b d e');
+  });
 });
