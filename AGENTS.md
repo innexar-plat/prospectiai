@@ -100,6 +100,17 @@ Traefik (external) → frontend (Nginx :80) → backend (Next.js :4000) → Post
 Target: **0 issues**, coverage ≥ **80%** lines/functions/branches.
 Dashboard: `https://sonar.innexar.com.br/dashboard?id=Prospector-AI`
 
+## Cloudflare AI Audit
+
+Configure Cloudflare AI Audit to **allow** the same crawlers listed in `frontend/public/robots.txt`:
+- `GPTBot` / `ChatGPT-User`
+- `ClaudeBot` / `anthropic-ai`
+- `Google-Extended`
+- `PerplexityBot`
+- `Amazonbot` / `Bytespider`
+
+The `robots.txt` and Cloudflare AI Audit allowlist must be kept in sync so AI crawlers can index public content (landing pages, blog, integration docs, pricing).
+
 ## i18n
 
 - Market determined by domain (BR: `precisionia.com.br`, US: `precisionai.innexar.app`)
