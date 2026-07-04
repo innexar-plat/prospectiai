@@ -36,5 +36,6 @@ declare module 'next-auth/jwt' {
         leadsUsed?: number;
         leadsLimit?: number;
         companyName?: string | null;
+        tokenVersion?: number;
     }
 }

@@ -226,15 +226,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 token.picture = user.image ?? token.picture;
                 token.role = getPanelRole({ user: { email: user.email ?? undefined }, expires: '' });
             }
-            if (!token.role && token.id) {
+            if (token.id) {
                 try {
                     const dbUser = await prisma.user.findUnique({
                         where: { id: String(token.id) },
-                        select: { email: true },
+                        select: { email: true, tokenVersion: true },
                     });
-                    if (dbUser?.email) {
-                        token.email = dbUser.email;
-                        token.role = getPanelRole({ user: { email: dbUser.email }, expires: '' });
+                    if (dbUser) {
+                        if (dbUser.email) token.email = dbUser.email;
+                        if (!token.role) {
+                            token.role = getPanelRole({ user: { email: dbUser.email ?? undefined }, expires: '' });
+                        }
+                        token.tokenVersion = dbUser.tokenVersion;
                     }
                 } catch (err) {
                     logger.error('JWT callback user lookup failed', {

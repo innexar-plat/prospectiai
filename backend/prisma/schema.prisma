@@ -209,8 +209,10 @@ model Workspace {
   promoRegularAmountBrl  Int?
   /** When BR trial reactivation promo email was sent (dedup for cron/script). */
   reactivationPromoSentAt DateTime?
-  createdAt          DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  tokenVersion  Int       @default(0)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   // Business profile (one per workspace; shared by all members)
   companyName    String?
