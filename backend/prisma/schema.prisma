@@ -73,12 +73,14 @@ enum LeadContactRoleHint {
 
 model User {
   id            String    @id @default(cuid())
+  market        String    @default("BR")
   name          String?
   email         String?   @unique
   emailVerified DateTime?
   image         String?
   password      String?
   resetToken          String?   @unique
+  resetTokenHash      String?
   resetTokenExpires   DateTime?
 
   twoFactorSecret   String?
@@ -185,6 +187,7 @@ model VerificationToken {
 
 model Workspace {
   id         String   @id @default(cuid())
+  market     String   @default("BR")
   name       String?
   plan               Plan     @default(FREE)
   leadsUsed          Int      @default(0)

@@ -6,6 +6,7 @@ import { forgotSchema, formatZodError } from "@/lib/validations/schemas"
 import { sendPasswordResetEmail } from "@/lib/email"
 import { getRequestLocale } from '@/lib/i18n/locale'
 import { getSiteUrlFromRequest } from '@/lib/site-url'
+import { hashToken } from "@/lib/auth-utils"
 
 export async function POST(req: Request) {
     try {
@@ -41,6 +42,7 @@ export async function POST(req: Request) {
             where: { id: user.id },
             data: {
                 resetToken: token,
+                resetTokenHash: hashToken(token),
                 resetTokenExpires: expires
             }
         })

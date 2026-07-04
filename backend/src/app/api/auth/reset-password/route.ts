@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import { rateLimit } from "@/lib/ratelimit"
 import { resetSchema, formatZodError } from "@/lib/validations/schemas"
+import { hashToken } from "@/lib/auth-utils"
 
 export async function POST(req: Request) {
     try {
@@ -21,10 +22,14 @@ export async function POST(req: Request) {
         }
 
         const { token, password } = parsed.data
+        const tokenHash = hashToken(token)
 
         const user = await prisma.user.findFirst({
             where: {
-                resetToken: token,
+                OR: [
+                    { resetTokenHash: tokenHash },
+                    { resetToken: token },
+                ],
                 resetTokenExpires: {
                     gt: new Date()
                 }
