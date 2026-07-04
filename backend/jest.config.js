@@ -9,6 +9,9 @@ const config = {
   transform: {
     '^.+\\.(t|j)sx?$': ['ts-jest', { useESM: false }],
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!(?:@otplib|@scure|@noble)/)',
+  ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   collectCoverageFrom: [
     'src/lib/**/*.{ts,tsx}',

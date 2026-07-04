@@ -1,26 +1,13 @@
-/**
- * TOTP 2FA helpers using speakeasy. Secrets are base32.
- */
-import speakeasy from 'speakeasy';
+import { generateSecret, generateURI, verifySync } from 'otplib';
 
 const ISSUER = process.env.TWOFA_ISSUER ?? 'Precision IA';
 
 export function generateTotpSecret(email: string): { secret: string; otpauthUrl: string } {
-  const secret = speakeasy.generateSecret({
-    name: `${ISSUER}:${email}`,
-    length: 20,
-  });
-  return {
-    secret: secret.base32,
-    otpauthUrl: secret.otpauth_url ?? `otpauth://totp/${ISSUER}:${email}?secret=${secret.base32}`,
-  };
+  const secret = generateSecret();
+  const otpauthUrl = generateURI({ issuer: ISSUER, label: email, secret });
+  return { secret, otpauthUrl };
 }
 
 export function verifyTotpToken(secret: string, token: string): boolean {
-  return speakeasy.totp.verify({
-    secret,
-    encoding: 'base32',
-    token,
-    window: 1,
-  });
+  return verifySync({ token, secret }).valid;
 }

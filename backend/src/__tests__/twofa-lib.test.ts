@@ -1,4 +1,5 @@
 const { generateTotpSecret, verifyTotpToken } = require('@/lib/twofa');
+const { generateSync } = require('otplib');
 
 describe('twofa lib', () => {
   it('generateTotpSecret returns secret and otpauthUrl', () => {
@@ -14,9 +15,8 @@ describe('twofa lib', () => {
   });
 
   it('verifyTotpToken returns true for current code', () => {
-    const speakeasy = require('speakeasy');
     const { secret } = generateTotpSecret('u@x.com');
-    const token = speakeasy.totp({ secret, encoding: 'base32' });
+    const token = generateSync({ secret });
     expect(verifyTotpToken(secret, token)).toBe(true);
   });
 });
