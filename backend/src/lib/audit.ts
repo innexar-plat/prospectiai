@@ -6,6 +6,7 @@ export type AuditAction =
   | 'admin.stats'
   | 'admin.users.list'
   | 'admin.users.get'
+  | 'admin.users.update'
   | 'admin.workspaces.list'
   | 'admin.workspaces.get'
   | 'admin.search-history.list'
@@ -27,6 +28,7 @@ export type AuditAction =
   | 'admin.plans.update'
   | 'admin.plans.delete'
   | 'admin.users.reset-password'
+  | 'admin.users.force-logout'
   | 'admin.workspaces.update'
   | 'support.users.reset-password';
 

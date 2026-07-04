@@ -130,6 +130,8 @@ model User {
   plan           Plan      @default(FREE)
   leadsUsed      Int       @default(0)
   leadsLimit     Int       @default(10)
+
+  tokenVersion   Int       @default(0)
   
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -209,7 +211,6 @@ model Workspace {
   promoRegularAmountBrl  Int?
   /** When BR trial reactivation promo email was sent (dedup for cron/script). */
   reactivationPromoSentAt DateTime?
-  tokenVersion  Int       @default(0)
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
