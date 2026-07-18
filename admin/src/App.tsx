@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastProvider } from '@/components/ui/ToastProvider';
 import { AdminGuard } from '@/components/AdminGuard';
 import { AdminLayout } from '@/components/layout/AdminLayout';
@@ -34,11 +34,13 @@ import { AutoProspeccaoTemplateEditorPage } from '@/pages/AutoProspeccaoTemplate
 import { AutoProspeccaoSearchProfilesPage } from '@/pages/AutoProspeccaoSearchProfilesPage';
 import { AutoProspeccaoConfigPage } from '@/pages/AutoProspeccaoConfigPage';
 import { AutoProspeccaoSenderPoolPage } from '@/pages/AutoProspeccaoSenderPoolPage';
-
-function RedirectAffiliateDetail() {
-  const { id } = useParams<{ id: string }>();
-  return <Navigate to={id ? `../../${id}` : '../..'} replace />;
-}
+import { RepresentativesLayout } from '@/pages/representatives/Layout';
+import { RepresentativesList } from '@/pages/representatives/List';
+import { RepresentativesCreate } from '@/pages/representatives/Create';
+import { RepresentativesDetail } from '@/pages/representatives/Detail';
+import { RepLevels } from '@/pages/representatives/Levels';
+import { RepStatsPage } from '@/pages/representatives/Stats';
+import { WhatsAppPage } from '@/pages/WhatsAppPage';
 
 function App() {
   return (
@@ -60,11 +62,18 @@ function App() {
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="plans" element={<PlansPage />} />
               <Route path="affiliates" element={<AffiliatesPage />} />
-              <Route path="affiliates/affiliates/:id" element={<RedirectAffiliateDetail />} />
               <Route path="affiliates/:id" element={<AffiliateDetailPage />} />
               <Route path="affiliate-settings" element={<AffiliateSettingsPage />} />
               <Route path="commissions" element={<CommissionsPage />} />
               <Route path="referrals" element={<ReferralsPage />} />
+              <Route path="whatsapp" element={<WhatsAppPage />} />
+              <Route path="representantes" element={<RepresentativesLayout />}>
+                <Route index element={<RepresentativesList />} />
+                <Route path="novo" element={<RepresentativesCreate />} />
+                <Route path=":id" element={<RepresentativesDetail />} />
+                <Route path="niveis" element={<RepLevels />} />
+                <Route path="relatorios" element={<RepStatsPage />} />
+              </Route>
               <Route path="profile" element={<ProfilePage />} />
               <Route path="email-templates" element={<EmailTemplatesPage />} />
               <Route path="email-templates/:id" element={<EmailTemplateEditorPage />} />

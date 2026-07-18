@@ -6,6 +6,7 @@ import { sendVerificationEmail } from '@/lib/email';
 import { logger } from '@/lib/logger';
 import { getRequestLocale } from '@/lib/i18n/locale';
 import { getSiteUrlFromRequest } from '@/lib/site-url';
+import { tApiError } from '@/lib/i18n/messages';
 
 const COOLDOWN_SECONDS = 60;
 
@@ -20,7 +21,7 @@ export async function POST(req: Request) {
     try {
         const session = await auth();
         if (!session?.user?.email) {
-            return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+            return NextResponse.json({ error: tApiError(locale, 'unauthorized') }, { status: 401 });
         }
 
         const email = session.user.email;
@@ -31,10 +32,10 @@ export async function POST(req: Request) {
             select: { emailVerified: true },
         });
         if (!user) {
-            return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
+            return NextResponse.json({ error: tApiError(locale, 'userNotFound') }, { status: 404 });
         }
         if (user.emailVerified) {
-            return NextResponse.json({ error: 'E-mail já verificado' }, { status: 400 });
+            return NextResponse.json({ error: tApiError(locale, 'emailAlreadyVerified') }, { status: 400 });
         }
 
         // Rate limit: check if a token was created recently
@@ -53,7 +54,7 @@ export async function POST(req: Request) {
             if (secondsSinceCreation < COOLDOWN_SECONDS) {
                 const remaining = Math.ceil(COOLDOWN_SECONDS - secondsSinceCreation);
                 return NextResponse.json(
-                    { error: `Aguarde ${remaining} segundos antes de reenviar`, cooldown: remaining },
+                    { error: tApiError(locale, 'resendCooldown').replace('{seconds}', String(remaining)), cooldown: remaining },
                     { status: 429 },
                 );
             }
@@ -75,13 +76,13 @@ export async function POST(req: Request) {
         const result = await sendVerificationEmail(email, token, locale, siteUrl);
         if (!result.sent) {
             logger.error('Resend verification email failed', { email, error: result.error });
-            return NextResponse.json({ error: 'Falha ao enviar e-mail. Tente novamente.' }, { status: 500 });
+            return NextResponse.json({ error: tApiError(locale, 'sendFailed') }, { status: 500 });
         }
 
         logger.info('Verification email resent', { email });
         return NextResponse.json({ sent: true, cooldown: COOLDOWN_SECONDS });
     } catch (error) {
         logger.error('Resend verification error', { error: error instanceof Error ? error.message : 'Unknown' });
-        return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
+        return NextResponse.json({ error: tApiError(locale, 'internalError') }, { status: 500 });
     }
 }

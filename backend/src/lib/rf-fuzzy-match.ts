@@ -34,8 +34,8 @@ function extractCityFromAddress(address: string): string | null {
     for (const part of parts) {
         const dashSplit = part.split(' - ');
         if (dashSplit.length === 2) {
-            const city = dashSplit[0].trim();
-            const uf = dashSplit[1].trim();
+            const city = dashSplit[0]!.trim();
+            const uf = dashSplit[1]!.trim();
             // UF is 2 chars
             if (uf.length === 2 && city.length > 2) return city.toUpperCase();
         }
@@ -115,14 +115,14 @@ export async function fuzzyMatchRfCompany(
             `;
 
             if (exactMatches.length === 1) {
-                return { ...exactMatches[0], matchConfidence: 95, matchMethod: 'name_exact_city' };
+                return { ...exactMatches[0]!, matchConfidence: 95, matchMethod: 'name_exact_city' } satisfies RfFuzzyMatchResult;
             }
             if (exactMatches.length > 1 && streetNumber) {
                 const withAddress = exactMatches.find(m => m.numero === streetNumber);
-                if (withAddress) return { ...withAddress, matchConfidence: 98, matchMethod: 'name_exact_city_address' };
+                if (withAddress) return { ...withAddress, matchConfidence: 98, matchMethod: 'name_exact_city_address' } satisfies RfFuzzyMatchResult;
             }
             if (exactMatches.length > 1) {
-                return { ...exactMatches[0], matchConfidence: 75, matchMethod: 'name_exact_city_multiple' };
+                return { ...exactMatches[0]!, matchConfidence: 75, matchMethod: 'name_exact_city_multiple' } satisfies RfFuzzyMatchResult;
             }
         }
 
@@ -147,18 +147,17 @@ export async function fuzzyMatchRfCompany(
             `;
 
             if (fuzzyMatches.length > 0) {
-                const best = fuzzyMatches[0];
+                const best = fuzzyMatches[0]!;
                 const sim = Number(best.sim);
                 if (sim >= 0.6) {
                     let confidence = Math.round(sim * 80);
                     let method = 'name_fuzzy_city';
-                    // Boost if street number also matches
                     if (streetNumber && best.numero === streetNumber) {
                         confidence = Math.min(95, confidence + 15);
                         method = 'name_fuzzy_city_address';
                     }
                     const { sim: _s, ...rest } = best;
-                    return { ...rest, matchConfidence: confidence, matchMethod: method };
+                    return { ...rest, matchConfidence: confidence, matchMethod: method } satisfies RfFuzzyMatchResult;
                 }
             }
         }
@@ -183,13 +182,13 @@ export async function fuzzyMatchRfCompany(
                 LIMIT 3
             `;
 
-            if (razaoMatches.length > 0 && Number(razaoMatches[0].sim) >= 0.5) {
-                const best = razaoMatches[0];
+            if (razaoMatches.length > 0 && Number(razaoMatches[0]!.sim) >= 0.5) {
+                const best = razaoMatches[0]!;
                 const sim = Number(best.sim);
                 let confidence = Math.round(sim * 65);
                 if (streetNumber && best.numero === streetNumber) confidence = Math.min(85, confidence + 15);
                 const { sim: _s, ...rest } = best;
-                return { ...rest, matchConfidence: confidence, matchMethod: 'razao_fuzzy_city' };
+                return { ...rest, matchConfidence: confidence, matchMethod: 'razao_fuzzy_city' } satisfies RfFuzzyMatchResult;
             }
         }
 

@@ -34,7 +34,7 @@ async function runWithConcurrencyLimit<T, R>(
             const index = currentIndex;
             currentIndex += 1;
             if (index >= items.length) return;
-            results[index] = await worker(items[index]);
+            results[index] = await worker(items[index]!);
         }
     });
 

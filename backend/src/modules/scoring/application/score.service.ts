@@ -110,7 +110,7 @@ export function scoreAndRankPlaces(
     const top10Reviews = reviewCounts.slice(0, 10);
     const medianReviews =
         top10Reviews.length > 0
-            ? top10Reviews[Math.floor(top10Reviews.length / 2)]
+            ? top10Reviews[Math.floor(top10Reviews.length / 2)]!
             : 0;
 
     // Compute avg rating

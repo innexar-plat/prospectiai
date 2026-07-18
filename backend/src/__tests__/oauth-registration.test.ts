@@ -19,9 +19,15 @@ jest.mock('@/lib/affiliate', () => ({
   parseAffiliateRefFromCookie: jest.fn(),
 }));
 
+jest.mock('@/lib/representative', () => ({
+  attachRepLeadOnSignup: jest.fn(() => Promise.resolve()),
+  parseRepCodeFromCookie: jest.fn(),
+}));
+
 const { prisma } = require('@/lib/prisma');
 const { headers } = require('next/headers');
 const { attachReferralOnSignup } = require('@/lib/affiliate');
+const { attachRepLeadOnSignup, parseRepCodeFromCookie } = require('@/lib/representative');
 
 describe('provisionOauthUserWithWorkspace', () => {
   beforeEach(() => {
@@ -43,7 +49,7 @@ describe('provisionOauthUserWithWorkspace', () => {
         workspace: {
           create: jest.fn().mockImplementation((args: { data: { plan: string; leadsLimit: number; subscriptionStatus: string } }) => {
             expect(args.data.plan).toBe('FREE');
-            expect(args.data.leadsLimit).toBe(0);
+            expect(args.data.leadsLimit).toBe(10);
             expect(args.data.subscriptionStatus).toBe('inactive');
             return Promise.resolve(createdWorkspace);
           }),
@@ -69,7 +75,7 @@ describe('provisionOauthUserWithWorkspace', () => {
         workspace: {
           create: jest.fn().mockImplementation((args: { data: Record<string, unknown> }) => {
             expect(args.data.plan).toBe('FREE');
-            expect(args.data.leadsLimit).toBe(0);
+            expect(args.data.leadsLimit).toBe(10);
             expect(args.data.subscriptionStatus).toBe('inactive');
             return Promise.resolve({ id: 'w2', ...args.data });
           }),
@@ -124,6 +130,32 @@ describe('provisionOauthUserWithWorkspace', () => {
       email: 'ref@x.com',
     });
   });
+
+  it('attaches rep lead when rep_code cookie is present (regression: OAuth signup used to skip rep attribution entirely)', async () => {
+    headers.mockResolvedValue({
+      get: (name: string) => (name === 'cookie' ? 'rep_code=cmrabc123' : null),
+    });
+    (parseRepCodeFromCookie as jest.Mock).mockReturnValue('cmrabc123');
+
+    const createdUser = { id: 'u5', email: 'lead@x.com', name: 'Lead' };
+    prisma.$transaction.mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        user: { create: jest.fn().mockResolvedValue(createdUser) },
+        workspace: { create: jest.fn().mockResolvedValue({ id: 'w5', plan: 'FREE' }) },
+        workspaceMember: { create: jest.fn().mockResolvedValue({}) },
+      };
+      return cb(tx);
+    });
+
+    await provisionOauthUserWithWorkspace({ email: 'lead@x.com', name: 'Lead' }, 'BR');
+    expect(attachRepLeadOnSignup).toHaveBeenCalledWith({
+      repCode: 'cmrabc123',
+      userId: 'u5',
+      workspaceId: 'w5',
+      email: 'lead@x.com',
+      name: 'Lead',
+    });
+  });
 });
 
 describe('parseAffiliateRefFromCookie', () => {
@@ -131,6 +163,15 @@ describe('parseAffiliateRefFromCookie', () => {
     jest.unmock('@/lib/affiliate');
     const { parseAffiliateRefFromCookie: parse } = jest.requireActual('@/lib/affiliate');
     expect(parse('affiliate_ref=abc12; other=1')).toBe('ABC12');
+    expect(parse('')).toBeNull();
+  });
+});
+
+describe('parseRepCodeFromCookie', () => {
+  it('parses rep_code cookie, preserving case (it is a lowercase cuid, unlike affiliate codes)', () => {
+    jest.unmock('@/lib/representative');
+    const { parseRepCodeFromCookie: parse } = jest.requireActual('@/lib/representative');
+    expect(parse('rep_code=cmrAbc123; other=1')).toBe('cmrAbc123');
     expect(parse('')).toBeNull();
   });
 });

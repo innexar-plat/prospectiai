@@ -17,6 +17,9 @@ jest.mock('@/lib/prisma', () => ({
   prisma: {
     user: { findUnique: jest.fn() },
     workspace: { update: jest.fn(), updateMany: jest.fn(), findFirst: jest.fn() },
+    representative: { findUnique: jest.fn(), update: jest.fn() },
+    repClient: { findFirst: jest.fn(), create: jest.fn(), update: jest.fn() },
+    repCommission: { create: jest.fn() },
   },
 }));
 
@@ -47,6 +50,7 @@ const { prisma } = require('@/lib/prisma');
 const { rateLimit } = require('@/lib/ratelimit');
 const { isWebhookDuplicate } = require('@/lib/webhook-dedup');
 const { logger } = require('@/lib/logger');
+const { PLANS } = require('@/lib/billing-config');
 
 function makeReq(body = '{}', headers: Record<string, string> = {}) {
   return new Request('http://x/api/billing/webhook', { method: 'POST', body, headers });
@@ -120,6 +124,89 @@ describe('POST /api/billing/webhook (Stripe)', () => {
     );
   });
 
+  it('handles checkout.session.completed with a rep referral — creates RepClient with the real customer name/email, not a truncated user id', async () => {
+    mockConstructEvent.mockReturnValue({
+      id: 'evt_rep1',
+      type: 'checkout.session.completed',
+      data: { object: { metadata: { userId: 'u1', planId: 'BASIC', rep: 'cmrrep1' }, subscription: 'sub_1', id: 'cs_1' } },
+    });
+    mockSubscriptionsRetrieve.mockResolvedValue({
+      id: 'sub_1', customer: 'cus_1', status: 'active', current_period_end: Math.floor(Date.now() / 1000) + 86400,
+      items: { data: [{ price: { recurring: { interval: 'month' } } }] },
+    });
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'u1', email: 'real-customer@x.com', name: 'Real Customer', workspaces: [{ workspaceId: 'w1' }],
+    });
+    prisma.workspace.update.mockResolvedValue({});
+    prisma.representative.findUnique.mockResolvedValue({ id: 'cmrrep1', status: 'ACTIVE', directCommissionPct: 20, commissionHoldDays: 30 });
+    prisma.repClient.findFirst.mockResolvedValue(null);
+    prisma.repClient.create.mockResolvedValue({ id: 'client1' });
+    prisma.repCommission.create.mockResolvedValue({ id: 'comm1', amountCents: 1980 });
+
+    const res = await POST(makeReq());
+    expect(res.status).toBe(200);
+    expect(prisma.repClient.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        name: 'Real Customer',
+        email: 'real-customer@x.com',
+      }),
+    });
+  });
+
+  it('falls back to email, then to a truncated user id, when the customer has no name on file', async () => {
+    mockConstructEvent.mockReturnValue({
+      id: 'evt_rep2',
+      type: 'checkout.session.completed',
+      data: { object: { metadata: { userId: 'u2', planId: 'BASIC', rep: 'cmrrep1' }, subscription: 'sub_1', id: 'cs_1' } },
+    });
+    mockSubscriptionsRetrieve.mockResolvedValue({
+      id: 'sub_1', customer: 'cus_1', status: 'active', current_period_end: Math.floor(Date.now() / 1000) + 86400,
+      items: { data: [{ price: { recurring: { interval: 'month' } } }] },
+    });
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'u2', email: 'noname@x.com', name: null, workspaces: [{ workspaceId: 'w2' }],
+    });
+    prisma.workspace.update.mockResolvedValue({});
+    prisma.representative.findUnique.mockResolvedValue({ id: 'cmrrep1', status: 'ACTIVE', directCommissionPct: 20, commissionHoldDays: 30 });
+    prisma.repClient.findFirst.mockResolvedValue(null);
+    prisma.repClient.create.mockResolvedValue({ id: 'client2' });
+    prisma.repCommission.create.mockResolvedValue({ id: 'comm2', amountCents: 1980 });
+
+    const res = await POST(makeReq());
+    expect(res.status).toBe(200);
+    expect(prisma.repClient.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ name: 'noname@x.com' }),
+    });
+  });
+
+  it('does not overwrite name/email when a lead RepClient already exists for this workspace (created at signup)', async () => {
+    mockConstructEvent.mockReturnValue({
+      id: 'evt_rep3',
+      type: 'checkout.session.completed',
+      data: { object: { metadata: { userId: 'u3', planId: 'BASIC', rep: 'cmrrep1' }, subscription: 'sub_1', id: 'cs_1' } },
+    });
+    mockSubscriptionsRetrieve.mockResolvedValue({
+      id: 'sub_1', customer: 'cus_1', status: 'active', current_period_end: Math.floor(Date.now() / 1000) + 86400,
+      items: { data: [{ price: { recurring: { interval: 'month' } } }] },
+    });
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'u3', email: 'u3@x.com', name: 'U3', workspaces: [{ workspaceId: 'w3' }],
+    });
+    prisma.workspace.update.mockResolvedValue({});
+    prisma.representative.findUnique.mockResolvedValue({ id: 'cmrrep1', status: 'ACTIVE', directCommissionPct: 20, commissionHoldDays: 30 });
+    prisma.repClient.findFirst.mockResolvedValue({ id: 'existing-lead', name: 'Lead Name', email: 'lead@x.com' });
+    prisma.repClient.update.mockResolvedValue({ id: 'existing-lead' });
+    prisma.repCommission.create.mockResolvedValue({ id: 'comm3', amountCents: 1980 });
+
+    const res = await POST(makeReq());
+    expect(res.status).toBe(200);
+    expect(prisma.repClient.create).not.toHaveBeenCalled();
+    expect(prisma.repClient.update).toHaveBeenCalledWith({
+      where: { id: 'existing-lead' },
+      data: { planId: 'BASIC', valueCents: expect.any(Number), status: 'ACTIVE' },
+    });
+  });
+
   it('returns 400 when planId metadata is invalid', async () => {
     mockConstructEvent.mockReturnValue({
       id: 'evt_bad',
@@ -131,7 +218,7 @@ describe('POST /api/billing/webhook (Stripe)', () => {
     expect(prisma.workspace.update).not.toHaveBeenCalled();
   });
 
-  it('handles customer.subscription.deleted — downgrades to FREE', async () => {
+  it('handles customer.subscription.deleted — downgrades to FREE with the standard FREE credit allowance, not 0', async () => {
     mockConstructEvent.mockReturnValue({
       id: 'evt_2',
       type: 'customer.subscription.deleted',
@@ -142,7 +229,7 @@ describe('POST /api/billing/webhook (Stripe)', () => {
     const res = await POST(makeReq());
     expect(res.status).toBe(200);
     expect(prisma.workspace.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { subscriptionId: 'sub_del' }, data: expect.objectContaining({ plan: 'FREE', leadsLimit: 0 }) }),
+      expect.objectContaining({ where: { subscriptionId: 'sub_del' }, data: expect.objectContaining({ plan: 'FREE', leadsLimit: PLANS.FREE.leadsLimit }) }),
     );
   });
 

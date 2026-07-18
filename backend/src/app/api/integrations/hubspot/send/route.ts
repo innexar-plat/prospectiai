@@ -219,8 +219,8 @@ export async function POST(req: NextRequest) {
             const last = addressParts[addressParts.length - 1] ?? '';
             const cityStateMatch = secondLast.match(/^(.+?)\s*-\s*([A-Z]{2})$/);
             if (cityStateMatch) {
-                parsedCity = cityStateMatch[1].trim();
-                parsedState = cityStateMatch[2].trim();
+                parsedCity = cityStateMatch[1]!.trim();
+                parsedState = cityStateMatch[2]!.trim();
                 parsedCountry = /brasil|brazil/i.test(last) ? 'Brazil' : last;
             }
         }
@@ -250,7 +250,7 @@ export async function POST(req: NextRequest) {
             const errBody = (await contactRes.json().catch(() => ({}))) as { message?: string };
             const idMatch = errBody.message?.match(/Existing ID:\s*(\d+)/i);
             if (idMatch) {
-                contactId = idMatch[1];
+                contactId = idMatch[1]!;
                 // Update existing contact
                 await hubspotFetch(`https://api.hubapi.com/crm/v3/objects/contacts/${contactId}`, {
                     method: 'PATCH',

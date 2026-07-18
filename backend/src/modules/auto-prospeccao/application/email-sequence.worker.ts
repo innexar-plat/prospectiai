@@ -306,7 +306,7 @@ function getDefaultTemplate(step: number): { id: string; subject: string; bodyHt
 <p>Atenciosamente,<br>Equipe Precision IA</p>`,
     },
   };
-  return templates[step] ?? templates[1];
+  return (templates[step] ?? templates[1])!;
 }
 
 function interpolate(template: string, vars: Record<string, string>): string {

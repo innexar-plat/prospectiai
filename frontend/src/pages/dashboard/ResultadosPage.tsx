@@ -126,6 +126,7 @@ export default function ResultadosPage() {
         radiusKm: searchParams.radiusKm,
         hasWebsite: searchParams.hasWebsite,
         hasPhone: searchParams.hasPhone,
+        bypassDbAndRf: searchParams.bypassDbAndRf,
         pageToken: nextPageToken,
         pageSize: 20,
       });
@@ -638,7 +639,7 @@ export default function ResultadosPage() {
                       />
                       {leadIndex[p.id]?.score != null && (
                         <ScoreBadgeWithInfo
-                          label={t('page.resultados.badgeAi', { score: leadIndex[p.id].score ?? 0 })}
+                          label={t('page.resultados.badgeAi', { score: leadIndex[p.id]!.score ?? 0 })}
                           tooltipKey="page.resultados.aiTooltip"
                           badgeClassName="border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300"
                           t={t}
@@ -745,7 +746,7 @@ export default function ResultadosPage() {
                     </div>
                   )}
                   {leadIndex[p.id]?.score != null && (
-                    <AiAnalysisCardPreview source={leadIndex[p.id]} className="mt-2" />
+                    <AiAnalysisCardPreview source={leadIndex[p.id]!} className="mt-2" />
                   )}
                 </div>
                 <div className="px-4 sm:px-5 pb-4 sm:pb-5 flex items-center justify-between gap-2 flex-wrap border-t border-border/40 sm:border-0 sm:-mt-1">

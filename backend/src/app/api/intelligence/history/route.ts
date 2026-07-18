@@ -18,14 +18,14 @@ export async function GET(req: NextRequest) {
 
         const user = await prisma.user.findUnique({
             where: { id: session.user.id },
-            select: { workspaces: { take: 1, select: { workspaceId: true } } },
+            select: { workspaces: { orderBy: { workspace: { createdAt: 'asc' } }, take: 1, select: { workspaceId: true } } },
         });
 
         if (!user?.workspaces?.length) {
             return jsonWithRequestId({ error: 'Workspace not found' }, { status: 404, requestId });
         }
 
-        const workspaceId = user.workspaces[0].workspaceId;
+        const workspaceId = user.workspaces[0]!.workspaceId;
         const moduleKey = req.nextUrl.searchParams.get('module') || undefined;
         const favoriteOnly = req.nextUrl.searchParams.get('favoriteOnly') === 'true';
         const limit = Math.min(parseInt(req.nextUrl.searchParams.get('limit') || '20', 10), 100);

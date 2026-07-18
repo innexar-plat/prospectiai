@@ -44,7 +44,7 @@ export async function GET(req: Request) {
 
     const userWithWorkspace = await prisma.user.findUnique({
         where: { id: session.user.id },
-        include: { workspaces: { take: 1, include: { workspace: true } } },
+        include: { workspaces: { orderBy: { workspace: { createdAt: 'asc' } }, take: 1, include: { workspace: true } } },
     });
     const workspace = userWithWorkspace?.workspaces?.[0]?.workspace;
 

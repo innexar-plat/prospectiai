@@ -69,7 +69,7 @@ function extractCnaeCode(cnaeText: string | null): string | null {
     if (!cnaeText) return null;
     // CNAE can be code like "6920601" or text like "Atividades de contabilidade"
     const codeMatch = cnaeText.match(/^(\d{5,7})/);
-    return codeMatch ? codeMatch[1] : null;
+    return codeMatch ? codeMatch[1]! : null;
 }
 
 function extractCity(address: string | null): string | null {

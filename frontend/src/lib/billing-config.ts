@@ -62,7 +62,7 @@ export function getNextUpgradePlan(currentPlan: string): { key: PlanType; name: 
     const idx = PLAN_TIER_ORDER.indexOf(currentPlan as PlanType);
     if (idx < 0 || idx >= PLAN_TIER_ORDER.length - 1) return null;
     const nextKey = PLAN_TIER_ORDER[idx + 1];
-    if (!PUBLIC_PLAN_KEYS.includes(nextKey)) {
+    if (!PUBLIC_PLAN_KEYS.includes(nextKey!)) {
         const starterIdx = PLAN_TIER_ORDER.indexOf('BASIC');
         if (starterIdx < 0) return null;
         const starter = PLANS.BASIC;
@@ -73,11 +73,12 @@ export function getNextUpgradePlan(currentPlan: string): { key: PlanType; name: 
             priceBrl: starter.monthly.price_brl,
         };
     }
-    const plan = PLANS[nextKey];
+    const plan = PLANS[nextKey!];
+    const key: PlanType = nextKey!;
     return {
-        key: nextKey,
+        key,
         name: plan.name,
-        leadsLimit: resolveMarketLeadsLimit(nextKey, plan.leadsLimit),
+        leadsLimit: resolveMarketLeadsLimit(key, plan.leadsLimit),
         priceBrl: plan.monthly.price_brl,
     };
 }

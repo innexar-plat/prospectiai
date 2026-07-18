@@ -290,7 +290,7 @@ export async function resolveAiForRole(role: AiRole): Promise<{ config: Resolved
     if (candidates.length === 0) {
         throw new Error(`No AI config for role "${role}" and no env fallback configured`);
     }
-    const [first] = candidates;
+    const first = candidates[0]!;
     const config: ResolvedAiConfig = {
         provider: first.provider,
         model: first.model,

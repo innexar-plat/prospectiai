@@ -2,14 +2,14 @@
 
 import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Check, Sparkles } from 'lucide-react';
+import { Check } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import CookieConsent from '@/components/legal/CookieConsent';
 import SeoMeta from '@/components/layout/SeoMeta';
 import BreadcrumbJsonLd from '@/components/layout/BreadcrumbJsonLd';
 import { useI18n } from '@/lib/i18n';
 import { PLANS, PUBLIC_PLAN_KEYS, type PlanType } from '@/lib/billing-config';
-import { getActiveMarket, getMarketConfig, isTrialEnabled, US_STARTER_CREDITS } from '@/lib/market';
+import { getActiveMarket, getMarketConfig, US_STARTER_CREDITS } from '@/lib/market';
 import { Button } from '@/components/ui/Button';
 
 function getDisplayCredits(planKey: PlanType): number {
@@ -72,16 +72,9 @@ export default function PricingPage({ locale: initialLocale }: { locale: string 
             />
             <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-12 sm:py-16">
                 <div className="text-center mb-10">
-                    {isTrialEnabled() ? (
-                        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-600/10 text-violet-600 dark:text-violet-400 text-xs font-bold mb-4">
-                            <Sparkles size={14} />
-                            {t('pricing.trialBadge', { days: 7, credits: 50 })}
-                        </span>
-                    ) : (
-                        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold mb-4">
-                            {t('pricing.starterBadge')} — $19 · 50 {t('pricing.creditsMonth')}
-                        </span>
-                    )}
+                    <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold mb-4">
+                        {t('pricing.starterBadge')} — {formatPrice('BASIC', 'monthly').amount} · {getDisplayCredits('BASIC')} {t('pricing.creditsMonth')}
+                    </span>
                     <h1 className="text-3xl sm:text-4xl font-black text-foreground">{t('billing.title')}</h1>
                     <p className="text-muted mt-3 max-w-2xl mx-auto">{t('pricing.subtitle')}</p>
                 </div>
@@ -124,7 +117,7 @@ export default function PricingPage({ locale: initialLocale }: { locale: string 
                                     )}
                                 </ul>
                                 <Button variant={popular ? 'primary' : 'secondary'} className="w-full mt-6" onClick={goSignup}>
-                                    {isTrialEnabled() ? t('pricing.ctaTrial') : t('pricing.ctaSubscribe')}
+                                    {t('pricing.ctaSubscribe')}
                                 </Button>
                             </div>
                         );

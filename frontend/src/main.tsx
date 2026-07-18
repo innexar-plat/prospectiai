@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { onLCP, onFID, onCLS } from 'web-vitals'
+import { onLCP, onCLS } from 'web-vitals'
 import './index.css'
 import App from './App.tsx'
 import MaintenancePage from './pages/MaintenancePage'
@@ -37,9 +37,8 @@ function sendWebVitals(metric: { name: string; value: number; rating: string }) 
   }
 }
 
-onLCP((m) => sendWebVitals({ name: 'LCP', value: m.value, rating: m.rating }));
-onFID((m) => sendWebVitals({ name: 'FID', value: m.value, rating: m.rating }));
-onCLS((m) => sendWebVitals({ name: 'CLS', value: m.value, rating: m.rating }));
+onLCP((m: { value: number; rating: string }) => sendWebVitals({ name: 'LCP', value: m.value, rating: m.rating }));
+onCLS((m: { value: number; rating: string }) => sendWebVitals({ name: 'CLS', value: m.value, rating: m.rating }));
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

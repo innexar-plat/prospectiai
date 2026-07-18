@@ -37,6 +37,7 @@ export interface SessionUser {
     facebookUrl?: string | null;
     websiteUrl?: string | null;
     requiresOnboarding?: boolean;
+    isRepresentative?: boolean;
     emailVerified?: boolean;
     twoFactorEnabled?: boolean;
     subscriptionStatus?: string | null;
@@ -733,5 +734,177 @@ export type AffiliateStats = {
     commissionPendingCents: number;
     commissionPaidCents: number;
 };
+
+export const RepLevel = {
+    BRONZE: 'BRONZE',
+    SILVER: 'SILVER',
+    GOLD: 'GOLD',
+    PLATINUM: 'PLATINUM',
+    DIAMOND: 'DIAMOND',
+} as const;
+export type RepLevel = (typeof RepLevel)[keyof typeof RepLevel];
+
+export type RepStatus = 'ACTIVE' | 'SUSPENDED' | 'INACTIVE';
+export type RepCommissionStatus = 'PENDING' | 'APPROVED' | 'PAID' | 'CANCELLED';
+export type RepCommissionSource = 'DIRECT_CLIENT' | 'AFFILIATE_OVERRIDE';
+export type PayoutType = 'PIX' | 'BANK_TRANSFER' | '';
+
+export interface RepresentativeDTO {
+    id: string;
+    userId: string;
+    code: string;
+    level: RepLevel;
+    status: RepStatus;
+    commissionRatePercent: number;
+    overrideRatePercent: number;
+    payoutType: PayoutType | null;
+    payoutPayload: string | null;
+    approvedAt: string | null;
+    createdAt: string;
+}
+
+export interface RepClientDTO {
+    id: string;
+    name: string;
+    email: string | null;
+    company: string | null;
+    phone: string | null;
+    planId: string | null;
+    status: 'LEAD' | 'CONVERTED' | 'ACTIVE' | 'CANCELED' | 'REFUNDED';
+    valueCents: number | null;
+    currency?: string;
+    signedAt: string | null;
+    notes: string | null;
+    createdAt: string;
+}
+
+export interface RepCommissionDTO {
+    id: string;
+    amountCents: number;
+    currency?: string;
+    commissionPercent: number;
+    status: RepCommissionStatus;
+    source: RepCommissionSource;
+    clientName: string | null;
+    clientCompany: string | null;
+    holdUntil: string | null;
+    paidAt: string | null;
+    orderId: string | null;
+    subscriptionId: string | null;
+    notes: string | null;
+    createdAt: string;
+}
+
+export interface RepGoalDTO {
+    id: string;
+    year: number;
+    month: number;
+    targetCents: number;
+    achievedCents: number;
+    status: 'PENDING' | 'ACHIEVED' | 'EXCEEDED' | 'MISSED';
+}
+
+export interface RepLevelConfigDTO {
+    level: RepLevel;
+    minCommissionCents: number;
+    commissionRatePercent: number;
+    overrideRatePercent: number;
+    description: string;
+}
+
+export interface RepDashboardSummary {
+    id: string;
+    name: string;
+    email: string;
+    level: RepLevel;
+    status: RepStatus;
+    directCommissionPct: number;
+    affiliateOverridePct: number;
+    commissionHoldDays: number;
+    creditLimit: number;
+    minPayoutCents: number;
+    monthlyGoalCents: number | null;
+    region: string | null;
+    payoutType: string | null;
+    payoutPayload: string | null;
+    lastActivityAt: string | null;
+    createdAt: string;
+    balanceCents: number;
+    pendingCents: number;
+    totalClients: number;
+    monthClientCount: number;
+    monthCommissionCents: number;
+    goalProgress: { targetCents: number; achievedCents: number; percent: number } | null;
+    linkClicks: number;
+    leadsCount: number;
+    activeClientsCount: number;
+}
+
+export interface RepDashboardRecentCommission {
+    id: string;
+    source: RepCommissionSource;
+    amountCents: number;
+    currency?: string;
+    commissionPercent: number;
+    status: RepCommissionStatus;
+    clientName: string | null;
+    clientCompany: string | null;
+    createdAt: string;
+}
+
+export interface RepDashboardDTO {
+    dashboard: RepDashboardSummary;
+    balance: { availableCents: number; approvedCents: number; paidCents: number };
+    currency?: string;
+    recentCommissions: RepDashboardRecentCommission[];
+    recentClients: RepClientDTO[];
+    disclosureLink: string;
+    repCode: string;
+}
+
+export interface WhatsAppConversationDTO {
+    id: string;
+    contactNumber: string;
+    contactName: string | null;
+    lastMessageAt: string | null;
+    lastMessagePreview: string | null;
+    unreadCount: number;
+    repClientId: string | null;
+    repClientName: string | null;
+    repClientCompany: string | null;
+    createdAt: string;
+}
+
+export interface WhatsAppMessageDTO {
+    id: string;
+    direction: 'IN' | 'OUT';
+    body: string;
+    status: 'SENT' | 'DELIVERED' | 'READ' | 'FAILED';
+    createdAt: string;
+}
+
+export interface RepPaymentDTO {
+    id: string;
+    amountCents: number;
+    currency: string;
+    method: string | null;
+    status: string;
+    paidAt: string;
+    periodStart: string;
+    periodEnd: string;
+    createdAt: string;
+}
+
+export interface RepAffiliateDTO {
+    id: string;
+    code: string;
+    name: string | null;
+    email: string | null;
+    commissionRatePercent: number;
+    referralCount: number;
+    commissionCount: number;
+    status: string;
+    createdAt: string;
+}
 
 

@@ -188,7 +188,7 @@ function pickBest(contacts: ContactIntelligenceContact[]): ContactIntelligenceCo
   const primaryCandidates = contacts.filter((c) => c.isPrimary);
   const candidates = primaryCandidates.length > 0 ? primaryCandidates : contacts;
 
-  return [...candidates].sort((a, b) => b.effectiveScore - a.effectiveScore)[0];
+  return [...candidates].sort((a, b) => b.effectiveScore - a.effectiveScore)[0] ?? null;
 }
 
 export async function buildContactIntelligenceByLeadId(leadId: string): Promise<ContactIntelligenceResult | null> {

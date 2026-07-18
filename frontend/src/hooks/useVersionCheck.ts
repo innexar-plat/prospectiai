@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { APP_VERSION } from '@/lib/version';
+import { APP_VERSION, BUILD_TIME } from '@/lib/version';
 
 const CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -7,6 +7,10 @@ const CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
  * Periodically polls /version.json to detect new deployments.
  * When a mismatch is found, shows a non-intrusive prompt to reload.
  * Also triggers a check on window focus (user comes back to tab).
+ *
+ * Compares `buildTime` (auto-generated on every build) rather than relying solely on
+ * `version` (frontend/package.json's semver), which is bumped by hand and easy to forget —
+ * a deploy without a version bump would otherwise never be detected.
  */
 export function useVersionCheck() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
@@ -17,7 +21,9 @@ export function useVersionCheck() {
       const res = await fetch('/version.json', { cache: 'no-store' });
       if (!res.ok) return;
       const data = await res.json();
-      if (data.version && data.version !== APP_VERSION) {
+      const versionChanged = data.version && data.version !== APP_VERSION;
+      const buildChanged = data.buildTime && data.buildTime !== BUILD_TIME;
+      if (versionChanged || buildChanged) {
         setUpdateAvailable(true);
       }
     } catch {

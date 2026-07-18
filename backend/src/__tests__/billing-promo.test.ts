@@ -67,9 +67,9 @@ describe('billing-promo', () => {
         ).toBe(false);
     });
 
-    it('canApplyStarterPromo requires monthly BR trial-expired workspace', () => {
+    it('canApplyStarterPromo is disabled — BR runs no promotional pricing', () => {
         const workspace = { plan: 'TRIAL', subscriptionStatus: TRIAL_EXPIRED_STATUS };
-        expect(canApplyStarterPromo(workspace, 'BR', 'monthly')).toBe(true);
+        expect(canApplyStarterPromo(workspace, 'BR', 'monthly')).toBe(false);
         expect(canApplyStarterPromo(workspace, 'BR', 'annual')).toBe(false);
         expect(canApplyStarterPromo(workspace, 'US', 'monthly')).toBe(false);
     });

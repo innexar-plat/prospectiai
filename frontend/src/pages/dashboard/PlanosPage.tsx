@@ -6,7 +6,7 @@ import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom
 import type { PromoValidateResponse, SessionUser } from '@/lib/api';
 import { billingApi, plansApi, type PlanFromApi } from '@/lib/api';
 import { getPlanDisplayName, isTrialExpiredUser } from '@/lib/billing-config';
-import { getAffiliateRef } from '@/lib/affiliate-ref';
+import { getAffiliateRef, getRepCode } from '@/lib/affiliate-ref';
 import { getSupportEmail, getSupportWhatsAppUrl } from '@/lib/support';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/contexts/ToastContext';
@@ -278,6 +278,7 @@ function PlanCardActionButton({
 
 function renderPlanCardFooter(
     isCurrent: boolean,
+    isCycleChangeOnly: boolean,
     planKey: string,
     loadingPlan: string | null,
     isDowngrade: (key: string) => boolean,
@@ -289,6 +290,21 @@ function renderPlanCardFooter(
     }
     if (planKey === 'FREE' || planKey === 'TRIAL') {
         return <div className="text-center text-xs text-muted py-2">{t('dash.planos.freePlan')}</div>;
+    }
+    if (isCycleChangeOnly) {
+        const loading = loadingPlan === planKey;
+        return (
+            <Button
+                variant="secondary"
+                size="sm"
+                className="w-full rounded-xl font-bold"
+                disabled={loading}
+                onClick={() => onUpgrade(planKey)}
+                icon={loading ? <Loader2 size={14} className="animate-spin" /> : undefined}
+            >
+                {loading ? t('dash.planos.processing') : t('dash.planos.switchCycle')}
+            </Button>
+        );
     }
     return <PlanCardActionButton planKey={planKey} loadingPlan={loadingPlan} isDowngrade={isDowngrade} onUpgrade={onUpgrade} t={t} />;
 }
@@ -357,7 +373,9 @@ function PlanosGridContent({
             <BillingCycleToggle cycle={cycle} onChange={onCycleChange} t={t} />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                 {plans.map((plan) => {
-                    const isCurrent = plan.key === user.plan;
+                    const isSamePlan = plan.key === user.plan;
+                    const isCurrent = isSamePlan && cycle === (user.billingCycle ?? 'monthly');
+                    const isCycleChangeOnly = isSamePlan && !isCurrent && plan.key !== 'FREE' && plan.key !== 'TRIAL';
                     const ui = PLAN_UI[plan.key] ?? { icon: Zap, color: 'text-muted', borderColor: 'border-border' };
                     const Icon = ui.icon;
                     const creditsLabel = t('dash.planos.creditsPerMonth', { count: plan.leadsLimit.toLocaleString(numberLocale) });
@@ -417,7 +435,7 @@ function PlanosGridContent({
                                     </li>
                                 ))}
                             </ul>
-                            {renderPlanCardFooter(isCurrent, plan.key, loadingPlan, isDowngrade, onUpgrade, t)}
+                            {renderPlanCardFooter(isCurrent, isCycleChangeOnly, plan.key, loadingPlan, isDowngrade, onUpgrade, t)}
                         </div>
                     );
                 })}
@@ -512,10 +530,13 @@ export default function PlanosPage() {
     const isDowngrade = (targetKey: string) => planTierIndex(targetKey) < planTierIndex(user.plan);
 
     const handleUpgrade = async (planId: string) => {
-        if (planId === 'FREE' || planId === 'TRIAL' || planId === user.plan) return;
+        if (planId === 'FREE' || planId === 'TRIAL') return;
+        const isCycleChangeOnly = planId === user.plan && billingCycle !== (user.billingCycle ?? 'monthly');
+        if (planId === user.plan && !isCycleChangeOnly) return;
         setLoadingPlan(planId);
         try {
             const affiliateCode = getAffiliateRef();
+            const repCode = getRepCode();
             const usePromo = planId === 'BASIC' && effectivePromo?.eligible && billingCycle === 'monthly';
             const res = await billingApi.checkout({
                 planId: usePromo ? effectivePromo.checkoutPlanId : planId,
@@ -523,6 +544,7 @@ export default function PlanosPage() {
                 locale: checkoutLocale,
                 scheduleAtPeriodEnd: isDowngrade(planId),
                 ...(affiliateCode && { affiliateCode }),
+                ...(repCode && { repCode }),
                 ...(usePromo && promoParam && { promoCode: promoParam }),
                 ...(usePromo && promoToken && { promoToken }),
                 ...(usePromo && !promoParam && !promoToken && { promoCode: 'starter-6m' }),

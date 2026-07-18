@@ -234,7 +234,8 @@ services:
 
   # ── PgBouncer: connection pooler para PostgreSQL ──────────────────────────────
   pgbouncer:
-    image: bitnami/pgbouncer:latest
+    # bitnami/pgbouncer:latest was discontinued; bitnamilegacy mirrors the same image/env vars.
+    image: bitnamilegacy/pgbouncer:latest
     container_name: prospector-pgbouncer
     environment:
       - POSTGRESQL_HOST=db
@@ -257,7 +258,9 @@ services:
         limits:
           memory: 128m
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      # pgbouncer images ship psql (under /opt/bitnami/postgresql/bin) but not pg_isready;
+      # "pgbouncer" is PgBouncer's own admin virtual database, always available once it's up.
+      test: ["CMD-SHELL", "PGPASSWORD=$${POSTGRESQL_PASSWORD} /opt/bitnami/postgresql/bin/psql -h 127.0.0.1 -p 6432 -U $${POSTGRESQL_USERNAME} -d pgbouncer -c 'SHOW VERSION;'"]
       interval: 30s
       timeout: 5s
       retries: 3

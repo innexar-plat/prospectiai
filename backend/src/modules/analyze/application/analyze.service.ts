@@ -84,14 +84,14 @@ async function getUserAndWorkspaceOrThrow(userId: string) {
             productService: true,
             targetAudience: true,
             mainBenefit: true,
-            workspaces: { include: { workspace: true }, take: 1 },
+            workspaces: { include: { workspace: true }, orderBy: { workspace: { createdAt: 'asc' } }, take: 1 },
         },
     });
     if (!user || user.workspaces.length === 0) throw new AnalyzeHttpError(404, { error: 'Workspace not found' });
     if (user.onboardingCompletedAt == null) {
         throw new AnalyzeHttpError(403, { error: 'Complete onboarding before analyzing leads', code: 'REQUIRES_ONBOARDING' });
     }
-    const membership = user.workspaces[0];
+    const membership = user.workspaces[0]!;
     return {
         user,
         activeWorkspace: membership.workspace,
@@ -467,6 +467,7 @@ export async function runAnalyze(input: AnalyzeInput, userId: string, onProgress
         where: { id: activeWorkspace.id },
         data: { leadsUsed: { increment: 1 } },
     });
+    import('@/lib/credit-alerts').then(({ maybeSendLowCreditsAlert }) => maybeSendLowCreditsAlert(activeWorkspace.id)).catch(() => {});
 
     await prisma.leadAnalysis.updateMany({
         where: { userId, workspaceId: null },

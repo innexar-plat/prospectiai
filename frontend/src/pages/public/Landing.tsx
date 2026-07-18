@@ -7,7 +7,7 @@ import LandingConversion from '@/components/landing/LandingConversion';
 import Header from '@/components/layout/Header';
 import CookieConsent from '@/components/legal/CookieConsent';
 import { useI18n } from '@/lib/i18n';
-import { captureRefFromUrl } from '@/lib/affiliate-ref';
+import { captureRefFromUrl, captureRepFromUrl } from '@/lib/affiliate-ref';
 import { getActiveMarket } from '@/lib/market';
 
 export default function PublicEntryClient({ locale: initialLocale }: { locale: string }) {
@@ -20,6 +20,7 @@ export default function PublicEntryClient({ locale: initialLocale }: { locale: s
 
     useEffect(() => {
         captureRefFromUrl();
+        captureRepFromUrl();
     }, []);
 
     const switchLanguage = (lang: string) => {

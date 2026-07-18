@@ -8,7 +8,7 @@ export const PLANS = {
     },
     TRIAL: {
         name: 'Trial',
-        leadsLimit: 50,
+        leadsLimit: 10,
         maxMembers: 1,
         monthly: { price_usd: 0, price_brl: 0 },
         annual: { price_usd: 0, price_brl: 0 },

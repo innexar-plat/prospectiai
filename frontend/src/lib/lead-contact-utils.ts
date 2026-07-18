@@ -18,7 +18,7 @@ export function inferDialCodeFromAddress(address?: string): string {
 }
 
 export function getPrimaryPhone(place: PlaceDetail | Place): string {
-  if (place.phones && place.phones.length > 0) return place.phones[0];
+  if (place.phones && place.phones.length > 0) return place.phones[0]!;
   return place.nationalPhoneNumber ?? place.internationalPhoneNumber ?? '';
 }
 

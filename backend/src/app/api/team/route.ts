@@ -12,6 +12,7 @@ import { z } from 'zod';
 
 import { getSiteUrlFromRequest } from '@/lib/site-url';
 import { getRequestLocale } from '@/lib/i18n/locale';
+import { hashToken } from '@/lib/auth-utils';
 
 const inviteBodySchema = z.object({
     email: z.email().transform((s) => s.trim().toLowerCase()),
@@ -218,7 +219,7 @@ export async function POST(req: NextRequest) {
                             email,
                             name: 'Convidado',
                             password: hashedPassword,
-                            resetToken,
+                            resetTokenHash: hashToken(resetToken),
                             resetTokenExpires,
                             plan: 'FREE',
                             leadsLimit: 10,

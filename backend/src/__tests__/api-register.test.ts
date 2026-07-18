@@ -46,7 +46,7 @@ describe('POST /api/auth/register', () => {
       id: 'ws-1',
       name: 'Test User - Workspace',
       plan: 'FREE',
-      leadsLimit: 0,
+      leadsLimit: 10,
       leadsUsed: 0,
       subscriptionStatus: 'inactive',
     });
@@ -125,7 +125,7 @@ describe('POST /api/auth/register', () => {
         data: expect.objectContaining({
           name: 'New User - Workspace',
           plan: 'FREE',
-          leadsLimit: 0,
+          leadsLimit: 10,
           leadsUsed: 0,
           subscriptionStatus: 'inactive',
         }),
@@ -183,7 +183,7 @@ describe('POST /api/auth/register', () => {
       id: 'ws-us',
       name: 'New User - Workspace',
       plan: 'FREE',
-      leadsLimit: 0,
+      leadsLimit: 10,
       leadsUsed: 0,
       subscriptionStatus: 'inactive',
     });
@@ -202,7 +202,7 @@ describe('POST /api/auth/register', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           plan: 'FREE',
-          leadsLimit: 0,
+          leadsLimit: 10,
           subscriptionStatus: 'inactive',
         }),
       }),

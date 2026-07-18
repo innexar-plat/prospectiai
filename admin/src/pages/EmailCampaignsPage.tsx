@@ -76,8 +76,9 @@ export function EmailCampaignsPage() {
   useEffect(() => {
     if (showModal && templates.length === 0) {
       emailMarketingApi.templates.list({ status: 'ACTIVE', limit: 100 }).then((res) => {
-        setTemplates(res.items);
-        if (res.items.length > 0 && !formTemplateId) setFormTemplateId(res.items[0].id);
+        const items = res.items ?? [];
+        setTemplates(items);
+        if (items.length > 0 && !formTemplateId) setFormTemplateId(items[0]!.id);
       });
     }
   }, [showModal, templates.length, formTemplateId]);

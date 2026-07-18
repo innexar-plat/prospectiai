@@ -114,8 +114,8 @@ const LANDING_FAQ = [
         a: 'Usamos as IAs mais modernas do mercado. Os dados vêm de fontes oficiais: Google Places (avaliações, localização), Receita Federal (27M empresas, CNPJ, CNAE, porte), Reclame Aqui e Jus Brasil.'
     },
     {
-        q: 'Preciso de cartão de crédito para testar?',
-        a: 'Não. O plano gratuito oferece 10 créditos/mês sem cartão de crédito. Dá para buscar empresas, analisar leads com IA e validar o fluxo completo antes de assinar qualquer plano.'
+        q: 'Qual plano devo escolher para começar?',
+        a: 'O plano Starter a partir de R$ 97/mês é ideal para começar. Você pode fazer upgrade, downgrade ou cancelar a qualquer momento, sem burocracia.'
     },
     {
         q: 'Posso integrar com o CRM que já uso?',
@@ -194,29 +194,9 @@ export default function LandingPage({ onViewPlans, t }: { locale: string; onView
         })),
     };
 
-    const softwareAppSchema = {
-        '@context': 'https://schema.org',
-        '@type': 'SoftwareApplication',
-        name: 'Precision',
-        applicationCategory: 'BusinessApplication',
-        operatingSystem: 'Web',
-        offers: {
-            '@type': 'AggregateOffer',
-            lowPrice: '0',
-            highPrice: '2497',
-            priceCurrency: 'BRL',
-            offerCount: '5',
-        },
-        description: 'Como encontrar empresas para vender: plataforma de prospecção B2B com IA. Busca por nicho, região, score de leads e análise de mercado.',
-        featureList: 'Busca por nicho e região, Score de leads com IA, Análise de concorrência, Viabilidade de negócio, Smart Relations, Smart Tags, Gestão de equipe, Integração RD Station, Agendor e HubSpot, Activity Tracking, Exportação CSV/JSON, Scripts de abordagem com IA',
-        inLanguage: 'pt-BR',
-        url: 'https://precisionia.com.br',
-    };
-
     return (
         <div className="min-h-screen bg-background text-foreground selection:bg-violet-500/30 overflow-x-hidden" role="document">
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(landingFaqSchema) }} />
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareAppSchema) }} />
             {/* Background Decorative Elements */}
             <div className="absolute top-0 left-0 right-0 h-[80vh] bg-[radial-gradient(circle_at_50%_0%,rgba(139,92,246,0.18)_0%,transparent_65%)] pointer-events-none" />
             <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-violet-500/10 blur-[120px] rounded-full pointer-events-none animate-float" />
@@ -238,15 +218,15 @@ export default function LandingPage({ onViewPlans, t }: { locale: string; onView
                         <span className="accent-gradient">priorize os melhores leads</span>
                     </h1>
 
-                    <p className="text-lg md:text-xl text-muted max-w-3xl mx-auto mb-10 leading-relaxed animate-fade animation-delay-200 animation-fill-both">
-                        Busque por nicho e região, receba score IA em segundos e descubra quem vale seu tempo antes de entrar em contato. Teste com <strong className="text-foreground">10 créditos grátis</strong> e dados de <strong className="text-foreground">27 milhões de empresas brasileiras</strong>.
-                    </p>
+                        <p className="text-lg md:text-xl text-muted max-w-3xl mx-auto mb-10 leading-relaxed animate-fade animation-delay-200 animation-fill-both">
+                            Busque por nicho e região, receba score IA em segundos e descubra quem vale seu tempo antes de entrar em contato. Acesse dados de <strong className="text-foreground">27 milhões de empresas brasileiras</strong> com análise de concorrência, viabilidade de negócio e scripts de abordagem prontos.
+                        </p>
 
-                    <div className="flex flex-wrap items-center justify-center gap-3 mb-10 text-xs md:text-sm font-semibold text-muted animate-fade animation-delay-300 animation-fill-both">
-                        <span className="px-3 py-1.5 rounded-full bg-card border border-border">10 créditos grátis</span>
-                        <span className="px-3 py-1.5 rounded-full bg-card border border-border">Sem cartão</span>
-                        <span className="px-3 py-1.5 rounded-full bg-card border border-border">Busca por nicho e região</span>
-                    </div>
+                        <div className="flex flex-wrap items-center justify-center gap-3 mb-10 text-xs md:text-sm font-semibold text-muted animate-fade animation-delay-300 animation-fill-both">
+                            <span className="px-3 py-1.5 rounded-full bg-card border border-border">Score IA por lead</span>
+                            <span className="px-3 py-1.5 rounded-full bg-card border border-border">Análise de concorrência</span>
+                            <span className="px-3 py-1.5 rounded-full bg-card border border-border">Scripts de abordagem</span>
+                        </div>
 
                     {/* STATS BAR */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-10 animate-fade animation-delay-300 animation-fill-both">
@@ -256,6 +236,12 @@ export default function LandingPage({ onViewPlans, t }: { locale: string; onView
                     </div>
 
                     {/* CTA */}
+                    <div className="flex justify-center mb-4 animate-fade animation-delay-300 animation-fill-both">
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-1.5 text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                            <Zap size={14} aria-hidden />
+                            {t('landing.ctaFreeBadge')}
+                        </span>
+                    </div>
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide animation-delay-300 animation-fill-both">
                         <Link
                             to="/auth/signup"
@@ -269,11 +255,11 @@ export default function LandingPage({ onViewPlans, t }: { locale: string; onView
                         </Button>
                     </div>
                     <p className="mt-4 text-sm text-muted animate-fade animation-delay-400 animation-fill-both">
-                        A partir de $19/mês · Sem cartão de crédito · Cancele quando quiser ·{' '}
-                        <Link to="/auth/afiliado/cadastro" className="font-semibold underline decoration-violet-500/50 hover:decoration-violet-500 transition-colors">
-                            Seja um afiliado
-                        </Link>
-                    </p>
+                            {t('landing.ctaFreeNote')} ·{' '}
+                            <Link to="/auth/afiliado/cadastro" className="font-semibold underline decoration-violet-500/50 hover:decoration-violet-500 transition-colors">
+                                Seja um afiliado
+                            </Link>
+                        </p>
                 </div>
             </section>
 
@@ -598,10 +584,9 @@ export default function LandingPage({ onViewPlans, t }: { locale: string; onView
                     <h2 id="plans-heading" className="text-3xl md:text-5xl font-black mb-4 text-foreground">Escolha o plano <span className="accent-gradient">ideal</span></h2>
                     <p className="text-muted max-w-xl mx-auto mb-10">{t('landing.plansSubtitle')}</p>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-10">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-10 max-w-4xl mx-auto">
                         {[
-                            { name: 'Free', leads: '10 leads', price: 'R$ 0' },
-                            { name: 'Starter', leads: '100 leads', price: 'R$ 129/mês' },
+                            { name: 'Starter', leads: '100 leads', price: 'R$ 97/mês' },
                             { name: 'Growth', leads: '400 leads', price: 'R$ 397/mês', highlight: true },
                             { name: 'Business', leads: '1.200 leads', price: 'R$ 997/mês' },
                             { name: 'Enterprise', leads: '5.000 leads', price: 'R$ 2.497/mês' },
@@ -684,15 +669,15 @@ export default function LandingPage({ onViewPlans, t }: { locale: string; onView
             <section className="py-16 md:py-20 px-4 bg-surface/30" aria-labelledby="cta-mid-heading">
                 <div className="max-w-3xl mx-auto text-center">
                     <h2 id="cta-mid-heading" className="text-3xl md:text-4xl font-black mb-4 text-foreground">Pronto para prospectar com <span className="accent-gradient">inteligência</span>?</h2>
-                    <p className="text-muted mb-8">Comece grátis. 5 análises completas. Sem cartão de crédito.</p>
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <Link
-                            to="/auth/signup"
-                            className="inline-flex items-center justify-center font-bold rounded-2xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-violet-500/50 motion-safe:active:scale-95 bg-[#7c3aed] text-white shadow-[0_4px_14px_0_rgba(124,58,237,0.3)] hover:bg-[#6d28d9] hover:shadow-[0_6px_20px_rgba(109,40,217,0.4)] hover:-translate-y-0.5 h-14 px-10 text-base w-full sm:w-auto"
-                        >
-                            <Rocket size={18} className="mr-2" aria-hidden />
-                            Criar conta grátis
-                        </Link>
+                        <p className="text-muted mb-8">Descubra empresas, qualifique leads e feche mais negócios com IA.</p>
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                            <Link
+                                to="/auth/signup"
+                                className="inline-flex items-center justify-center font-bold rounded-2xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-violet-500/50 motion-safe:active:scale-95 bg-[#7c3aed] text-white shadow-[0_4px_14px_0_rgba(124,58,237,0.3)] hover:bg-[#6d28d9] hover:shadow-[0_6px_20px_rgba(109,40,217,0.4)] hover:-translate-y-0.5 h-14 px-10 text-base w-full sm:w-auto"
+                            >
+                                <Rocket size={18} className="mr-2" aria-hidden />
+                                Criar conta
+                            </Link>
                         <Button onClick={onViewPlans} variant="secondary" size="lg" className="w-full sm:w-auto">
                             {t('landing.ctaPlans')}
                         </Button>
@@ -710,7 +695,7 @@ export default function LandingPage({ onViewPlans, t }: { locale: string; onView
                         <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }} />
 
                         <div className="relative z-10">
-                            <p className="text-white/70 text-sm font-bold uppercase tracking-widest mb-6">Pare de perder tempo. Comece agora.</p>
+                            <p className="text-white/70 text-sm font-bold uppercase tracking-widest mb-6">                            Prospecção inteligente com IA.</p>
                             <h2 className="text-4xl md:text-6xl font-black text-white mb-6 leading-tight">
                                 27 milhões de empresas.<br />
                                 <span className="text-white/90">1 plataforma inteligente.</span>
@@ -723,9 +708,9 @@ export default function LandingPage({ onViewPlans, t }: { locale: string; onView
                                 className="inline-flex items-center justify-center font-bold rounded-2xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-violet-500/50 motion-safe:active:scale-95 bg-white text-violet-600 h-16 px-12 text-xl hover:bg-white/90 hover:scale-105 shadow-lg"
                             >
                                 <ArrowRight size={20} className="mr-2" />
-                                Começar agora — é grátis
+                                Começar agora
                             </Link>
-                            <p className="text-white/50 text-sm mt-4">5 análises grátis · Sem cartão · Setup em 30 segundos</p>
+                            <p className="text-white/50 text-sm mt-4">Starter a partir de R$ 97/mês · Cancele quando quiser</p>
                         </div>
                     </div>
                 </div>

@@ -51,7 +51,7 @@ function CompanyCard({ company, t, locale }: { company: RelatedCompany; t: (key:
         ? company.relation
         : null;
     const color = relationKey ? RELATION_COLORS[relationKey] : 'text-gray-600 bg-gray-50';
-    const Icon = relationKey ? RELATION_ICONS[relationKey] : Building2;
+    const Icon = relationKey ? RELATION_ICONS[relationKey]! : Building2;
     const label = relationKey
         ? t(`page.smartRelations.relation.${relationKey}`)
         : company.relation;

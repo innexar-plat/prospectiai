@@ -22,6 +22,65 @@ import {
     notifyPlanUpgrade,
 } from '@/lib/telegram-business-alerts';
 
+async function handleRepCommission(repCode: string, userId: string, workspaceId: string, planId: string, valueCents: number, orderId: string, subscriptionId?: string): Promise<void> {
+    try {
+        const rep = await prisma.representative.findUnique({ where: { id: repCode } });
+        if (!rep || rep.status !== 'ACTIVE') return;
+
+        let repClient = await prisma.repClient.findFirst({
+            where: { representativeId: rep.id, workspaceId },
+        });
+        if (!repClient) {
+            // No lead was captured at signup (e.g. rep_code cookie set after registration) —
+            // look up the real customer instead of showing a truncated user id as the name.
+            const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } });
+            repClient = await prisma.repClient.create({
+                data: {
+                    representativeId: rep.id,
+                    workspaceId,
+                    name: user?.name?.trim() || user?.email || `${userId.slice(0, 8)}...`,
+                    email: user?.email,
+                    planId,
+                    status: 'ACTIVE',
+                    valueCents,
+                    signedAt: new Date(),
+                },
+            });
+        } else {
+            repClient = await prisma.repClient.update({
+                where: { id: repClient.id },
+                data: { planId, valueCents, status: 'ACTIVE' },
+            });
+        }
+
+        const holdUntil = new Date();
+        holdUntil.setDate(holdUntil.getDate() + rep.commissionHoldDays);
+
+        const commission = await prisma.repCommission.create({
+            data: {
+                representativeId: rep.id,
+                source: 'DIRECT_CLIENT',
+                repClientId: repClient.id,
+                orderId: orderId || null,
+                subscriptionId: subscriptionId || null,
+                amountCents: Math.floor((valueCents * Number(rep.directCommissionPct)) / 100),
+                commissionPercent: rep.directCommissionPct,
+                status: 'PENDING',
+                holdUntil,
+            },
+        });
+
+        await prisma.representative.update({
+            where: { id: rep.id },
+            data: { lastActivityAt: new Date() },
+        });
+
+        logger.info('Rep commission created', { repId: rep.id, commissionId: commission.id, amountCents: commission.amountCents, userId, workspaceId });
+    } catch (e) {
+        logger.error('Rep commission creation failed', { error: e instanceof Error ? e.message : 'Unknown', repCode, userId, workspaceId });
+    }
+}
+
 const GRACE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 const APP_BASE_URL = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 const DASHBOARD_URL = `${APP_BASE_URL.replace(/\/$/, '')}/dashboard`;
@@ -64,7 +123,15 @@ function validateMpSignature(
     template += `ts:${ts};`;
 
     const expected = createHmac('sha256', secret).update(template).digest('hex');
-    return expected === v1;
+    const matches = expected === v1;
+    if (!matches) {
+        logger.warn('MP signature mismatch debug', {
+            dataId, xRequestId, ts, template,
+            expectedPrefix: expected.slice(0, 8), receivedPrefix: v1.slice(0, 8),
+            secretLength: secret.length,
+        });
+    }
+    return matches;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -115,7 +182,7 @@ async function applyApprovedPaymentMp(userId: string, planId: PlanType, interval
     const plan = PLANS[planId];
     const userWithWorkspace = await prisma.user.findUnique({
         where: { id: userId },
-        include: { workspaces: { take: 1, include: { workspace: true } } }
+        include: { workspaces: { orderBy: { workspace: { createdAt: 'asc' } }, take: 1, include: { workspace: true } } }
     });
     const workspace = userWithWorkspace?.workspaces?.[0]?.workspace;
     const workspaceId = workspace?.id;
@@ -167,6 +234,13 @@ async function handlePaymentTopic(id: string): Promise<void> {
     const statusDetail = (data as { status_detail?: string }).status_detail;
     const preapprovalId = (data.metadata?.preapproval_id ?? data.metadata?.subscription_id) as string | undefined;
     logger.info('MP Full Payment Data', { paymentId: id, status: data.status, status_detail: statusDetail });
+
+    // Dedup by payment+status (not just payment ID): MP re-notifies the same payment ID as
+    // its status transitions (e.g. pending -> approved). A dedup key on ID alone would let the
+    // first (pending) notification consume the slot and silently swallow the later approval.
+    if (await isWebhookDuplicate('mercadopago', `payment:${id}:${data.status}`)) {
+        return;
+    }
     notifyPaymentCreated({
         userId: data.metadata?.user_id,
         toPlan: data.metadata?.plan_id as string | undefined,
@@ -184,6 +258,7 @@ async function handlePaymentTopic(id: string): Promise<void> {
         const planId = data.metadata?.plan_id as PlanType;
         const interval = (data.metadata?.interval as string) || 'monthly';
         const affiliateCode = data.metadata?.affiliate_code as string | undefined;
+        const repCode = data.metadata?.rep as string | undefined;
         const promoId = data.metadata?.promo_id as string | undefined;
         if (userId && planId) {
             await applyApprovedPaymentMp(userId, planId, interval, id, promoId);
@@ -209,7 +284,7 @@ async function handlePaymentTopic(id: string): Promise<void> {
             if (plan) {
                 const userWithWorkspace = await prisma.user.findUnique({
                     where: { id: userId },
-                    include: { workspaces: { take: 1 } },
+                    include: { workspaces: { orderBy: { workspace: { createdAt: 'asc' } }, take: 1 } },
                 });
                 const workspaceId = userWithWorkspace?.workspaces?.[0]?.workspaceId;
                 if (workspaceId) {
@@ -228,6 +303,10 @@ async function handlePaymentTopic(id: string): Promise<void> {
                         });
                     } catch (e) {
                         logger.error('Affiliate commission create failed (MP payment)', { error: e instanceof Error ? e.message : 'Unknown' });
+                    }
+
+                    if (repCode && workspaceId) {
+                        await handleRepCommission(repCode, userId, workspaceId, planId, valueCents, id, preapprovalId);
                     }
                 }
             }
@@ -319,7 +398,7 @@ async function handlePreapprovalTopic(id: string): Promise<void> {
         logger.warn('MP preapproval: invalid external_reference', { preapprovalId: id, extRef });
         return;
     }
-    const { userId, planId, cycle, affiliateCode, promoId } = parsed;
+    const { userId, planId, cycle, affiliateCode, promoId, repCode } = parsed;
     const plan = PLANS[planId];
     if (!plan || !userId) {
         logger.warn('MP preapproval: invalid external_reference', { preapprovalId: id, extRef });
@@ -328,7 +407,7 @@ async function handlePreapprovalTopic(id: string): Promise<void> {
 
     const userWithWorkspace = await prisma.user.findUnique({
         where: { id: userId },
-        include: { workspaces: { take: 1 } }
+        include: { workspaces: { orderBy: { workspace: { createdAt: 'asc' } }, take: 1 } }
     });
     const workspaceId = userWithWorkspace?.workspaces?.[0]?.workspaceId;
     if (!workspaceId) return;
@@ -398,6 +477,10 @@ async function handlePreapprovalTopic(id: string): Promise<void> {
             });
         } catch (e) {
             logger.error('Affiliate commission create failed (MP preapproval)', { error: e instanceof Error ? e.message : 'Unknown' });
+        }
+
+        if (repCode) {
+            await handleRepCommission(repCode, userId, workspaceId, planId, valueCents, id, id);
         }
     } else if (status === 'cancelled' || status === 'pending' || status === 'paused') {
         await prisma.workspace.update({
@@ -524,9 +607,11 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
-    // Idempotency: skip duplicate webhook deliveries
+    // Idempotency: skip duplicate webhook deliveries. 'payment' and 'merchant_order' dedupe
+    // internally (keyed by payment status too — see handlePaymentTopic), since MP re-sends the
+    // same resource ID as its status changes and a plain ID-based key here would swallow that.
     const dedupeId = dataId ?? xRequestId ?? '';
-    if (dedupeId && await isWebhookDuplicate('mercadopago', `${topic}:${dedupeId}`)) {
+    if (topic !== 'payment' && topic !== 'merchant_order' && dedupeId && await isWebhookDuplicate('mercadopago', `${topic}:${dedupeId}`)) {
         return NextResponse.json({ received: true });
     }
 

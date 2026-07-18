@@ -132,13 +132,15 @@ function levenshteinSimilarity(a: string, b: string): number {
     const matrix: number[][] = [];
     for (let i = 0; i <= na.length; i++) {
         matrix[i] = [i];
+        const row = matrix[i]!;
         for (let j = 1; j <= nb.length; j++) {
-            if (i === 0) { matrix[0][j] = j; continue; }
+            if (i === 0) { row[j] = j; continue; }
+            const prevRow = matrix[i - 1]!;
             const cost = na[i - 1] === nb[j - 1] ? 0 : 1;
-            matrix[i][j] = Math.min(matrix[i - 1][j] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j - 1] + cost);
+            row[j] = Math.min(prevRow[j]! + 1, row[j - 1]! + 1, prevRow[j - 1]! + cost);
         }
     }
-    return 1 - matrix[na.length][nb.length] / maxLen;
+    return 1 - matrix[na.length]![nb.length]! / maxLen;
 }
 
 function extractBestWebsiteFromSerper(
@@ -262,7 +264,7 @@ export async function enrichMissingWebsitesWithSerper(
             while (activeKeyIndex < apiKeys.length) {
                 try {
                     rich = await withTimeout(
-                        searchSerperRich(apiKeys[activeKeyIndex], query, num, isBr ? 'br' : undefined, isBr ? 'pt-br' : undefined),
+                        searchSerperRich(apiKeys[activeKeyIndex]!, query, num, isBr ? 'br' : undefined, isBr ? 'pt-br' : undefined),
                         SEARCH_SITE_ENRICH_TIMEOUT_MS,
                         'SEARCH_SITE_ENRICH_TIMEOUT',
                     );

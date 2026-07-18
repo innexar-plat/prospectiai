@@ -157,7 +157,7 @@ describe('POST /api/billing/checkout', () => {
     expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
   });
 
-  it('charges R$59 for BR Starter promo checkout via Mercado Pago', async () => {
+  it('BR Starter promo is disabled — checks out at regular R$99 via Mercado Pago', async () => {
     const res = await POST(
       checkoutRequest(
         { planId: 'STARTER_PROMO_BR', interval: 'monthly', promoCode: 'starter-6m' },
@@ -170,29 +170,29 @@ describe('POST /api/billing/checkout', () => {
         body: expect.objectContaining({
           items: [
             expect.objectContaining({
-              unit_price: 59,
+              unit_price: 99,
               title: expect.stringContaining('Starter'),
             }),
           ],
           metadata: expect.objectContaining({
             plan_id: 'BASIC',
-            promo_id: 'starter-6m',
           }),
         }),
       }),
     );
+    const metadata = preference.create.mock.calls[0][0].body.metadata;
+    expect(metadata.promo_id).toBeUndefined();
   });
 
-  it('rejects BR Starter promo on US market', async () => {
+  it('ignores BR Starter promo code on US market and checks out at regular price', async () => {
     const res = await POST(
       checkoutRequest(
         { planId: 'STARTER_PROMO_BR', interval: 'monthly', promoCode: 'starter-6m' },
         { host: 'precisionai.innexar.app', 'X-Prospector-Market': 'US' },
       ),
     );
-    expect(res.status).toBe(403);
-    expect(await res.json()).toMatchObject({ error: 'Promo not eligible for this account' });
-    expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
+    expect(res.status).toBe(200);
+    expect(stripe.checkout.sessions.create).toHaveBeenCalled();
     expect(preference.create).not.toHaveBeenCalled();
   });
 
@@ -210,5 +210,72 @@ describe('POST /api/billing/checkout', () => {
         metadata: expect.objectContaining({ userId: 'u1', planId: 'PRO', interval: 'monthly' }),
       }),
     );
+  });
+
+  it('same-tier billing-cycle switch (Stripe) modifies the existing subscription in place instead of creating a new one', async () => {
+    const { prisma } = require('@/lib/prisma');
+    prisma.user.findUnique.mockResolvedValueOnce({
+      id: 'u1',
+      workspaces: [{
+        workspace: {
+          id: 'w1',
+          plan: 'BASIC',
+          subscriptionId: 'sub_abc123',
+          billingCycle: 'monthly',
+          subscriptionStatus: 'active',
+        },
+      }],
+    });
+    stripe.subscriptions.retrieve.mockResolvedValue({
+      items: {
+        data: [{ id: 'si_1', price: { recurring: { interval: 'month' }, product: 'prod_basic' } }],
+      },
+    });
+    stripe.subscriptions.update.mockResolvedValue({});
+
+    const res = await POST(
+      checkoutRequest(
+        { planId: 'BASIC', interval: 'annual' },
+        { host: 'precisionai.innexar.app', 'X-Prospector-Market': 'US' },
+      ),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.url).toContain('upgraded=1');
+    expect(stripe.subscriptions.update).toHaveBeenCalledWith(
+      'sub_abc123',
+      expect.objectContaining({
+        items: [expect.objectContaining({ price_data: expect.objectContaining({ recurring: { interval: 'year' } }) })],
+      }),
+    );
+    expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
+  });
+
+  it('same-tier billing-cycle switch (Mercado Pago) is refused instead of creating a duplicate subscription', async () => {
+    const { prisma } = require('@/lib/prisma');
+    prisma.user.findUnique.mockResolvedValueOnce({
+      id: 'u1',
+      workspaces: [{
+        workspace: {
+          id: 'w1',
+          plan: 'BASIC',
+          subscriptionId: 'mp_pre_123',
+          billingCycle: 'monthly',
+          subscriptionStatus: 'active',
+        },
+      }],
+    });
+
+    const res = await POST(
+      checkoutRequest(
+        { planId: 'BASIC', interval: 'annual' },
+        { host: 'precisionia.com.br', 'X-Prospector-Market': 'BR' },
+      ),
+    );
+
+    expect(res.status).toBe(409);
+    expect(preference.create).not.toHaveBeenCalled();
+    expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
   });
 });

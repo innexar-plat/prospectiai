@@ -1,5 +1,5 @@
 import { NavLink, useLocation, Link } from 'react-router-dom';
-import { Search, Clock, Target, BarChart3, LogOut, Swords, TrendingUp, Users, LayoutDashboard, HelpCircle, ChevronDown, X, Lock, Building2, PanelLeftClose, PanelLeft, Plug, Sparkles, Layers, Crosshair, Bot, CreditCard } from 'lucide-react';
+import { Search, Clock, Target, BarChart3, LogOut, Swords, TrendingUp, Users, LayoutDashboard, HelpCircle, ChevronDown, X, Lock, Building2, PanelLeftClose, PanelLeft, Plug, Sparkles, Layers, Crosshair, Bot, CreditCard, Wallet, Link2, Gift, MessageCircle } from 'lucide-react';
 import { Logo } from '@/components/brand/Logo';
 import { LogoIcon } from '@/components/brand/LogoIcon';
 import { cn } from '@/lib/utils';
@@ -83,6 +83,21 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
     ],
   },
   {
+    id: 'sales-channels',
+    titleKey: 'Canais de Vendas',
+    collapsible: true,
+    items: [
+      { to: '/dashboard/representante', end: true, icon: LayoutDashboard, labelKey: 'Visão Geral' },
+      { to: '/dashboard/representante/clientes', end: false, icon: Users, labelKey: 'Clientes' },
+      { to: '/dashboard/representante/comissoes', end: false, icon: BarChart3, labelKey: 'Comissões' },
+      { to: '/dashboard/representante/pagamentos', end: false, icon: Wallet, labelKey: 'Pagamentos' },
+      { to: '/dashboard/representante/metas', end: false, icon: Target, labelKey: 'Metas' },
+      { to: '/dashboard/representante/afiliados', end: false, icon: Gift, labelKey: 'Afiliados' },
+      { to: '/dashboard/representante/link', end: false, icon: Link2, labelKey: 'Meu Link' },
+      { to: '/dashboard/representante/whatsapp', end: false, icon: MessageCircle, labelKey: 'WhatsApp' },
+    ],
+  },
+  {
     id: 'account',
     titleKey: 'dash.section.account',
     items: [
@@ -143,6 +158,7 @@ export function SidebarNav({
   const [sectionCollapsed, setSectionCollapsed] = useState<Record<string, boolean>>({});
   const [sidebarCollapsed, setSidebarCollapsed] = useState(getStoredSidebarCollapsed);
   const [upgradeModal, setUpgradeModal] = useState<{ planName: string; feature: string } | null>(null);
+  const hasRepresentative = Boolean(user.isRepresentative);
   const location = useLocation();
   const prevPathnameRef = useRef(location.pathname);
 
@@ -235,6 +251,9 @@ export function SidebarNav({
           if (section.id === 'auto-prospeccao') {
             return isMarketFeatureEnabled('autoProspeccao') && !!user.autoProspeccaoEnabled;
           }
+          if (section.id === 'sales-channels') {
+            return hasRepresentative;
+          }
           return true;
         }).map((section, sectionIndex) => {
           const isSecCollapsed = sectionCollapsed[section.id];
@@ -267,7 +286,7 @@ export function SidebarNav({
                   {section.items.map(({ to, end, icon: Icon, labelKey, badge }) => {
                     const label = t(labelKey);
                     const locked = badge && !hasPlanAccess(user.plan, badge);
-                    const planName = badge ? BADGE_TO_PLAN_NAME[badge] : '';
+                    const planName = badge ? (BADGE_TO_PLAN_NAME[badge] ?? '') : '';
                     const linkContent = (
                       <span className={cn('flex items-center min-w-0', isNarrow ? 'justify-center' : 'gap-2.5')}>
                         <span className="shrink-0 flex items-center justify-center" style={{ width: isNarrow ? undefined : 18 }}>
@@ -481,8 +500,8 @@ function MobileSidebarWrapper({ onClose, children }: { onClose: () => void; chil
     if (!wrapper) return;
     const focusable = wrapper.querySelectorAll<HTMLElement>('a[href], button, [tabindex]:not([tabindex="-1"])');
     if (!focusable.length) return;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
+    const first = focusable[0]!;
+    const last = focusable[focusable.length - 1]!;
     if (e.shiftKey && document.activeElement === first) {
       e.preventDefault();
       last.focus();

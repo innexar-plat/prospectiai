@@ -9,11 +9,19 @@ import { getMarketLeadsLimit } from '@/lib/market';
 import { processPaymentSchema, formatZodError } from '@/lib/validations/schemas';
 import { notifyPaymentCreated } from '@/lib/telegram-business-alerts';
 
+/** Mercado Pago direct payments are always charged in BRL — this endpoint is BR-only. */
+function expectedPriceBrl(planId: string, interval: string): number | null {
+    if (!(planId in PLANS)) return null;
+    const plan = PLANS[planId as PlanType];
+    const cycle = interval === 'annual' ? 'annual' : 'monthly';
+    return plan[cycle].price_brl;
+}
+
 async function applyApprovedPayment(userId: string, planId: string, interval: string): Promise<void> {
     const plan = PLANS[planId as PlanType];
     const userWithWorkspace = await prisma.user.findUnique({
         where: { id: userId },
-        include: { workspaces: { take: 1 } }
+        include: { workspaces: { orderBy: { workspace: { createdAt: 'asc' } }, take: 1 } }
     });
     const workspaceId = userWithWorkspace?.workspaces[0]?.workspaceId;
     if (!workspaceId) return;
@@ -45,6 +53,19 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: formatZodError(parsed) }, { status: 400 });
         }
         const { token, issuer_id, payment_method_id, transaction_amount, installments, payer, planId, interval } = parsed.data;
+
+        const expectedAmount = expectedPriceBrl(planId, interval);
+        if (expectedAmount === null || expectedAmount <= 0 || Math.abs(transaction_amount - expectedAmount) > 0.01) {
+            const { logger } = await import('@/lib/logger');
+            logger.warn('Payment rejected: transaction_amount does not match plan price', {
+                userId: session.user.id,
+                planId,
+                interval,
+                transaction_amount,
+                expectedAmount,
+            });
+            return NextResponse.json({ error: 'Invalid plan or amount' }, { status: 400 });
+        }
 
         const payment = new Payment(mpConfig);
 

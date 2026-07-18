@@ -26,7 +26,7 @@ export function SearchSegmentRow({
     )
     : -1;
   const effectiveCategoryIndex = categoryIndexFromType >= 0 ? categoryIndexFromType : selectedCategoryIndex;
-  const currentTypes = effectiveCategoryIndex >= 0 ? PLACE_TYPE_CATEGORIES[effectiveCategoryIndex].types : [];
+  const currentTypes = effectiveCategoryIndex >= 0 ? PLACE_TYPE_CATEGORIES[effectiveCategoryIndex]!.types : [];
   const selectedTypeLabel = value.includedType
     ? getPlaceTypeByValue(value.includedType)?.label
     : null;

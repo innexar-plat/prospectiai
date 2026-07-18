@@ -40,13 +40,13 @@ function isValidCnpj(digits: string): boolean {
   const w1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
   const w2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
 
-  let sum = 0;
-  for (let i = 0; i < 12; i++) sum += Number(digits[i]) * w1[i];
-  let rem = sum % 11;
-  if (Number(digits[12]) !== (rem < 2 ? 0 : 11 - rem)) return false;
+    let sum = 0;
+    for (let i = 0; i < 12; i++) sum += Number(digits[i]) * w1[i]!;
+    let rem = sum % 11;
+    if (Number(digits[12]!) !== (rem < 2 ? 0 : 11 - rem)) return false;
 
-  sum = 0;
-  for (let i = 0; i < 13; i++) sum += Number(digits[i]) * w2[i];
+    sum = 0;
+    for (let i = 0; i < 13; i++) sum += Number(digits[i]) * w2[i]!;
   rem = sum % 11;
   if (Number(digits[13]) !== (rem < 2 ? 0 : 11 - rem)) return false;
 

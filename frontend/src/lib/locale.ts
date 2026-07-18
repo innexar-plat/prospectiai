@@ -47,7 +47,7 @@ export function detectLocale(pathLocale?: string, stored?: string | null): Suppo
 /** Normalize BCP-47 tags (e.g. pt-BR, en-US) to supported analyze/UI locale. */
 export function normalizeAnalyzeLocale(value: string | null | undefined): SupportedLocale {
     if (!value) return getMarketConfig().defaultLocale;
-    const base = value.split('-')[0].toLowerCase();
+    const base = value.split('-')[0]!.toLowerCase();
     if (isSupportedLocale(base)) return base;
     return getMarketConfig().defaultLocale;
 }

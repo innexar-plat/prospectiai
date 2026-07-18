@@ -55,6 +55,7 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
   const navigate = useNavigate();
   const location = useLocation();
   const userNeedsSubscription = needsSubscription(user);
+  const lowCredits = !userNeedsSubscription && user.leadsLimit > 0 && remainingCredits <= 3;
   useKeyboardShortcuts();
   const [checked, setChecked] = useState(false);
   const { theme, toggleTheme } = useTheme();
@@ -112,6 +113,7 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
   };
 
   useEffect(() => {
+    if (user.isRepresentative) return;
     const needsPlanAction = user.trialExpired || userNeedsSubscription;
     if (!needsPlanAction) return;
 
@@ -311,7 +313,7 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <div className="hidden sm:flex items-center gap-0.5 mr-1">
+            <div className="flex items-center gap-0.5 mr-0.5 sm:mr-1">
               {(['pt', 'en', 'es'] as SupportedLocale[]).map((lang) => (
                 <button
                   key={lang}
@@ -320,7 +322,7 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
                   onFocus={() => preloadLocale(lang)}
                   onClick={() => setLocale(lang)}
                   className={cn(
-                    'text-[10px] font-bold px-2 py-1 rounded-md transition-all uppercase',
+                    'text-[10px] font-bold px-1.5 sm:px-2 py-1 rounded-md transition-all uppercase',
                     locale === lang ? 'bg-violet-600 text-white' : 'text-muted hover:text-foreground',
                   )}
                 >
@@ -338,7 +340,9 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
                 'flex sm:hidden items-center gap-1 px-2 py-1.5 rounded-lg transition-all text-[11px] font-bold min-h-[36px]',
                 userNeedsSubscription
                   ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white'
-                  : 'bg-violet-600/10 text-violet-500',
+                  : lowCredits
+                    ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 animate-pulse'
+                    : 'bg-violet-600/10 text-violet-500',
               )}
               title={
                 userNeedsSubscription
@@ -362,7 +366,9 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
                 'hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-all text-xs font-bold',
                 userNeedsSubscription
                   ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:shadow-md hover:shadow-violet-600/30'
-                  : 'bg-violet-600/10 hover:bg-violet-600/20 text-violet-500',
+                  : lowCredits
+                    ? 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                    : 'bg-violet-600/10 hover:bg-violet-600/20 text-violet-500',
               )}
               title={
                 userNeedsSubscription
@@ -376,7 +382,10 @@ export function DashboardLayout({ user }: { user: SessionUser }) {
               ) : (
                 <>
                   <span className="tabular-nums">{formatCreditCount(remainingCredits, dateLocale)}</span>
-                  <span className={cn('text-[10px] font-normal', !userNeedsSubscription && 'text-violet-600 dark:text-violet-400/70')}>{t('dash.credits.label')}</span>
+                  <span className={cn(
+                    'text-[10px] font-normal',
+                    lowCredits ? 'text-amber-600/80 dark:text-amber-400/80' : 'text-violet-600 dark:text-violet-400/70',
+                  )}>{t('dash.credits.label')}</span>
                 </>
               )}
             </Link>
@@ -750,7 +759,7 @@ function EmailVerificationGate({
       const msg = err instanceof Error ? err.message : t('dash.emailVerify.resendError');
       if (msg.includes('Aguarde') || msg.includes('Wait')) {
         const match = msg.match(/(\d+)/);
-        if (match) setCooldown(parseInt(match[1], 10));
+        if (match) setCooldown(parseInt(match[1]!, 10));
       }
       setError(msg);
     } finally {

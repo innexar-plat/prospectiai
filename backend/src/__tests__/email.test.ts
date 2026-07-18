@@ -91,6 +91,28 @@ describe('email lib', () => {
       expect(prisma.emailConfig.findFirst).toHaveBeenCalled();
     });
 
+    it('falls back to env RESEND_API_KEY when the DB-stored key cannot be decrypted', async () => {
+      process.env.RESEND_API_KEY = 're_env_fallback';
+      prisma.emailConfig.findFirst.mockResolvedValue({
+        provider: 'resend',
+        resendApiKeyEncrypted: 'stale-hex',
+        fromEmail: 'From <noreply@test.com>',
+        smtpHost: null,
+        smtpPort: null,
+        smtpUser: null,
+        smtpPasswordEncrypted: null,
+      });
+      const { decryptEmailSecret } = require('@/lib/email-config-encrypt');
+      decryptEmailSecret.mockImplementationOnce(() => {
+        throw new Error('Unsupported state or unable to authenticate data');
+      });
+      mockSend.mockResolvedValue({ data: { id: '1' }, error: null });
+      const mod = await import('@/lib/email');
+      const result = await mod.sendEmail('a@b.com', 'Hi', '<p>Hi</p>');
+      expect(result.sent).toBe(true);
+      expect(mockSend).toHaveBeenCalled();
+    });
+
     it('uses Resend from DB config when provider is resend and key is set', async () => {
       prisma.emailConfig.findFirst.mockResolvedValue({
         provider: 'resend',

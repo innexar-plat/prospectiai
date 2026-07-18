@@ -14,8 +14,9 @@ export interface LastSearchParams {
   state?: string;
   country?: string;
   radiusKm?: number;
-  hasWebsite?: string;
-  hasPhone?: string;
+  hasWebsite?: 'yes' | 'no';
+  hasPhone?: 'yes' | 'no';
+  bypassDbAndRf?: boolean;
 }
 
 export interface LastSearchResults {

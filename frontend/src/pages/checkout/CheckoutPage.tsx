@@ -9,16 +9,19 @@ import {
     Loader2,
     ArrowUpRight,
     RefreshCw,
+    LogOut,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Logo } from '@/components/brand/Logo';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/contexts/ToastContext';
-import { billingApi, plansApi, type PlanFromApi, type PromoValidateResponse, type SessionUser } from '@/lib/api';
-import { getAffiliateRef } from '@/lib/affiliate-ref';
+import { authApi, billingApi, plansApi, type PlanFromApi, type PromoValidateResponse, type SessionUser } from '@/lib/api';
+import { getAffiliateRef, getRepCode } from '@/lib/affiliate-ref';
 import { useI18n } from '@/lib/i18n';
 import { getActiveMarket, getMarketConfig } from '@/lib/market';
-import { isCheckoutDone } from '@/lib/post-auth-redirect';
+import { isCheckoutDone, markCheckoutDone } from '@/lib/post-auth-redirect';
+
+const FREE_PLAN_CREDITS = 10;
 
 type BillingCycle = 'monthly' | 'annual';
 type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
@@ -190,17 +193,35 @@ export default function CheckoutPage({ user }: { user: SessionUser }) {
         if (ready) loadPlans();
     }, [ready, loadPlans]);
 
+    const handleStartFree = () => {
+        markCheckoutDone();
+        navigate('/onboarding', { replace: true });
+    };
+
+    const handleLogout = async () => {
+        try {
+            await authApi.signOut();
+        } catch {
+            // Ignore — clear local state and leave anyway
+        }
+        localStorage.removeItem('prospector-session');
+        sessionStorage.clear();
+        window.location.replace('/auth/signin');
+    };
+
     const handleSubscribe = async (planId: string) => {
         if (planId === 'FREE' || planId === 'TRIAL') return;
         setLoadingPlan(planId);
         try {
             const affiliateCode = getAffiliateRef();
+            const repCode = getRepCode();
             const usePromo = planId === 'BASIC' && effectivePromo?.eligible && billingCycle === 'monthly';
             const res = await billingApi.checkout({
                 planId: usePromo ? effectivePromo.checkoutPlanId : planId,
                 interval: billingCycle,
                 locale: checkoutLocale,
                 ...(affiliateCode && { affiliateCode }),
+                ...(repCode && { repCode }),
                 ...(usePromo && promoParam && { promoCode: promoParam }),
                 ...(usePromo && promoToken && { promoToken }),
                 ...(usePromo && !promoParam && !promoToken && { promoCode: 'starter-6m' }),
@@ -228,8 +249,17 @@ export default function CheckoutPage({ user }: { user: SessionUser }) {
     return (
         <div className="min-h-screen flex flex-col items-center p-6 sm:p-10 bg-background">
             <div className="w-full max-w-5xl">
-                <div className="flex justify-center mb-8">
+                <div className="relative flex justify-center mb-8">
                     <Logo height={48} />
+                    <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-muted hover:text-foreground hover:bg-surface border border-border transition-colors"
+                        title={t('dash.logout')}
+                    >
+                        <LogOut size={15} />
+                        <span className="hidden sm:inline">{t('dash.logout')}</span>
+                    </button>
                 </div>
 
                 <div className="text-center mb-8">
@@ -376,6 +406,34 @@ export default function CheckoutPage({ user }: { user: SessionUser }) {
                 {!plansLoading && !plansError && payablePlans.length === 0 && (
                     <div className="rounded-3xl bg-card border border-border p-8 text-center text-muted">
                         {t('dash.planos.noPlans')}
+                    </div>
+                )}
+
+                {!plansLoading && !plansError && payablePlans.length > 0 && (
+                    <div className="mt-8 flex flex-col items-center gap-2 text-center">
+                        <p className="max-w-xl text-sm text-muted italic">{t('page.checkout.socialQuote')}</p>
+                        <p className="text-xs font-semibold text-foreground">{t('page.checkout.socialAuthor')}</p>
+                        <p className="text-xs text-violet-600 dark:text-violet-400 font-bold mt-1">
+                            <Check size={12} className="inline mr-1" aria-hidden />
+                            {t('page.checkout.socialStat')}
+                        </p>
+                    </div>
+                )}
+
+                {!plansLoading && (
+                    <div className="mt-8 rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-6 text-center">
+                        <p className="font-bold text-foreground">{t('page.checkout.freeTitle')}</p>
+                        <p className="text-sm text-muted mt-1">
+                            {t('page.checkout.freeSubtitle', { count: FREE_PLAN_CREDITS })}
+                        </p>
+                        <button
+                            type="button"
+                            onClick={handleStartFree}
+                            className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 font-bold text-sm hover:bg-emerald-500/10 transition-colors"
+                        >
+                            <Zap size={15} />
+                            {t('page.checkout.freeCta')}
+                        </button>
                     </div>
                 )}
             </div>

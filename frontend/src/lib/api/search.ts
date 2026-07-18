@@ -200,14 +200,15 @@ export const searchApi = {
     search: (params: {
         textQuery: string;
         includedType?: string;
-        hasWebsite?: string;
-        hasPhone?: string;
-        pageToken?: string;
         pageSize?: number;
+        pageToken?: string;
+        hasWebsite?: 'yes' | 'no';
+        hasPhone?: 'yes' | 'no';
         city?: string;
         state?: string;
         country?: string;
         radiusKm?: number;
+        bypassDbAndRf?: boolean;
     }) =>
         requestWithRetry<{ places: Place[]; nextPageToken?: string }>('/search', {
             method: 'POST',

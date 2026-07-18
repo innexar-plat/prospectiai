@@ -4,6 +4,7 @@ import { useVersionCheck } from '../useVersionCheck';
 
 vi.mock('@/lib/version', () => ({
   APP_VERSION: '2.2.0',
+  BUILD_TIME: '2026-01-01T00:00:00.000Z',
 }));
 
 describe('useVersionCheck', () => {
@@ -38,11 +39,11 @@ describe('useVersionCheck', () => {
     });
   });
 
-  it('keeps updateAvailable as false when version matches', async () => {
+  it('keeps updateAvailable as false when version and buildTime match', async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({ version: '2.2.0' }),
+      json: () => Promise.resolve({ version: '2.2.0', buildTime: '2026-01-01T00:00:00.000Z' }),
     } as Response);
 
     const { result } = renderHook(() => useVersionCheck());
@@ -50,6 +51,22 @@ describe('useVersionCheck', () => {
       vi.advanceTimersByTime(31000);
     });
     expect(result.current.updateAvailable).toBe(false);
+  });
+
+  it('sets updateAvailable to true on a buildTime mismatch even when version string is unchanged (regression: a deploy without a manual version bump must still be detected)', async () => {
+    const mockFetch = vi.mocked(fetch);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ version: '2.2.0', buildTime: '2026-06-01T00:00:00.000Z' }),
+    } as Response);
+
+    const { result } = renderHook(() => useVersionCheck());
+    await act(async () => {
+      vi.advanceTimersByTime(31000);
+    });
+    await vi.waitFor(() => {
+      expect(result.current.updateAvailable).toBe(true);
+    });
   });
 
   it('does not set updateAvailable on fetch error', async () => {

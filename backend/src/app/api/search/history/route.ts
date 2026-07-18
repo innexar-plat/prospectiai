@@ -27,14 +27,14 @@ export async function GET(req: NextRequest) {
 
         const user = await prisma.user.findUnique({
             where: { id: session.user.id },
-            select: { workspaces: { take: 1, select: { workspaceId: true } } }
+            select: { workspaces: { orderBy: { workspace: { createdAt: 'asc' } }, take: 1, select: { workspaceId: true } } }
         });
 
         if (!user?.workspaces?.length) {
             return jsonWithRequestId({ error: 'Workspace not found' }, { status: 404, requestId });
         }
 
-        const workspaceId = user.workspaces[0].workspaceId;
+        const workspaceId = user.workspaces[0]!.workspaceId;
         const limit = Math.min(parsed.data.limit ?? 20, 100);
         const offset = parsed.data.offset ?? 0;
 

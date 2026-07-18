@@ -3,8 +3,10 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 
 function maskEmail(email: string): string {
-  const [local, domain] = email.split('@');
-  if (!domain) return '***';
+  const parts = email.split('@');
+  if (parts.length < 2) return '***';
+  const local = parts[0]!;
+  const domain = parts[1]!;
   if (local.length <= 2) return `${local[0]}***@${domain}`;
   return `${local.slice(0, 2)}***@${domain}`;
 }

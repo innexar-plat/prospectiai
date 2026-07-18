@@ -12,6 +12,7 @@ export const billingApi = {
         locale?: string;
         scheduleAtPeriodEnd?: boolean;
         affiliateCode?: string;
+        repCode?: string;
         promoCode?: string;
         promoToken?: string;
     }) =>

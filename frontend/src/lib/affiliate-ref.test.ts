@@ -1,5 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { setAffiliateRef, getAffiliateRef, clearAffiliateRef, captureRefFromUrl } from './affiliate-ref';
+import {
+  setAffiliateRef,
+  getAffiliateRef,
+  clearAffiliateRef,
+  captureRefFromUrl,
+  setRepCode,
+  getRepCode,
+  clearRepCode,
+  captureRepFromUrl,
+} from './affiliate-ref';
 
 describe('affiliate-ref', () => {
   let cookieStore: string;
@@ -11,11 +20,11 @@ describe('affiliate-ref', () => {
       get: () => cookieStore,
       set: (v: string) => {
         const [part] = v.split(';');
-        const [name, val] = part.split('=').map((s) => s.trim());
+        const [name, val] = part!.split('=').map((s) => s.trim());
         if (val === '' || (name && val === undefined)) {
           cookieStore = cookieStore.replace(new RegExp(`${name}=[^;]*;?`), '');
         } else {
-          cookieStore = cookieStore ? `${cookieStore}; ${part}` : part;
+          cookieStore = cookieStore ? `${cookieStore}; ${part!}` : part!;
         }
       },
     });
@@ -78,6 +87,94 @@ describe('affiliate-ref', () => {
       vi.stubGlobal('window', { location: { search: '?foo=1' }, search: '?foo=1' });
       captureRefFromUrl();
       expect(document.cookie).toBe('');
+      vi.unstubAllGlobals();
+    });
+  });
+
+  describe('setRepCode', () => {
+    it('does nothing when code is empty', () => {
+      setRepCode('');
+      setRepCode('   ');
+      expect(document.cookie).toBe('');
+    });
+
+    it('preserves case — the rep code is a lowercase cuid id, not a normalized code (regression: used to uppercase and break lookups)', () => {
+      setRepCode('  cmrdf7r9z00pemc014590v2z8  ');
+      expect(document.cookie).toContain('rep_code=');
+      expect(document.cookie).toContain(encodeURIComponent('cmrdf7r9z00pemc014590v2z8'));
+      expect(document.cookie).not.toContain('CMRDF7R9Z00PEMC014590V2Z8');
+    });
+
+    it('slices to 50 chars', () => {
+      setRepCode('a'.repeat(60));
+      expect(document.cookie).toContain(encodeURIComponent('a'.repeat(50)));
+    });
+  });
+
+  describe('getRepCode', () => {
+    it('returns null when no cookie', () => {
+      expect(getRepCode()).toBeNull();
+    });
+
+    it('returns decoded value exactly as stored, case preserved', () => {
+      cookieStore = `rep_code=${encodeURIComponent('cmrDf7r9z00')}; path=/`;
+      expect(getRepCode()).toBe('cmrDf7r9z00');
+    });
+
+    it('returns null for empty value', () => {
+      cookieStore = 'rep_code=; path=/';
+      expect(getRepCode()).toBeNull();
+    });
+  });
+
+  describe('clearRepCode', () => {
+    it('clears cookie so getRepCode returns null', () => {
+      cookieStore = 'rep_code=cmrold123';
+      expect(getRepCode()).toBe('cmrold123');
+      clearRepCode();
+      expect(getRepCode()).toBeNull();
+    });
+  });
+
+  describe('captureRepFromUrl', () => {
+    beforeEach(() => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }));
+    });
+
+    it('reads rep from search and sets cookie, preserving case', () => {
+      const location = { search: '?rep=cmrFromUrl123', href: 'http://localhost/' };
+      vi.stubGlobal('window', { location, search: location.search });
+      captureRepFromUrl();
+      expect(document.cookie).toContain(encodeURIComponent('cmrFromUrl123'));
+      vi.unstubAllGlobals();
+    });
+
+    it('fires a best-effort click-tracking request with the rep code', () => {
+      const mockFetch = vi.mocked(fetch);
+      const location = { search: '?rep=cmrFromUrl123', href: 'http://localhost/' };
+      vi.stubGlobal('window', { location, search: location.search });
+      vi.stubGlobal('fetch', mockFetch);
+      captureRepFromUrl();
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/representative/track-click',
+        expect.objectContaining({ method: 'POST', body: JSON.stringify({ code: 'cmrFromUrl123' }) }),
+      );
+      vi.unstubAllGlobals();
+    });
+
+    it('does not throw when the click-tracking request fails', () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network error')));
+      const location = { search: '?rep=cmrFromUrl123', href: 'http://localhost/' };
+      vi.stubGlobal('window', { location, search: location.search });
+      expect(() => captureRepFromUrl()).not.toThrow();
+      vi.unstubAllGlobals();
+    });
+
+    it('does nothing when no rep in URL', () => {
+      vi.stubGlobal('window', { location: { search: '?foo=1' }, search: '?foo=1' });
+      captureRepFromUrl();
+      expect(document.cookie).toBe('');
+      expect(fetch).not.toHaveBeenCalled();
       vi.unstubAllGlobals();
     });
   });

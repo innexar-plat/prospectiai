@@ -19,7 +19,7 @@ describe('CookieConsent', () => {
   it('hides when accept clicked', async () => {
     renderWithProviders(<CookieConsent t={t} />);
     const buttons = await screen.findAllByRole('button', { name: 'cookie.accept' });
-    fireEvent.click(buttons[0]);
+    fireEvent.click(buttons[0]!);
     expect(localStorage.getItem('prospector_cookie_consent')).toBe('accepted');
   });
 });

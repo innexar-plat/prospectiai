@@ -59,7 +59,7 @@ const US_PLANS = [
     },
 ] as const;
 
-function StatCard({ icon: Icon, value, label }: { icon: typeof Zap; value: string; label: string }) {
+function StatCard({ icon: Icon, value, label }: { icon: typeof Zap | typeof Users | typeof Clock | typeof TrendingUp; value: string; label: string }) {
     return (
         <div className="flex flex-col items-center gap-1.5 p-4 sm:p-5 rounded-2xl bg-card border border-border card-shadow">
             <div className="w-9 h-9 rounded-xl bg-violet-500/15 flex items-center justify-center text-violet-600">
@@ -132,13 +132,13 @@ function PricingCard({
 
 export default function LandingConversion({ locale, t, onSignup, onPricing }: LandingConversionProps) {
     const features = [1, 2, 3, 4, 5, 6].map((i) => ({
-        icon: FEATURE_ICONS[i - 1],
+        icon: FEATURE_ICONS[i - 1]!,
         title: t(`landing.conv.feature${i}Title`),
         desc: t(`landing.conv.feature${i}Desc`),
     }));
 
     const stats = [1, 2, 3, 4].map((i) => ({
-        icon: STAT_ICONS[i - 1],
+        icon: STAT_ICONS[i - 1]!,
         value: t(`landing.conv.stat${i}Value`),
         label: t(`landing.conv.stat${i}Label`),
     }));

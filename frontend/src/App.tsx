@@ -61,6 +61,14 @@ const OnboardingPage = lazy(() => import('./pages/onboarding/OnboardingPage'));
 const CheckoutPage = lazy(() => import('./pages/checkout/CheckoutPage'));
 const BlogIndex = lazy(() => import('./pages/blog/BlogIndex'));
 const BlogPost = lazy(() => import('./pages/blog/BlogPost'));
+const RepOverview = lazy(() => import('./pages/dashboard/representative/Overview'));
+const RepClients = lazy(() => import('./pages/dashboard/representative/Clients'));
+const RepCommissions = lazy(() => import('./pages/dashboard/representative/Commissions'));
+const RepPayments = lazy(() => import('./pages/dashboard/representative/Payments'));
+const RepGoals = lazy(() => import('./pages/dashboard/representative/Goals'));
+const RepAffiliates = lazy(() => import('./pages/dashboard/representative/Affiliates'));
+const RepMyLink = lazy(() => import('./pages/dashboard/representative/MyLink'));
+const RepWhatsApp = lazy(() => import('./pages/dashboard/representative/WhatsApp'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 const LazyFallback = <AppLoadingFallback />;
@@ -190,6 +198,14 @@ function App() {
           <Route path="planos" element={<PlanosPage />} />
           <Route path="suporte" element={<SuportePage />} />
           <Route path="afiliado" element={<AfiliadoPage />} />
+          <Route path="representante" element={<RepOverview />} />
+          <Route path="representante/clientes" element={<RepClients />} />
+          <Route path="representante/comissoes" element={<RepCommissions />} />
+          <Route path="representante/pagamentos" element={<RepPayments />} />
+          <Route path="representante/metas" element={<RepGoals />} />
+          <Route path="representante/afiliados" element={<RepAffiliates />} />
+          <Route path="representante/link" element={<RepMyLink />} />
+          <Route path="representante/whatsapp" element={<RepWhatsApp />} />
           <Route path="afiliado/dicas" element={<AfiliadoDicasPage />} />
           <Route path="afiliado/conversoes" element={<AfiliadoConversoesPage />} />
           <Route path="afiliado/comissoes" element={<AfiliadoComissoesPage />} />

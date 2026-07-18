@@ -13,7 +13,7 @@ export function toPainPointsArray(value: unknown): string[] {
 
 export function getAiPainPreview(source: AiAnalysisPreviewSource): string | null {
   const pains = toPainPointsArray(source.painPoints);
-  if (pains.length > 0) return pains[0];
+  if (pains.length > 0) return pains[0] ?? null;
   const summary = source.summary?.trim();
   return summary || null;
 }

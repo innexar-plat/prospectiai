@@ -102,7 +102,7 @@ describe('RelatoriosPage', () => {
 
     const [, cityInput] = screen.getAllByRole('textbox');
     await act(async () => {
-      fireEvent.change(cityInput, { target: { value: 'Orlando' } });
+      fireEvent.change(cityInput!, { target: { value: 'Orlando' } });
     });
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /gerar relatório/i }));

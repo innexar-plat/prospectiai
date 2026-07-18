@@ -41,6 +41,8 @@ export const registerSchema = z.object({
   name: optionalRealNameSchema,
   /** Código do afiliado (?ref=CODE). Opcional. */
   affiliateCode: z.string().max(50).optional().transform(normalizeOptionalText),
+  /** Código do representante (?rep=CODE, o id do Representative). Opcional. */
+  repCode: z.string().max(50).optional().transform(normalizeOptionalText),
 });
 
 /** POST /api/onboarding/complete */
@@ -63,6 +65,7 @@ export const searchSchema = z.object({
   state: z.string().max(100).optional(),
   country: z.string().max(100).optional(),
   radiusKm: z.coerce.number().min(1).max(100).optional(),
+  bypassDbAndRf: z.boolean().optional(),
 });
 
 /** POST /api/market-report */
@@ -194,6 +197,8 @@ export const checkoutSchema = z.object({
   scheduleAtPeriodEnd: z.boolean().optional(),
   /** Código do afiliado (do cookie/ref). Repasse no metadata do pagamento para atribuição. */
   affiliateCode: z.string().max(50).optional().transform((s) => (s?.trim() || undefined)),
+  /** Código do representante (?rep=CODE). Repassado no metadata do pagamento para atribuição. */
+  repCode: z.string().max(50).optional().transform((s) => (s?.trim() || undefined)),
   /** Promo code (e.g. starter-6m, reactivation) or virtual plan STARTER_PROMO_BR */
   promoCode: z.string().max(50).optional().transform((s) => (s?.trim() || undefined)),
   promoToken: z.string().max(500).optional().transform((s) => (s?.trim() || undefined)),

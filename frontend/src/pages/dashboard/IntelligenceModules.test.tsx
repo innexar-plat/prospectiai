@@ -226,7 +226,7 @@ describe('Intelligence modules', () => {
 
       const [, cityInput] = screen.getAllByRole('textbox');
       await act(async () => {
-        fireEvent.change(cityInput, { target: { value: 'Orlando' } });
+        fireEvent.change(cityInput!, { target: { value: 'Orlando' } });
       });
 
       fireEvent.click(screen.getByRole('button', { name: /generate analysis/i }));
@@ -321,8 +321,8 @@ describe('Intelligence modules', () => {
       renderWithProviders(<ViabilidadePage />, { route: '/dashboard/viabilidade' });
 
       const textboxes = screen.getAllByRole('textbox');
-      fireEvent.change(textboxes[0], { target: { value: 'Gym' } });
-      fireEvent.change(textboxes[1], { target: { value: 'Austin' } });
+      fireEvent.change(textboxes[0]!, { target: { value: 'Gym' } });
+      fireEvent.change(textboxes[1]!, { target: { value: 'Austin' } });
       fireEvent.click(screen.getByRole('button', { name: /analyze viability/i }));
 
       await waitFor(() => {

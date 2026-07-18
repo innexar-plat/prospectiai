@@ -43,11 +43,13 @@ type CheckoutContext = {
     useMercadoPago: boolean;
     isDowngradeRequest: boolean;
     isUpgradeRequest: boolean;
+    isCycleChangeRequest: boolean;
     isStripeSubscription: boolean;
     priceBrl: number;
     priceUsd: number;
     cardTokenId: string | undefined;
     affiliateCode: string | undefined;
+    repCode: string | undefined;
     promoId?: StarterPromoId;
     promoPaymentsMonths?: number;
     promoRegularPriceBrl?: number;
@@ -58,8 +60,9 @@ type CheckoutContextResult = { ok: true; ctx: CheckoutContext } | { ok: false; e
 function computeCheckoutFlags(
     workspace: WorkspaceForCheckout | undefined,
     planId: string,
+    cycle: BillingCycle,
     scheduleAtPeriodEnd: boolean,
-): { isDowngradeRequest: boolean; isUpgradeRequest: boolean; isStripeSubscription: boolean } {
+): { isDowngradeRequest: boolean; isUpgradeRequest: boolean; isCycleChangeRequest: boolean; isStripeSubscription: boolean } {
     const currentPlan = workspace?.plan;
     const isDowngradeRequest =
         scheduleAtPeriodEnd === true &&
@@ -72,7 +75,16 @@ function computeCheckoutFlags(
         currentPlan !== 'FREE' &&
         workspace != null &&
         isUpgrade(currentPlan as PlanType, planId as PlanType);
-    return { isDowngradeRequest, isUpgradeRequest, isStripeSubscription };
+    // Same tier, different billing cycle (e.g. switching monthly -> annual on the current plan) —
+    // not an upgrade/downgrade, but must not fall through to creating a brand-new parallel
+    // subscription alongside the still-active one.
+    const isCycleChangeRequest =
+        currentPlan != null &&
+        currentPlan === (planId as PlanType) &&
+        workspace != null &&
+        workspace.billingCycle != null &&
+        workspace.billingCycle !== cycle;
+    return { isDowngradeRequest, isUpgradeRequest, isCycleChangeRequest, isStripeSubscription };
 }
 
 function logScheduleAtPeriodEndNotDowngrade(
@@ -95,11 +107,11 @@ function logScheduleAtPeriodEndNotDowngrade(
 
 async function getCheckoutContext(
     session: { user: SessionUser },
-    parsed: { data: { planId: string; interval?: string; cycle?: string; locale?: string; card_token_id?: string; scheduleAtPeriodEnd?: boolean; affiliateCode?: string; promoCode?: string; promoToken?: string } },
+    parsed: { data: { planId: string; interval?: string; cycle?: string; locale?: string; card_token_id?: string; scheduleAtPeriodEnd?: boolean; affiliateCode?: string; promoCode?: string; promoToken?: string; repCode?: string } },
     appUrl: string,
     market: ReturnType<typeof getRequestMarket>,
 ): Promise<CheckoutContextResult> {
-    const { planId: rawPlanId, interval, cycle: cycleParam, locale, card_token_id, scheduleAtPeriodEnd, affiliateCode, promoCode, promoToken } = parsed.data;
+    const { planId: rawPlanId, interval, cycle: cycleParam, locale, card_token_id, scheduleAtPeriodEnd, affiliateCode, promoCode, promoToken, repCode } = parsed.data;
     const cycle: BillingCycle = (interval ?? cycleParam) === 'annual' ? 'annual' : 'monthly';
 
     let promoId = resolvePromoIdFromInput(promoCode, rawPlanId);
@@ -122,23 +134,24 @@ async function getCheckoutContext(
     };
     const userWithWorkspace = await prisma.user.findUnique({
         where: { id: session.user.id },
-        include: { workspaces: { take: 1, include: { workspace: true } } },
+        include: { workspaces: { orderBy: { workspace: { createdAt: 'asc' } }, take: 1, include: { workspace: true } } },
     });
     const workspace = userWithWorkspace?.workspaces?.[0]?.workspace as WorkspaceForCheckout | undefined;
 
     if (promoId) {
-        if (cycle !== 'monthly') {
-            return { ok: false, error: NextResponse.json({ error: 'Promo applies to monthly billing only' }, { status: 400 }) };
-        }
-        if (!workspace || !canApplyStarterPromo(workspace, market, cycle)) {
-            return { ok: false, error: NextResponse.json({ error: 'Promo not eligible for this account' }, { status: 403 }) };
-        }
-        if (resolvedPlanId !== 'BASIC') {
-            return { ok: false, error: NextResponse.json({ error: 'Promo applies to Starter plan only' }, { status: 400 }) };
+        const promoValid =
+            cycle === 'monthly' &&
+            !!workspace &&
+            canApplyStarterPromo(workspace, market, cycle) &&
+            resolvedPlanId === 'BASIC';
+        // Promo may be disabled or the account may no longer qualify (e.g. stale email
+        // link) — fall back to regular pricing instead of blocking checkout entirely.
+        if (!promoValid) {
+            promoId = null;
         }
     }
 
-    const { isDowngradeRequest, isUpgradeRequest, isStripeSubscription } = computeCheckoutFlags(workspace, resolvedPlanId, scheduleAtPeriodEnd === true);
+    const { isDowngradeRequest, isUpgradeRequest, isCycleChangeRequest, isStripeSubscription } = computeCheckoutFlags(workspace, resolvedPlanId, cycle, scheduleAtPeriodEnd === true);
     if (scheduleAtPeriodEnd === true && !isDowngradeRequest) {
         logScheduleAtPeriodEndNotDowngrade(session.user.id, resolvedPlanId, workspace);
     }
@@ -166,11 +179,13 @@ async function getCheckoutContext(
             useMercadoPago: isMarketFeatureEnabled('mercadoPago', market),
             isDowngradeRequest,
             isUpgradeRequest,
+            isCycleChangeRequest,
             isStripeSubscription,
             priceBrl,
             priceUsd,
             cardTokenId: card_token_id,
             affiliateCode: affiliateCode ?? undefined,
+            repCode: repCode ?? undefined,
             promoId: promoId ?? undefined,
             promoPaymentsMonths: promoContext?.months,
             promoRegularPriceBrl: promoContext?.regularPriceBrl,
@@ -189,9 +204,11 @@ async function executeStripeCheckout(
     currentPlan?: string | null,
     workspaceId?: string | null,
     affiliateCode?: string,
+    repCode?: string,
 ): Promise<NextResponse> {
     const metadata: Record<string, string> = { userId: sessionUser.id, planId, interval: cycle };
     if (affiliateCode) metadata.affiliateCode = affiliateCode;
+    if (repCode) metadata.rep = repCode;
     const base = appUrl.replace(/\/$/, '');
     const localeSegment = locale === 'en' ? 'en' : locale === 'es' ? 'es' : 'pt';
     const stripeLocale = locale === 'pt' ? 'pt-BR' : locale === 'es' ? 'es' : 'en';
@@ -279,12 +296,12 @@ async function tryStripeUpgrade(
     });
     const item = subscription.items.data[0];
     const price = item?.price as { recurring?: { interval?: string }; product?: string } | undefined;
-    const stripeInterval = price?.recurring?.interval ?? 'month';
     const productId = typeof price?.product === 'string' ? price.product : undefined;
-    const sameCycle =
-        (cycle === 'monthly' && stripeInterval === 'month') ||
-        (cycle === 'annual' && stripeInterval === 'year');
-    if (!item || !sameCycle || !productId) return null;
+    if (!item || !productId) return null;
+    // price_data replaces the item's price and interval together, so this same call also
+    // covers a pure billing-cycle switch (same tier, monthly <-> annual) with proration,
+    // instead of leaving that case to fall through to creating a brand-new subscription.
+    const targetInterval = cycle === 'annual' ? 'year' : 'month';
     const newPriceCents = Math.round(getMarketPlanPrices(planId as PlanType, cycle, 'US').primary * 100);
     await stripe.subscriptions.update(subId, {
         items: [
@@ -293,7 +310,7 @@ async function tryStripeUpgrade(
                 price_data: {
                     currency: 'usd',
                     unit_amount: newPriceCents,
-                    recurring: { interval: stripeInterval },
+                    recurring: { interval: targetInterval },
                     product: productId,
                 },
             },
@@ -334,13 +351,14 @@ async function handlePtLocaleCheckout(params: {
     currentPlan?: string | null;
     workspaceId?: string | null;
     affiliateCode?: string;
+    repCode?: string;
     promoId?: StarterPromoId;
     promoPaymentsMonths?: number;
     promoRegularPriceBrl?: number;
 }): Promise<NextResponse> {
     const {
         cardTokenId, planId, cycle, plan, priceBrl, sessionUser, appUrl, localePath,
-        currentPlan, workspaceId, affiliateCode, promoId, promoPaymentsMonths, promoRegularPriceBrl,
+        currentPlan, workspaceId, affiliateCode, repCode, promoId, promoPaymentsMonths, promoRegularPriceBrl,
     } = params;
     if (cardTokenId) {
         const extRef = buildMpExternalReference({
@@ -349,6 +367,7 @@ async function handlePtLocaleCheckout(params: {
             cycle,
             affiliateCode,
             promoId,
+            repCode,
         });
         const preApproval = await createPreApproval({
             payerEmail: sessionUser.email ?? '',
@@ -393,7 +412,7 @@ async function handlePtLocaleCheckout(params: {
         return NextResponse.json({ url });
     }
     const mpUrl = await createMPCheckoutUrl(
-        planId, cycle, plan, priceBrl, sessionUser, appUrl, localePath, affiliateCode, promoId,
+        planId, cycle, plan, priceBrl, sessionUser, appUrl, localePath, affiliateCode, repCode, promoId,
     );
     return NextResponse.json({ url: mpUrl });
 }
@@ -407,6 +426,7 @@ async function createMPCheckoutUrl(
     appUrl: string,
     _localePath: string,
     affiliateCode?: string,
+    repCode?: string,
     promoId?: StarterPromoId,
 ): Promise<string> {
     const fullName = user.name || 'Cliente Precision IA';
@@ -440,6 +460,7 @@ async function createMPCheckoutUrl(
                 plan_id: planId,
                 interval: cycle,
                 ...(affiliateCode ? { affiliate_code: affiliateCode } : {}),
+                ...(repCode ? { rep: repCode } : {}),
                 ...(promoId ? { promo_id: promoId } : {}),
             },
             payer: { email: user.email ?? '', name, surname: surname || '.' },
@@ -482,7 +503,7 @@ async function executeCheckoutFlow(
             return downgradeRes;
         }
     }
-    if (!ctx.useMercadoPago && ctx.isUpgradeRequest && ctx.isStripeSubscription && ctx.workspace) {
+    if (!ctx.useMercadoPago && (ctx.isUpgradeRequest || ctx.isCycleChangeRequest) && ctx.isStripeSubscription && ctx.workspace) {
         try {
             const upgradeRes = await tryStripeUpgrade(
                 ctx.workspace,
@@ -505,6 +526,15 @@ async function executeCheckoutFlow(
             );
         }
     }
+    if (ctx.isCycleChangeRequest) {
+        // Same tier, different cycle, but we couldn't modify the existing subscription in place
+        // (e.g. Mercado Pago preapprovals don't support changing frequency) — refuse instead of
+        // silently creating a second, parallel subscription that would double-bill the customer.
+        return NextResponse.json(
+            { error: 'Para mudar o ciclo de cobrança do plano atual, entre em contato com o suporte.' },
+            { status: 409 }
+        );
+    }
     if (ctx.useMercadoPago) {
         return handlePtLocaleCheckout({
             cardTokenId: ctx.cardTokenId,
@@ -518,6 +548,7 @@ async function executeCheckoutFlow(
             currentPlan: ctx.workspace?.plan,
             workspaceId: ctx.workspace?.id,
             affiliateCode: ctx.affiliateCode,
+            repCode: ctx.repCode,
             promoId: ctx.promoId,
             promoPaymentsMonths: ctx.promoPaymentsMonths,
             promoRegularPriceBrl: ctx.promoRegularPriceBrl,
@@ -534,6 +565,7 @@ async function executeCheckoutFlow(
         ctx.workspace?.plan,
         ctx.workspace?.id,
         ctx.affiliateCode,
+        ctx.repCode,
     );
 }
 

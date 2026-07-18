@@ -41,7 +41,7 @@ describe('PricingPage — US funnel isolation', () => {
     expect(screen.getByText(/secure checkout via stripe/i)).toBeInTheDocument();
   });
 
-  it('shows trial badge on BR host', async () => {
+  it('shows starter badge in BRL and subscribe CTA on BR host', async () => {
     vi.stubGlobal('location', {
       ...window.location,
       hostname: 'precisionia.com.br',
@@ -50,7 +50,8 @@ describe('PricingPage — US funnel isolation', () => {
     localStorage.setItem(getLocaleStorageKey(), 'pt');
     renderWithProviders(<PricingPage locale="pt" />, { route: '/pt/pricing' });
 
-    expect(await screen.findByText(/trial 7 dias/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/começar trial grátis/i).length).toBeGreaterThan(0);
+    expect(await screen.findByText(/plano inicial — r\$ 99 · 100 créditos\/mês/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/assinar agora/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/\$19/)).not.toBeInTheDocument();
   });
 });

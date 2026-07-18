@@ -9,6 +9,8 @@ jest.mock('@/lib/prisma', () => ({
     user: { findUnique: jest.fn() },
   },
 }));
+jest.mock('@/lib/ratelimit', () => ({ rateLimit: jest.fn().mockResolvedValue({ success: true, remaining: 9, reset: 0 }) }));
+jest.mock('@/lib/twofa', () => ({ verifyTotpToken: jest.fn() }));
 
 jest.mock('@auth/prisma-adapter', () => ({ PrismaAdapter: jest.fn(() => ({})) }));
 jest.mock('next-auth/providers/google', () => ({ __esModule: true, default: jest.fn(() => ({ id: 'google' })) }));
@@ -142,10 +144,13 @@ describe('Auth Callbacks', () => {
 describe('Credentials Provider', () => {
   const { prisma } = require('@/lib/prisma');
 
-  function getCredentialsAuthorize(): Function {
+  const fakeRequest = new Request('http://localhost/api/auth/callback/credentials');
+
+  function getCredentialsAuthorize(): (credentials: unknown) => unknown {
     const providers = capturedConfig.providers as Array<{ name?: string; credentials?: unknown; authorize?: Function }>;
     const creds = providers.find((p) => p.name === 'credentials' || p.credentials);
-    return creds!.authorize!;
+    const authorize = creds!.authorize!;
+    return (credentials: unknown) => authorize(credentials, fakeRequest);
   }
 
   beforeEach(() => { jest.clearAllMocks(); });

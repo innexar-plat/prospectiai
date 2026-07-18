@@ -7,7 +7,7 @@ import { recordLeadEvent } from '@/lib/lead-intelligence';
 async function findLeadAnalysisForUser(analysisId: string, userId: string) {
     const userWithWorkspace = await prisma.user.findUnique({
         where: { id: userId },
-        include: { workspaces: { take: 1 } },
+        include: { workspaces: { orderBy: { workspace: { createdAt: 'asc' } }, take: 1 } },
     });
     const workspaceId = userWithWorkspace?.workspaces[0]?.workspaceId;
     const where = workspaceId
@@ -86,7 +86,7 @@ export async function PATCH(
 
         const userWithWorkspace = await prisma.user.findUnique({
             where: { id: session.user.id },
-            include: { workspaces: { take: 1 } },
+            include: { workspaces: { orderBy: { workspace: { createdAt: 'asc' } }, take: 1 } },
         });
         const workspaceId = userWithWorkspace?.workspaces[0]?.workspaceId;
         const updateWhere = workspaceId

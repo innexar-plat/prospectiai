@@ -30,7 +30,7 @@ export function getRequestLocale(req: Request): Locale {
 /** Locale for AI outputs: body locale → X-Locale header → Accept-Language → market default. */
 export function resolveAiRequestLocale(req: Request, bodyLocale?: string | null): Locale {
     if (bodyLocale?.trim()) {
-        const base = bodyLocale.split('-')[0].toLowerCase();
+        const base = bodyLocale.split('-')[0]!.toLowerCase();
         if (isSupportedLocale(base)) return base;
     }
     return getRequestLocale(req);

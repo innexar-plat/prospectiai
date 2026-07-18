@@ -1,4 +1,5 @@
-import { createHmac, timingSafeEqual } from 'crypto';
+import { createHmac } from 'crypto';
+import { timingSafeEqual } from 'crypto';
 import type { Market } from '@/lib/market';
 import { PLANS, type PlanType } from '@/lib/billing-config';
 import { TRIAL_EXPIRED_STATUS } from '@/lib/trial';
@@ -71,11 +72,15 @@ export function isStarterPromoEligibleWorkspace(
     return false;
 }
 
+/** Starter promo disabled: BR will not run promotional pricing (business decision). */
+const STARTER_PROMO_DISABLED = true;
+
 export function canApplyStarterPromo(
     workspace: WorkspacePromoEligibility,
     market: Market,
     cycle: 'monthly' | 'annual',
 ): boolean {
+    if (STARTER_PROMO_DISABLED) return false;
     if (cycle !== 'monthly') return false;
     if (market !== 'BR') return false;
     const plan = workspace.plan ?? 'FREE';
@@ -112,14 +117,32 @@ export function buildMpExternalReference(params: {
     cycle: 'monthly' | 'annual';
     affiliateCode?: string;
     promoId?: StarterPromoId;
+    repCode?: string;
 }): string {
     const affiliate = params.affiliateCode ?? '';
+    const rep = params.repCode ?? '';
+    const repPart = rep ? `rep:${rep}` : '';
     if (params.promoId) {
-        return `${params.userId}:${params.planId}:${params.cycle}:${affiliate}:promo:${params.promoId}`;
+        const parts = [params.userId, params.planId, params.cycle];
+        if (affiliate && rep) {
+            parts.push(affiliate, repPart);
+        } else if (affiliate) {
+            parts.push(affiliate);
+        } else if (rep) {
+            parts.push(repPart);
+        }
+        parts.push('promo', params.promoId);
+        return parts.join(':');
     }
-    return affiliate
-        ? `${params.userId}:${params.planId}:${params.cycle}:${affiliate}`
-        : `${params.userId}:${params.planId}:${params.cycle}`;
+    const parts = [params.userId, params.planId, params.cycle];
+    if (affiliate && rep) {
+        parts.push(affiliate, repPart);
+    } else if (affiliate) {
+        parts.push(affiliate);
+    } else if (rep) {
+        parts.push(repPart);
+    }
+    return parts.join(':');
 }
 
 export function parseMpExternalReference(extRef: string): {
@@ -128,6 +151,7 @@ export function parseMpExternalReference(extRef: string): {
     cycle: 'monthly' | 'annual';
     affiliateCode?: string;
     promoId?: StarterPromoId;
+    repCode?: string;
 } | null {
     const parts = extRef.split(':');
     if (parts.length < 3) return null;
@@ -137,21 +161,34 @@ export function parseMpExternalReference(extRef: string): {
     const promoIdx = parts.indexOf('promo');
     let affiliateCode: string | undefined;
     let promoId: StarterPromoId | undefined;
+    let repCode: string | undefined;
     if (promoIdx >= 0) {
         const promoValue = parts[promoIdx + 1];
         if (promoValue === STARTER_PROMO_BR.id) {
             promoId = STARTER_PROMO_BR.id;
         }
-        if (promoIdx > 3) {
-            affiliateCode = parts[3] || undefined;
-        } else if (parts[3] && parts[3] !== 'promo') {
-            affiliateCode = parts[3];
+        for (let i = 3; i < promoIdx; i++) {
+            const p = parts[i];
+            if (p === 'rep') {
+                repCode = parts[i + 1] || undefined;
+                i++;
+            } else if (p && p !== 'promo') {
+                affiliateCode = p;
+            }
         }
     } else {
-        affiliateCode = parts[3] || undefined;
+        for (let i = 3; i < parts.length; i++) {
+            const p = parts[i];
+            if (p === 'rep') {
+                repCode = parts[i + 1] || undefined;
+                i++;
+            } else if (p) {
+                affiliateCode = p;
+            }
+        }
     }
     if (!userId || !(planId in PLANS)) return null;
-    return { userId, planId, cycle, affiliateCode, promoId };
+    return { userId, planId, cycle, affiliateCode, promoId, repCode };
 }
 
 /** Signed promo token for email links: `promoId.userId.expUnix.sig` */
@@ -181,10 +218,10 @@ export function verifyPromoToken(
     if (!Number.isFinite(exp) || exp < Math.floor(Date.now() / 1000)) {
         return { valid: false, reason: 'expired' };
     }
-    const payload = `${promoId}.${tokenUserId}.${expStr}`;
+    const payload = `${parts[0]!}.${parts[1]!}.${parts[2]!}`;
     const expected = createHmac('sha256', promoSecret()).update(payload).digest('hex').slice(0, 32);
     try {
-        const valid = timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
+        const valid = timingSafeEqual(new Uint8Array(Buffer.from(parts[3]!)), new Uint8Array(Buffer.from(expected)));
         return valid ? { valid: true, promoId: STARTER_PROMO_BR.id } : { valid: false, reason: 'bad_signature' };
     } catch {
         return { valid: false, reason: 'bad_signature' };

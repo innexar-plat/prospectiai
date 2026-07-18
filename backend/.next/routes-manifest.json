@@ -200,6 +200,62 @@
       "namedRegex": "^/api/admin/plans/(?<nxtPid>[^/]+?)(?:/)?$"
     },
     {
+      "page": "/api/admin/representatives/commissions/[commissionId]",
+      "regex": "^/api/admin/representatives/commissions/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPcommissionId": "nxtPcommissionId"
+      },
+      "namedRegex": "^/api/admin/representatives/commissions/(?<nxtPcommissionId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/admin/representatives/levels/[level]",
+      "regex": "^/api/admin/representatives/levels/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPlevel": "nxtPlevel"
+      },
+      "namedRegex": "^/api/admin/representatives/levels/(?<nxtPlevel>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/admin/representatives/[id]",
+      "regex": "^/api/admin/representatives/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/representatives/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/admin/representatives/[id]/affiliates",
+      "regex": "^/api/admin/representatives/([^/]+?)/affiliates(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/representatives/(?<nxtPid>[^/]+?)/affiliates(?:/)?$"
+    },
+    {
+      "page": "/api/admin/representatives/[id]/clients",
+      "regex": "^/api/admin/representatives/([^/]+?)/clients(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/representatives/(?<nxtPid>[^/]+?)/clients(?:/)?$"
+    },
+    {
+      "page": "/api/admin/representatives/[id]/commissions",
+      "regex": "^/api/admin/representatives/([^/]+?)/commissions(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/representatives/(?<nxtPid>[^/]+?)/commissions(?:/)?$"
+    },
+    {
+      "page": "/api/admin/representatives/[id]/goals",
+      "regex": "^/api/admin/representatives/([^/]+?)/goals(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/representatives/(?<nxtPid>[^/]+?)/goals(?:/)?$"
+    },
+    {
       "page": "/api/admin/users/[id]",
       "regex": "^/api/admin/users/([^/]+?)(?:/)?$",
       "routeKeys": {
@@ -222,6 +278,22 @@
         "nxtPid": "nxtPid"
       },
       "namedRegex": "^/api/admin/users/(?<nxtPid>[^/]+?)/reset\\-password(?:/)?$"
+    },
+    {
+      "page": "/api/admin/whatsapp/chat/conversations/[id]/messages",
+      "regex": "^/api/admin/whatsapp/chat/conversations/([^/]+?)/messages(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/whatsapp/chat/conversations/(?<nxtPid>[^/]+?)/messages(?:/)?$"
+    },
+    {
+      "page": "/api/admin/whatsapp/chat/conversations/[id]/read",
+      "regex": "^/api/admin/whatsapp/chat/conversations/([^/]+?)/read(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/whatsapp/chat/conversations/(?<nxtPid>[^/]+?)/read(?:/)?$"
     },
     {
       "page": "/api/admin/workspaces/[id]",
@@ -374,6 +446,30 @@
         "nxtPprovider": "nxtPprovider"
       },
       "namedRegex": "^/api/oauth/(?<nxtPprovider>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/representative/clients/[id]",
+      "regex": "^/api/representative/clients/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/representative/clients/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/representative/whatsapp/chat/conversations/[id]/messages",
+      "regex": "^/api/representative/whatsapp/chat/conversations/([^/]+?)/messages(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/representative/whatsapp/chat/conversations/(?<nxtPid>[^/]+?)/messages(?:/)?$"
+    },
+    {
+      "page": "/api/representative/whatsapp/chat/conversations/[id]/read",
+      "regex": "^/api/representative/whatsapp/chat/conversations/([^/]+?)/read(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/representative/whatsapp/chat/conversations/(?<nxtPid>[^/]+?)/read(?:/)?$"
     },
     {
       "page": "/api/search/history/[id]",
@@ -630,6 +726,24 @@
       "namedRegex": "^/api/admin/referrals(?:/)?$"
     },
     {
+      "page": "/api/admin/representatives",
+      "regex": "^/api/admin/representatives(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/representatives(?:/)?$"
+    },
+    {
+      "page": "/api/admin/representatives/levels",
+      "regex": "^/api/admin/representatives/levels(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/representatives/levels(?:/)?$"
+    },
+    {
+      "page": "/api/admin/representatives/stats",
+      "regex": "^/api/admin/representatives/stats(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/representatives/stats(?:/)?$"
+    },
+    {
       "page": "/api/admin/search-history",
       "regex": "^/api/admin/search\\-history(?:/)?$",
       "routeKeys": {},
@@ -658,6 +772,42 @@
       "regex": "^/api/admin/web\\-search\\-config(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/admin/web\\-search\\-config(?:/)?$"
+    },
+    {
+      "page": "/api/admin/whatsapp/chat/conversations",
+      "regex": "^/api/admin/whatsapp/chat/conversations(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/whatsapp/chat/conversations(?:/)?$"
+    },
+    {
+      "page": "/api/admin/whatsapp/chat/send",
+      "regex": "^/api/admin/whatsapp/chat/send(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/whatsapp/chat/send(?:/)?$"
+    },
+    {
+      "page": "/api/admin/whatsapp/connect",
+      "regex": "^/api/admin/whatsapp/connect(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/whatsapp/connect(?:/)?$"
+    },
+    {
+      "page": "/api/admin/whatsapp/disconnect",
+      "regex": "^/api/admin/whatsapp/disconnect(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/whatsapp/disconnect(?:/)?$"
+    },
+    {
+      "page": "/api/admin/whatsapp/meta/connect",
+      "regex": "^/api/admin/whatsapp/meta/connect(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/whatsapp/meta/connect(?:/)?$"
+    },
+    {
+      "page": "/api/admin/whatsapp/status",
+      "regex": "^/api/admin/whatsapp/status(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/whatsapp/status(?:/)?$"
     },
     {
       "page": "/api/admin/workspaces",
@@ -972,6 +1122,12 @@
       "namedRegex": "^/api/cron/weekly\\-report(?:/)?$"
     },
     {
+      "page": "/api/csp-report",
+      "regex": "^/api/csp\\-report(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/csp\\-report(?:/)?$"
+    },
+    {
       "page": "/api/details",
       "regex": "^/api/details(?:/)?$",
       "routeKeys": {},
@@ -1194,6 +1350,102 @@
       "namedRegex": "^/api/ready(?:/)?$"
     },
     {
+      "page": "/api/representative/affiliates",
+      "regex": "^/api/representative/affiliates(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/representative/affiliates(?:/)?$"
+    },
+    {
+      "page": "/api/representative/clients",
+      "regex": "^/api/representative/clients(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/representative/clients(?:/)?$"
+    },
+    {
+      "page": "/api/representative/commissions",
+      "regex": "^/api/representative/commissions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/representative/commissions(?:/)?$"
+    },
+    {
+      "page": "/api/representative/dashboard",
+      "regex": "^/api/representative/dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/representative/dashboard(?:/)?$"
+    },
+    {
+      "page": "/api/representative/link",
+      "regex": "^/api/representative/link(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/representative/link(?:/)?$"
+    },
+    {
+      "page": "/api/representative/me",
+      "regex": "^/api/representative/me(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/representative/me(?:/)?$"
+    },
+    {
+      "page": "/api/representative/payments",
+      "regex": "^/api/representative/payments(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/representative/payments(?:/)?$"
+    },
+    {
+      "page": "/api/representative/track-click",
+      "regex": "^/api/representative/track\\-click(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/representative/track\\-click(?:/)?$"
+    },
+    {
+      "page": "/api/representative/whatsapp/chat/conversations",
+      "regex": "^/api/representative/whatsapp/chat/conversations(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/representative/whatsapp/chat/conversations(?:/)?$"
+    },
+    {
+      "page": "/api/representative/whatsapp/chat/send",
+      "regex": "^/api/representative/whatsapp/chat/send(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/representative/whatsapp/chat/send(?:/)?$"
+    },
+    {
+      "page": "/api/representative/whatsapp/connect",
+      "regex": "^/api/representative/whatsapp/connect(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/representative/whatsapp/connect(?:/)?$"
+    },
+    {
+      "page": "/api/representative/whatsapp/disconnect",
+      "regex": "^/api/representative/whatsapp/disconnect(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/representative/whatsapp/disconnect(?:/)?$"
+    },
+    {
+      "page": "/api/representative/whatsapp/meta/connect",
+      "regex": "^/api/representative/whatsapp/meta/connect(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/representative/whatsapp/meta/connect(?:/)?$"
+    },
+    {
+      "page": "/api/representative/whatsapp/send",
+      "regex": "^/api/representative/whatsapp/send(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/representative/whatsapp/send(?:/)?$"
+    },
+    {
+      "page": "/api/representative/whatsapp/status",
+      "regex": "^/api/representative/whatsapp/status(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/representative/whatsapp/status(?:/)?$"
+    },
+    {
+      "page": "/api/representative/whatsapp/webhook",
+      "regex": "^/api/representative/whatsapp/webhook(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/representative/whatsapp/webhook(?:/)?$"
+    },
+    {
       "page": "/api/rf-search",
       "regex": "^/api/rf\\-search(?:/)?$",
       "routeKeys": {},
@@ -1366,6 +1618,12 @@
       "regex": "^/api/viability(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/viability(?:/)?$"
+    },
+    {
+      "page": "/api/webhooks/whatsapp/meta",
+      "regex": "^/api/webhooks/whatsapp/meta(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/webhooks/whatsapp/meta(?:/)?$"
     },
     {
       "page": "/api/workspace/current/profile",

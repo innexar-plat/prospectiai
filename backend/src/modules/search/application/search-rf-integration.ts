@@ -233,6 +233,22 @@ function tokenizeRfTerm(value: string): string[] {
         .filter((part) => part.length >= 4 && !SEARCH_RF_STOP_WORDS.has(part));
 }
 
+/**
+ * Runs a raw query with a Postgres-enforced statement_timeout, scoped via SET LOCAL
+ * inside a transaction. Unlike a JS-side Promise race, this actually cancels the
+ * query server-side on timeout instead of abandoning it to keep consuming CPU/IO.
+ */
+async function queryRawWithStatementTimeout<T>(
+    sql: string,
+    params: (string | number)[],
+    timeoutMs: number,
+): Promise<T[]> {
+    return prisma.$transaction(async (tx) => {
+        await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${Math.max(1000, timeoutMs)}`);
+        return tx.$queryRawUnsafe<T[]>(sql, ...params);
+    });
+}
+
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
     const safeTimeoutMs = Math.max(1000, timeoutMs);
     return Promise.race([
@@ -409,11 +425,11 @@ async function searchRfPlacesForCross(
     params.push(maxResults);
     const sql = `SELECT * FROM (${branches.join(' UNION ALL ')}) sub LIMIT $${paramIdx}`;
 
-    const companies = await prisma.$queryRawUnsafe<Array<{
+    const companies = await queryRawWithStatementTimeout<{
         cnpj: string; razaoSocial: string; nomeFantasia: string | null; cnaePrincipal: string;
         uf: string; municipio: string | null; bairro: string | null; logradouro: string | null;
         numero: string | null; ddd: string | null; telefone: string | null; porte: string | null;
-    }>>(sql, ...params);
+    }>(sql, params, SEARCH_RF_CROSS_TIMEOUT_MS);
 
     if (companies.length === 0) return [];
 

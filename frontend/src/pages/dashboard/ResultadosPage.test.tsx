@@ -109,8 +109,9 @@ describe('ResultadosPage', () => {
 
   it('renders loading state', () => {
     mockLocationState = { loading: true };
-    renderWithProviders(<ResultadosPage />, { route: '/dashboard/resultados' });
-    expect(screen.getByText(/carregando resultados/i)).toBeInTheDocument();
+    const { container } = renderWithProviders(<ResultadosPage />, { route: '/dashboard/resultados' });
+    // Loading state now renders skeleton placeholders instead of a text message.
+    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
   });
 
   it('renders results list with analyze hint for new searches', async () => {

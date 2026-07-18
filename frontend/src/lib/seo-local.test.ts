@@ -172,20 +172,20 @@ describe('seo-local', () => {
       expect(faq.length).toBeGreaterThan(0);
       expect(faq[0]).toHaveProperty('question');
       expect(faq[0]).toHaveProperty('answer');
-      expect(faq[0].question).toContain('Curitiba');
+      expect(faq[0]!.question).toContain('Curitiba');
     });
 
     it('returns FAQ for cidade-nicho', () => {
       const faq = getSeoFaq({ slug: 'x', type: 'cidade-nicho', city: 'BH', niche: 'Contadores' });
       expect(faq.length).toBeGreaterThan(0);
-      expect(faq[0].question).toContain('Contadores');
-      expect(faq[0].question).toContain('BH');
+      expect(faq[0]!.question).toContain('Contadores');
+      expect(faq[0]!.question).toContain('BH');
     });
 
     it('returns FAQ for bairro', () => {
       const faq = getSeoFaq({ slug: 'x', type: 'bairro', neighborhood: 'Jardins' });
       expect(faq.length).toBeGreaterThan(0);
-      expect(faq[0].question).toContain('Jardins');
+      expect(faq[0]!.question).toContain('Jardins');
     });
 
     it('returns empty array when type has no city/neighborhood', () => {

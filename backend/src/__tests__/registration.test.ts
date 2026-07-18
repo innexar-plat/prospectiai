@@ -12,10 +12,10 @@ describe('registration', () => {
         jest.resetModules();
         const { buildRegistrationUserData: buildUser, buildRegistrationWorkspaceData: buildWs } = require('@/lib/registration');
         expect(buildUser().plan).toBe('FREE');
-        expect(buildUser().leadsLimit).toBe(0);
+        expect(buildUser().leadsLimit).toBe(10);
         const ws = buildWs('Test');
         expect(ws.plan).toBe('FREE');
-        expect(ws.leadsLimit).toBe(0);
+        expect(ws.leadsLimit).toBe(10);
         expect(ws.subscriptionStatus).toBe('inactive');
     });
 
@@ -24,10 +24,10 @@ describe('registration', () => {
         jest.resetModules();
         const { buildRegistrationUserData: buildUser, buildRegistrationWorkspaceData: buildWs } = require('@/lib/registration');
         expect(buildUser().plan).toBe('FREE');
-        expect(buildUser().leadsLimit).toBe(0);
+        expect(buildUser().leadsLimit).toBe(10);
         const ws = buildWs('Test Workspace');
         expect(ws.plan).toBe('FREE');
-        expect(ws.leadsLimit).toBe(0);
+        expect(ws.leadsLimit).toBe(10);
         expect(ws.subscriptionStatus).toBe('inactive');
     });
 

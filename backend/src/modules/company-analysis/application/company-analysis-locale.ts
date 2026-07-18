@@ -51,7 +51,7 @@ export function buildSerperQueries(input: CompanyAnalysisInput, market: Market):
 
     for (let i = 0; i < Math.min(withUrls.length, 3); i++) {
         const idx = queries.length - 3 + i;
-        if (idx >= 3) queries[idx] = withUrls[i];
+        if (idx >= 3) queries[idx] = withUrls[i]!;
     }
 
     return queries.slice(0, 6);

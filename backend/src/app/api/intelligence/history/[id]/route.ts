@@ -25,14 +25,14 @@ export async function GET(
 
         const user = await prisma.user.findUnique({
             where: { id: session.user.id },
-            select: { workspaces: { take: 1, select: { workspaceId: true } } },
+            select: { workspaces: { orderBy: { workspace: { createdAt: 'asc' } }, take: 1, select: { workspaceId: true } } },
         });
 
         if (!user?.workspaces?.length) {
             return jsonWithRequestId({ error: 'Workspace not found' }, { status: 404, requestId });
         }
 
-        const workspaceId = user.workspaces[0].workspaceId;
+        const workspaceId = user.workspaces[0]!.workspaceId;
 
         const item = await prisma.intelligenceReport.findFirst({
             where: { id, workspaceId },
@@ -73,14 +73,14 @@ export async function PATCH(
 
         const user = await prisma.user.findUnique({
             where: { id: session.user.id },
-            select: { workspaces: { take: 1, select: { workspaceId: true } } },
+            select: { workspaces: { orderBy: { workspace: { createdAt: 'asc' } }, take: 1, select: { workspaceId: true } } },
         });
 
         if (!user?.workspaces?.length) {
             return jsonWithRequestId({ error: 'Workspace not found' }, { status: 404, requestId });
         }
 
-        const workspaceId = user.workspaces[0].workspaceId;
+        const workspaceId = user.workspaces[0]!.workspaceId;
 
         const body = await req.json().catch(() => ({}));
         const isFavorite = typeof body.isFavorite === 'boolean' ? body.isFavorite : undefined;

@@ -26,6 +26,7 @@ export interface SearchPayload {
   cnaeDescricao?: string;
   /** Multiple CNAE codes for broader RF search */
   cnaes?: string[];
+  bypassDbAndRf?: boolean;
 }
 
 export interface SearchResult {
@@ -96,7 +97,7 @@ export function buildTextQuery(payload: SearchPayload): string {
     // Use CNAE description as search query for Google Places
     parts.push(payload.cnaeDescricao.trim());
   } else if (payload.niches && payload.niches.length > 0) {
-    parts.push(payload.niches[0]);
+    parts.push(payload.niches[0]!);
   } else {
     parts.push(isPortuguese ? 'empresas' : 'businesses');
   }
@@ -158,6 +159,7 @@ export async function startSearch(payload: SearchPayload, t?: SearchTranslateFn)
     radiusKm: payload.radiusKm,
     hasWebsite: payload.hasWebsite && payload.hasWebsite !== 'any' ? payload.hasWebsite : undefined,
     hasPhone: payload.hasPhone && payload.hasPhone !== 'any' ? payload.hasPhone : undefined,
+    bypassDbAndRf: payload.bypassDbAndRf,
   });
 
   const res = await googlePromise;

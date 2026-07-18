@@ -2,6 +2,7 @@ import { headers } from 'next/headers';
 import { getRequestMarket, MARKET, type Market } from '@/lib/market';
 import { buildRegistrationUserData, buildRegistrationWorkspaceData, defaultWorkspaceName } from '@/lib/registration';
 import { attachReferralOnSignup, parseAffiliateRefFromCookie } from '@/lib/affiliate';
+import { attachRepLeadOnSignup, parseRepCodeFromCookie } from '@/lib/representative';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import type { Prisma } from '@prisma/client';
@@ -27,6 +28,15 @@ export async function resolveAdapterAffiliateCode(): Promise<string | null> {
     try {
         const h = await headers();
         return parseAffiliateRefFromCookie(h.get('cookie'));
+    } catch {
+        return null;
+    }
+}
+
+export async function resolveAdapterRepCode(): Promise<string | null> {
+    try {
+        const h = await headers();
+        return parseRepCodeFromCookie(h.get('cookie'));
     } catch {
         return null;
     }
@@ -80,6 +90,17 @@ export async function provisionOauthUserWithWorkspace(
             userId: user.user.id,
             workspaceId: user.workspaceId,
             email: user.user.email,
+        });
+    }
+
+    const repCode = await resolveAdapterRepCode();
+    if (repCode && user.user.email) {
+        await attachRepLeadOnSignup({
+            repCode,
+            userId: user.user.id,
+            workspaceId: user.workspaceId,
+            email: user.user.email,
+            name: user.user.name,
         });
     }
 

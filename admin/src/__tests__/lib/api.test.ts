@@ -75,7 +75,7 @@ describe('admin api', () => {
       } as Response);
       const data = await adminApi.users();
       expect(data.items).toHaveLength(1);
-      expect(data.items[0].email).toBe('u@x.com');
+      expect(data.items[0]?.email).toBe('u@x.com');
     });
 
     it('workspaces returns list', async () => {

@@ -91,14 +91,14 @@ export function OnboardingTour({ sectionId, steps, onComplete, onSkip }: Props) 
   }, [isLast, onComplete]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    const touch = e.touches[0];
+    const touch = e.touches[0]!;
     touchRef.current = { x: touch.clientX, y: touch.clientY };
   }, []);
 
   const handleTouchEnd = useCallback(
     (e: React.TouchEvent) => {
       if (!touchRef.current) return;
-      const touch = e.changedTouches[0];
+      const touch = e.changedTouches[0]!;
       const dx = touch.clientX - touchRef.current.x;
       const dy = touch.clientY - touchRef.current.y;
       touchRef.current = null;

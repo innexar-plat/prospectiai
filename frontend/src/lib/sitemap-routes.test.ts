@@ -44,12 +44,12 @@ describe('sitemap-routes', () => {
   });
 
   it('getIndexableRoutesForMarket selects by market', () => {
-    expect(getIndexableRoutesForMarket('US')[0].title).toMatch(/B2B Lead Generation/i);
-    expect(getIndexableRoutesForMarket('BR')[0].title).toMatch(/Encontrar Empresas/i);
+    expect(getIndexableRoutesForMarket('US')[0]!.title).toMatch(/B2B Lead Generation/i);
+    expect(getIndexableRoutesForMarket('BR')[0]!.title).toMatch(/Encontrar Empresas/i);
   });
 
   it('routeToUrl builds canonical paths', () => {
-    const home = getUsIndexableRoutes()[0];
+    const home = getUsIndexableRoutes()[0]!;
     expect(routeToUrl(US_ORIGIN, home)).toBe(`${US_ORIGIN}/`);
     const pricing = getUsIndexableRoutes().find((r) => r.path === 'pricing');
     expect(routeToUrl(US_ORIGIN, pricing!)).toBe(`${US_ORIGIN}/pricing`);

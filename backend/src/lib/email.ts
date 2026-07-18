@@ -13,6 +13,9 @@ import {
   getOAuthWelcomeEmailCopy,
   getTeamInviteEmailCopy,
   getTeamInviteAccountCreatedCopy,
+  getRepresentativeInviteCopy,
+  getLowCreditsEmailCopy,
+  getRepresentativePromotedCopy,
   getAffiliateApprovedEmailCopy,
   getAffiliateConversionEmailCopy,
   getAffiliateCommissionPaidEmailCopy,
@@ -25,6 +28,9 @@ import {
   oauthWelcomeTemplate,
   teamInviteTemplate,
   teamInviteAccountCreatedTemplate,
+  representativeInviteTemplate,
+  lowCreditsTemplate,
+  representativePromotedTemplate,
   affiliateApprovedTemplate,
   affiliateConversionTemplate,
   affiliateCommissionPaidTemplate,
@@ -113,17 +119,24 @@ async function sendWithDbConfig(
   subject: string,
   html: string,
 ): Promise<SendResult | null> {
-  if (config?.provider === 'resend' && config.resendApiKeyEncrypted) {
-    const key = decryptEmailSecret(config.resendApiKeyEncrypted);
-    return sendViaResend(key, from, to, subject, html);
+  try {
+    if (config?.provider === 'resend' && config.resendApiKeyEncrypted) {
+      const key = decryptEmailSecret(config.resendApiKeyEncrypted);
+      return await sendViaResend(key, from, to, subject, html);
+    }
+    if (config?.provider === 'smtp' && config.smtpHost && config.smtpPort != null && config.smtpUser && config.smtpPasswordEncrypted) {
+      return await sendViaSmtp(
+        { smtpHost: config.smtpHost, smtpPort: config.smtpPort, smtpUser: config.smtpUser, smtpPasswordEncrypted: config.smtpPasswordEncrypted },
+        from, to, subject, html
+      );
+    }
+    return null;
+  } catch (err) {
+    // A stale/undecryptable DB-stored secret (e.g. after an AUTH_SECRET rotation) must not
+    // break email sending — fall back to the env-configured provider instead of throwing.
+    logger.error('Email DB config failed, falling back to env config', { error: err instanceof Error ? err.message : 'Unknown' });
+    return null;
   }
-  if (config?.provider === 'smtp' && config.smtpHost && config.smtpPort != null && config.smtpUser && config.smtpPasswordEncrypted) {
-    return sendViaSmtp(
-      { smtpHost: config.smtpHost, smtpPort: config.smtpPort, smtpUser: config.smtpUser, smtpPasswordEncrypted: config.smtpPasswordEncrypted },
-      from, to, subject, html
-    );
-  }
-  return null;
 }
 
 export async function sendEmail(to: string, subject: string, html: string): Promise<SendResult> {
@@ -237,6 +250,53 @@ export async function sendTeamInviteAccountCreatedEmail(
   const base = siteUrl?.replace(/\/$/, '');
   const html = teamInviteAccountCreatedTemplate(inviterName, workspaceName, setPasswordUrl, undefined, locale, base);
   return sendEmail(to, copy.subject(workspaceName), html);
+}
+
+/**
+ * Send email when a new representative account was created; user must set password via link.
+ */
+export async function sendRepresentativeInviteEmail(
+  to: string,
+  setPasswordUrl: string,
+  locale: Locale = 'pt',
+  siteUrl?: string,
+): Promise<SendResult> {
+  const copy = getRepresentativeInviteCopy(locale);
+  const base = siteUrl?.replace(/\/$/, '');
+  const html = representativeInviteTemplate(setPasswordUrl, undefined, locale, base);
+  return sendEmail(to, copy.subject, html);
+}
+
+/**
+ * Send low-credits alert with upgrade CTA (fired once per cycle when ~70% of credits are used).
+ */
+export async function sendLowCreditsEmail(
+  to: string,
+  remaining: number,
+  limit: number,
+  locale: Locale = 'pt',
+  siteUrl?: string,
+): Promise<SendResult> {
+  const copy = getLowCreditsEmailCopy(locale);
+  const base = (siteUrl ?? DEFAULT_SITE_URL).replace(/\/$/, '');
+  const plansUrl = `${base}/dashboard/planos`;
+  const html = lowCreditsTemplate(remaining, limit, plansUrl, undefined, locale, base);
+  return sendEmail(to, copy.subject(remaining), html);
+}
+
+/**
+ * Send email when an existing Precision customer was promoted to representative.
+ */
+export async function sendRepresentativePromotedEmail(
+  to: string,
+  dashboardUrl: string,
+  locale: Locale = 'pt',
+  siteUrl?: string,
+): Promise<SendResult> {
+  const copy = getRepresentativePromotedCopy(locale);
+  const base = siteUrl?.replace(/\/$/, '');
+  const html = representativePromotedTemplate(dashboardUrl, undefined, locale, base);
+  return sendEmail(to, copy.subject, html);
 }
 
 export async function sendAffiliateApprovedEmail(

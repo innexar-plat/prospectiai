@@ -56,7 +56,7 @@ async function main(): Promise<void> {
         throw new Error('No OPENROUTER configs found in DB');
     }
 
-    await testConfig(configs[0].id);
+    await testConfig(configs[0]!.id);
 }
 
 main()

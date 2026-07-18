@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { Target, Loader2, ArrowRight, ExternalLink, Download, Star, Copy, Check, MessageCircle, X } from 'lucide-react';
+import { Target, ArrowRight, ExternalLink, Download, Star, Copy, Check, MessageCircle, X } from 'lucide-react';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { leadsApi, type LeadAnalysisListItem, type SessionUser } from '@/lib/api';

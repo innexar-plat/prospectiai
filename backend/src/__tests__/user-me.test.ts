@@ -13,6 +13,7 @@ jest.mock('@/lib/prisma', () => ({
     user: { findUnique: jest.fn() },
     workspace: { findUnique: jest.fn(), create: jest.fn() },
     workspaceMember: { findFirst: jest.fn(), create: jest.fn() },
+    representative: { findUnique: jest.fn() },
     $transaction: jest.fn((cb) => {
       if (typeof cb !== 'function') return Promise.resolve();
       const tx = {
@@ -117,6 +118,75 @@ describe('GET /api/user/me', () => {
     expect(json.user.requiresOnboarding).toBe(true);
     expect(json.user.workspaces).toBeUndefined();
     expect(json.workspaceProfile).toBeDefined();
+    expect(json.user.isRepresentative).toBe(false);
+  });
+
+  it('sets isRepresentative and skips requiresOnboarding for an active representative, even without onboardingCompletedAt', async () => {
+    auth.mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    const userWithWorkspace = {
+      id: 'u1',
+      name: 'Test',
+      email: 'test@example.com',
+      image: null,
+      plan: 'FREE',
+      leadsUsed: 0,
+      leadsLimit: 10,
+      companyName: null,
+      productService: null,
+      targetAudience: null,
+      mainBenefit: null,
+      phone: null,
+      address: null,
+      linkedInUrl: null,
+      instagramUrl: null,
+      facebookUrl: null,
+      websiteUrl: null,
+      onboardingCompletedAt: null,
+      notifyByEmail: true,
+      workspaces: [{ workspace: { id: 'w1', ...baseWorkspace } }],
+    };
+    prisma.user.findUnique.mockResolvedValue(userWithWorkspace);
+    prisma.workspace.findUnique.mockResolvedValue({ id: 'w1', ...baseWorkspace });
+    prisma.representative.findUnique.mockResolvedValue({ status: 'ACTIVE' });
+
+    const res = await GET(new Request('http://localhost/api/user/me'));
+    const json = await res.json();
+    expect(json.user.isRepresentative).toBe(true);
+    expect(json.user.requiresOnboarding).toBe(false);
+  });
+
+  it('does not set isRepresentative for a suspended representative record', async () => {
+    auth.mockResolvedValue({ user: { id: 'u1' }, expires: '' });
+    const userWithWorkspace = {
+      id: 'u1',
+      name: 'Test',
+      email: 'test@example.com',
+      image: null,
+      plan: 'FREE',
+      leadsUsed: 0,
+      leadsLimit: 10,
+      companyName: null,
+      productService: null,
+      targetAudience: null,
+      mainBenefit: null,
+      phone: null,
+      address: null,
+      linkedInUrl: null,
+      instagramUrl: null,
+      facebookUrl: null,
+      websiteUrl: null,
+      onboardingCompletedAt: null,
+      notifyByEmail: true,
+      workspaces: [{ workspace: { id: 'w1', ...baseWorkspace } }],
+    };
+    prisma.user.findUnique.mockResolvedValue(userWithWorkspace);
+    prisma.workspace.findUnique.mockResolvedValue({ id: 'w1', ...baseWorkspace });
+    prisma.representative.findUnique.mockResolvedValue({ status: 'SUSPENDED' });
+
+    const res = await GET(new Request('http://localhost/api/user/me'));
+    const json = await res.json();
+    expect(json.user.isRepresentative).toBe(false);
+    expect(json.user.requiresOnboarding).toBe(true);
   });
 
   it('returns enriched workspace profile fields', async () => {
@@ -252,7 +322,7 @@ describe('GET /api/user/me', () => {
       image: null,
       plan: 'FREE',
       leadsUsed: 0,
-      leadsLimit: 0,
+      leadsLimit: 10,
       companyName: null,
       productService: null,
       targetAudience: null,
@@ -280,7 +350,7 @@ describe('GET /api/user/me', () => {
         workspace: {
           create: jest.fn().mockImplementation((args: { data: Record<string, unknown> }) => {
             expect(args.data.plan).toBe('FREE');
-            expect(args.data.leadsLimit).toBe(0);
+            expect(args.data.leadsLimit).toBe(10);
             expect(args.data.subscriptionStatus).toBe('inactive');
             return Promise.resolve({ id: 'w-us', ...args.data });
           }),
@@ -292,7 +362,7 @@ describe('GET /api/user/me', () => {
     prisma.workspace.findUnique.mockResolvedValue({
       id: 'w-us',
       plan: 'FREE',
-      leadsLimit: 0,
+      leadsLimit: 10,
       leadsUsed: 0,
       subscriptionStatus: 'inactive',
       currentPeriodEnd: null,

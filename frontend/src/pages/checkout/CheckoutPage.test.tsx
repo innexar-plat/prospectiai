@@ -151,7 +151,7 @@ describe('CheckoutPage', () => {
     renderCheckout();
 
     const subscribeButtons = await screen.findAllByRole('button', { name: /subscribe/i });
-    fireEvent.click(subscribeButtons[0]);
+    fireEvent.click(subscribeButtons[0]!);
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(

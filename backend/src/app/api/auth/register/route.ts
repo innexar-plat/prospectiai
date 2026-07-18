@@ -7,6 +7,7 @@ import { sendVerificationEmail } from "@/lib/email"
 import { registerSchema, formatZodError } from "@/lib/validations/schemas"
 import { logger } from "@/lib/logger"
 import { attachReferralOnSignup } from "@/lib/affiliate"
+import { attachRepLeadOnSignup } from "@/lib/representative"
 import { notifyNewSignup } from '@/lib/telegram-business-alerts'
 import { buildRegistrationUserData, buildRegistrationWorkspaceData, defaultWorkspaceName } from '@/lib/registration'
 import { getRequestLocale } from '@/lib/i18n/locale'
@@ -35,7 +36,7 @@ export async function POST(req: Request) {
         if (!parsed.success) {
             return NextResponse.json({ error: formatZodError(parsed) }, { status: 400 })
         }
-        const { email, password, name, affiliateCode } = parsed.data
+        const { email, password, name, affiliateCode, repCode } = parsed.data
 
         const existingUser = await prisma.user.findUnique({
             where: { email }
@@ -82,6 +83,17 @@ export async function POST(req: Request) {
                 userId: result.user.id,
                 workspaceId: result.workspace.id,
                 email,
+            });
+        }
+
+        // Lead do representante: cria RepClient LEAD se veio de um ?rep= válido (fora da tx)
+        if (repCode) {
+            await attachRepLeadOnSignup({
+                repCode,
+                userId: result.user.id,
+                workspaceId: result.workspace.id,
+                email,
+                name,
             });
         }
 

@@ -11,6 +11,7 @@ vi.mock('@/components/legal/CookieConsent', () => ({
 
 vi.mock('@/lib/affiliate-ref', () => ({
   captureRefFromUrl: vi.fn(),
+  captureRepFromUrl: vi.fn(),
 }));
 
 function renderLanding(locale = 'en') {
@@ -39,13 +40,13 @@ describe('Public landing — US funnel isolation', () => {
     });
     renderLanding('en');
 
-    const ctas = await screen.findAllByText(/get started — from \$19\/mo/i);
+    const ctas = await screen.findAllByText(/start free — 10 credits/i);
     expect(ctas.length).toBeGreaterThan(0);
     expect(screen.getAllByText(/secure checkout via stripe/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/qualify leads with ai/i)).toBeInTheDocument();
     expect(screen.queryByText(/7-day trial/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/start free trial/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/testar agora — 10 créditos grátis/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/começar grátis/i)).not.toBeInTheDocument();
   });
 
   it('keeps US landing on US host even when BR market cookie is set', async () => {
@@ -57,8 +58,8 @@ describe('Public landing — US funnel isolation', () => {
     });
     renderLanding('en');
 
-    expect((await screen.findAllByText(/get started — from \$19\/mo/i)).length).toBeGreaterThan(0);
-    expect(screen.queryByText(/testar agora — 10 créditos grátis/i)).not.toBeInTheDocument();
+    expect((await screen.findAllByText(/start free — 10 credits/i)).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/começar grátis/i)).not.toBeInTheDocument();
   });
 
   it('renders BR landing with free-credits CTA, not US conversion hero', async () => {
@@ -69,7 +70,8 @@ describe('Public landing — US funnel isolation', () => {
     });
     renderLanding('pt');
 
-    expect(await screen.findByText(/testar agora — 10 créditos grátis/i)).toBeInTheDocument();
+    expect(await screen.findByText(/10 créditos grátis/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/começar grátis/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/27 milhões de empresas brasileiras/i)).toBeInTheDocument();
     expect(screen.queryByText(/get started — from \$19\/mo/i)).not.toBeInTheDocument();
   });

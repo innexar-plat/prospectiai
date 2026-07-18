@@ -7,7 +7,7 @@ import { getRealNameValidationMessage, normalizePersonName } from "@/lib/realNam
 import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
 import { AuthLayout } from "@/components/auth/AuthLayout"
-import { captureRefFromUrl, getAffiliateRef } from "@/lib/affiliate-ref"
+import { captureRefFromUrl, getAffiliateRef, getRepCode } from "@/lib/affiliate-ref"
 import { getSignupCallbackPath } from '@/lib/post-auth-redirect'
 import { isTrialEnabled } from '@/lib/market'
 import { useI18n } from '@/lib/i18n'
@@ -57,8 +57,9 @@ export default function SignUpPage() {
         setError('')
 
         const affiliateCode = getAffiliateRef()
+        const repCode = getRepCode()
         try {
-            const result = await authApi.register({ email, password, name: normalizedName, ...(affiliateCode && { affiliateCode }) })
+            const result = await authApi.register({ email, password, name: normalizedName, ...(affiliateCode && { affiliateCode }), ...(repCode && { repCode }) })
             if (!result.verificationEmailSent) {
                 sessionStorage.setItem(
                     'signup-verification-email-warning',

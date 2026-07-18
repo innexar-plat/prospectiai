@@ -13,7 +13,7 @@ import { getRequestLocale } from '@/lib/i18n/locale';
 async function getInviteContext(sessionUserId: string, email: string) {
     const currentUser = await prisma.user.findUnique({
         where: { id: sessionUserId },
-        include: { workspaces: { take: 1, include: { workspace: { select: { name: true, plan: true } } } } },
+        include: { workspaces: { orderBy: { workspace: { createdAt: 'asc' } }, take: 1, include: { workspace: { select: { name: true, plan: true } } } } },
     });
     const activeWorkspaceId = currentUser?.workspaces[0]?.workspaceId;
     const currentUserRole = currentUser?.workspaces[0]?.role;

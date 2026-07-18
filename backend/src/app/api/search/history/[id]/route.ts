@@ -35,16 +35,15 @@ export async function GET(
         // Get user workspace
         const user = await prisma.user.findUnique({
             where: { id: session.user.id },
-            select: { workspaces: { take: 1, select: { workspaceId: true } } },
+            select: { workspaces: { orderBy: { workspace: { createdAt: 'asc' } }, take: 1, select: { workspaceId: true } } },
         });
 
         if (!user?.workspaces?.length) {
             return jsonWithRequestId({ error: 'Workspace not found' }, { status: 404, requestId });
         }
 
-        const workspaceId = user.workspaces[0].workspaceId;
+        const workspaceId = user.workspaces[0]!.workspaceId;
 
-        // Fetch the item, ensuring it belongs to the user's workspace
         const item = await prisma.searchHistory.findFirst({
             where: { id, workspaceId },
             select: {

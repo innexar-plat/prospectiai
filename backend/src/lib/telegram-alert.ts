@@ -20,7 +20,7 @@ const timestamps: number[] = [];
 function isRateLimited(): boolean {
     const now = Date.now();
     // Remove timestamps older than window
-    while (timestamps.length > 0 && timestamps[0] < now - WINDOW_MS) {
+    while (timestamps.length > 0 && timestamps[0]! < now - WINDOW_MS) {
         timestamps.shift();
     }
     if (timestamps.length >= MAX_MESSAGES_PER_MINUTE) return true;

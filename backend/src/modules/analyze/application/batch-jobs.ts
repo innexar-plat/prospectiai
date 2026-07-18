@@ -105,7 +105,7 @@ async function processBatch(job: AnalyzeBatchJob, items: AnalyzeBatchItem[]): Pr
         while (current < items.length) {
             const idx = current;
             current += 1;
-            const item = items[idx];
+            const item = items[idx]!;
             try {
                 await runAnalyze(toAnalyzeInput(item), job.userId);
                 job.succeeded += 1;

@@ -33,14 +33,14 @@ describe('exportService', () => {
       const out = flattenForExport(items as unknown as Record<string, unknown>[]);
       expect(out).toHaveLength(1);
       expect(out[0]).toMatchObject({ nome: 'Foo', endereco: 'Rua 1', avaliacao: 4.5 });
-      expect(out[0].tipo).toBe('a; b');
+      expect(out[0]!.tipo).toBe('a; b');
     });
 
     it('uses fallbacks when displayName or address missing', () => {
       const items = [{ name: 'Baz', address: 'Addr' }];
       const out = flattenForExport(items as unknown as Record<string, unknown>[]);
-      expect(out[0].nome).toBe('Baz');
-      expect(out[0].endereco).toBe('Addr');
+      expect(out[0]!.nome).toBe('Baz');
+      expect(out[0]!.endereco).toBe('Addr');
     });
   });
 

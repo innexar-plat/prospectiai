@@ -39,12 +39,12 @@ function parseAddress(raw?: string): { city?: string; state?: string; country?: 
   const secondLast = parts[parts.length - 2];
   const cityStateMatch = secondLast?.match(/^(.+?)\s*-\s*([A-Z]{2})$/);
   if (cityStateMatch) {
-    return { city: cityStateMatch[1].trim(), state: cityStateMatch[2].trim(), country: /brasil|brazil/i.test(last) ? last : 'Brasil' };
+    return { city: cityStateMatch[1]!.trim(), state: cityStateMatch[2]!.trim(), country: /brasil|brazil/i.test(last ?? '') ? last : 'Brasil' };
   }
   const thirdLast = parts[parts.length - 3];
   const stateMatch = secondLast?.match(/^([A-Z]{2})$/);
   if (stateMatch && thirdLast) {
-    return { city: thirdLast.replace(/^.*-\s*/, '').trim(), state: stateMatch[1], country: /brasil|brazil/i.test(last) ? last : 'Brasil' };
+    return { city: thirdLast.replace(/^.*-\s*/, '').trim(), state: stateMatch[1], country: /brasil|brazil/i.test(last ?? '') ? last : 'Brasil' };
   }
   return {};
 }

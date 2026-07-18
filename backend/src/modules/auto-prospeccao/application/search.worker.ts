@@ -29,7 +29,7 @@ export async function runSearchWorker(
   const where: Prisma.RfCompanyWhereInput = {};
 
   if (cnaeList.length === 1) {
-    where.cnaePrincipal = { startsWith: cnaeList[0].substring(0, 4) };
+    where.cnaePrincipal = { startsWith: cnaeList[0]!.substring(0, 4) };
   } else if (cnaeList.length > 1) {
     where.OR = cnaeList.map((cnae) => ({
       cnaePrincipal: { startsWith: cnae.substring(0, 4) },

@@ -7,7 +7,10 @@ node_modules
 *.md
 .env
 .env.*
+**/.env
+**/.env.*
 !.env.example
+!**/.env.example
 coverage
 **/coverage
 test-results
@@ -25,3 +28,5 @@ playwright-report
 .ai
 cookies.txt
 rf-import.log
+.rf-import-temp
+.rf-import-temp/**

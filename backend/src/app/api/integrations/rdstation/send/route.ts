@@ -291,15 +291,15 @@ export async function POST(req: NextRequest) {
             const last = addressParts[addressParts.length - 1] ?? '';
             const cityStateMatch = secondLast.match(/^(.+?)\s*-\s*([A-Z]{2})$/);
             if (cityStateMatch) {
-                parsedCity = cityStateMatch[1].trim();
-                parsedState = cityStateMatch[2].trim();
+                parsedCity = cityStateMatch[1]!.trim();
+                parsedState = cityStateMatch[2]!.trim();
                 parsedCountry = /brasil|brazil/i.test(last) ? last : 'Brasil';
             } else {
                 const stateMatch = secondLast.match(/^([A-Z]{2})$/);
                 const thirdLast = addressParts[addressParts.length - 3] ?? '';
                 if (stateMatch && thirdLast) {
                     parsedCity = thirdLast.replace(/^.*-\s*/, '').trim();
-                    parsedState = stateMatch[1];
+                    parsedState = stateMatch[1]!;
                     parsedCountry = /brasil|brazil/i.test(last) ? last : 'Brasil';
                 }
             }

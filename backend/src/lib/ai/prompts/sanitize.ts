@@ -74,7 +74,7 @@ function replacementForProfile(profile?: UserBusinessProfile): string {
 }
 
 export function sanitizeAnalysisText(text: string, profile?: UserBusinessProfile): string {
-    if (!text?.trim()) return text;
+    if (typeof text !== 'string' || !text.trim()) return text;
     const patterns = getOffTopicIndustryPatterns(profile);
     if (!patterns.length) return text;
 
@@ -87,8 +87,8 @@ export function sanitizeAnalysisText(text: string, profile?: UserBusinessProfile
 }
 
 function sanitizeStringArray(values: string[] | undefined, profile?: UserBusinessProfile): string[] | undefined {
-    if (!values?.length) return values;
-    return values.map((item) => sanitizeAnalysisText(item, profile));
+    if (!Array.isArray(values) || !values.length) return values;
+    return values.map((item) => (typeof item === 'string' ? sanitizeAnalysisText(item, profile) : item));
 }
 
 function sanitizeMessageVariants(

@@ -16,7 +16,7 @@ vi.mock('@/lib/billing-config', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/billing-config')>();
   return {
     ...actual,
-    isTrialExpiredUser: vi.fn((user: SessionUser) => user.plan === 'TRIAL_EXPIRED'),
+    isTrialExpiredUser: vi.fn((user: { plan: string }) => user.plan === 'TRIAL_EXPIRED'),
     isTrialingUser: vi.fn((user: SessionUser) => user.plan === 'TRIAL' && (user.trialDaysRemaining ?? 0) > 0),
   };
 });
@@ -54,7 +54,7 @@ describe('TrialBanner', () => {
   });
 
   it('renders expired trial banner', () => {
-    const user = buildUser({ plan: 'TRIAL_EXPIRED', trialDaysRemaining: 0 });
+    const user = buildUser({ plan: 'TRIAL_EXPIRED' as never, trialDaysRemaining: 0 });
     render(<MemoryRouter><TrialBanner user={user} /></MemoryRouter>);
     expect(screen.getByText(/ver planos/i)).toBeInTheDocument();
   });

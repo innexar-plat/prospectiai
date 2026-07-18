@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
         const user = await prisma.user.findUnique({
             where: { id: session.user.id },
             select: {
-                workspaces: { include: { workspace: { select: WORKSPACE_SELECT } }, take: 1 },
+                workspaces: { include: { workspace: { select: WORKSPACE_SELECT } }, orderBy: { workspace: { createdAt: 'asc' } }, take: 1 },
                 plan: true,
                 companyName: true,
                 productService: true,

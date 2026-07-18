@@ -296,7 +296,7 @@ export default function DashboardIndex() {
 
   const [form, setForm] = useState<SearchFormValues>(() => createDefaultSearchValues());
   const [loading, setLoading] = useState(false);
-  const [loadingStep, setLoadingStep] = useState(0);
+  const [, setLoadingStep] = useState(0);
 
   const [stats, setStats] = useState<LeadStats | null>(null);
   const [showUpgradeCTA, setShowUpgradeCTA] = useState(false);
@@ -367,7 +367,7 @@ export default function DashboardIndex() {
     ? PLACE_TYPE_CATEGORIES.findIndex((c) => c.types.some((t) => t.value === form.includedType))
     : -1;
   const effectiveCategoryIndex = categoryIndexFromType >= 0 ? categoryIndexFromType : selectedCategoryIndex;
-  const currentTypes = effectiveCategoryIndex >= 0 ? PLACE_TYPE_CATEGORIES[effectiveCategoryIndex].types : [];
+  const currentTypes = effectiveCategoryIndex >= 0 ? PLACE_TYPE_CATEGORIES[effectiveCategoryIndex]!.types : [];
 
   // Cycle through loading steps
   useEffect(() => {
@@ -413,7 +413,7 @@ export default function DashboardIndex() {
           ...prev,
           country: active.country,
           city: active.city || prev.city,
-          state: active.states.length === 1 ? active.states[0] : 'Todos',
+          state: active.states.length === 1 ? active.states[0]! : 'Todos',
           radiusKm: active.radiusKm || prev.radiusKm,
         }));
       }
@@ -503,6 +503,7 @@ export default function DashboardIndex() {
       advancedTerm: form.advancedTerm ?? '',
       hasWebsite: form.hasWebsite,
       hasPhone: form.hasPhone,
+      bypassDbAndRf: form.bypassDbAndRf,
       ...(showCnaeFilters
         ? { cnae: form.cnae, cnaeDescricao: form.cnaeDescricao, cnaes: form.cnaes }
         : {}),
@@ -631,7 +632,7 @@ export default function DashboardIndex() {
       ...prev,
       country: profile.country,
       city: profile.city || '',
-      state: profile.states.length === 1 ? profile.states[0] : 'Todos',
+      state: profile.states.length === 1 ? profile.states[0]! : 'Todos',
       radiusKm: profile.radiusKm || prev.radiusKm,
     }));
     persistProfiles({ profiles, activeId: profile.id });
@@ -1069,6 +1070,21 @@ export default function DashboardIndex() {
               ))}
             </div>
           </div>
+          {/* Toggle Bypass RF & Local DB */}
+          <div className="col-span-2 sm:col-span-4 flex items-center justify-end mt-1">
+            <label className="flex items-center gap-2 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={form.bypassDbAndRf ?? false}
+                onChange={(e) => setForm((prev) => ({ ...prev, bypassDbAndRf: e.target.checked }))}
+                disabled={loading}
+                className="w-4 h-4 rounded border-border text-violet-600 focus:ring-violet-500/30 bg-surface disabled:opacity-50 transition-colors"
+              />
+              <span className="text-[11px] font-semibold text-muted group-hover:text-foreground transition-colors">
+                Busca Rápida (Apenas Google, ignora Receita Federal)
+              </span>
+            </label>
+          </div>
         </section>
 
         {/* ── Category shortcuts (collapsible) ── */}
@@ -1300,6 +1316,7 @@ export default function DashboardIndex() {
           currentPlan={user.plan}
           leadsUsed={user.leadsUsed}
           leadsLimit={user.leadsLimit}
+          starterPromo={user.starterPromoEligible ? user.starterPromo : null}
           onClose={() => setShowUpgradeCTA(false)}
         />
       )}

@@ -64,7 +64,7 @@ const userMeSelect = {
     onboardingCompletedAt: true,
     emailVerified: true,
     notifyByEmail: true,
-    workspaces: { include: { workspace: true }, take: 1 },
+    workspaces: { include: { workspace: true }, orderBy: { workspace: { createdAt: 'asc' } }, take: 1 },
 } as const;
 
 /** Garante que o usuário tenha ao menos um workspace (OAuth e outros fluxos podem criar user sem workspace). */
@@ -148,6 +148,7 @@ function buildUiUser(
     user: { workspaces?: Array<{ workspace?: WorkspaceAfterExpiry | null }>; [k: string]: unknown },
     w: WorkspaceAfterExpiry | null | undefined,
     market: ReturnType<typeof getRequestMarket>,
+    isRepresentative = false,
 ): Record<string, unknown> {
     const promoEligible = w ? canApplyStarterPromo(w, market, 'monthly') : false;
     const starterPromo = market === 'BR' ? getStarterPromoPublicInfo(promoEligible) : null;
@@ -191,9 +192,10 @@ function buildUiUser(
         starterPromoEligible: promoEligible,
         starterPromo,
         workspaces: undefined,
-        requiresOnboarding: user.onboardingCompletedAt == null,
+        requiresOnboarding: user.onboardingCompletedAt == null && !isRepresentative,
         emailVerified: user.emailVerified != null,
         notifyByEmail: user.notifyByEmail,
+        isRepresentative,
     };
 }
 
@@ -261,7 +263,12 @@ export async function GET(req: NextRequest) {
         const w = workspaceAfterExpiry ?? activeWorkspace ?? null;
         const workspaceProfile = buildWorkspaceProfile(w);
         const market = getRequestMarket(req);
-        const uiUser = buildUiUser(user, w, market);
+        const representative = await prisma.representative.findUnique({
+            where: { userId: session.user.id },
+            select: { status: true },
+        });
+        const isRepresentative = representative?.status === 'ACTIVE';
+        const uiUser = buildUiUser(user, w, market, isRepresentative);
         return jsonWithRequestId({ user: uiUser, workspaceProfile }, { requestId });
     } catch (error) {
         const { logger } = await import('@/lib/logger');

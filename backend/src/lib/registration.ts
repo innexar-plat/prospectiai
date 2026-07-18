@@ -1,11 +1,12 @@
 import type { Market } from '@/lib/market';
 import { MARKET } from '@/lib/market';
+import { PLANS } from '@/lib/billing-config';
 
-/** User + workspace data for new signups — inactive FREE until first payment (BR and US). */
+/** User + workspace data for new signups — active FREE plan with starter credits (BR and US). */
 export function buildRegistrationUserData(_market: Market = MARKET) {
     return {
         plan: 'FREE' as const,
-        leadsLimit: 0,
+        leadsLimit: PLANS.FREE.leadsLimit,
         leadsUsed: 0,
     };
 }
@@ -20,7 +21,7 @@ export function buildRegistrationWorkspaceData(name: string, _market: Market = M
     return {
         name,
         plan: 'FREE' as const,
-        leadsLimit: 0,
+        leadsLimit: PLANS.FREE.leadsLimit,
         leadsUsed: 0,
         subscriptionStatus: 'inactive',
         currentPeriodEnd: null,

@@ -281,6 +281,153 @@ export function getTeamInviteAccountCreatedCopy(locale: Locale): TeamInviteAccou
     return TEAM_INVITE_ACCOUNT[locale] ?? TEAM_INVITE_ACCOUNT.en;
 }
 
+type RepresentativeInviteCopy = {
+    subject: string;
+    title: string;
+    preheader: string;
+    body: string[];
+    ctaLabel: string;
+    footerNote: string;
+};
+
+const REPRESENTATIVE_INVITE: Record<Locale, RepresentativeInviteCopy> = {
+    pt: {
+        subject: 'Você foi convidado como Representante – Precision IA',
+        title: 'Sua conta de Representante foi criada',
+        preheader: 'Defina sua senha para acessar o painel Comercial do PrecisionAI.',
+        body: [
+            'Você foi cadastrado como <strong>Representante Comercial</strong> no PrecisionAI.',
+            'Clique no botão abaixo para definir sua senha e acessar o menu Comercial, com seus clientes, comissões e link de divulgação.',
+        ],
+        ctaLabel: 'Definir minha senha',
+        footerNote: 'Este link expira em 7 dias. Se não definir a senha, peça um novo convite ao administrador.',
+    },
+    en: {
+        subject: 'You were invited as a Representative – Precision AI',
+        title: 'Your Representative account was created',
+        preheader: 'Set your password to access the Precision AI Commercial dashboard.',
+        body: [
+            'You were registered as a <strong>Sales Representative</strong> on Precision AI.',
+            'Click the button below to set your password and access the Commercial menu, with your clients, commissions and referral link.',
+        ],
+        ctaLabel: 'Set my password',
+        footerNote: 'This link expires in 7 days. If you do not set a password, ask an administrator to resend the invite.',
+    },
+    es: {
+        subject: 'Fuiste invitado como Representante – Precision AI',
+        title: 'Tu cuenta de Representante fue creada',
+        preheader: 'Define tu contraseña para acceder al panel Comercial de Precision AI.',
+        body: [
+            'Fuiste registrado como <strong>Representante Comercial</strong> en Precision AI.',
+            'Haz clic en el botón para definir tu contraseña y acceder al menú Comercial, con tus clientes, comisiones y enlace de referido.',
+        ],
+        ctaLabel: 'Definir mi contraseña',
+        footerNote: 'Este enlace expira en 7 días. Si no defines la contraseña, pide al administrador que reenvíe la invitación.',
+    },
+};
+
+export function getRepresentativeInviteCopy(locale: Locale): RepresentativeInviteCopy {
+    return REPRESENTATIVE_INVITE[locale] ?? REPRESENTATIVE_INVITE.en;
+}
+
+type RepresentativePromotedCopy = {
+    subject: string;
+    title: string;
+    preheader: string;
+    body: string[];
+    ctaLabel: string;
+    footerNote: string;
+};
+
+const REPRESENTATIVE_PROMOTED: Record<Locale, RepresentativePromotedCopy> = {
+    pt: {
+        subject: 'Você agora é um Representante – Precision IA',
+        title: 'Você ganhou acesso ao menu Comercial',
+        preheader: 'Sua conta Precision AI agora tem acesso de Representante.',
+        body: [
+            'Sua conta existente no PrecisionAI foi promovida a <strong>Representante Comercial</strong>.',
+            'Acesse o dashboard e procure a seção "Canais de Vendas" no menu lateral para ver seus clientes, comissões e link de divulgação.',
+        ],
+        ctaLabel: 'Acessar o dashboard',
+        footerNote: 'Se você não esperava este e-mail, entre em contato com o suporte.',
+    },
+    en: {
+        subject: 'You are now a Representative – Precision AI',
+        title: 'You now have access to the Commercial menu',
+        preheader: 'Your Precision AI account now has Representative access.',
+        body: [
+            'Your existing Precision AI account was promoted to <strong>Sales Representative</strong>.',
+            'Open your dashboard and look for the "Sales Channels" section in the sidebar to see your clients, commissions and referral link.',
+        ],
+        ctaLabel: 'Go to dashboard',
+        footerNote: 'If you were not expecting this email, please contact support.',
+    },
+    es: {
+        subject: 'Ahora eres un Representante – Precision AI',
+        title: 'Ganaste acceso al menú Comercial',
+        preheader: 'Tu cuenta de Precision AI ahora tiene acceso de Representante.',
+        body: [
+            'Tu cuenta existente en Precision AI fue promovida a <strong>Representante Comercial</strong>.',
+            'Abre tu dashboard y busca la sección "Canales de Venta" en el menú lateral para ver tus clientes, comisiones y enlace de referido.',
+        ],
+        ctaLabel: 'Ir al dashboard',
+        footerNote: 'Si no esperabas este correo, contacta a soporte.',
+    },
+};
+
+export function getRepresentativePromotedCopy(locale: Locale): RepresentativePromotedCopy {
+    return REPRESENTATIVE_PROMOTED[locale] ?? REPRESENTATIVE_PROMOTED.en;
+}
+
+type LowCreditsEmailCopy = {
+    subject: (remaining: number) => string;
+    title: (remaining: number) => string;
+    preheader: string;
+    body: (remaining: number, limit: number) => string[];
+    ctaLabel: string;
+    footerNote: string;
+};
+
+const LOW_CREDITS: Record<Locale, LowCreditsEmailCopy> = {
+    pt: {
+        subject: (r) => `Restam só ${r} créditos de prospecção`,
+        title: (r) => `Você tem apenas ${r} créditos restantes`,
+        preheader: 'Continue prospectando sem interrupção — faça upgrade do seu plano.',
+        body: (r, l) => [
+            `Você já usou <strong>${l - r} de ${l}</strong> créditos de prospecção este ciclo — seu ritmo está ótimo!`,
+            'Para não parar sua prospecção quando os créditos acabarem, escolha um plano e continue encontrando clientes qualificados sem interrupção.',
+        ],
+        ctaLabel: 'Ver planos e continuar',
+        footerNote: 'Seus créditos são renovados de acordo com o plano contratado.',
+    },
+    en: {
+        subject: (r) => `Only ${r} prospecting credits left`,
+        title: (r) => `You have just ${r} credits remaining`,
+        preheader: 'Keep prospecting without interruption — upgrade your plan.',
+        body: (r, l) => [
+            `You have already used <strong>${l - r} of ${l}</strong> prospecting credits this cycle — great pace!`,
+            'To keep your prospecting going when credits run out, pick a plan and keep finding qualified leads without interruption.',
+        ],
+        ctaLabel: 'See plans and continue',
+        footerNote: 'Your credits renew according to your subscription plan.',
+    },
+    es: {
+        subject: (r) => `Solo quedan ${r} créditos de prospección`,
+        title: (r) => `Te quedan solo ${r} créditos`,
+        preheader: 'Sigue prospectando sin interrupción — mejora tu plan.',
+        body: (r, l) => [
+            `Ya usaste <strong>${l - r} de ${l}</strong> créditos de prospección este ciclo — ¡buen ritmo!`,
+            'Para no detener tu prospección cuando se acaben los créditos, elige un plan y sigue encontrando clientes calificados sin interrupción.',
+        ],
+        ctaLabel: 'Ver planes y continuar',
+        footerNote: 'Tus créditos se renuevan según el plan contratado.',
+    },
+};
+
+export function getLowCreditsEmailCopy(locale: Locale): LowCreditsEmailCopy {
+    return LOW_CREDITS[locale] ?? LOW_CREDITS.en;
+}
+
 type AnalysisReadyNotificationCopy = {
     title: string;
     message: string;
@@ -499,6 +646,10 @@ const API_ERRORS: Record<Locale, Record<string, string>> = {
         unauthorized: 'Não autorizado.',
         trialExpired: 'Seu período de teste encerrou. Escolha um plano para continuar.',
         subscriptionRequired: 'Assine um plano para começar a prospectar.',
+        userNotFound: 'Usuário não encontrado.',
+        emailAlreadyVerified: 'E-mail já verificado.',
+        resendCooldown: 'Aguarde {seconds} segundos antes de reenviar.',
+        sendFailed: 'Falha ao enviar e-mail. Tente novamente.',
     },
     en: {
         tooManyRequests: 'Too many requests. Try again later.',
@@ -507,6 +658,10 @@ const API_ERRORS: Record<Locale, Record<string, string>> = {
         unauthorized: 'Unauthorized.',
         trialExpired: 'Your trial has ended. Choose a plan to continue.',
         subscriptionRequired: 'Subscribe to a plan to start prospecting.',
+        userNotFound: 'User not found.',
+        emailAlreadyVerified: 'Email already verified.',
+        resendCooldown: 'Wait {seconds} seconds before resending.',
+        sendFailed: 'Failed to send email. Try again.',
     },
     es: {
         tooManyRequests: 'Demasiados intentos. Inténtalo más tarde.',
@@ -515,11 +670,15 @@ const API_ERRORS: Record<Locale, Record<string, string>> = {
         unauthorized: 'No autorizado.',
         trialExpired: 'Tu período de prueba terminó. Elige un plan para continuar.',
         subscriptionRequired: 'Suscríbete a un plan para empezar a prospectar.',
+        userNotFound: 'Usuario no encontrado.',
+        emailAlreadyVerified: 'Correo ya verificado.',
+        resendCooldown: 'Espera {seconds} segundos antes de reenviar.',
+        sendFailed: 'Error al enviar el correo. Inténtalo de nuevo.',
     },
 };
 
 export function tApiError(locale: Locale, key: keyof (typeof API_ERRORS)['en']): string {
-    return API_ERRORS[locale]?.[key] ?? API_ERRORS.en[key];
+    return (API_ERRORS[locale]?.[key] ?? API_ERRORS.en[key])!;
 }
 
 /** BR trial reactivation promo — expired trial users only (pt). */

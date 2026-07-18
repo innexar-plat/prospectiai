@@ -122,11 +122,11 @@ export async function GET(req: NextRequest) {
         if (session?.user?.id) {
             const user = await prisma.user.findFirst({
                 where: { id: session.user.id },
-                include: { workspaces: { include: { workspace: true }, take: 1 } },
+                include: { workspaces: { include: { workspace: true }, orderBy: { workspace: { createdAt: 'asc' } }, take: 1 } },
             });
             if (user?.workspaces && user.workspaces.length > 0) {
                 recordUsageEvent({
-                    workspaceId: user.workspaces[0].workspace.id,
+                    workspaceId: user.workspaces[0]!.workspace.id,
                     userId: session.user.id,
                     type: 'GOOGLE_PLACES_DETAILS',
                     quantity: 1,

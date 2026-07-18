@@ -1,4 +1,4 @@
-import NextAuth, { CredentialsSignin } from "next-auth"
+import NextAuth from "next-auth"
 import { createProspectorAuthAdapter } from "@/lib/auth-adapter"
 import { prisma } from "@/lib/prisma"
 import { getPanelRole } from "@/lib/admin"
@@ -14,8 +14,9 @@ import {
 import Google from "next-auth/providers/google"
 import GitHub from "next-auth/providers/github"
 import Credentials from "next-auth/providers/credentials"
-import bcrypt from "bcryptjs"
 import { resolveAuthRedirectUrl } from "@/lib/app-origins"
+import { authorizeCredentials } from "@/lib/credentials-authorize"
+import { checkTokenRevocation } from "@/lib/session-revocation"
 
 const isDevelopment = process.env.NODE_ENV === "development";
 
@@ -52,36 +53,13 @@ providers.push(
         credentials: {
             email: { label: "Email", type: "email" },
             password: { label: "Password", type: "password" },
+            code: { label: "2FA Code", type: "text" },
         },
-        async authorize(credentials) {
+        async authorize(credentials, request) {
             if (isDevelopment) console.log("[AUTH] Authorize called with email:", credentials?.email);
-            const email = credentials?.email;
-            const plainPassword = credentials?.password;
-            if (typeof email !== 'string' || typeof plainPassword !== 'string') {
-                if (isDevelopment) console.log("[AUTH] Invalid credentials type");
-                return null;
-            }
-
-            const user = await prisma.user.findUnique({
-                where: { email },
-            });
-
-            if (!user) {
-                if (isDevelopment) console.log("[AUTH] User not found in DB:", email);
-                return null;
-            }
-
-            const isValid = await bcrypt.compare(plainPassword, user.password || "");
-            if (!isValid) {
-                if (isDevelopment) console.log("[AUTH] Invalid password for user:", email);
-                return null;
-            }
-
-            if (user.disabledAt) {
-                throw new CredentialsSignin("Conta desativada. Entre em contato com o suporte.");
-            }
-
-            if (isDevelopment) console.log("[AUTH] Login successful for user:", email);
+            const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
+            const user = await authorizeCredentials(credentials?.email, credentials?.password, credentials?.code, ip);
+            if (isDevelopment) console.log(user ? "[AUTH] Login successful" : "[AUTH] Login failed", credentials?.email);
             return user;
         },
     }),
@@ -219,6 +197,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             return true;
         },
         async jwt({ token, user }) {
+            const isFreshLogin = !!user;
             if (user) {
                 token.id = user.id;
                 token.email = user.email ?? token.email;
@@ -228,17 +207,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             }
             if (token.id) {
                 try {
-                    const dbUser = await prisma.user.findUnique({
-                        where: { id: String(token.id) },
-                        select: { email: true, tokenVersion: true },
-                    });
-                    if (dbUser) {
-                        if (dbUser.email) token.email = dbUser.email;
-                        if (!token.role) {
-                            token.role = getPanelRole({ user: { email: dbUser.email ?? undefined }, expires: '' });
-                        }
-                        token.tokenVersion = dbUser.tokenVersion;
+                    const result = await checkTokenRevocation(String(token.id), token.tokenVersion, isFreshLogin);
+                    if (result.revoked) {
+                        return null as unknown as typeof token;
                     }
+                    if (result.email) token.email = result.email;
+                    if (!token.role) {
+                        token.role = getPanelRole({ user: { email: result.email ?? undefined }, expires: '' });
+                    }
+                    token.tokenVersion = result.tokenVersion;
                 } catch (err) {
                     logger.error('JWT callback user lookup failed', {
                         error: err instanceof Error ? err.message : 'Unknown',

@@ -24,7 +24,7 @@ describe('trial', () => {
     it('buildTrialUserData sets TRIAL plan', () => {
         const data = buildTrialUserData();
         expect(data.plan).toBe('TRIAL');
-        expect(data.leadsLimit).toBe(50);
+        expect(data.leadsLimit).toBe(PLANS.TRIAL.leadsLimit);
     });
 
     it('isTrialExpired returns true when period ended', () => {

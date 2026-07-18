@@ -65,7 +65,7 @@ const ERROR_TITLES: Record<AnalyzeLocale, string> = {
 
 export function normalizeAnalyzeLocale(locale: string): AnalyzeLocale {
     if (locale?.trim()) {
-        const base = locale.split('-')[0].toLowerCase();
+        const base = locale.split('-')[0]!.toLowerCase();
         if (base === 'en' || base === 'es' || base === 'pt') return base;
     }
     if (process.env.MARKET === 'US') return 'en';

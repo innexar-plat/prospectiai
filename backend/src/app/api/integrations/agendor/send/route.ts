@@ -88,7 +88,7 @@ function parseAddress(raw?: string): { city?: string; state?: string; country?: 
     const last = parts[parts.length - 1] ?? '';
     const cityStateMatch = secondLast.match(/^(.+?)\s*-\s*([A-Z]{2})$/);
     if (cityStateMatch) {
-        return { city: cityStateMatch[1].trim(), state: cityStateMatch[2].trim(), country: /brasil|brazil/i.test(last) ? last : 'Brasil' };
+        return { city: cityStateMatch[1]!.trim(), state: cityStateMatch[2]!.trim(), country: /brasil|brazil/i.test(last) ? last : 'Brasil' };
     }
     const stateMatch = secondLast.match(/^([A-Z]{2})$/);
     const thirdLast = parts[parts.length - 3] ?? '';

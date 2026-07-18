@@ -23,7 +23,7 @@ describe('tour-steps', () => {
       expect(steps.length).toBe(12);
       expect(steps[0]).toHaveProperty('title');
       expect(steps[0]).toHaveProperty('body');
-      expect(steps[0].title).toBe('common.tour.welcome.1.title');
+      expect(steps[0]!.title).toBe('common.tour.welcome.1.title');
     });
 
     it('getWelcomeTourSteps returns 12 steps for US market', () => {
@@ -49,8 +49,8 @@ describe('tour-steps', () => {
     it('getCheckoutCreditsTourSteps returns 3 steps', () => {
       const steps = getCheckoutCreditsTourSteps(mockT);
       expect(steps.length).toBe(3);
-      expect(steps[1].target).toBe('header-credits');
-      expect(steps[0].title).toBe('common.tour.checkout.1.title');
+      expect(steps[1]!.target).toBe('header-credits');
+      expect(steps[0]!.title).toBe('common.tour.checkout.1.title');
     });
 
     it('getTourStepsBySection has expected keys', () => {

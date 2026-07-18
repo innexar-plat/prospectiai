@@ -7,12 +7,13 @@ import { isAdmin } from '@/lib/admin';
 import { logAdminAction } from '@/lib/audit';
 import { sendPasswordResetEmail } from '@/lib/email';
 import { adminResetPasswordSchema, formatZodError } from '@/lib/validations/schemas';
+import { hashToken } from '@/lib/auth-utils';
 
 async function buildResetUpdateData(
     temporaryPassword: string | null | undefined,
     sendEmail: boolean,
-): Promise<{ updateData: { password?: string; resetToken: string | null; resetTokenExpires: Date | null }; token?: string }> {
-    const updateData: { password?: string; resetToken: string | null; resetTokenExpires: Date | null } = {
+): Promise<{ updateData: { password?: string; resetToken: null; resetTokenHash?: string; resetTokenExpires: Date | null }; token?: string }> {
+    const updateData: { password?: string; resetToken: null; resetTokenHash?: string; resetTokenExpires: Date | null } = {
         resetToken: null,
         resetTokenExpires: null,
     };
@@ -22,7 +23,7 @@ async function buildResetUpdateData(
     let token: string | undefined;
     if (sendEmail === true) {
         token = crypto.randomBytes(32).toString('hex');
-        updateData.resetToken = token;
+        updateData.resetTokenHash = hashToken(token);
         updateData.resetTokenExpires = new Date(Date.now() + 3600000);
     }
     return { updateData, token };

@@ -4,6 +4,7 @@ export { analyzeStream } from './search';
 export { authApi } from './auth';
 export { searchApi, competitorApi, viabilityApi, companyAnalysisApi, intelligenceApi, cnaeApi, rfSearchApi, smartRelationsApi, integrationsApi, autoProspApi } from './search';
 export { plansApi, billingApi, affiliateApi } from './billing';
+export { representativeApi } from './representative';
 export { leadsApi, pipelineApi, tagsApi, notificationsApi, pushApi } from './crm';
 export { userApi, workspaceProfileApi, onboardingApi, activityApi } from './user';
 
@@ -59,4 +60,17 @@ export type {
     PaginatedResponse,
     AffiliateMe,
     AffiliateStats,
+    RepLevel,
+    RepresentativeDTO,
+    RepClientDTO,
+    RepCommissionDTO,
+    RepGoalDTO,
+    RepLevelConfigDTO,
+    RepDashboardDTO,
+    RepPaymentDTO,
+    RepAffiliateDTO,
+    RepStatus,
+    RepCommissionStatus,
+    RepCommissionSource,
+    PayoutType,
 } from './types';

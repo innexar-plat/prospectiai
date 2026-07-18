@@ -150,6 +150,7 @@ model User {
   pushSubscriptions    PushSubscription[]
   affiliate            Affiliate?
   referrals            Referral[]
+  representative       Representative?
 }
 
 model Account {
@@ -258,6 +259,7 @@ model Workspace {
   autoProspeccaoRuns   AutoProspeccaoRun[]
   autoProspSenderPool  AutoProspSenderPool[]
   prospectedLeads      ProspectedLead[]
+  representative        Representative?
 }
 
 model WorkspaceMember {
@@ -677,26 +679,29 @@ model Affiliate {
   id                    String    @id @default(cuid())
   code                  String    @unique
   status                AffiliateStatus @default(PENDING)
-  userId                String?   @unique // null = afiliado externo (cadastrado pelo admin)
-  name                  String?   // para afiliado externo
+  userId                String?   @unique
+  name                  String?
   email                 String?
-  document              String?   // CPF/CNPJ
+  document              String?
   notes                 String?   @db.Text
   commissionRatePercent Int       @default(20)
-  payoutType            String?   // PIX | BANK_TRANSFER
-  payoutPayload         String?   @db.Text // chave PIX ou dados banco (opcional criptografado)
+  payoutType            String?
+  payoutPayload         String?   @db.Text
+  representativeId      String?                // ligado a um representante comercial
   approvedAt            DateTime?
   createdByAdminId      String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
   user         User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  representative Representative?  @relation("RepresentativeAffiliates", fields: [representativeId], references: [id], onDelete: SetNull)
   referrals    Referral[]
   commissions  AffiliateCommission[]
   clicks       AffiliateClick[]
 
   @@index([status])
   @@index([userId])
+  @@index([representativeId])
 }
 
 model AffiliateClick {
@@ -1328,4 +1333,230 @@ model AutoProspeccaoRun {
 
   @@index([workspaceId, startedAt(sort: Desc)])
   @@index([status])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// REPRESENTANTE COMERCIAL — Canal de vendas multi-nível
+// ═══════════════════════════════════════════════════════════════════
+
+enum RepLevel {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+enum RepStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum RepCommissionStatus {
+  PENDING
+  APPROVED
+  PAID
+  CANCELLED
+}
+
+enum RepCommissionSource {
+  DIRECT_CLIENT
+  AFFILIATE_OVERRIDE
+}
+
+enum PayoutType {
+  PIX
+  BANK_TRANSFER
+}
+
+model Representative {
+  id                    String    @id @default(cuid())
+  userId                String?   @unique
+  workspaceId           String    @unique
+  name                  String
+  email                 String    @unique
+  phone                 String?
+  document              String?
+  level                 RepLevel  @default(BRONZE)
+
+  directCommissionPct   Decimal   @default(20)
+  affiliateOverridePct  Decimal   @default(5)
+  commissionHoldDays    Int       @default(30)
+
+  creditLimit           Int       @default(500)
+
+  payoutType            PayoutType?
+  payoutPayload         String?   @db.Text
+  minPayoutCents        Int       @default(10000)
+
+  monthlyGoalCents      Int?
+
+  region                String?
+  contractUrl           String?
+  notes                 String?   @db.Text
+  status                RepStatus @default(ACTIVE)
+  lastActivityAt        DateTime?
+  createdByAdminId      String
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  evolutionInstanceName String?   @unique
+  whatsappStatus        String    @default("DISCONNECTED")
+  whatsappNumber        String?
+  whatsappConnectedAt   DateTime?
+  /** Which gateway sends/receives for this rep: EVOLUTION (QR-paired personal number) or META (official Cloud API). */
+  whatsappProvider      String    @default("EVOLUTION")
+  /** Meta WhatsApp Cloud API phone_number_id, registered externally in Meta Business Suite. */
+  metaPhoneNumberId     String?   @unique
+
+  linkClicks            Int       @default(0)
+
+  user                  User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  workspace             Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  clients               RepClient[]
+  commissions           RepCommission[]
+  goals                 RepGoal[]
+  affiliates            Affiliate[]        @relation("RepresentativeAffiliates")
+  whatsappConversations  WhatsAppConversation[]
+
+  @@index([status])
+  @@index([level])
+}
+
+/** Reserved for a future customer-facing rollout; only representatives use this today. */
+model AdminWhatsAppConfig {
+  id                  String    @id @default(cuid())
+  label               String    @default("Precision IA")
+  provider            String    @default("META")
+  evolutionInstanceName String? @unique
+  whatsappStatus      String    @default("DISCONNECTED")
+  whatsappNumber      String?
+  whatsappConnectedAt DateTime?
+  metaPhoneNumberId   String?   @unique
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  conversations       WhatsAppConversation[]
+}
+
+model WhatsAppConversation {
+  id                 String    @id @default(cuid())
+  /** Owner: exactly one of representativeId / adminConfigId is set today; workspaceId is reserved for customer rollout. */
+  representativeId   String?
+  adminConfigId      String?
+  workspaceId        String?
+  contactNumber      String
+  contactName        String?
+  repClientId        String?
+  lastMessageAt      DateTime?
+  lastMessagePreview String?   @db.Text
+  unreadCount        Int       @default(0)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  representative     Representative?      @relation(fields: [representativeId], references: [id], onDelete: Cascade)
+  adminConfig        AdminWhatsAppConfig?  @relation(fields: [adminConfigId], references: [id], onDelete: Cascade)
+  repClient          RepClient?            @relation(fields: [repClientId], references: [id], onDelete: SetNull)
+  messages           WhatsAppMessage[]
+
+  @@unique([representativeId, contactNumber])
+  @@unique([adminConfigId, contactNumber])
+  @@index([representativeId, lastMessageAt])
+  @@index([adminConfigId, lastMessageAt])
+}
+
+model WhatsAppMessage {
+  id                String   @id @default(cuid())
+  conversationId    String
+  direction         String
+  provider          String
+  providerMessageId String?
+  body              String   @db.Text
+  status            String   @default("SENT")
+  createdAt         DateTime @default(now())
+
+  conversation      WhatsAppConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerMessageId])
+  @@index([conversationId, createdAt])
+}
+
+model RepClient {
+  id                  String    @id @default(cuid())
+  representativeId    String
+  workspaceId         String?
+  name                String
+  email               String?
+  phone               String?
+  company             String?
+  planId              String?
+  status              String    @default("LEAD")
+  valueCents          Int?
+  signedAt            DateTime?
+  canceledAt          DateTime?
+  notes               String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  representative      Representative  @relation(fields: [representativeId], references: [id], onDelete: Cascade)
+  commissions         RepCommission[]
+  whatsappConversations WhatsAppConversation[]
+
+  @@index([representativeId])
+  @@index([status])
+}
+
+model RepCommission {
+  id                    String              @id @default(cuid())
+  representativeId      String
+  source                RepCommissionSource @default(DIRECT_CLIENT)
+  repClientId           String?
+  affiliateId           String?
+  affiliateCommissionId String?
+  orderId               String?
+  subscriptionId        String?
+  amountCents           Int
+  commissionPercent     Decimal
+  status                RepCommissionStatus @default(PENDING)
+  holdUntil             DateTime?
+  paidAt                DateTime?
+  paidByAdminId         String?
+  paymentProofUrl       String?
+  notes                 String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  representative        Representative   @relation(fields: [representativeId], references: [id], onDelete: Cascade)
+  repClient             RepClient?       @relation(fields: [repClientId], references: [id], onDelete: SetNull)
+
+  @@index([representativeId])
+  @@index([status])
+  @@index([holdUntil])
+}
+
+model RepGoal {
+  id                  String    @id @default(cuid())
+  representativeId    String
+  month               Int
+  year                Int
+  targetCents         Int
+  achievedCents       Int       @default(0)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  representative      Representative @relation(fields: [representativeId], references: [id], onDelete: Cascade)
+
+  @@unique([representativeId, month, year])
+}
+
+model RepLevelConfig {
+  id                    String    @id @default(cuid())
+  level                 RepLevel  @unique
+  directCommissionPct   Decimal   @default(20)
+  affiliateOverridePct  Decimal   @default(5)
+  creditLimit           Int       @default(500)
+  minPayoutCents        Int       @default(10000)
+  monthlyGoalCents      Int?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 }

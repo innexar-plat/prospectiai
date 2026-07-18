@@ -12,6 +12,7 @@ import { buildAnalyzePayload } from '@/lib/analyze-payload';
 import { getActiveMarket, isMarketFeatureEnabled } from '@/lib/market';
 import { buildMapsUrl, buildWhatsAppNumber, getPrimaryPhone, getPrimaryEmail, buildMailtoUrl } from '@/lib/lead-contact-utils';
 import { CrmSidePanel } from '@/components/dashboard/CrmSidePanel';
+import { representativeApi } from '@/lib/api/representative';
 import { AiAnalysisCardPreview } from '@/components/dashboard/AiAnalysisCardPreview';
 import SmartRelations from '@/components/SmartRelations';
 import { cn } from '@/lib/utils';
@@ -49,14 +50,17 @@ function MessageTemplatesPanel({
   recipientEmail,
   businessName,
   whatsappNumber,
+  isRepresentative,
 }: {
   analysis: Analysis;
   ownerName: string;
   recipientEmail?: string | null;
   businessName?: string;
   whatsappNumber?: string | null;
+  isRepresentative?: boolean;
 }) {
   const { t } = useI18n();
+  const { addToast } = useToast();
   const whatsappRaw = analysis.suggestedWhatsAppMessage != null ? String(analysis.suggestedWhatsAppMessage) : '';
   const emailRaw = analysis.firstContactMessage != null ? String(analysis.firstContactMessage) : '';
   const linkedinRaw = emailRaw;
@@ -70,16 +74,17 @@ function MessageTemplatesPanel({
   const defaultTab = tabs[0]?.key ?? 'whatsapp';
   const [activeTab, setActiveTab] = useState<MessageTab>(defaultTab);
   const [personalized, setPersonalized] = useState(false);
+  const [sendingViaWhatsApp, setSendingViaWhatsApp] = useState(false);
 
   useEffect(() => {
     if (tabs.length > 0 && !tabs.find((tab) => tab.key === activeTab)) {
-      setActiveTab(tabs[0].key);
+      setActiveTab(tabs[0]!.key);
     }
   }, [tabs, activeTab]);
 
   if (tabs.length === 0) return null;
 
-  const current = tabs.find((tab) => tab.key === activeTab) ?? tabs[0];
+  const current = tabs.find((tab) => tab.key === activeTab) ?? tabs[0]!;
   const displayText = personalized ? personalizeMessage(current.raw, ownerName) : current.raw;
   const mailtoUrl = buildMailtoUrl({
     to: recipientEmail,
@@ -92,6 +97,19 @@ function MessageTemplatesPanel({
 
   const handlePersonalize = () => {
     setPersonalized(true);
+  };
+
+  const handleSendViaConnectedWhatsApp = async () => {
+    if (!whatsappNumber || sendingViaWhatsApp) return;
+    setSendingViaWhatsApp(true);
+    try {
+      await representativeApi.sendChatMessage(whatsappNumber, displayText);
+      addToast('success', t('page.leadDetail.whatsappSent'));
+    } catch (err) {
+      addToast('error', err instanceof Error ? err.message : t('page.leadDetail.whatsappSendError'));
+    } finally {
+      setSendingViaWhatsApp(false);
+    }
   };
 
   const actionBtn = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-surface border border-border text-muted hover:text-foreground hover:bg-violet-500/10 transition-colors';
@@ -145,6 +163,17 @@ function MessageTemplatesPanel({
             <MessageCircle size={12} aria-hidden />
             {t('page.leadDetail.openWhatsApp')}
           </a>
+        )}
+        {activeTab === 'whatsapp' && whatsappNumber && isRepresentative && (
+          <button
+            type="button"
+            onClick={handleSendViaConnectedWhatsApp}
+            disabled={sendingViaWhatsApp}
+            className={cn(actionBtn, 'hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-500/30 disabled:opacity-50')}
+          >
+            <MessageCircle size={12} aria-hidden />
+            {sendingViaWhatsApp ? t('page.leadDetail.whatsappSending') : t('page.leadDetail.sendViaConnectedWhatsApp')}
+          </button>
         )}
       </div>
     </div>
@@ -231,6 +260,7 @@ function LeadDetailAnalysisView({
   recipientEmail,
   businessName,
   whatsappNumber,
+  isRepresentative,
   getProviderLabel,
 }: {
   analysis: Analysis;
@@ -238,6 +268,7 @@ function LeadDetailAnalysisView({
   recipientEmail?: string | null;
   businessName?: string;
   whatsappNumber?: string | null;
+  isRepresentative?: boolean;
   getProviderLabel: (p: string | undefined) => string | undefined;
 }) {
   const { t } = useI18n();
@@ -419,6 +450,7 @@ function LeadDetailAnalysisView({
         recipientEmail={recipientEmail}
         businessName={businessName}
         whatsappNumber={whatsappNumber}
+        isRepresentative={isRepresentative}
       />
 
       {/* Deep Analysis — Reclame Aqui, JusBrasil, CNPJ */}
@@ -842,6 +874,7 @@ function LeadDetailAnalysisSection({
   onAnalyze,
   ownerName,
   place,
+  isRepresentative,
 }: {
   analysis: Analysis | null;
   analyzing: boolean;
@@ -849,6 +882,7 @@ function LeadDetailAnalysisSection({
   onAnalyze: () => void;
   ownerName: string;
   place: PlaceDetail | Place;
+  isRepresentative?: boolean;
 }) {
   const { t } = useI18n();
   const recipientEmail = getPrimaryEmail(place);
@@ -885,6 +919,7 @@ function LeadDetailAnalysisSection({
           recipientEmail={recipientEmail}
           businessName={businessName}
           whatsappNumber={whatsappNumber}
+          isRepresentative={isRepresentative}
           getProviderLabel={(p) => getAnalysisProviderLabel(p, t)}
         />
       )}
@@ -909,7 +944,7 @@ function AnalysisProgressMotion({ currentStep }: { currentStep: AnalyzeProgressS
   const { t } = useI18n();
   const stepConfig = getStepConfig(t);
   const stepIndex = Math.max(0, stepConfig.findIndex((s) => s.key === currentStep));
-  const current = stepConfig[stepIndex] ?? stepConfig[0];
+  const current = (stepConfig[stepIndex] ?? stepConfig[0])!;
   const progress = Math.max(8, ((stepIndex + 1) / stepConfig.length) * 100);
 
   return (
@@ -987,7 +1022,7 @@ function LeadDetailContent(props: LeadDetailContentProps) {
             <LeadDetailTagsSection tags={tags} showTagInput={showTagInput} newTag={newTag} onAddTag={onAddTag} onRemoveTag={onRemoveTag} setNewTag={setNewTag} setShowTagInput={setShowTagInput} />
             {isMarketFeatureEnabled('smartRelations') && <SmartRelations placeId={place.id} />}
           </div>
-          <LeadDetailAnalysisSection analysis={analysis} analyzing={analyzing} currentStep={currentStep} onAnalyze={onAnalyze} ownerName={ownerName} place={place} />
+          <LeadDetailAnalysisSection analysis={analysis} analyzing={analyzing} currentStep={currentStep} onAnalyze={onAnalyze} ownerName={ownerName} place={place} isRepresentative={user.isRepresentative} />
         </div>
       </div>
     </>

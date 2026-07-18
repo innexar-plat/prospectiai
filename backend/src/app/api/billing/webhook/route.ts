@@ -15,8 +15,68 @@ import {
     notifyPaymentRenewed,
     notifyPlanUpgrade,
 } from '@/lib/telegram-business-alerts';
+import { logger } from '@/lib/logger';
 
 type SubscriptionWithPeriod = Stripe.Subscription & { current_period_end: number };
+
+async function handleRepCommission(repCode: string, userId: string, workspaceId: string, planId: string, valueCents: number, orderId: string, subscriptionId?: string): Promise<void> {
+    try {
+        const rep = await prisma.representative.findUnique({ where: { id: repCode } });
+        if (!rep || rep.status !== 'ACTIVE') return;
+
+        let repClient = await prisma.repClient.findFirst({
+            where: { representativeId: rep.id, workspaceId },
+        });
+        if (!repClient) {
+            // No lead was captured at signup (e.g. rep_code cookie set after registration) —
+            // look up the real customer instead of showing a truncated user id as the name.
+            const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } });
+            repClient = await prisma.repClient.create({
+                data: {
+                    representativeId: rep.id,
+                    workspaceId,
+                    name: user?.name?.trim() || user?.email || `${userId.slice(0, 8)}...`,
+                    email: user?.email,
+                    planId,
+                    status: 'ACTIVE',
+                    valueCents,
+                    signedAt: new Date(),
+                },
+            });
+        } else {
+            repClient = await prisma.repClient.update({
+                where: { id: repClient.id },
+                data: { planId, valueCents, status: 'ACTIVE' },
+            });
+        }
+
+        const holdUntil = new Date();
+        holdUntil.setDate(holdUntil.getDate() + rep.commissionHoldDays);
+
+        const commission = await prisma.repCommission.create({
+            data: {
+                representativeId: rep.id,
+                source: 'DIRECT_CLIENT',
+                repClientId: repClient.id,
+                orderId: orderId || null,
+                subscriptionId: subscriptionId || null,
+                amountCents: Math.floor((valueCents * Number(rep.directCommissionPct)) / 100),
+                commissionPercent: rep.directCommissionPct,
+                status: 'PENDING',
+                holdUntil,
+            },
+        });
+
+        await prisma.representative.update({
+            where: { id: rep.id },
+            data: { lastActivityAt: new Date() },
+        });
+
+        logger.info('Rep commission created (Stripe)', { repId: rep.id, commissionId: commission.id, amountCents: commission.amountCents, userId, workspaceId });
+    } catch (e) {
+        logger.error('Rep commission creation failed (Stripe)', { error: e instanceof Error ? e.message : 'Unknown', repCode, userId, workspaceId });
+    }
+}
 
 const PROBE_USER_AGENT = /curl|healthcheck|kube-probe|ELB-HealthChecker|Go-http-client/i;
 
@@ -50,6 +110,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
     const userId = session.metadata?.userId;
     const planId = session.metadata?.planId as PlanType;
     const affiliateCode = session.metadata?.affiliateCode as string | undefined;
+    const repCode = session.metadata?.rep as string | undefined;
     if (!userId) return NextResponse.json({ error: 'Missing userId in metadata' }, { status: 400 });
     if (!planId || !(planId in PLANS) || planId === 'FREE' || planId === 'TRIAL') {
         return NextResponse.json({ error: 'Invalid planId in metadata' }, { status: 400 });
@@ -59,7 +120,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
     const plan = PLANS[planId];
     const userWithWorkspace = await prisma.user.findUnique({
         where: { id: userId },
-        include: { workspaces: { take: 1 } }
+        include: { workspaces: { orderBy: { workspace: { createdAt: 'asc' } }, take: 1 } }
     });
 
     if (!userWithWorkspace?.workspaces[0]?.workspaceId) return null;
@@ -125,6 +186,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
         const { logger } = await import('@/lib/logger');
         logger.error('Affiliate commission create failed', { error: e instanceof Error ? e.message : 'Unknown' });
     }
+
+    if (repCode) {
+        await handleRepCommission(repCode, userId, workspaceId, planId, valueCents, session.id, subscription.id);
+    }
+
     return null;
 }
 
@@ -134,7 +200,7 @@ async function handleSubscriptionDeleted(subscription: SubscriptionWithPeriod): 
         data: {
             subscriptionStatus: 'canceled',
             plan: 'FREE',
-            leadsLimit: getMarketLeadsLimit('FREE', 'US'),
+            leadsLimit: PLANS.FREE.leadsLimit,
             gracePeriodEnd: null,
         },
     });

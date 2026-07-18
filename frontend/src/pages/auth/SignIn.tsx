@@ -12,6 +12,7 @@ export default function SignInPage() {
     const { t } = useI18n();
     const [searchParams] = useSearchParams()
     const errorParam = searchParams.get('error')
+    const errorCodeParam = searchParams.get('code')
     const callbackUrlParam = searchParams.get('callbackUrl')
     const resolvedCallbackPath = callbackUrlParam && callbackUrlParam.startsWith('/')
         ? callbackUrlParam
@@ -30,15 +31,22 @@ export default function SignInPage() {
 
     // Auto-set error if coming back from failed login
     React.useEffect(() => {
-        if (errorParam === 'CredentialsSignin') {
+        if (errorCodeParam === 'two_factor_required') {
+            setRequires2fa(true)
+        } else if (errorCodeParam === 'two_factor_invalid') {
+            setRequires2fa(true)
+            setError(t('auth.twoFactorInvalid'))
+        } else if (errorParam === 'CredentialsSignin') {
             setError(t('auth.signInError'))
         } else if (errorParam) {
             setError(t('auth.signInGenericError'))
         }
-    }, [errorParam, t])
+    }, [errorParam, errorCodeParam, t])
 
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
+    const [twoFaCode, setTwoFaCode] = useState('')
+    const [requires2fa, setRequires2fa] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState('')
@@ -53,7 +61,12 @@ export default function SignInPage() {
         setError('')
 
         try {
-            await authApi.signIn({ email, password, callbackUrl: callbackUrlParam ?? undefined })
+            await authApi.signIn({
+                email,
+                password,
+                code: requires2fa ? twoFaCode : undefined,
+                callbackUrl: callbackUrlParam ?? undefined,
+            })
             return
         } catch (err) {
             console.error('SignIn error details:', err)
@@ -123,6 +136,25 @@ export default function SignInPage() {
                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                 </div>
+
+                {requires2fa && (
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-muted uppercase tracking-widest ml-1">{t('auth.twoFactorCode')}</label>
+                        <Input
+                            required
+                            type="text"
+                            inputMode="numeric"
+                            autoComplete="one-time-code"
+                            value={twoFaCode}
+                            onChange={e => setTwoFaCode(e.target.value)}
+                            placeholder={t('auth.twoFactorCodePlaceholder')}
+                            icon={<Lock size={18} />}
+                        />
+                        {!error && (
+                            <p className="text-xs text-muted ml-1">{t('auth.twoFactorRequired')}</p>
+                        )}
+                    </div>
+                )}
 
                 {error && (
                     <div className="p-4 bg-red-200 dark:bg-red-500/10 border border-red-600 dark:border-red-500/20 rounded-2xl text-red-900 dark:text-red-400 text-sm font-bold text-center animate-shake">

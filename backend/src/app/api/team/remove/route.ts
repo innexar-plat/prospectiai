@@ -24,7 +24,7 @@ export async function DELETE(req: NextRequest) {
         // 1. Get the current user's workspace
         const currentUser = await prisma.user.findUnique({
             where: { id: session.user.id },
-            include: { workspaces: { take: 1 } }
+            include: { workspaces: { orderBy: { workspace: { createdAt: 'asc' } }, take: 1 } }
         });
 
         const activeWorkspaceId = currentUser?.workspaces[0]?.workspaceId;

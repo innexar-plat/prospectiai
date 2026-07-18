@@ -66,7 +66,7 @@ describe('POST /api/onboarding/complete', () => {
             expect.objectContaining({
                 data: expect.objectContaining({
                     plan: 'FREE',
-                    leadsLimit: 0,
+                    leadsLimit: 10,
                     subscriptionStatus: 'inactive',
                 }),
             }),

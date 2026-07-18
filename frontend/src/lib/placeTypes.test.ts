@@ -6,8 +6,8 @@ describe('placeTypes', () => {
     it('has categories with label and types', () => {
       expect(PLACE_TYPE_CATEGORIES.length).toBeGreaterThan(0);
       expect(PLACE_TYPE_CATEGORIES[0]).toHaveProperty('label');
-      expect(PLACE_TYPE_CATEGORIES[0].types.length).toBeGreaterThan(0);
-      expect(PLACE_TYPE_CATEGORIES[0].types[0]).toEqual({ value: expect.any(String), label: expect.any(String) });
+      expect(PLACE_TYPE_CATEGORIES[0]!.types.length).toBeGreaterThan(0);
+      expect(PLACE_TYPE_CATEGORIES[0]!.types[0]!).toEqual({ value: expect.any(String), label: expect.any(String) });
     });
   });
 

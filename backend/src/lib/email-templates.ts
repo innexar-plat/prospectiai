@@ -28,6 +28,9 @@ import {
   getOAuthWelcomeEmailCopy,
   getTeamInviteEmailCopy,
   getTeamInviteAccountCreatedCopy,
+  getRepresentativeInviteCopy,
+  getRepresentativePromotedCopy,
+  getLowCreditsEmailCopy,
   getNotificationEmailCopy,
   getAffiliateApprovedEmailCopy,
   getAffiliateConversionEmailCopy,
@@ -63,9 +66,19 @@ const SUCCESS_COLOR = '#059669';
 const WARNING_COLOR = '#d97706';
 const DANGER_COLOR  = '#dc2626';
 
-// Empresa
+// Empresa (identidade legal por mercado, derivada do siteUrl do e-mail)
 const COMPANY_NAME    = 'Innexar Brasil';
 const COMPANY_ADDRESS = 'Av. Dona Ophelia Caccerari Reis - Aviação, 363 — São Paulo, SP';
+const COMPANY_NAME_US    = 'Innexar LLC';
+const COMPANY_ADDRESS_US = '13013 Yardley Ct — Orlando, Florida, USA';
+const SUPPORT_EMAIL_US   = 'support@precisionai.innexar.app';
+
+function getCompanyIdentity(siteBase: string): { name: string; address: string; support: string } {
+  if (siteBase.includes('precisionai.innexar.app')) {
+    return { name: COMPANY_NAME_US, address: COMPANY_ADDRESS_US, support: SUPPORT_EMAIL_US };
+  }
+  return { name: COMPANY_NAME, address: COMPANY_ADDRESS, support: SUPPORT_EMAIL };
+}
 // ── Tipos ──────────────────────────────────────────────────────────────────
 
 export interface BuildEmailOptions {
@@ -219,6 +232,7 @@ function wrapContent(content: string, options: {
 }): string {
   const accent   = options.accentColor ?? BRAND_COLOR;
   const base     = (options.siteUrl ?? SITE_URL).replace(/\/$/, '');
+  const company  = getCompanyIdentity(base);
   const shell    = getEmailShellCopy(options.locale ?? 'pt');
   const unsub    = options.unsubscribeToken
     ? `${base}/unsubscribe?token=${encodeURIComponent(options.unsubscribeToken)}`
@@ -275,10 +289,10 @@ function wrapContent(content: string, options: {
               ${options.footerExtra ? `<p style="margin:0 0 10px;font-size:13px;color:${TEXT_COLOR};">${options.footerExtra}</p>` : ''}
               <p style="margin:0 0 4px;font-size:12px;color:${MUTED_COLOR};">
                 ${shell.needHelp}
-                <a href="mailto:${SUPPORT_EMAIL}" style="color:${accent};text-decoration:none;">${SUPPORT_EMAIL}</a>
+                <a href="mailto:${company.support}" style="color:${accent};text-decoration:none;">${company.support}</a>
               </p>
               <p style="margin:0 0 10px;font-size:12px;color:${MUTED_COLOR};">
-                <strong>${COMPANY_NAME}</strong> &mdash; ${COMPANY_ADDRESS}
+                <strong>${company.name}</strong> &mdash; ${company.address}
               </p>
               <p style="margin:0;font-size:11px;color:#9ca3af;line-height:1.6;">
                 <a href="${base}" style="color:${MUTED_COLOR};text-decoration:none;">${base.replace(/^https?:\/\//, '')}</a>
@@ -326,6 +340,7 @@ export function buildEmail(options: BuildEmailOptions): string {
 export function buildEmailText(options: BuildEmailOptions): string {
   const { title, userName, body, ctaHref, ctaLabel, footerNote, siteUrl, locale = 'pt' } = options;
   const base = (siteUrl ?? SITE_URL).replace(/\/$/, '');
+  const company = getCompanyIdentity(base);
   const shell = getEmailShellCopy(locale);
   const lines: string[] = [];
   if (userName) lines.push(`${shell.greeting}, ${userName}.`, '');
@@ -335,8 +350,8 @@ export function buildEmailText(options: BuildEmailOptions): string {
   if (footerNote) lines.push('---', footerNote, '');
   lines.push(
     '---',
-    `${COMPANY_NAME} | ${COMPANY_ADDRESS}`,
-    `${shell.needHelp} ${SUPPORT_EMAIL}`,
+    `${company.name} | ${company.address}`,
+    `${shell.needHelp} ${company.support}`,
     `${shell.unsubscribe}: ${base}/unsubscribe`,
   );
   return lines.join('\n');
@@ -449,6 +464,74 @@ export function teamInviteAccountCreatedTemplate(
     ctaLabel: copy.ctaLabel,
     footerNote: copy.footerNote,
     accentColor: BRAND_COLOR,
+    locale,
+    siteUrl,
+  });
+}
+
+/** Novo representante sem conta prévia — precisa definir senha */
+export function representativeInviteTemplate(
+  setPasswordUrl: string,
+  userName?: string,
+  locale: Locale = 'pt',
+  siteUrl?: string,
+): string {
+  const copy = getRepresentativeInviteCopy(locale);
+  return buildEmail({
+    title: copy.title,
+    preheader: copy.preheader,
+    userName,
+    body: copy.body,
+    ctaHref: setPasswordUrl,
+    ctaLabel: copy.ctaLabel,
+    footerNote: copy.footerNote,
+    accentColor: BRAND_COLOR,
+    locale,
+    siteUrl,
+  });
+}
+
+/** Cliente existente promovido a representante — conta já tinha senha */
+export function representativePromotedTemplate(
+  dashboardUrl: string,
+  userName?: string,
+  locale: Locale = 'pt',
+  siteUrl?: string,
+): string {
+  const copy = getRepresentativePromotedCopy(locale);
+  return buildEmail({
+    title: copy.title,
+    preheader: copy.preheader,
+    userName,
+    body: copy.body,
+    ctaHref: dashboardUrl,
+    ctaLabel: copy.ctaLabel,
+    footerNote: copy.footerNote,
+    accentColor: BRAND_COLOR,
+    locale,
+    siteUrl,
+  });
+}
+
+/** Créditos acabando — CTA de upgrade no momento de maior engajamento */
+export function lowCreditsTemplate(
+  remaining: number,
+  limit: number,
+  plansUrl: string,
+  userName?: string,
+  locale: Locale = 'pt',
+  siteUrl?: string,
+): string {
+  const copy = getLowCreditsEmailCopy(locale);
+  return buildEmail({
+    title: copy.title(remaining),
+    preheader: copy.preheader,
+    userName,
+    body: copy.body(remaining, limit),
+    ctaHref: plansUrl,
+    ctaLabel: copy.ctaLabel,
+    footerNote: copy.footerNote,
+    accentColor: WARNING_COLOR,
     locale,
     siteUrl,
   });

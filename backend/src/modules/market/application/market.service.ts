@@ -26,7 +26,7 @@ function getPlaceType(place: Record<string, unknown>): string {
   const primaryType = place.primaryType as string | undefined;
   const types = place.types as string[] | undefined;
   if (primaryType) return primaryType;
-  if (types?.length) return types[0];
+    if (types?.length) return types[0]!;
   return 'establishment';
 }
 

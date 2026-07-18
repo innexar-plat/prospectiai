@@ -47,7 +47,7 @@ describe('i18n critical key parity', () => {
 });
 
 describe('US-facing EN legal copy', () => {
-  const en = LEGAL_MESSAGES.en;
+  const en = LEGAL_MESSAGES.en!;
 
   it('terms governing law references US jurisdiction, not Brazil', () => {
     expect(en['legal.terms.s9.body']).toMatch(/Delaware|United States/i);

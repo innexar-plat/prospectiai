@@ -4,15 +4,17 @@ import { Link } from 'react-router-dom';
 import { getNextUpgradePlan, getPlanDisplayName } from '@/lib/billing-config';
 import { useI18n } from '@/lib/i18n';
 import { getActiveMarket, getMarketConfig, US_STARTER_CREDITS, US_STARTER_PRICE_USD, resolveMarketLeadsLimit } from '@/lib/market';
+import type { StarterPromoInfo } from '@/lib/api';
 
 interface UpgradeCTAModalProps {
     currentPlan: string;
     leadsUsed: number;
     leadsLimit: number;
+    starterPromo?: StarterPromoInfo | null;
     onClose: () => void;
 }
 
-export function UpgradeCTAModal({ currentPlan, leadsUsed, leadsLimit, onClose }: UpgradeCTAModalProps) {
+export function UpgradeCTAModal({ currentPlan, leadsUsed, leadsLimit, starterPromo, onClose }: UpgradeCTAModalProps) {
     const { t } = useI18n();
     const next = getNextUpgradePlan(currentPlan);
     const isTrial = currentPlan === 'TRIAL';
@@ -41,6 +43,7 @@ export function UpgradeCTAModal({ currentPlan, leadsUsed, leadsLimit, onClose }:
     };
 
     const multiplier = Math.round(target.leadsLimit / (leadsLimit || 1));
+    const promoActive = currency === 'BRL' && target.key === 'BASIC' && starterPromo?.eligible === true;
 
     return createPortal(
         <div
@@ -93,10 +96,29 @@ export function UpgradeCTAModal({ currentPlan, leadsUsed, leadsLimit, onClose }:
                                 <p className="text-xs text-muted">{t('upgrade.creditsPerMonth', { count: target.leadsLimit.toLocaleString(numberLocale) })}</p>
                             </div>
                             <div className="ml-auto text-right">
-                                <p className="text-lg font-black text-violet-600 dark:text-violet-400">{formatPrice(target.priceBrl)}</p>
-                                <p className="text-[10px] text-muted">{t('upgrade.perMonth')}</p>
+                                {promoActive && starterPromo ? (
+                                    <>
+                                        <p className="text-[11px] text-muted line-through">{formatPrice(starterPromo.regularPriceMonthlyBrl)}</p>
+                                        <p className="text-lg font-black text-emerald-600 dark:text-emerald-400">{formatPrice(starterPromo.priceMonthlyBrl)}</p>
+                                        <p className="text-[10px] text-muted">{t('upgrade.perMonth')}</p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="text-lg font-black text-violet-600 dark:text-violet-400">{formatPrice(target.priceBrl)}</p>
+                                        <p className="text-[10px] text-muted">{t('upgrade.perMonth')}</p>
+                                    </>
+                                )}
                             </div>
                         </div>
+                        {promoActive && starterPromo && (
+                            <p className="mb-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                {t('dash.planos.starterPromoBanner', {
+                                    price: formatPrice(starterPromo.priceMonthlyBrl),
+                                    regular: formatPrice(starterPromo.regularPriceMonthlyBrl),
+                                    months: starterPromo.months,
+                                })}
+                            </p>
+                        )}
                         <ul className="text-xs text-muted space-y-1.5">
                             <li className="flex items-center gap-2">
                                 <span className="w-1 h-1 rounded-full bg-violet-400 shrink-0" />

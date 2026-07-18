@@ -2,5 +2,38 @@
   "version": 3,
   "middleware": {},
   "sortedMiddleware": [],
-  "functions": {}
+  "functions": {
+    "/api/csp-report/route": {
+      "files": [
+        "server/edge/chunks/_c997731d._.js",
+        "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_b2c2aa75.js",
+        "server/middleware-build-manifest.js",
+        "server/interception-route-rewrite-manifest.js",
+        "required-server-files.js",
+        "server/server-reference-manifest.js",
+        "server/app/api/csp-report/route_client-reference-manifest.js",
+        "server/edge/chunks/backend__next-internal_server_app_api_csp-report_route_actions_f72e3983.js",
+        "server/edge/chunks/node_modules_next_dist_esm_b66ec5af._.js",
+        "server/edge/chunks/[root-of-the-server]__1ada8f1c._.js",
+        "server/edge/chunks/turbopack-node_modules_next_dist_esm_build_templates_edge-wrapper_b5f8257b.js"
+      ],
+      "name": "app/api/csp-report/route",
+      "page": "/api/csp-report/route",
+      "matchers": [
+        {
+          "regexp": "^/api/csp-report(?:/)?$",
+          "originalSource": "/api/csp-report"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "1UaeHcDGgWBFwprEPtLn9",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "d+EO72ugX4rk2MYOW4zuxw9YtDab+F1L0s7ttxz5DNM=",
+        "__NEXT_PREVIEW_MODE_ID": "38812a1971d3699bba71d720f3596f71",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "a1cf3c4f7c81fcacf0cdee0e8169eab3e5e392b15e2dc8d56577649be2a76443",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "96be9568c2d8301b2710c230619e674b56c90f0a13988d4c643be049d8bda174"
+      }
+    }
+  }
 }

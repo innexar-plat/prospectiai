@@ -20,6 +20,8 @@ import {
   BarChart3,
   TrendingUp,
   Search,
+  Layers,
+  MessageCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -45,6 +47,15 @@ const sections: NavSection[] = [
       { to: 'commissions', end: false, label: 'Comissões', icon: DollarSign },
       { to: 'referrals', end: false, label: 'Referrals', icon: UserPlus },
       { to: 'affiliate-settings', end: false, label: 'Config. Afiliados', icon: Settings },
+    ],
+  },
+  {
+    title: 'Canais de Vendas',
+    items: [
+      { to: 'representantes', end: false, label: 'Representantes', icon: Users },
+      { to: 'representantes/niveis', end: false, label: 'Níveis', icon: Layers },
+      { to: 'representantes/relatorios', end: false, label: 'Relatórios', icon: BarChart3 },
+      { to: 'whatsapp', end: false, label: 'WhatsApp', icon: MessageCircle },
     ],
   },
   {

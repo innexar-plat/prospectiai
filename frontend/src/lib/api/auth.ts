@@ -53,13 +53,13 @@ function normalizeCallbackPath(callbackUrl?: string, fallbackPath = '/dashboard'
 export const authApi = {
     session: () => request<{ user: SessionUser | null }>('/auth/session'),
 
-    register: (data: { email: string; password: string; name?: string; affiliateCode?: string }) =>
+    register: (data: { email: string; password: string; name?: string; affiliateCode?: string; repCode?: string }) =>
         request<{ message: string; id: string; requiresOnboarding: boolean; verificationEmailSent: boolean; verificationEmailError?: string | null }>('/auth/register', {
             method: 'POST',
             body: JSON.stringify(data),
         }),
 
-    signIn: async (data: { email: string; password: string; callbackUrl?: string }) => {
+    signIn: async (data: { email: string; password: string; code?: string; callbackUrl?: string }) => {
         const csrfToken = await getCsrfToken();
         const callbackUrl = normalizeCallbackPath(data.callbackUrl, '/dashboard');
 
@@ -67,6 +67,7 @@ export const authApi = {
             csrfToken,
             email: data.email,
             password: data.password,
+            ...(data.code ? { code: data.code } : {}),
             callbackUrl,
         });
     },

@@ -4,6 +4,7 @@ import { acquireRedisLock, getCached, releaseRedisLock, setCached, waitForCached
 import { enqueueLeadSync } from '@/lib/lead-sync-queue';
 import { enqueueSearchHistoryWrite } from '@/lib/search-history-queue';
 import { computeOpportunityScore } from '@/lib/db-sync';
+import type { PlaceResult as GooglePlaceResult, TextSearchResponse } from '@/lib/google-places';
 import { logger } from '@/lib/logger';
 import { recordUsageEvent } from '@/lib/usage';
 import { geocodeAddress } from '@/lib/geocode';
@@ -90,7 +91,7 @@ function filterPlaces<T extends PlaceLike>(
 function enrichWithOpportunityScore(places: PlaceResult[]): PlaceResult[] {
     return places
         .map((place) => {
-            const { score } = computeOpportunityScore(place);
+            const { score } = computeOpportunityScore(place as GooglePlaceResult);
             return { ...place, opportunityScore: score };
         })
         .sort((a, b) => {
@@ -217,7 +218,7 @@ async function getSearchUserAndWorkspaceOrThrow(userId: string) {
     if (user.onboardingCompletedAt == null) {
         throw new SearchHttpError(403, { error: 'Complete onboarding before searching', code: 'REQUIRES_ONBOARDING' });
     }
-    const membership = user.workspaces[0];
+    const membership = user.workspaces[0]!;
     const activeWorkspace = membership.workspace;
     await applyTrialExpiryIfNeeded(activeWorkspace.id);
     const trialGate = assertWorkspaceCanUseProduct(activeWorkspace);
@@ -374,7 +375,7 @@ async function persistUnifiedSearchResult(
         type: 'GOOGLE_PLACES_SEARCH',
         quantity: 1,
     });
-    enqueueLeadSync(places);
+    enqueueLeadSync(places as GooglePlaceResult[]);
 
     const scopedCacheKey = buildCacheKey(
         textQuery,
@@ -392,6 +393,7 @@ async function persistUnifiedSearchResult(
         where: { id: activeWorkspace.id },
         data: { leadsUsed: { increment: 1 } },
     });
+    import('@/lib/credit-alerts').then(({ maybeSendLowCreditsAlert }) => maybeSendLowCreditsAlert(activeWorkspace.id)).catch(() => {});
 
     enqueueSearchHistoryWrite({
         workspaceId: activeWorkspace.id,
@@ -470,7 +472,7 @@ function createSaveHistoryForSearch(
 }
 
 async function executeGoogleSearchAndPersist(
-    input: { textQuery: string; includedType: string | null; pageToken: string | undefined; hasWebsite: string | null; hasPhone: string | null; effectivePageSize: number },
+    input: { textQuery: string; includedType: string | null; pageToken: string | undefined; hasWebsite: string | null; hasPhone: string | null; effectivePageSize: number; bypassDbAndRf?: boolean },
     locationBias: LocationBias | undefined,
     activeWorkspace: { id: string },
     userId: string,
@@ -558,17 +560,22 @@ async function executeGoogleSearchAndPersist(
         );
 
         if (!input.pageToken) {
-            const crossed = await crossWithReceitaIfEligible(
-                googlePlaces,
-                input.textQuery,
-                input.includedType,
-                location?.city,
-                location?.state,
-                country,
-            );
-            result.places = collectAllContacts(crossed);
+            if (input.bypassDbAndRf) {
+                logger.info('Search: skipping RF cross due to bypass flag');
+                result.places = collectAllContacts(googlePlaces) as GooglePlaceResult[];
+            } else {
+                const crossed = await crossWithReceitaIfEligible(
+                    googlePlaces,
+                    input.textQuery,
+                    input.includedType,
+                    location?.city,
+                    location?.state,
+                    country,
+                );
+                result.places = collectAllContacts(crossed) as GooglePlaceResult[];
+            }
         } else {
-            result.places = googlePlaces;
+            result.places = googlePlaces as GooglePlaceResult[];
         }
     }
     const finalCount = result.places?.length ?? 0;
@@ -589,14 +596,14 @@ async function executeGoogleSearchAndPersist(
             result.places.length,
             location,
         );
-        result.places = await hydratePlacesWithLeadSnapshot(result.places);
+        result.places = await hydratePlacesWithLeadSnapshot(result.places) as GooglePlaceResult[];
     }
     logger.info('Search: result', { resultCount: finalCount });
     return result;
 }
 
 export async function runSearch(input: SearchInput, userId: string): Promise<SearchResult> {
-    const { textQuery, includedType, pageSize, pageToken, hasWebsite, hasPhone, city, state, country, radiusKm } = input;
+    const { textQuery, includedType, pageSize, pageToken, hasWebsite, hasPhone, city, state, country, radiusKm, bypassDbAndRf } = input;
     const effectivePageSize = Math.min(PLACES_PAGE_SIZE_MAX, Math.max(1, pageSize ?? PLACES_PAGE_SIZE_MAX));
     const filtersPayload = {
         includedType: includedType ?? null,
@@ -618,12 +625,16 @@ export async function runSearch(input: SearchInput, userId: string): Promise<Sea
     const locationInfo = { city: city ?? null, state: state ?? null, country: country ?? null };
     const saveHistory = createSaveHistoryForSearch(activeWorkspace, userId, textQuery, effectivePageSize, filtersPayload, locationInfo);
 
-    const earlyResult = await tryCacheOrDbSearch(
-        pageToken,
-        { workspaceId: activeWorkspace.id, userId, textQuery, includedType, effectivePageSize, hasWebsite, hasPhone, city, state, country },
-        saveHistory,
-    );
-    if (earlyResult) return earlyResult;
+    if (!bypassDbAndRf) {
+        const earlyResult = await tryCacheOrDbSearch(
+            pageToken,
+            { workspaceId: activeWorkspace.id, userId, textQuery, includedType, effectivePageSize, hasWebsite, hasPhone, city, state, country },
+            saveHistory,
+        );
+        if (earlyResult) return earlyResult;
+    } else {
+        logger.info('Search: skipping local DB search due to bypass flag');
+    }
 
     const locationBias = await resolveSearchLocationBias(city?.trim(), pageToken, state, country, radiusKm);
     return executeGoogleSearchAndPersist(
@@ -634,6 +645,7 @@ export async function runSearch(input: SearchInput, userId: string): Promise<Sea
             hasWebsite: hasWebsite ?? null,
             hasPhone: hasPhone ?? null,
             effectivePageSize,
+            bypassDbAndRf,
         },
         locationBias,
         activeWorkspace,

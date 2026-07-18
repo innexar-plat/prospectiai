@@ -25,6 +25,7 @@ export const searchFormSchema = z.object({
   cnaeDescricao: z.string().optional(),
   /** Multiple CNAE codes for broader RF search */
   cnaes: z.array(z.string().max(7)).max(10).default([]),
+  bypassDbAndRf: z.boolean().default(false),
 });
 
 export type SearchFormValues = z.infer<typeof searchFormSchema>;
@@ -44,6 +45,7 @@ export function createDefaultSearchValues(): SearchFormValues {
     cnae: undefined,
     cnaeDescricao: undefined,
     cnaes: [],
+    bypassDbAndRf: false,
   };
 }
 

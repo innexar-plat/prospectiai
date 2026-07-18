@@ -391,7 +391,7 @@ describe('api', () => {
       } as Response);
       const data = await searchApi.search({ textQuery: 'cafes' });
       expect(data.places).toHaveLength(1);
-      expect(data.places[0].displayName?.text).toBe('Place 1');
+      expect(data.places[0]!.displayName?.text).toBe('Place 1');
     });
 
     it('details fetches place by placeId', async () => {
@@ -527,7 +527,7 @@ describe('api', () => {
       } as Response);
       const data = await plansApi.list();
       expect(data).toHaveLength(1);
-      expect(data[0].key).toBe('PRO');
+      expect(data[0]!.key).toBe('PRO');
     });
   });
 
@@ -735,7 +735,7 @@ describe('api', () => {
         json: () => Promise.resolve({ items: [], unreadCount: 0, limit: 10 }),
       } as Response);
       await notificationsApi.list({ unreadOnly: true, limit: 10 });
-      const url = (mockFetch as ReturnType<typeof createMockFetch>).mock.calls[0][0];
+      const url = (mockFetch as ReturnType<typeof createMockFetch>).mock.calls[0]![0]!;
       expect(url).toContain('unreadOnly=true');
       expect(url).toContain('limit=10');
     });
@@ -900,7 +900,7 @@ describe('api', () => {
         json: () => Promise.resolve({ items: [], total: 0 }),
       } as Response);
       await intelligenceApi.history({ module: 'search', limit: 5 });
-      const callUrl = (mockFetch as ReturnType<typeof createMockFetch>).mock.calls[0][0];
+      const callUrl = (mockFetch as ReturnType<typeof createMockFetch>).mock.calls[0]![0]!;
       expect(callUrl).toContain('module=search');
       expect(callUrl).toContain('limit=5');
     });
