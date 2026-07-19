@@ -1,9 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Lock, Loader2, Search, Link as LinkIcon, Star, AlertTriangle, CheckCircle2, Lightbulb, Share2, User, Globe } from 'lucide-react';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { Link, useOutletContext, useNavigate } from 'react-router-dom';
-import type { SessionUser, CompanyAnalysisReport } from '@/lib/api';
-import { companyAnalysisApi } from '@/lib/api';
+import type { SessionUser, CompanyAnalysisReport, CompanyAnalysisProgressStep } from '@/lib/api';
+import { companyAnalysisStream } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/contexts/ToastContext';
 import { EmptyState, StatCard } from '@/components/dashboard/shared/DashboardUI';
@@ -23,6 +23,17 @@ import { isMarketFeatureEnabled } from '@/lib/market';
 type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
 type AnalysisMode = 'profile' | 'search';
+
+const CA_STEP_LABEL: Record<string, string> = {
+    profile: 'Preparando perfil...',
+    web_search: 'Buscando dados na web...',
+    places: 'Verificando avaliações...',
+    prompt: 'Montando análise...',
+    ai_call: 'Analisando com IA...',
+    parsing: 'Processando resultados...',
+    saving: 'Salvando relatório...',
+    done: 'Análise concluída!',
+};
 
 function buildProfileRequestBody(profile: { companyName: string; location: LocationFieldsValue }, locale: SupportedLocale) {
     return {
@@ -450,6 +461,13 @@ export default function MinhaEmpresaPage() {
     const [loading, setLoading] = useState(false);
     const [report, setReport] = useState<CompanyAnalysisReport | null>(null);
     const [error, setError] = useState('');
+    const [currentStep, setCurrentStep] = useState('');
+
+    const streamAbortRef = useRef<{ abort: () => void } | null>(null);
+
+    useEffect(() => {
+        return () => { streamAbortRef.current?.abort(); };
+    }, []);
 
     const hasAccess = user.plan === 'BUSINESS' || user.plan === 'SCALE';
     const workspaceName = user.companyName ?? '';
@@ -464,31 +482,40 @@ export default function MinhaEmpresaPage() {
         setLoading(true);
         setReport(null);
         setError('');
-        try {
-            const body = buildAnalysisRequestBody(
-                mode,
-                { companyName, location: profileLocation },
-                {
-                    companyName: searchCompanyName,
-                    location: searchLocation,
-                    productService: searchProductService,
-                    websiteUrl: searchWebsiteUrl,
-                    linkedInUrl: searchLinkedInUrl,
-                    instagramUrl: searchInstagramUrl,
-                    facebookUrl: searchFacebookUrl,
-                },
-                locale,
-            );
-            const result = await companyAnalysisApi.run(body);
-            setReport(result);
-            addToast('success', t('page.minhaEmpresa.toast.success'));
-        } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : t('page.minhaEmpresa.toast.error');
-            setError(message);
-            addToast('error', message);
-        } finally {
-            setLoading(false);
-        }
+        setCurrentStep('profile');
+
+        const body = buildAnalysisRequestBody(
+            mode,
+            { companyName, location: profileLocation },
+            {
+                companyName: searchCompanyName,
+                location: searchLocation,
+                productService: searchProductService,
+                websiteUrl: searchWebsiteUrl,
+                linkedInUrl: searchLinkedInUrl,
+                instagramUrl: searchInstagramUrl,
+                facebookUrl: searchFacebookUrl,
+            },
+            locale,
+        );
+
+        streamAbortRef.current = companyAnalysisStream(body as unknown as Record<string, unknown>, {
+            onProgress: (step: CompanyAnalysisProgressStep) => {
+                setCurrentStep(step);
+            },
+            onResult: (result: CompanyAnalysisReport) => {
+                setReport(result);
+                setLoading(false);
+                setCurrentStep('');
+                addToast('success', t('page.minhaEmpresa.toast.success'));
+            },
+            onError: (message: string) => {
+                setError(message);
+                setLoading(false);
+                setCurrentStep('');
+                addToast('error', message);
+            },
+        });
     }, [canSubmit, mode, companyName, profileLocation, searchCompanyName, searchLocation, searchProductService, searchWebsiteUrl, searchLinkedInUrl, searchInstagramUrl, searchFacebookUrl, addToast, t, locale]);
 
     const handleAnalyze = async (e: React.SyntheticEvent<HTMLFormElement>) => {
@@ -537,7 +564,12 @@ export default function MinhaEmpresaPage() {
                 {error && !loading && !report && (
                     <IntelligenceErrorBanner message={error} onRetry={runAnalyze} />
                 )}
-                {loading && <IntelligenceLoadingSkeleton statCount={2} />}
+                {loading && (
+                    <div className="space-y-2">
+                        {currentStep && <p className="text-sm text-muted animate-pulse">{CA_STEP_LABEL[currentStep] ?? currentStep}</p>}
+                        <IntelligenceLoadingSkeleton statCount={2} />
+                    </div>
+                )}
                 {report && !loading && <MinhaEmpresaReportView report={report} t={t} showReclameAqui={showReclameAqui} />}
             </div>
         </>

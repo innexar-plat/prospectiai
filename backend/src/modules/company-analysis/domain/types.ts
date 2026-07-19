@@ -32,6 +32,16 @@ export interface CompanyAnalysisInput {
     country?: string;
 }
 
+export type CompanyAnalysisProgressStep =
+    | 'profile'
+    | 'web_search'
+    | 'places'
+    | 'prompt'
+    | 'ai_call'
+    | 'parsing'
+    | 'saving'
+    | 'done';
+
 export interface CompanyAnalysisReport {
     summary: string;
     strengths: string[];

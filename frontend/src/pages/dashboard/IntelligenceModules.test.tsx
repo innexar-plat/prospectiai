@@ -33,7 +33,7 @@ vi.mock('react-router-dom', async (importOriginal) => {
 
 const mockMarketReport = vi.fn();
 const mockCompetitorAnalyze = vi.fn();
-const mockCompanyAnalysisRun = vi.fn();
+const mockCompanyAnalysisStream = vi.fn();
 const mockPipelineBrief = vi.fn();
 const mockViabilityAnalyze = vi.fn();
 
@@ -45,9 +45,7 @@ vi.mock('@/lib/api', () => ({
   competitorApi: {
     analyze: (...args: unknown[]) => mockCompetitorAnalyze(...args),
   },
-  companyAnalysisApi: {
-    run: (...args: unknown[]) => mockCompanyAnalysisRun(...args),
-  },
+  companyAnalysisStream: (...args: unknown[]) => mockCompanyAnalysisStream(...args),
   pipelineApi: {
     getDailyBrief: () => mockPipelineBrief(),
   },
@@ -76,7 +74,7 @@ describe('Intelligence modules', () => {
     mockIsMarketFeatureEnabled.mockImplementation((feature: string) => feature !== 'smartRelations');
     mockMarketReport.mockReset();
     mockCompetitorAnalyze.mockReset();
-    mockCompanyAnalysisRun.mockReset();
+    mockCompanyAnalysisStream.mockReset();
     mockPipelineBrief.mockReset();
     mockViabilityAnalyze.mockReset();
   });
@@ -168,7 +166,7 @@ describe('Intelligence modules', () => {
   describe('MinhaEmpresaPage', () => {
     it('hides Reclame Aqui section in US market', async () => {
       mockIsMarketFeatureEnabled.mockImplementation((feature: string) => feature !== 'reclameAqui' && feature !== 'smartRelations');
-      mockCompanyAnalysisRun.mockResolvedValue({
+      const mockResult = {
         summary: 'Strong digital presence.',
         strengths: ['Good reviews'],
         weaknesses: ['Low social activity'],
@@ -177,6 +175,10 @@ describe('Intelligence modules', () => {
         googlePresenceScore: 8,
         googleRating: 4.5,
         googleReviewCount: 120,
+      };
+      mockCompanyAnalysisStream.mockImplementation((_body: unknown, callbacks: { onResult: (r: unknown) => void }) => {
+        setTimeout(() => callbacks.onResult(mockResult), 50);
+        return { abort: () => {} };
       });
 
       renderWithProviders(<MinhaEmpresaPage />, { route: '/dashboard/minha-empresa' });
@@ -191,7 +193,10 @@ describe('Intelligence modules', () => {
     });
 
     it('shows error banner when company analysis fails', async () => {
-      mockCompanyAnalysisRun.mockRejectedValue(new Error('Erro ao gerar análise'));
+      mockCompanyAnalysisStream.mockImplementation((_body: unknown, callbacks: { onError: (e: string) => void }) => {
+        setTimeout(() => callbacks.onError('Erro ao gerar análise'), 50);
+        return { abort: () => {} };
+      });
 
       renderWithProviders(<MinhaEmpresaPage />, { route: '/dashboard/minha-empresa' });
       fireEvent.click(screen.getByRole('button', { name: /gerar análise/i }));
@@ -204,12 +209,18 @@ describe('Intelligence modules', () => {
     it('passes country, locale and Orlando city in search mode', async () => {
       localStorage.setItem(getLocaleStorageKey(), 'en');
       mockIsMarketFeatureEnabled.mockImplementation((feature: string) => feature !== 'reclameAqui' && feature !== 'smartRelations');
-      mockCompanyAnalysisRun.mockResolvedValue({
+      const mockResult = {
         summary: 'Strong local presence.',
         strengths: [],
         weaknesses: [],
         recommendations: [],
         socialNetworks: { presence: '' },
+      };
+      const capturedArgs: unknown[] = [];
+      mockCompanyAnalysisStream.mockImplementation((body: unknown, callbacks: { onResult: (r: unknown) => void }) => {
+        capturedArgs.push(body);
+        setTimeout(() => callbacks.onResult(mockResult), 50);
+        return { abort: () => {} };
       });
 
       renderWithProviders(<MinhaEmpresaPage />, { route: '/dashboard/minha-empresa' });
@@ -232,7 +243,8 @@ describe('Intelligence modules', () => {
       fireEvent.click(screen.getByRole('button', { name: /generate analysis/i }));
 
       await waitFor(() => {
-        expect(mockCompanyAnalysisRun).toHaveBeenCalledWith(
+        expect(capturedArgs.length).toBeGreaterThan(0);
+        expect(capturedArgs[0]).toEqual(
           expect.objectContaining({
             useProfile: false,
             companyName: 'Acme Barbershop',

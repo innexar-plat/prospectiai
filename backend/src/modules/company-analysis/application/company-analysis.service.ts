@@ -13,6 +13,7 @@ import { logger } from '@/lib/logger';
 import type { Market } from '@/lib/market';
 import { MARKET } from '@/lib/market';
 import type { CompanyAnalysisInput, CompanyAnalysisReport } from '../domain/types';
+import type { CompanyAnalysisProgressStep } from '../domain/types';
 import {
     buildCompanyAnalysisPrompt,
     buildPlacesBlock,
@@ -195,14 +196,17 @@ export async function runCompanyAnalysis(
     userId: string,
     market: Market = MARKET,
     locale: string = market === 'US' ? 'en' : 'pt',
+    onProgress?: (step: CompanyAnalysisProgressStep) => void,
 ): Promise<CompanyAnalysisReport> {
     const workspaceId = await getWorkspaceIdForUser(userId);
+    onProgress?.('profile');
 
     const queries = buildSerperQueries(input, market);
     const webContext = await getWebContextForRole('company_analysis', queries, {
         workspaceId: workspaceId ?? undefined,
         userId,
     });
+    onProgress?.('web_search');
 
     const city = input.city?.trim();
     const state = input.state?.trim();
@@ -219,12 +223,14 @@ export async function runCompanyAnalysis(
                   locale,
               )
             : null;
+    onProgress?.('places');
 
     const profileBlock = buildProfileBlock(input, market);
     const placesBlock = buildPlacesBlock(placesContext, market);
     const noBusinessTypeDeclared =
         !input.productService?.trim() && !input.targetAudience?.trim() && !input.mainBenefit?.trim();
     const prompt = buildCompanyAnalysisPrompt(profileBlock, webContext, placesBlock, noBusinessTypeDeclared, market, locale);
+    onProgress?.('prompt');
 
     const { config } = await resolveAiForRole('company_analysis');
     const result = await generateCompletionForRole('company_analysis', {
@@ -232,6 +238,7 @@ export async function runCompanyAnalysis(
         jsonMode: true,
         maxOutputTokens: 4096,
     });
+    onProgress?.('ai_call');
 
     if (workspaceId && result.usage) {
         recordUsageEvent({
@@ -256,6 +263,7 @@ export async function runCompanyAnalysis(
     } catch {
         aiReport = fallbackReport(locale);
     }
+    onProgress?.('parsing');
 
     if (workspaceId) {
         prisma.intelligenceReport
@@ -276,6 +284,7 @@ export async function runCompanyAnalysis(
                 })
             );
     }
+    onProgress?.('saving');
 
     return aiReport;
 }

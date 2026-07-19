@@ -11,6 +11,9 @@ import { classifyRouteError, getRouteFallbackMessage } from '@/lib/api-route-err
 import { getRequestMarket, resolveAnalysisMarket, resolveSearchCountry } from '@/lib/market';
 import { resolveMarketForUser } from '@/lib/user-market';
 import { resolveAiRequestLocale } from '@/lib/i18n/locale';
+import { acquireRedisLock, releaseRedisLock, setCached, waitForCached } from '@/lib/redis';
+import { withAnalyzeBulkhead } from '@/lib/analyze-bulkhead';
+import { randomUUID } from 'crypto';
 
 const WORKSPACE_SELECT = {
     companyName: true,
@@ -99,6 +102,41 @@ function buildAnalysisInput(useProfile: boolean, data: BodyForAnalysis, w: Works
     };
 }
 
+const DEFAULT_JOB_TTL_SECONDS = 900;
+const DEFAULT_LOCK_TTL_MS = 120000;
+const DEFAULT_WAIT_RESULT_TIMEOUT_MS = 15000;
+
+type CompanyAnalysisJobState = {
+    status: 'processing' | 'done' | 'error';
+    step?: string;
+    result?: unknown;
+    error?: string;
+    httpStatus?: number;
+    jobId?: string;
+    updatedAt?: number;
+};
+
+function withJobTimestamp(state: CompanyAnalysisJobState): CompanyAnalysisJobState {
+    return { ...state, updatedAt: Date.now() };
+}
+
+function parsePositiveInt(value: string | undefined, fallback: number): number {
+    const parsed = Number.parseInt(value ?? '', 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function getJobTtlSeconds(): number {
+    return parsePositiveInt(process.env.ANALYZE_JOB_TTL_SECONDS, DEFAULT_JOB_TTL_SECONDS);
+}
+
+function getLockTtlMs(): number {
+    return parsePositiveInt(process.env.ANALYZE_LOCK_TTL_MS, DEFAULT_LOCK_TTL_MS);
+}
+
+function getWaitResultTimeoutMs(): number {
+    return parsePositiveInt(process.env.ANALYZE_WAIT_RESULT_TIMEOUT_MS, DEFAULT_WAIT_RESULT_TIMEOUT_MS);
+}
+
 export async function POST(req: NextRequest) {
     const requestId = getOrCreateRequestId(req);
     try {
@@ -182,8 +220,54 @@ export async function POST(req: NextRequest) {
         const resolvedCountry = resolveSearchCountry(req, data.country);
         const market = resolveAnalysisMarket(req, resolvedCountry, userMarket);
         const locale = resolveAiRequestLocale(req, data.locale);
-        const result = await runCompanyAnalysis({ ...input, country: resolvedCountry }, session.user.id, market, locale);
-        return jsonWithRequestId(result, { requestId });
+
+        // ── Async job setup ──────────────────────────────────────────────
+
+        const lockKey = `company-analysis:lock:${session.user.id}`;
+        const lockToken = randomUUID();
+        const lockAcquired = await acquireRedisLock(lockKey, lockToken, getLockTtlMs());
+
+        if (!lockAcquired) {
+            return jsonWithRequestId(
+                { error: 'Uma análise já está em andamento. Aguarde ou tente novamente em alguns instantes.' },
+                { status: 429, requestId },
+            );
+        }
+
+        const jobId = randomUUID();
+        const jobKey = `company-analysis:job:${jobId}`;
+        const jobTtlSeconds = getJobTtlSeconds();
+        const processingState = withJobTimestamp({ status: 'processing', step: 'profile', jobId });
+
+        await setCached(jobKey, processingState, jobTtlSeconds);
+
+        // Fire background analysis
+        withAnalyzeBulkhead(() =>
+            runCompanyAnalysis(input, session.user.id, market, locale, async (step) => {
+                const state = withJobTimestamp({ status: 'processing', step, jobId });
+                await setCached(jobKey, state, jobTtlSeconds).catch(() => {});
+            })
+        )
+            .then(async (result) => {
+                const state = withJobTimestamp({ status: 'done', result, jobId });
+                await setCached(jobKey, state, jobTtlSeconds);
+            })
+            .catch(async (err) => {
+                const msg = err instanceof Error ? err.message : 'Internal error';
+                const status = err instanceof Error && err.message === 'ANALYZE_BULKHEAD_TIMEOUT' ? 503 : 500;
+                const state = withJobTimestamp({
+                    status: 'error',
+                    error: msg,
+                    httpStatus: status,
+                    jobId,
+                });
+                await setCached(jobKey, state, jobTtlSeconds);
+            })
+            .finally(async () => {
+                await releaseRedisLock(lockKey, lockToken);
+            });
+
+        return jsonWithRequestId({ jobId, status: 'processing' }, { requestId });
     } catch (err) {
         const { logger } = await import('@/lib/logger');
         const market = getRequestMarket(req);

@@ -332,9 +332,17 @@ export type CheckoutResponse =
 
 export type AnalyzeProgressStep = 'profile' | 'web_search' | 'conversion' | 'prompt' | 'ai_call' | 'parsing' | 'saving' | 'done';
 
+export type CompanyAnalysisProgressStep = 'profile' | 'web_search' | 'places' | 'prompt' | 'ai_call' | 'parsing' | 'saving' | 'done';
+
 export interface AnalyzeStreamCallbacks {
     onProgress: (step: AnalyzeProgressStep, detail?: string) => void;
     onResult: (result: Analysis) => void;
+    onError: (error: string) => void;
+}
+
+export interface CompanyAnalysisStreamCallbacks {
+    onProgress: (step: CompanyAnalysisProgressStep, detail?: string) => void;
+    onResult: (result: CompanyAnalysisReport) => void;
     onError: (error: string) => void;
 }
 

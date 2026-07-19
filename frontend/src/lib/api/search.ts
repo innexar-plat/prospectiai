@@ -25,6 +25,8 @@ import type {
     AnalyzeProgressStep,
     AnalyzeStreamCallbacks,
     AnalyzeStreamOptions,
+    CompanyAnalysisProgressStep,
+    CompanyAnalysisStreamCallbacks,
 } from './types';
 
 // ─── Analyze stream helpers ──────────────────────────────────────────────────
@@ -183,6 +185,143 @@ export function analyzeStream(
         } catch (err) {
             if (aborted) return;
             callbacks.onError(err instanceof Error ? err.message : resolveLogMessage(options, 'log.analyze.error.startFailed'));
+        }
+    })();
+
+    return {
+        abort: () => {
+            aborted = true;
+            if (pollTimer) clearTimeout(pollTimer);
+        },
+    };
+}
+
+// ─── Company Analysis Stream ─────────────────────────────────────────────────
+
+const CA_STEP_LABELS: Record<string, string> = {
+    profile: 'Preparando perfil...',
+    web_search: 'Buscando dados na web...',
+    places: 'Verificando avaliações...',
+    prompt: 'Montando análise...',
+    ai_call: 'Analisando com IA...',
+    parsing: 'Processando resultados...',
+    saving: 'Salvando relatório...',
+    done: 'Análise concluída!',
+};
+
+type CompanyAnalysisJobStatusResponse = {
+    status: string;
+    step?: CompanyAnalysisProgressStep;
+    result?: CompanyAnalysisReport;
+    error?: string;
+    errorCode?: string;
+};
+
+class CompanyAnalysisStatusHttpError extends Error {
+    httpStatus: number;
+    constructor(message: string, httpStatus: number) {
+        super(message);
+        this.httpStatus = httpStatus;
+    }
+}
+
+async function fetchCompanyAnalysisJobStatus(jobId: string): Promise<CompanyAnalysisJobStatusResponse> {
+    const res = await fetch('/api/company-analysis/status?jobId=' + jobId, {
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await res.json().catch(() => ({})) as CompanyAnalysisJobStatusResponse & { error?: string };
+
+    if (res.status === 404) {
+        return { status: 'not_found', error: data.error };
+    }
+    if (!res.ok) {
+        throw new CompanyAnalysisStatusHttpError(data.error || `HTTP ${res.status}`, res.status);
+    }
+    return data;
+}
+
+export function companyAnalysisStream(
+    body: Record<string, unknown>,
+    callbacks: CompanyAnalysisStreamCallbacks,
+): { abort: () => void } {
+    let aborted = false;
+    let pollTimer: ReturnType<typeof setTimeout> | null = null;
+
+    (async () => {
+        try {
+            const { jobId } = await request<{ jobId: string; status: string }>('/company-analysis', {
+                method: 'POST',
+                body: JSON.stringify(body),
+            });
+
+            callbacks.onProgress('profile', CA_STEP_LABELS.profile);
+
+            const POLL_INTERVAL = 2000;
+            const MAX_POLLS = 450;
+            const MAX_CONSECUTIVE_ERRORS = 5;
+            let polls = 0;
+            let consecutiveErrors = 0;
+
+            const poll = async () => {
+                if (aborted) return;
+                polls++;
+
+                try {
+                    const job = await fetchCompanyAnalysisJobStatus(jobId);
+
+                    if (aborted) return;
+                    consecutiveErrors = 0;
+
+                    if (job.status === 'not_found') {
+                        callbacks.onError(job.error || 'Job not found');
+                        return;
+                    }
+
+                    if (job.status === 'processing') {
+                        if (job.step && CA_STEP_LABELS[job.step]) {
+                            callbacks.onProgress(job.step, CA_STEP_LABELS[job.step]);
+                        }
+                        if (polls < MAX_POLLS) {
+                            pollTimer = setTimeout(poll, POLL_INTERVAL);
+                        } else {
+                            callbacks.onError('A análise excedeu o tempo limite. Tente novamente.');
+                        }
+                    } else if (job.status === 'done' && job.result) {
+                        callbacks.onProgress('done', CA_STEP_LABELS.done);
+                        callbacks.onResult(job.result);
+                    } else if (job.status === 'error') {
+                        if (job.errorCode === 'ANALYSIS_STALE') {
+                            callbacks.onError('A análise excedeu o tempo limite. Tente novamente.');
+                        } else {
+                            callbacks.onError(job.error || 'Erro ao analisar empresa');
+                        }
+                    } else {
+                        callbacks.onError('Status desconhecido da análise');
+                    }
+                } catch (err) {
+                    if (aborted) return;
+                    consecutiveErrors++;
+                    const httpStatus = err instanceof CompanyAnalysisStatusHttpError ? err.httpStatus : undefined;
+                    const isTransient = httpStatus === 502 || httpStatus === 503 || httpStatus === 520 || httpStatus === undefined;
+
+                    if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS && isTransient) {
+                        callbacks.onError('Serviço temporariamente indisponível. Tente novamente.');
+                        return;
+                    }
+
+                    if (polls < MAX_POLLS) {
+                        pollTimer = setTimeout(poll, POLL_INTERVAL);
+                    } else {
+                        callbacks.onError(err instanceof Error ? err.message : 'Erro ao verificar status');
+                    }
+                }
+            };
+
+            pollTimer = setTimeout(poll, POLL_INTERVAL);
+        } catch (err) {
+            if (aborted) return;
+            callbacks.onError(err instanceof Error ? err.message : 'Erro ao iniciar análise');
         }
     })();
 

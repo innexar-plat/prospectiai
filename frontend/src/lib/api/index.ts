@@ -1,5 +1,5 @@
 export { __resetAuthRedirectForTests, buildApiHeaders } from './_request';
-export { analyzeStream } from './search';
+export { analyzeStream, companyAnalysisStream } from './search';
 
 export { authApi } from './auth';
 export { searchApi, competitorApi, viabilityApi, companyAnalysisApi, intelligenceApi, cnaeApi, rfSearchApi, smartRelationsApi, integrationsApi, autoProspApi } from './search';
@@ -37,6 +37,8 @@ export type {
     AnalyzeProgressStep,
     AnalyzeStreamCallbacks,
     AnalyzeStreamOptions,
+    CompanyAnalysisProgressStep,
+    CompanyAnalysisStreamCallbacks,
     NotificationType,
     NotificationItem,
     LeadTagItem,
