@@ -1,50 +1,21 @@
 import React from 'react';
+import type { HTMLMotionProps } from 'framer-motion';
 
-type MotionDivProps = React.ComponentProps<'div'> & {
-  initial?: Record<string, unknown>;
-  animate?: Record<string, unknown>;
-  exit?: Record<string, unknown>;
-  transition?: Record<string, unknown>;
-  variants?: Record<string, unknown>;
-  whileHover?: Record<string, unknown>;
-  whileTap?: Record<string, unknown>;
-  whileInView?: Record<string, unknown>;
-  viewport?: Record<string, unknown>;
-  layout?: boolean | string;
-  layoutId?: string;
-  style?: React.CSSProperties;
-  className?: string;
-  children?: React.ReactNode;
-  ref?: React.Ref<HTMLDivElement>;
-};
+type MotionDivProps = HTMLMotionProps<'div'>;
 
-const MotionLazy = React.lazy(() =>
+const LazyDiv = React.lazy(() =>
   import('framer-motion').then((mod) => ({
     default: mod.motion.div,
   }))
 );
 
-export function MotionDiv(props: MotionDivProps) {
-  const { initial, animate, exit, transition, variants, whileHover, whileTap, whileInView, viewport, layout, layoutId, style, className, children, ...rest } = props;
+export function MotionDiv({ className, style, children, ...motionProps }: MotionDivProps) {
   return (
-    <React.Suspense fallback={<div className={className} style={style} {...rest}>{children}</div>}>
-      <MotionLazy
-        initial={initial}
-        animate={animate}
-        exit={exit}
-        transition={transition}
-        variants={variants}
-        whileHover={whileHover}
-        whileTap={whileTap}
-        whileInView={whileInView}
-        viewport={viewport}
-        layout={layout}
-        layoutId={layoutId}
-        style={style}
-        className={className}
-      >
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    <React.Suspense fallback={<div className={className} style={style as any}>{children as any}</div>}>
+      <LazyDiv className={className} style={style} {...motionProps}>
         {children}
-      </MotionLazy>
+      </LazyDiv>
     </React.Suspense>
   );
 }
