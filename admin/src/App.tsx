@@ -12,6 +12,7 @@ import { LeadsPage } from '@/pages/LeadsPage';
 import { SearchHistoryPage } from '@/pages/SearchHistoryPage';
 import { AuditPage } from '@/pages/AuditPage';
 import { AiConfigPage } from '@/pages/AiConfigPage';
+import { RfConfigPage } from '@/pages/RfConfigPage';
 import { CrmIntegrationsPage } from '@/pages/CrmIntegrationsPage';
 import { EmailPage } from '@/pages/EmailPage';
 import { NotificationsPage } from '@/pages/NotificationsPage';
@@ -58,6 +59,7 @@ function App() {
               <Route path="audit" element={<AuditPage />} />
               <Route path="ai-config" element={<AiConfigPage />} />
               <Route path="crm-integrations" element={<CrmIntegrationsPage />} />
+              <Route path="rf-config" element={<RfConfigPage />} />
               <Route path="email" element={<EmailPage />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="plans" element={<PlansPage />} />

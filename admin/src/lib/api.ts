@@ -629,6 +629,12 @@ export const adminApi = {
       request<AffiliateSettingsPublic>('/admin/affiliate-settings', { method: 'PATCH', body: JSON.stringify(body) }),
   },
 
+  rfSearchConfig: {
+    get: () => request<RfConfigPublic>('/admin/rf-config'),
+    update: (body: { enabled: boolean }) =>
+      request<RfConfigPublic>('/admin/rf-config', { method: 'PATCH', body: JSON.stringify(body) }),
+  },
+
   emailLogs: (params?: { limit?: number; offset?: number; type?: string; status?: string; email?: string }) => {
     const q = new URLSearchParams();
     if (params?.limit != null) q.set('limit', String(params.limit));
@@ -650,6 +656,12 @@ export interface EmailLogItem {
   provider: string | null;
   error: string | null;
   createdAt: string;
+}
+
+export interface RfConfigPublic {
+  id: string;
+  enabled: boolean;
+  updatedAt: string;
 }
 
 export interface AffiliateSettingsPublic {

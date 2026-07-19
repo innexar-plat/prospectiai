@@ -3,7 +3,27 @@ import { getCached, setCached } from '@/lib/redis';
 import { logger } from '@/lib/logger';
 import type { PlaceResult } from '../domain/types';
 
-const SEARCH_RF_CROSS_ENABLED = String(process.env.SEARCH_RF_CROSS_ENABLED ?? 'true').toLowerCase() === 'true';
+let _rfCrossEnabled: boolean | null = null;
+
+async function isRfCrossEnabled(): Promise<boolean> {
+  if (_rfCrossEnabled !== null) return _rfCrossEnabled;
+  const envVal = String(process.env.SEARCH_RF_CROSS_ENABLED ?? 'true').toLowerCase();
+  if (envVal !== 'true') {
+    _rfCrossEnabled = false;
+    return false;
+  }
+  try {
+    const config = await prisma.rfSearchConfig.findUnique({ where: { id: 'rf-search-config-default' } });
+    _rfCrossEnabled = config?.enabled ?? true;
+  } catch {
+    _rfCrossEnabled = true;
+  }
+  return _rfCrossEnabled;
+}
+
+export function invalidateRfCrossConfigCache(): void {
+  _rfCrossEnabled = null;
+}
 const SEARCH_RF_MAX_RESULTS = Number.parseInt(process.env.SEARCH_RF_MAX_RESULTS ?? '20', 10);
 const SEARCH_RF_AUTO_CNAE_LIMIT = Number.parseInt(process.env.SEARCH_RF_AUTO_CNAE_LIMIT ?? '5', 10);
 const SEARCH_RF_AUTO_CNAE_LOOKUPS = Number.parseInt(process.env.SEARCH_RF_AUTO_CNAE_LOOKUPS ?? '12', 10);
@@ -691,7 +711,7 @@ export async function crossWithReceitaIfEligible(
     state?: string | null,
     country?: string | null,
 ): Promise<PlaceResult[]> {
-    if (!SEARCH_RF_CROSS_ENABLED || !isBrazilCountry(country)) return places;
+    if (!(await isRfCrossEnabled()) || !isBrazilCountry(country)) return places;
 
     try {
         const releaseSlot = await acquireRfCrossSlot();

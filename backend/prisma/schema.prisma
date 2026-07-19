@@ -780,6 +780,13 @@ model AffiliateSettings {
   updatedAt                 DateTime @updatedAt
 }
 
+// Configuração de busca na base da Receita Federal
+model RfSearchConfig {
+  id        String   @id
+  enabled   Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+}
+
 // Configuração de e-mail (única por sistema): Resend ou SMTP, editável no admin
 model EmailConfig {
   id                     String   @id @default(cuid())

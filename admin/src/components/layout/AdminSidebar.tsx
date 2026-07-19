@@ -85,6 +85,7 @@ const sections: NavSection[] = [
       { to: 'email', end: false, label: 'Email', icon: Mail },
       { to: 'notifications', end: false, label: 'Notificações', icon: Bell },
       { to: 'plans', end: false, label: 'Planos', icon: CreditCard },
+      { to: 'rf-config', end: false, label: 'Busca RF', icon: Search },
     ],
   },
 ];
