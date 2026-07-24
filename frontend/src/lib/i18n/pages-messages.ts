@@ -176,6 +176,7 @@ export const PAGES_MESSAGES: Record<string, Record<string, string>> = {
         'page.resultados.actionEmail': 'Enviar e-mail',
         'page.resultados.hasEmail': 'Com e-mail',
         'page.resultados.noEmail': 'Sem e-mail',
+
         'page.configuracoes.title': 'Configurações',
         'page.configuracoes.subtitle': 'Notificações, segurança e preferências.',
         'page.configuracoes.breadcrumb': 'Conta / Configurações',
@@ -1676,6 +1677,7 @@ export const PAGES_MESSAGES: Record<string, Record<string, string>> = {
         'page.resultados.actionEmail': 'Send email',
         'page.resultados.hasEmail': 'Has email',
         'page.resultados.noEmail': 'No email',
+
         'page.configuracoes.title': 'Settings',
         'page.configuracoes.subtitle': 'Notifications, security and preferences.',
         'page.configuracoes.breadcrumb': 'Account / Settings',
@@ -3176,6 +3178,7 @@ export const PAGES_MESSAGES: Record<string, Record<string, string>> = {
         'page.resultados.actionEmail': 'Enviar correo',
         'page.resultados.hasEmail': 'Con correo',
         'page.resultados.noEmail': 'Sin correo',
+
         'page.configuracoes.title': 'Configuración',
         'page.configuracoes.subtitle': 'Notificaciones, seguridad y preferencias.',
         'page.configuracoes.breadcrumb': 'Cuenta / Configuración',

@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { getCached, setCached } from '@/lib/redis';
-import { searchSerperRich, type SerperRichResponse } from '@/lib/web-search/serper';
+import { searchSerper, searchSerperRich, type SerperRichResponse } from '@/lib/web-search/serper';
 import { logger } from '@/lib/logger';
 import { recordUsageEvent } from '@/lib/usage';
 import type { PlaceResult } from '../domain/types';
@@ -337,6 +337,85 @@ export async function enrichMissingWebsitesWithSerper(
     });
 
     return nextPlaces;
+}
+
+const websiteEnrichCache = new Map<string, { url: string | null; expiresAt: number }>();
+let lastSerperCall = 0;
+
+function buildWebsiteEnrichCacheKey(place: PlaceResult): string {
+    const name = (place.displayName?.text ?? '').trim().toLowerCase();
+    const address = (place.formattedAddress ?? '').trim().toLowerCase();
+    return `enrich:website:${name}:${address}`;
+}
+
+function buildWebsiteSearchQuery(place: PlaceResult): string {
+    const name = sanitizeSerperText(place.displayName?.text ?? '');
+    const address = sanitizeSerperText(place.formattedAddress ?? '');
+    const parts = [name, address].filter(Boolean);
+    return `${parts.join(' ')} site`;
+}
+
+export async function enrichWebsitesFromSerper(places: PlaceResult[]): Promise<PlaceResult[]> {
+    if (!SEARCH_SITE_ENRICH_ENABLED || places.length === 0) return places;
+
+    const missing = places.filter((p) => !p.websiteUri?.trim() && !p.website?.trim());
+    if (missing.length === 0) return places;
+
+    const apiKeys = await resolveSerperApiKeysForSearch();
+    if (apiKeys.length === 0) return places;
+
+    const batch = missing.slice(0, 5);
+    const result = [...places];
+    let activeKeyIndex = 0;
+
+    for (const place of batch) {
+        const elapsed = Date.now() - lastSerperCall;
+        if (elapsed < 500) await new Promise((r) => setTimeout(r, 500 - elapsed));
+        lastSerperCall = Date.now();
+
+        const cacheKey = buildWebsiteEnrichCacheKey(place);
+        const cached = websiteEnrichCache.get(cacheKey);
+        if (cached && cached.expiresAt > Date.now()) {
+            if (cached.url) {
+                const idx = places.indexOf(place);
+                result[idx] = { ...place, website: cached.url };
+            }
+            continue;
+        }
+
+        try {
+            const query = buildWebsiteSearchQuery(place);
+            let organic: Awaited<ReturnType<typeof searchSerper>> = [];
+            while (activeKeyIndex < apiKeys.length) {
+                try {
+                    organic = await searchSerper(apiKeys[activeKeyIndex]!, query, 3);
+                    break;
+                } catch (keyErr) {
+                    const errMsg = keyErr instanceof Error ? keyErr.message : String(keyErr);
+                    if (errMsg.includes('400') || errMsg.includes('credits') || errMsg.includes('401') || errMsg.includes('403')) {
+                        activeKeyIndex++;
+                        continue;
+                    }
+                    throw keyErr;
+                }
+            }
+            const url = organic.find((r) => isAllowedBusinessWebsite(r.link))?.link?.trim() ?? null;
+
+            websiteEnrichCache.set(cacheKey, { url, expiresAt: Date.now() + 3600_000 });
+
+            if (url) {
+                const idx = places.indexOf(place);
+                result[idx] = { ...place, website: url };
+            }
+        } catch (err) {
+            logger.warn('enrichWebsitesFromSerper error', {
+                placeId: place.id,
+                error: err instanceof Error ? err.message : String(err),
+            });
+        }
+    }
+
+    return result;
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {

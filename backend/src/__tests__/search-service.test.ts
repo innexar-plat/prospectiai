@@ -77,6 +77,7 @@ jest.mock('@/lib/search-history-queue', () => ({
 jest.mock('@/lib/logger', () => ({
     logger: {
         info: jest.fn(),
+        warn: jest.fn(),
         error: jest.fn(),
     },
 }));
@@ -156,7 +157,7 @@ describe('SearchService', () => {
 
     it('should return from local DB if enough results available', async () => {
         (redis.getCached as jest.Mock).mockResolvedValue(null);
-        const mockLeads = Array(12).fill(null).map((_, i) => ({
+        const mockLeads = Array(15).fill(null).map((_, i) => ({
             placeId: `id-${i}`,
             name: `Lead ${i}`,
             address: 'Address',
@@ -189,7 +190,7 @@ describe('SearchService', () => {
         });
     });
 
-    it('should skip local DB when fewer than 5 leads returned', async () => {
+    it('should skip local DB when fewer than 15 leads returned', async () => {
         (redis.getCached as jest.Mock).mockResolvedValue(null);
         const fewLeads = Array(3).fill(null).map((_, i) => ({
             placeId: `id-${i}`,
@@ -220,17 +221,21 @@ describe('SearchService', () => {
         expect(prisma.workspace.update).toHaveBeenCalled();
     });
 
-    it('should NOT call Serper during search (moved to lead analysis)', async () => {
+    it('should enrich websites via Serper during search when websiteUri is missing', async () => {
         (redis.getCached as jest.Mock).mockResolvedValue(null);
         (prisma.lead.findMany as jest.Mock).mockResolvedValue([]);
         (googlePlaces.textSearch as jest.Mock).mockResolvedValue({
             places: [{ id: 'g1', displayName: { text: 'Acme Marketing' }, formattedAddress: 'Rua A, 123, Sao Paulo' }],
         });
+        (serper.searchSerper as jest.Mock).mockResolvedValue({
+            organic: [{ link: 'https://acmemarketing.com.br' }],
+        });
 
         const result = await runSearch({ textQuery: 'acme marketing sp', country: 'Brasil' } as any, mockUserId);
 
-        expect(serper.searchSerper).not.toHaveBeenCalled();
-        // Place should still be returned (without Serper enrichment)
+        // Serper should be called to find website for places missing websiteUri
+        expect(serper.searchSerper).toHaveBeenCalled();
+        // Place should still be returned
         expect(result.places?.[0]?.id).toBe('g1');
     });
 

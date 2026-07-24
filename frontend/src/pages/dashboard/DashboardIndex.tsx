@@ -35,6 +35,7 @@ import { FirstSearchHintBanner } from '@/components/dashboard/FirstSearchHintBan
 import type { FirstSearchExample } from '@/lib/first-search-hint';
 import { formatCreditUsage } from '@/lib/credits-display';
 import { TOUR_STEP_EVENT } from '@/lib/tour-placement';
+import { motion, AnimatePresence } from 'framer-motion';
 
 /* ─────────── constants ─────────── */
 
@@ -297,6 +298,7 @@ export default function DashboardIndex() {
   const [form, setForm] = useState<SearchFormValues>(() => createDefaultSearchValues());
   const [loading, setLoading] = useState(false);
   const [, setLoadingStep] = useState(0);
+  const [searchProgress, setSearchProgress] = useState<{ percent: number; label: string } | null>(null);
 
   const [stats, setStats] = useState<LeadStats | null>(null);
   const [showUpgradeCTA, setShowUpgradeCTA] = useState(false);
@@ -377,6 +379,22 @@ export default function DashboardIndex() {
     }, 2500);
     return () => clearInterval(timer);
   }, [loading, LOADING_STEPS.length]);
+
+  // Animate search progress bar
+  useEffect(() => {
+    if (!loading) { setSearchProgress(null); return; }
+    const steps = [
+      { at: 500, pct: 15, label: 'Buscando estabelecimentos…' },
+      { at: 1500, pct: 35, label: 'Buscando estabelecimentos…' },
+      { at: 3000, pct: 55, label: 'Enriquecendo dados…' },
+      { at: 5000, pct: 75, label: 'Calculando scores…' },
+      { at: 7000, pct: 90, label: 'Finalizando…' },
+    ];
+    const timers = steps.map(({ at, pct, label }) =>
+      setTimeout(() => setSearchProgress({ percent: pct, label }), at)
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [loading]);
 
   // Pre-fill form from URL params
   useEffect(() => {
@@ -523,6 +541,7 @@ export default function DashboardIndex() {
       addToast('error', t('dash.search.validation.advancedTermMin', { min: MIN_ADVANCED_TERM }));
       return;
     }
+    setSearchProgress({ percent: 0, label: 'Iniciando…' });
     setLoading(true);
     try {
       const result = await startSearch(payload, t);
@@ -714,7 +733,11 @@ export default function DashboardIndex() {
         primaryDisabled={!canSearch}
       />
 
-      <div className="p-4 sm:p-6 max-w-5xl mx-auto w-full space-y-5" role="search"
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 100, damping: 20 }}
+        className="p-4 sm:p-6 max-w-5xl mx-auto w-full space-y-5" role="search"
         onKeyDown={(e) => { if (e.key === 'Enter' && canSearch && !loading && !trialExpired) { e.preventDefault(); runSearch(); } }}
       >
         {/* ── Quick start for new users ── */}
@@ -1123,16 +1146,19 @@ export default function DashboardIndex() {
                     <span className="text-[10px] text-muted/50 ml-1">({group.templates.length})</span>
                   </button>
                   {isExpanded && (
-                    <div className="flex gap-2 flex-wrap px-3 pb-3">
+                    <motion.div className="flex gap-2 flex-wrap px-3 pb-3" layout>
                       {group.templates.map((tpl) => {
                         const Icon = tpl.icon;
                         const isActive = tpl.includedType
                           ? form.includedType === tpl.includedType
                           : form.niches.length > 0 && tpl.niches.every((n) => form.niches.includes(n));
                         return (
-                          <button
+                          <motion.button
                             key={tpl.label}
                             type="button"
+                            whileHover={{ scale: 1.03, y: -1 }}
+                            whileTap={{ scale: 0.97 }}
+                            layout
                             onClick={() => applyTemplate(tpl)}
                             className={cn(
                               'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors',
@@ -1143,16 +1169,38 @@ export default function DashboardIndex() {
                           >
                             <Icon size={14} className={isActive ? 'text-violet-600 dark:text-violet-400' : 'text-violet-500'} aria-hidden />
                             {tpl.label}
-                          </button>
+                          </motion.button>
                         );
                       })}
-                    </div>
+                    </motion.div>
                   )}
                 </div>
               );
             })}
           </div>
         </section>
+
+        {/* ── Search progress bar ── */}
+        {searchProgress && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full bg-card border border-border rounded-xl p-4 space-y-2"
+          >
+            <div className="flex items-center justify-between text-xs text-muted">
+              <span>{searchProgress.label}</span>
+              <span>{searchProgress.percent}%</span>
+            </div>
+            <div className="h-2 bg-surface rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-gradient-to-r from-violet-500 to-indigo-500 rounded-full"
+                initial={{ width: "0%" }}
+                animate={{ width: `${searchProgress.percent}%` }}
+                transition={{ type: "spring", stiffness: 60, damping: 20 }}
+              />
+            </div>
+          </motion.div>
+        )}
 
         {/* ── Recent searches ── */}
         {recentSearches.length > 0 && (
@@ -1214,8 +1262,15 @@ export default function DashboardIndex() {
               <span className="px-2 py-0.5 rounded-full bg-violet-600/15 text-violet-600 dark:text-violet-400 text-[10px] font-semibold">{t('dash.filters.phone')}</span>
             )}
           </button>
-          {advancedOpen && (
-            <div className="px-4 pb-4 space-y-4 border-t border-border pt-4">
+          <AnimatePresence initial={false}>
+            {advancedOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 200, damping: 25 }}
+                className="px-4 pb-4 space-y-4 border-t border-border pt-4 overflow-hidden"
+              >
               {/* CNAE — BR market only */}
               {showCnaeFilters && (
                 <div>
@@ -1274,8 +1329,8 @@ export default function DashboardIndex() {
                   ))}
                 </div>
               </div>
-            </div>
-          )}
+            </motion.div>
+          )}</AnimatePresence>
         </section>
 
         {/* ── Footer: Clear + Help + CTA ── */}
@@ -1297,19 +1352,25 @@ export default function DashboardIndex() {
               <Skeleton className="h-4 w-48 rounded" />
             </div>
           ) : (
-            <Button
-              variant="primary"
-              size="lg"
-              className="min-w-[200px] h-11 px-8 text-sm font-bold shadow-lg shadow-violet-600/25"
-              icon={<SearchIcon size={18} />}
-              onClick={runSearch}
-              disabled={!canSearch || loading}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 300, damping: 15 }}
             >
-              {t('dash.search.buttonNow')}
-            </Button>
+              <Button
+                variant="primary"
+                size="lg"
+                className="min-w-[200px] h-11 px-8 text-sm font-bold shadow-lg shadow-violet-600/25"
+                icon={<SearchIcon size={18} />}
+                onClick={runSearch}
+                disabled={!canSearch || loading}
+              >
+                {t('dash.search.buttonNow')}
+              </Button>
+            </motion.div>
           )}
         </section>
-      </div>
+      </motion.div>
 
       {showUpgradeCTA && (
         <UpgradeCTAModal

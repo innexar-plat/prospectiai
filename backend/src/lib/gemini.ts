@@ -259,31 +259,62 @@ async function generateLeadFullReport(
 ): Promise<{ fullReport: string; usage?: { inputTokens: number; outputTokens: number } }> {
     const sections = getReportSectionDefinitions(promptInput.isEn);
     const coreAnalysisJson = JSON.stringify(analysis, null, 2);
-    const renderedSections: string[] = [];
     let usage: { inputTokens: number; outputTokens: number } | undefined;
 
-    for (const section of sections) {
-        try {
-            const result = await generateCompletionForRole('lead_analysis', {
-                prompt: buildLeadReportSectionPrompt({
-                    ...promptInput,
-                    sectionTitle: section.title,
-                    sectionInstruction: section.instruction,
-                    coreAnalysisJson,
-                }),
-                maxOutputTokens: getAnalyzeReportSectionMaxOutputTokens(),
-            });
-            usage = mergeUsage(usage, result.usage);
-            const body = normalizeMarkdownBody(result.text) || buildUnavailableSectionBody(promptInput.isEn);
-            renderedSections.push(`## ${section.title}\n\n${body}`);
-        } catch (error) {
-            const { logger } = await import('@/lib/logger');
-            logger.warn('Lead report section generation failed', {
-                section: section.title,
-                placeId: promptInput.business.placeId,
-                error: error instanceof Error ? error.message : 'Unknown',
-            });
-            renderedSections.push(`## ${section.title}\n\n${buildUnavailableSectionBody(promptInput.isEn)}`);
+    const concurrencyLimit = 3;
+    const results: Array<{ index: number; result?: Awaited<ReturnType<typeof generateCompletionForRole>>; error?: unknown; section: ReportSectionDefinition }> = [];
+
+    for (let i = 0; i < sections.length; i += concurrencyLimit) {
+        const chunk = sections.slice(i, i + concurrencyLimit);
+        const chunkPromises = chunk.map(async (section) => {
+            const idx = sections.indexOf(section);
+            try {
+                const result = await generateCompletionForRole('lead_analysis', {
+                    prompt: buildLeadReportSectionPrompt({
+                        ...promptInput,
+                        sectionTitle: section.title,
+                        sectionInstruction: section.instruction,
+                        coreAnalysisJson,
+                    }),
+                    maxOutputTokens: getAnalyzeReportSectionMaxOutputTokens(),
+                });
+                return { index: idx, result, section };
+            } catch (error) {
+                const { logger } = await import('@/lib/logger');
+                logger.warn('Lead report section generation failed', {
+                    section: section.title,
+                    placeId: promptInput.business.placeId,
+                    error: error instanceof Error ? error.message : 'Unknown',
+                });
+                return { index: idx, error, section };
+            }
+        });
+        const settled = await Promise.allSettled(chunkPromises);
+        for (const item of settled) {
+            if (item.status === 'fulfilled') {
+                results.push(item.value);
+            } else {
+                const { logger } = await import('@/lib/logger');
+                logger.warn('Lead report section promise rejected', { reason: item.reason });
+            }
+        }
+    }
+
+    const renderedSections: string[] = [];
+    for (const { index, result: sectionResult, section } of results) {
+        if (sectionResult) {
+            usage = mergeUsage(usage, sectionResult.usage);
+            const body = normalizeMarkdownBody(sectionResult.text) || buildUnavailableSectionBody(promptInput.isEn);
+            renderedSections[index] = `## ${section.title}\n\n${body}`;
+        } else {
+            renderedSections[index] = `## ${section.title}\n\n${buildUnavailableSectionBody(promptInput.isEn)}`;
+        }
+    }
+
+    // Fill any gaps from rejected/undefined entries
+    for (let i = 0; i < sections.length; i++) {
+        if (!renderedSections[i]) {
+            renderedSections[i] = `## ${sections[i]!.title}\n\n${buildUnavailableSectionBody(promptInput.isEn)}`;
         }
     }
 

@@ -67,12 +67,20 @@ export interface TextSearchResponse {
     nextPageToken?: string;
 }
 
-/** locationBias circle: center = cidade (geocodificada), radius = raio a partir da cidade. API exige radius em metros (max 50000). UI usa km. */
-export interface LocationBiasCircle {
+/** locationBias / locationRestriction circle: center + radius. API exige radius em metros (max 50000). UI usa km. */
+export interface LocationCircle {
     center: { latitude: number; longitude: number };
     /** Raio em metros (UI envia km; converter antes de chamar a API). */
     radius: number;
 }
+
+export interface LocationRectangle {
+    low: { latitude: number; longitude: number };
+    high: { latitude: number; longitude: number };
+}
+
+/** @deprecated Use LocationCircle instead */
+export type LocationBiasCircle = LocationCircle;
 
 export interface TextSearchParams {
     textQuery: string;
@@ -83,6 +91,8 @@ export interface TextSearchParams {
     regionCode?: string;
     /** Bias results to this region (Places API doc: locationBias.circle). */
     locationBias?: LocationBiasCircle;
+    /** Hard-restrict results to this region (Places API doc: locationRestriction.rectangle). Only circle input, converted to rectangle internally. */
+    locationRestriction?: LocationCircle;
 }
 
 const SEARCH_FIELD_MASK = [
@@ -171,6 +181,26 @@ function buildSearchBodyNoToken(
                 radius,
             },
         };
+    }
+
+    // locationRestriction (hard restrict) always applied when provided
+    // since it uses rectangle, convert from circle params (center + radius)
+    if (params.locationRestriction?.center && params.locationRestriction?.radius != null) {
+        const radius = Math.min(50000, Math.max(0, params.locationRestriction.radius));
+        const lat = params.locationRestriction.center.latitude;
+        const lng = params.locationRestriction.center.longitude;
+        const radKm = radius / 1000;
+        const latDeg = radKm / 111.32;
+        const safeCos = Math.max(0.01, Math.abs(Math.cos(lat * Math.PI / 180)));
+        const lngDeg = radKm / (111.32 * safeCos);
+        body.locationRestriction = {
+            rectangle: {
+                low: { latitude: lat - latDeg, longitude: lng - lngDeg },
+                high: { latitude: lat + latDeg, longitude: lng + lngDeg },
+            },
+        };
+        // Remove locationBias if locationRestriction is set (API doesn't accept both)
+        delete body.locationBias;
     }
     return body;
 }

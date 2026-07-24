@@ -16,6 +16,7 @@ import { exportToCSV, flattenForExport } from '@/lib/exportService';
 import { useSearchResults } from '@/contexts/SearchResultsContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useI18n } from '@/lib/i18n';
+import { motion, AnimatePresence } from 'framer-motion';
 import { isMarketFeatureEnabled } from '@/lib/market';
 
 function formatCnpj(value: string | undefined): string | null {
@@ -383,7 +384,11 @@ export default function ResultadosPage() {
 
   if (loading) {
     return (
-      <div className="p-8 max-w-7xl mx-auto w-full space-y-4">
+      <motion.div
+        className="p-8 max-w-7xl mx-auto w-full space-y-4"
+        animate={{ opacity: [0.3, 1, 0.3] }}
+        transition={{ repeat: Infinity, duration: 1.5 }}
+      >
         <Skeleton className="h-8 w-64 rounded-lg" />
         <Skeleton className="h-4 w-96 rounded-lg mb-6" />
         <div className="rounded-[2.4rem] bg-card border border-border overflow-hidden shadow-sm divide-y divide-border">
@@ -406,7 +411,7 @@ export default function ResultadosPage() {
             </div>
           ))}
         </div>
-      </div>
+      </motion.div>
     );
   }
 
@@ -428,7 +433,11 @@ export default function ResultadosPage() {
   if (!loading && !error && !places.length) {
     const showUsEmptyTips = !isMarketFeatureEnabled('cnae');
     return (
-      <div className="p-8 max-w-7xl mx-auto w-full">
+      <motion.div
+        className="p-8 max-w-7xl mx-auto w-full"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+      >
         <div className="rounded-2xl bg-card border border-border p-12 flex flex-col items-center gap-4">
           <p className="text-muted text-center">{t('page.resultados.empty')}</p>
           {showUsEmptyTips && (
@@ -447,7 +456,7 @@ export default function ResultadosPage() {
             {t('page.resultados.newSearch')}
           </Button>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
@@ -460,7 +469,11 @@ export default function ResultadosPage() {
           subtitle={t('page.resultados.subtitleFiltered', { filtered: 0, total: places.length })}
           breadcrumb={t('page.resultados.breadcrumb')}
         />
-        <div className="p-8 max-w-7xl mx-auto w-full">
+        <motion.div
+          className="p-8 max-w-7xl mx-auto w-full"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
           <div className="rounded-2xl bg-card border border-border p-12 flex flex-col items-center gap-4">
             <p className="text-muted text-center max-w-md">{t('page.resultados.emptyFilter')}</p>
             <div className="flex gap-2 flex-wrap justify-center">
@@ -472,7 +485,7 @@ export default function ResultadosPage() {
               </Button>
             </div>
           </div>
-        </div>
+        </motion.div>
       </>
     );
   }
@@ -528,21 +541,29 @@ export default function ResultadosPage() {
         </div>
 
         {showAnalyzeHint && (
-          <div className="rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-3 text-xs text-foreground flex items-start gap-2">
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-3 text-xs text-foreground flex items-start gap-2"
+          >
             <Sparkles size={14} className="text-violet-500 shrink-0 mt-0.5" aria-hidden />
             <p>{t('page.resultados.analyzeHint')}</p>
-          </div>
+          </motion.div>
         )}
 
         {batchStatus && (
-          <div className="rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-3 text-xs text-foreground">
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-3 text-xs text-foreground"
+          >
             {t('page.resultados.batchStatus', {
               processed: batchStatus.processed,
               total: batchStatus.total,
               succeeded: batchStatus.succeeded,
               failed: batchStatus.failed,
             })}
-          </div>
+          </motion.div>
         )}
 
         {/* Quick filter chips */}
@@ -556,9 +577,11 @@ export default function ResultadosPage() {
               { key: 'highScore', label: t('page.resultados.filter.highScore', { count: places.filter((p) => (p.opportunityScore ?? 0) >= 60).length }) },
               { key: 'highRating', label: t('page.resultados.filter.highRating', { count: places.filter((p) => (p.rating ?? 0) >= 4.0).length }) },
             ] as const).map(({ key, label }) => (
-              <button
+              <motion.button
                 key={key}
                 type="button"
+                whileTap={{ scale: 0.9 }}
+                whileHover={{ scale: 1.05 }}
                 onClick={() => setResultFilter(key)}
                 className={cn(
                   'h-7 px-3 rounded-full text-[11px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-violet-500/30',
@@ -568,7 +591,7 @@ export default function ResultadosPage() {
                 )}
               >
                 {label}
-              </button>
+              </motion.button>
             ))}
           </div>
         )}
@@ -587,13 +610,20 @@ export default function ResultadosPage() {
 
         <div className="rounded-[2.4rem] bg-card border border-border overflow-hidden shadow-sm">
           <ul className="divide-y divide-border" role="list">
-            {displayedPlaces.map((p) => {
+            <AnimatePresence mode="popLayout">
+            {displayedPlaces.map((p, index) => {
               const goToDetail = () => navigateToLeadDetail(p);
               const phone = p.phones?.[0] ?? p.nationalPhoneNumber ?? p.internationalPhoneNumber;
               return (
-              <li
+              <motion.li
                 key={p.id}
-                className="group flex items-stretch min-w-0 transition-shadow hover:bg-surface/30 hover:shadow-[0_4px_20px_-8px_rgba(124,58,237,0.25)]"
+                layout
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.03, type: "spring", stiffness: 100 }}
+                whileHover={{ y: -2, boxShadow: "0 8px 30px rgba(124,58,237,0.15)" }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="group flex items-stretch min-w-0 backdrop-blur-xl bg-white/[0.02] dark:bg-black/[0.02]"
               >
                 <div className="pl-3 flex items-center shrink-0">
                   <input
@@ -774,20 +804,23 @@ export default function ResultadosPage() {
                         : <BookmarkPlus size={18} />}
                   </button>
                 </div>
-              </li>
+              </motion.li>
             );})}
+            </AnimatePresence>
           </ul>
           {!isFree && nextPageToken && (
             <div className="p-4 border-t border-border flex justify-center">
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={loadingMore}
-                icon={loadingMore ? <Loader2 size={14} className="animate-spin" /> : undefined}
-                onClick={handleLoadMore}
-              >
-                {loadingMore ? t('common.loading') : t('page.resultados.showMore')}
-              </Button>
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={loadingMore}
+                  icon={loadingMore ? <Loader2 size={14} className="animate-spin" /> : undefined}
+                  onClick={handleLoadMore}
+                >
+                  {loadingMore ? t('common.loading') : t('page.resultados.showMore')}
+                </Button>
+              </motion.div>
             </div>
           )}
         </div>

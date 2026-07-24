@@ -7,9 +7,9 @@
 
 import type { ScoreFactors, ScoredPlace } from '../domain/types';
 
-/** Weights for each scoring factor (must sum to ~100 max). */
+/** Weights for each scoring factor (current max sum: 75). */
 const WEIGHTS = {
-    noWebsite: 25,
+    noWebsite: 5,
     noPhone: 15,
     lowRating: 15,
     fewReviews: 20,

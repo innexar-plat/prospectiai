@@ -21,13 +21,13 @@ import {
     SEARCH_CACHE_TTL_SECONDS,
 } from './search-cache';
 import { crossWithReceitaIfEligible } from './search-rf-integration';
-import { enrichMissingWebsitesWithSerper } from './search-enrichment';
+import { enrichWebsitesFromSerper } from './search-enrichment';
 
 const RADIUS_KM_TO_M = 1000;
 const DEFAULT_LOCATION_RADIUS_KM = 15;
 const MAX_LOCATION_RADIUS_M = 50000;
 const NEXT_PAGE_TOKEN_DELAY_MS = 400;
-const DB_LEAD_FRESHNESS_DAYS = 14;
+const DB_LEAD_FRESHNESS_DAYS = 7;
 const ASYNC_HISTORY_WRITES = String(process.env.SEARCH_HISTORY_ASYNC ?? 'true').toLowerCase() === 'true';
 const SEARCH_USER_CONTEXT_CACHE_TTL_MS = Number.parseInt(process.env.SEARCH_USER_CONTEXT_CACHE_TTL_MS ?? '5000', 10);
 const IS_TEST_ENV = process.env.NODE_ENV === 'test';
@@ -298,7 +298,6 @@ async function tryCacheOrDbSearch(
 
     const dbWhereConditions: Record<string, unknown>[] = [
         { name: { contains: textQuery, mode: 'insensitive' } },
-        { address: { contains: textQuery, mode: 'insensitive' } },
     ];
 
     const dbWhere: Record<string, unknown> = {
@@ -324,9 +323,9 @@ async function tryCacheOrDbSearch(
     const dbLeads = await prisma.lead.findMany({
         where: dbWhere,
         take: effectivePageSize + 5,
-        orderBy: { lastSearchedAt: 'desc' },
+        orderBy: { name: 'asc' },
     });
-    if (dbLeads.length < 5) {
+    if (dbLeads.length < 15) {
         logger.info('Search: local DB skip', { dbLeadsCount: dbLeads.length });
         return null;
     }
@@ -354,7 +353,8 @@ async function tryCacheOrDbSearch(
     const slice = enrichWithOpportunityScore(mapped).slice(0, effectivePageSize);
     logger.info('Search: local DB used', { dbTotal: dbLeads.length, returned: slice.length });
     const crossedPlaces = await crossWithReceitaIfEligible(slice, textQuery, includedType, city, state, country);
-    const unified = collectAllContacts(crossedPlaces);
+    const enriched = await enrichWebsitesFromSerper(crossedPlaces);
+    const unified = collectAllContacts(enriched);
     await saveHistory(unified.length, unified);
     return { places: unified, fromLocalDb: true };
 }
@@ -562,7 +562,8 @@ async function executeGoogleSearchAndPersist(
         if (!input.pageToken) {
             if (input.bypassDbAndRf) {
                 logger.info('Search: skipping RF cross due to bypass flag');
-                result.places = collectAllContacts(googlePlaces) as GooglePlaceResult[];
+                const bypassEnriched = await enrichWebsitesFromSerper(googlePlaces);
+                result.places = collectAllContacts(bypassEnriched) as GooglePlaceResult[];
             } else {
                 const crossed = await crossWithReceitaIfEligible(
                     googlePlaces,
@@ -572,7 +573,8 @@ async function executeGoogleSearchAndPersist(
                     location?.state,
                     country,
                 );
-                result.places = collectAllContacts(crossed) as GooglePlaceResult[];
+                const enriched = await enrichWebsitesFromSerper(crossed);
+                result.places = collectAllContacts(enriched) as GooglePlaceResult[];
             }
         } else {
             result.places = googlePlaces as GooglePlaceResult[];
@@ -759,13 +761,15 @@ async function hydratePlacesWithLeadSnapshot(places: PlaceResult[]): Promise<Pla
                 ?? place.nationalPhoneNumber
                 ?? place.internationalPhoneNumber
                 ?? snapshot.phone
+                ?? place.phone
                 ?? undefined,
             websiteUri:
                 snapshot.recommendedWebsite
                 ?? place.websiteUri
+                ?? place.website
                 ?? snapshot.website
                 ?? undefined,
-            email: snapshot.recommendedEmail ?? snapshot.email ?? undefined,
+            email: snapshot.recommendedEmail ?? snapshot.email ?? place.email ?? undefined,
             recommendedPhone: snapshot.recommendedPhone ?? undefined,
             recommendedEmail: snapshot.recommendedEmail ?? undefined,
             recommendedWebsite: snapshot.recommendedWebsite ?? undefined,
@@ -776,6 +780,7 @@ async function hydratePlacesWithLeadSnapshot(places: PlaceResult[]): Promise<Pla
                 snapshot.phone,
                 place.nationalPhoneNumber,
                 place.internationalPhoneNumber,
+                place.phone,
             ], normalizePhoneForDedup),
             emails: deduplicateContacts([
                 ...(place.emails ?? []),
@@ -788,6 +793,7 @@ async function hydratePlacesWithLeadSnapshot(places: PlaceResult[]): Promise<Pla
                 snapshot.recommendedWebsite,
                 snapshot.website,
                 place.websiteUri,
+                place.website,
             ], normalizeWebsiteForDedup),
         };
     });

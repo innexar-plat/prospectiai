@@ -190,7 +190,7 @@ describe('Search API Route', () => {
             workspaces: [{ workspace: { id: 'w1', leadsUsed: 0, leadsLimit: 100 } }],
         });
         prisma.searchHistory.create.mockResolvedValue({} as never);
-        const dbLeads = Array.from({ length: 12 }, (_, i) => ({
+        const dbLeads = Array.from({ length: 15 }, (_, i) => ({
             placeId: `place-${i}`,
             name: `Lead ${i}`,
             address: 'Addr',
