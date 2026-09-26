@@ -235,7 +235,7 @@ services:
   # ── PgBouncer: connection pooler para PostgreSQL ──────────────────────────────
   pgbouncer:
     # bitnami/pgbouncer:latest was discontinued; bitnamilegacy mirrors the same image/env vars.
-    image: bitnamilegacy/pgbouncer:latest
+    image: bitnamilegacy/pgbouncer:latest@sha256:3b03f1169a35f1d492a786f588660170c59a8e71e8e69b4c97c66278c0e08431
     container_name: prospector-pgbouncer
     environment:
       - POSTGRESQL_HOST=db
