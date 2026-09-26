@@ -14,11 +14,11 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
                     <select
                         ref={ref}
                         className={cn(
-                            "appearance-none flex h-[44px] w-full rounded-xl border bg-bg-input px-3 py-2 text-sm text-foreground transition-all duration-150",
+                            "appearance-none flex h-[44px] w-full rounded-xl border bg-surface px-3 py-2 text-sm text-foreground transition-all duration-150",
                             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50",
                             error
-                                ? "border-danger focus-visible:ring-danger/30"
-                                : "border-border hover:border-primary/50 focus-visible:border-primary focus-visible:ring-primary/20",
+                                ? "border-red-500/50 focus-visible:ring-red-500/30"
+                                : "border-border hover:border-accent-violet/50 focus-visible:border-accent-violet focus-visible:ring-accent-violet/20",
                             className
                         )}
                         aria-invalid={!!error}
@@ -32,7 +32,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
                     </div>
                 </div>
                 {error && (
-                    <p id={props.name ? `error-${props.name}` : undefined} className="mt-1 text-xs text-danger">{error}</p>
+                    <p id={props.name ? `error-${props.name}` : undefined} className="mt-1 text-xs text-red-500">{error}</p>
                 )}
             </div>
         );

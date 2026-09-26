@@ -1,7 +1,36 @@
-# AGENTS.md — Precision (prospector-ai)
+# AGENTS.md — Engineering OS (prospector-ai)
+
+> Fully operational: 18 agents · 54 commands · 15 plugins · Engineering Brain live
+
+## New Slash Commands
+
+| Comando | O que faz |
+|---------|-----------|
+| `/rca` | Root Cause Analysis — analisa erro, stack, git blame, dependências, sugere fix + teste |
+| `/brain` | Query Engineering Brain — contexto instantâneo do projeto |
+| `/brain-init` | Inicializa grafo de conhecimento (.engineering-brain/) |
+| `/brain-learn` | Salva lição/decisão/pattern no Brain |
+| `/ctx` | Context Selector — só os arquivos necessários (-80% tokens) |
+| `/tradeoff` | Tradeoff Analysis — compara opções, riscos, scores, recomendação |
+| `/ci` | Continuous Improvement — scan pós-tarefa, backlog |
+| `/ci-backlog` | Ver backlog de melhorias |
+| `/ci-fix` | Auto-fix de itens do backlog |
+| `/orchestrate` | Gera DAG de tarefas + agentes + dependências |
+| `/pipeline` | Pipeline completa: plan → exec → validate → report |
+| `/validate` | Quality gates (build, lint, typecheck, test) |
+| `/scorecard` | Score 0-100 (Architecture, Security, Performance, UX, etc.) |
+| `/pi-scan` | Project Intelligence — cacheia API, componentes, DB, padrões |
+| `/impact` | Blast radius — mostra dependentes antes de editar |
+| `/ui-score` | UI quality — tipografia, spacing, contraste, a11y, etc. |
+| `/motion-score` | Motion quality — duração, easing, reduced-motion |
+| `/auto` | Pipeline autônoma completa: plan → architect → dev → QA → review → deliver |
+| `/mode` | Auto-detecta modo (FAST/NORMAL/DEEP/ARCHITECT) e executa |
 
 > High-signal facts for OpenCode agents working in this monorepo.
 > Read before any edit, commit, or deploy.
+> Engineering OS layers: see ~/.config/opencode/AGENTS.md for Constitution, Process, Quality Gates, Thinking Levels.
+> Memory: see memory/ directory for architecture, patterns, decisions, lessons.
+> Policies: see policies/ directory for engineering, architecture, frontend, backend, security, testing, UX, performance, deployment, cost, review, documentation.
 
 ## Monorepo (npm workspaces)
 
