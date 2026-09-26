@@ -1,3 +1,0 @@
-{
-  "/api/billing/cancel-pending-downgrade/route": "app/api/billing/cancel-pending-downgrade/route.js"
-}

@@ -1,3 +1,0 @@
-{
-  "/api/admin/affiliates/[id]/commissions/[commissionId]/route": "app/api/admin/affiliates/[id]/commissions/[commissionId]/route.js"
-}
