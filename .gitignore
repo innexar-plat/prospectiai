@@ -53,3 +53,6 @@ backend/test-users/
 next-env.d.ts
 
 .secrets/
+
+# dependências em qualquer nível (backend/, .opencode/)
+node_modules/

@@ -47,7 +47,8 @@ export async function POST(req: Request) {
             data: {
                 password: hashedPassword,
                 resetToken: null,
-                resetTokenExpires: null
+                resetTokenExpires: null,
+                tokenVersion: { increment: 1 }
             }
         })
 

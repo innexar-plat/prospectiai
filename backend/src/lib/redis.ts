@@ -27,7 +27,6 @@ export async function getCached<T>(key: string): Promise<T | null> {
     try {
         const client = getRedis();
         if (!client) return null;
-        await client.connect().catch(() => { });
         const data = await client.get(key);
         if (!data) return null;
         return JSON.parse(data) as T;
@@ -40,7 +39,6 @@ export async function setCached(key: string, value: unknown, ttlSeconds = 300): 
     try {
         const client = getRedis();
         if (!client) return;
-        await client.connect().catch(() => { });
         await client.set(key, JSON.stringify(value), 'EX', ttlSeconds);
     } catch {
         // silently fail — cache is optional
@@ -51,7 +49,6 @@ export async function acquireRedisLock(key: string, token: string, ttlMs: number
     try {
         const client = getRedis();
         if (!client) return false;
-        await client.connect().catch(() => { });
         const result = await client.set(key, token, 'PX', Math.max(250, ttlMs), 'NX');
         return result === 'OK';
     } catch {
@@ -63,7 +60,6 @@ export async function releaseRedisLock(key: string, token: string): Promise<void
     try {
         const client = getRedis();
         if (!client) return;
-        await client.connect().catch(() => { });
         // Delete lock only if token matches (prevents releasing another worker's lock).
         await client.eval(
             "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) else return 0 end",
@@ -101,7 +97,6 @@ export async function setPresence(userId: string): Promise<void> {
     try {
         const client = getRedis();
         if (!client) return;
-        await client.connect().catch(() => { });
         await client.set(`${PRESENCE_PREFIX}${userId}`, '1', 'EX', PRESENCE_TTL);
     } catch {
         // silently fail
@@ -112,7 +107,6 @@ export async function countOnlineUsers(): Promise<number> {
     try {
         const client = getRedis();
         if (!client) return 0;
-        await client.connect().catch(() => { });
         let cursor = '0';
         let count = 0;
         do {
