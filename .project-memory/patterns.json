@@ -1,0 +1,11 @@
+{
+  "conventions": [],
+  "detected": [
+    "TypeScript strict",
+    "React 19",
+    "Tailwind 4",
+    "Prisma ORM",
+    "JWT auth",
+    "i18n pt/en"
+  ]
+}

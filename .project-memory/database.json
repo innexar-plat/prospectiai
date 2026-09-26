@@ -1,0 +1,3047 @@
+{
+  "engine": "Prisma",
+  "models": [
+    {
+      "name": "User",
+      "fields": [
+        {
+          "raw": "id            String   "
+        },
+        {
+          "raw": "market        String   "
+        },
+        {
+          "raw": "name          String?"
+        },
+        {
+          "raw": "email         String?  "
+        },
+        {
+          "raw": "emailVerified DateTime?"
+        },
+        {
+          "raw": "image         String?"
+        },
+        {
+          "raw": "password      String?"
+        },
+        {
+          "raw": "resetToken          String?  "
+        },
+        {
+          "raw": "resetTokenHash      String?"
+        },
+        {
+          "raw": "resetTokenExpires   DateTime?"
+        },
+        {
+          "raw": "twoFactorSecret   String?"
+        },
+        {
+          "raw": "twoFactorEnabled  Boolean   "
+        },
+        {
+          "raw": "// Third-party integrations (tokens stored encrypted)"
+        },
+        {
+          "raw": "rdStationToken          String?  "
+        },
+        {
+          "raw": "rdStationRefreshToken   String?  "
+        },
+        {
+          "raw": "rdStationTokenExpiresAt DateTime?"
+        },
+        {
+          "raw": "agendorApiTokenEncrypted String? "
+        },
+        {
+          "raw": "hubspotToken            String?  "
+        },
+        {
+          "raw": "hubspotRefreshToken     String?  "
+        },
+        {
+          "raw": "hubspotTokenExpiresAt   DateTime?"
+        },
+        {
+          "raw": "subscriptionId String?  "
+        },
+        {
+          "raw": "customerId     String?"
+        },
+        {
+          "raw": "subscriptionStatus String?"
+        },
+        {
+          "raw": "currentPeriodEnd   DateTime?"
+        },
+        {
+          "raw": "// Business Profile (preenchido no onboarding; usado para buscas/IA)"
+        },
+        {
+          "raw": "companyName    String?"
+        },
+        {
+          "raw": "productService String?"
+        },
+        {
+          "raw": "targetAudience String?"
+        },
+        {
+          "raw": "mainBenefit    String?"
+        },
+        {
+          "raw": "// Personal profile (per user)"
+        },
+        {
+          "raw": "phone         String?"
+        },
+        {
+          "raw": "address       String?"
+        },
+        {
+          "raw": "linkedInUrl   String?"
+        },
+        {
+          "raw": "instagramUrl  String?"
+        },
+        {
+          "raw": "facebookUrl   String?"
+        },
+        {
+          "raw": "websiteUrl    String?"
+        },
+        {
+          "raw": "// Onboarding: só acessa dashboard após concluir"
+        },
+        {
+          "raw": "onboardingCompletedAt DateTime?"
+        },
+        {
+          "raw": "// Suporte/admin podem desativar conta; login bloqueado quando preenchido"
+        },
+        {
+          "raw": "disabledAt     DateTime?"
+        },
+        {
+          "raw": "// Notification preferences (used when sending alert emails)"
+        },
+        {
+          "raw": "notifyByEmail      Boolean"
+        },
+        {
+          "raw": "notifyWeeklyReport Boolean"
+        },
+        {
+          "raw": "notifyLeadAlerts   Boolean"
+        },
+        {
+          "raw": "// Legacy / Default Credits (moving to Workspace)"
+        },
+        {
+          "raw": "plan           Plan     "
+        },
+        {
+          "raw": "leadsUsed      Int      "
+        },
+        {
+          "raw": "leadsLimit     Int      "
+        },
+        {
+          "raw": "tokenVersion   Int      "
+        },
+        {
+          "raw": "createdAt     DateTime "
+        },
+        {
+          "raw": "updatedAt     DateTime "
+        },
+        {
+          "raw": "// NextAuth Relations"
+        },
+        {
+          "raw": "accounts      Account[]"
+        },
+        {
+          "raw": "sessions      Session[]"
+        },
+        {
+          "raw": "// App Relations"
+        },
+        {
+          "raw": "workspaces           WorkspaceMember[]"
+        },
+        {
+          "raw": "workspaceInvitations WorkspaceInvitation[]"
+        },
+        {
+          "raw": "analyses             LeadAnalysis[]"
+        },
+        {
+          "raw": "searchHistory        SearchHistory[]"
+        },
+        {
+          "raw": "tags                 LeadTag[]"
+        },
+        {
+          "raw": "notifications        Notification[]"
+        },
+        {
+          "raw": "pushSubscriptions    PushSubscription[]"
+        },
+        {
+          "raw": "affiliate            Affiliate?"
+        },
+        {
+          "raw": "referrals            Referral[]"
+        },
+        {
+          "raw": "representative       Representative?"
+        }
+      ]
+    },
+    {
+      "name": "Account",
+      "fields": [
+        {
+          "raw": "id                 String "
+        },
+        {
+          "raw": "userId             String"
+        },
+        {
+          "raw": "type               String"
+        },
+        {
+          "raw": "provider           String"
+        },
+        {
+          "raw": "providerAccountId  String"
+        },
+        {
+          "raw": "refresh_token      String? "
+        },
+        {
+          "raw": "access_token       String? "
+        },
+        {
+          "raw": "expires_at         Int?"
+        },
+        {
+          "raw": "token_type         String?"
+        },
+        {
+          "raw": "scope              String?"
+        },
+        {
+          "raw": "id_token           String? "
+        },
+        {
+          "raw": "session_state      String?"
+        },
+        {
+          "raw": "user User [userId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "@@unique([provider, providerAccountId])"
+        }
+      ]
+    },
+    {
+      "name": "Session",
+      "fields": [
+        {
+          "raw": "id           String  "
+        },
+        {
+          "raw": "sessionToken String  "
+        },
+        {
+          "raw": "userId       String"
+        },
+        {
+          "raw": "expires      DateTime"
+        },
+        {
+          "raw": "user         User     [userId], references: [id], onDelete: Cascade)"
+        }
+      ]
+    },
+    {
+      "name": "VerificationToken",
+      "fields": [
+        {
+          "raw": "identifier String"
+        },
+        {
+          "raw": "token      String  "
+        },
+        {
+          "raw": "expires    DateTime"
+        },
+        {
+          "raw": "@@unique([identifier, token])"
+        }
+      ]
+    },
+    {
+      "name": "Workspace",
+      "fields": [
+        {
+          "raw": "id         String  "
+        },
+        {
+          "raw": "market     String  "
+        },
+        {
+          "raw": "name       String?"
+        },
+        {
+          "raw": "plan               Plan    "
+        },
+        {
+          "raw": "leadsUsed          Int     "
+        },
+        {
+          "raw": "leadsLimit         Int     "
+        },
+        {
+          "raw": "subscriptionStatus String?"
+        },
+        {
+          "raw": "subscriptionId     String?"
+        },
+        {
+          "raw": "customerId         String?"
+        },
+        {
+          "raw": "currentPeriodEnd   DateTime?"
+        },
+        {
+          "raw": "/** Billing cycle for current subscription: monthly or annual. Used for proration on upgrade. */"
+        },
+        {
+          "raw": "billingCycle       String?   // 'monthly' | 'annual'"
+        },
+        {
+          "raw": "gracePeriodEnd     DateTime?"
+        },
+        {
+          "raw": "/** Downgrade scheduled for end of period: plan to apply at pendingPlanEffectiveAt */"
+        },
+        {
+          "raw": "pendingPlanId      String?   // PlanType key, e.g. BUSINESS"
+        },
+        {
+          "raw": "pendingPlanEffectiveAt DateTime?"
+        },
+        {
+          "raw": "/** BR Starter promo (R$59 x 6 months) — set when trial expires or via email link */"
+        },
+        {
+          "raw": "starterPromoEligible   Boolean "
+        },
+        {
+          "raw": "starterPromoCode       String?"
+        },
+        {
+          "raw": "promoPaymentsRemaining Int?"
+        },
+        {
+          "raw": "promoRegularAmountBrl  Int?"
+        },
+        {
+          "raw": "/** When BR trial reactivation promo email was sent (dedup for cron/script). */"
+        },
+        {
+          "raw": "reactivationPromoSentAt DateTime?"
+        },
+        {
+          "raw": "createdAt     DateTime "
+        },
+        {
+          "raw": "updatedAt     DateTime "
+        },
+        {
+          "raw": "// Business profile (one per workspace; shared by all members)"
+        },
+        {
+          "raw": "companyName    String?"
+        },
+        {
+          "raw": "legalName      String?"
+        },
+        {
+          "raw": "tradeName      String?"
+        },
+        {
+          "raw": "cnpj           String?"
+        },
+        {
+          "raw": "primaryCnaeCode String?"
+        },
+        {
+          "raw": "primaryCnaeDescription String?"
+        },
+        {
+          "raw": "companySize    String?"
+        },
+        {
+          "raw": "foundingDate   String?"
+        },
+        {
+          "raw": "productService String?"
+        },
+        {
+          "raw": "targetAudience String?"
+        },
+        {
+          "raw": "mainBenefit    String?"
+        },
+        {
+          "raw": "address        String?"
+        },
+        {
+          "raw": "postalCode     String?"
+        },
+        {
+          "raw": "street         String?"
+        },
+        {
+          "raw": "number         String?"
+        },
+        {
+          "raw": "complement     String?"
+        },
+        {
+          "raw": "neighborhood   String?"
+        },
+        {
+          "raw": "city           String?"
+        },
+        {
+          "raw": "state          String?"
+        },
+        {
+          "raw": "linkedInUrl    String?"
+        },
+        {
+          "raw": "instagramUrl   String?"
+        },
+        {
+          "raw": "facebookUrl    String?"
+        },
+        {
+          "raw": "websiteUrl     String?"
+        },
+        {
+          "raw": "logoUrl        String?"
+        },
+        {
+          "raw": "serviceModel   String?"
+        },
+        {
+          "raw": "averageTicket  Float?"
+        },
+        {
+          "raw": "operationRadiusKm Int?"
+        },
+        {
+          "raw": "knownCompetitors String?"
+        },
+        {
+          "raw": "/// Controla acesso ao módulo de Auto-Prospecção (ativado pelo admin do sistema)"
+        },
+        {
+          "raw": "autoProspeccaoEnabled Boolean"
+        },
+        {
+          "raw": "members              WorkspaceMember[]"
+        },
+        {
+          "raw": "invitations          WorkspaceInvitation[]"
+        },
+        {
+          "raw": "analyses             LeadAnalysis[]"
+        },
+        {
+          "raw": "searchHistory        SearchHistory[]"
+        },
+        {
+          "raw": "usageEvents          UsageEvent[]"
+        },
+        {
+          "raw": "intelligenceReports  IntelligenceReport[]"
+        },
+        {
+          "raw": "autoProspeccaoConfig AutoProspeccaoConfig?"
+        },
+        {
+          "raw": "autoProspeccaoRuns   AutoProspeccaoRun[]"
+        },
+        {
+          "raw": "autoProspSenderPool  AutoProspSenderPool[]"
+        },
+        {
+          "raw": "prospectedLeads      ProspectedLead[]"
+        },
+        {
+          "raw": "representative        Representative?"
+        }
+      ]
+    },
+    {
+      "name": "WorkspaceMember",
+      "fields": [
+        {
+          "raw": "id          String   "
+        },
+        {
+          "raw": "userId      String"
+        },
+        {
+          "raw": "workspaceId String"
+        },
+        {
+          "raw": "role        String   "
+        },
+        {
+          "raw": "createdAt   DateTime "
+        },
+        {
+          "raw": "updatedAt   DateTime "
+        },
+        {
+          "raw": "// Sales goals (set by admin/owner)"
+        },
+        {
+          "raw": "dailyLeadsGoal         Int?  // target leads contacted per day"
+        },
+        {
+          "raw": "dailyAnalysesGoal      Int?  // target AI analyses per day"
+        },
+        {
+          "raw": "monthlyConversionsGoal Int?  // target conversions per month"
+        },
+        {
+          "raw": "// Credit limits per member (null = no individual cap, uses workspace pool)"
+        },
+        {
+          "raw": "dailyLeadsLimit   Int?  // max consumptions (search + analysis) per calendar day"
+        },
+        {
+          "raw": "weeklyLeadsLimit  Int?  // max consumptions in rolling 7 days"
+        },
+        {
+          "raw": "monthlyLeadsLimit Int?  // max consumptions per calendar month"
+        },
+        {
+          "raw": "/// Acesso ao módulo de Auto-Prospecção (ativado pelo owner da workspace)"
+        },
+        {
+          "raw": "autoProspeccaoEnabled Boolean"
+        },
+        {
+          "raw": "user      User      [userId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "workspace Workspace [workspaceId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "@@unique([userId, workspaceId])"
+        }
+      ]
+    },
+    {
+      "name": "WorkspaceInvitation",
+      "fields": [
+        {
+          "raw": "id           String  "
+        },
+        {
+          "raw": "email        String"
+        },
+        {
+          "raw": "workspaceId  String"
+        },
+        {
+          "raw": "invitedById  String"
+        },
+        {
+          "raw": "token        String  "
+        },
+        {
+          "raw": "status       String   // PENDING | ACCEPTED | EXPIRED"
+        },
+        {
+          "raw": "lastSentAt   DateTime"
+        },
+        {
+          "raw": "createdAt    DateTime"
+        },
+        {
+          "raw": "updatedAt    DateTime"
+        },
+        {
+          "raw": "workspace Workspace [workspaceId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "inviter   User      fields: [invitedById], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "@@unique([email, workspaceId])"
+        },
+        {
+          "raw": "@@index([token]) "
+        },
+        {
+          "raw": "@@index([workspaceId]) "
+        }
+      ]
+    },
+    {
+      "name": "Lead",
+      "fields": [
+        {
+          "raw": "id               String  "
+        },
+        {
+          "raw": "placeId          String  "
+        },
+        {
+          "raw": "name             String"
+        },
+        {
+          "raw": "address          String?"
+        },
+        {
+          "raw": "phone            String?"
+        },
+        {
+          "raw": "email            String?"
+        },
+        {
+          "raw": "website          String?"
+        },
+        {
+          "raw": "cnpj             String? "
+        },
+        {
+          "raw": "companyLegalName String?"
+        },
+        {
+          "raw": "companyTradeName String?"
+        },
+        {
+          "raw": "companySize      String?"
+        },
+        {
+          "raw": "companyPorte     String?"
+        },
+        {
+          "raw": "companyLegalNature String?"
+        },
+        {
+          "raw": "companyMainCnae  String?"
+        },
+        {
+          "raw": "companyCapitalSocial Float?"
+        },
+        {
+          "raw": "cnpjStatus       String?"
+        },
+        {
+          "raw": "cnpjOpenedAt     String?"
+        },
+        {
+          "raw": "cnpjLastFetchedAt DateTime?"
+        },
+        {
+          "raw": "rating           Float?"
+        },
+        {
+          "raw": "reviewCount      Int?"
+        },
+        {
+          "raw": "types            Json?"
+        },
+        {
+          "raw": "businessStatus   String?"
+        },
+        {
+          "raw": "lastSearchedAt   DateTime?"
+        },
+        {
+          "raw": "opportunityScore Int?      // 0-100 unified opportunity score"
+        },
+        {
+          "raw": "scoreFactors     Json?     // { noWebsite, fewReviews, lowRating, noPhone, ..."
+        }
+      ]
+    },
+    {
+      "name": "LeadContact",
+      "fields": [
+        {
+          "raw": "id              String             "
+        },
+        {
+          "raw": "leadId          String"
+        },
+        {
+          "raw": "type            LeadContactType"
+        },
+        {
+          "raw": "source          LeadContactSource"
+        },
+        {
+          "raw": "roleHint        LeadContactRoleHint"
+        },
+        {
+          "raw": "valueRaw        String"
+        },
+        {
+          "raw": "valueNormalized String"
+        },
+        {
+          "raw": "confidenceScore Int?                // 0-100"
+        },
+        {
+          "raw": "isPrimary       Boolean            "
+        },
+        {
+          "raw": "evidence        Json?"
+        },
+        {
+          "raw": "firstSeenAt     DateTime           "
+        },
+        {
+          "raw": "lastSeenAt      DateTime           "
+        },
+        {
+          "raw": "createdAt       DateTime           "
+        },
+        {
+          "raw": "updatedAt       DateTime           "
+        },
+        {
+          "raw": "lead Lead [leadId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "@@unique([leadId, type, valueNormalized, source])"
+        },
+        {
+          "raw": "@@index([leadId]) "
+        },
+        {
+          "raw": "@@index([type]) "
+        },
+        {
+          "raw": "@@index([valueNormalized]) "
+        },
+        {
+          "raw": "@@index([source]) "
+        }
+      ]
+    },
+    {
+      "name": "LeadAnalysis",
+      "fields": [
+        {
+          "raw": "id                       String        "
+        },
+        {
+          "raw": "userId                   String"
+        },
+        {
+          "raw": "leadId                   String"
+        },
+        {
+          "raw": "workspaceId              String?"
+        },
+        {
+          "raw": "score                    Int?"
+        },
+        {
+          "raw": "scoreLabel               String?"
+        },
+        {
+          "raw": "summary                  String?       "
+        },
+        {
+          "raw": "strengths                Json?"
+        },
+        {
+          "raw": "weaknesses               Json?"
+        },
+        {
+          "raw": "painPoints               Json?"
+        },
+        {
+          "raw": "gaps                     Json?"
+        },
+        {
+          "raw": "status                   AnalysisStatus"
+        },
+        {
+          "raw": "approach                 String?       "
+        },
+        {
+          "raw": "contactStrategy          String?       "
+        },
+        {
+          "raw": "firstContactMessage      String?       "
+        },
+        {
+          "raw": "suggestedWhatsAppMessage String?       "
+        },
+        {
+          "raw": "fullReport               String?       "
+        },
+        {
+          "raw": "socialInstagram          String?"
+        },
+        {
+          "raw": "socialFacebook           String?"
+        },
+        {
+          "raw": "socialLinkedin           String?"
+        },
+        {
+          "raw": "isFavorite               Boolean       "
+        },
+        {
+          "raw": "// --- Lead Intelligence Engine ---"
+        },
+        {
+          "raw": "closeProbability         Int?           // 0-100% AI-predicted chance of closing"
+        },
+        {
+          "raw": "estimatedDealValue       Float?         // Estimated deal size in BRL"
+        },
+        {
+          "raw": "bestContactWindow        String?        // e.g. \"Terça 10h-12h\""
+        },
+        {
+          "raw": "reclameAquiAnalysis      String?         // AI analysis of Reclame Aqui data"
+        },
+        {
+          "raw": "jusBrasilAnalysis        String?         // AI analysis of legal proceedings"
+        },
+        {
+          "raw": "cnpjAnalysis             String?         // AI analysis of CNPJ/RF data"
+        },
+        {
+          "raw": "reviewTrend              String?        // IMPROVING, STABLE, DECLINING"
+        },
+        {
+          "raw": "suggestedContactTime     String?        // e.g. \"Segunda a Sexta, 9h-11h\""
+        },
+        {
+          "raw": "conversionReason         String?         // Why converted/lost (user fills)"
+        },
+        {
+          "raw": "dealValue                Float?         // Actual deal value (user fills on CONVERTED)"
+        },
+        {
+          "raw": "lostReason               String?        // PRICE | NO_NEED | COMPETITOR | NO_RESPONSE | OTHER"
+        },
+        {
+          "raw": "contactedAt              DateTime?      // When status changed to CONTACTED"
+        },
+        {
+          "raw": "convertedAt              DateTime?      // When status changed to CONVERTED"
+        },
+        {
+          "raw": "lostAt                   DateTime?      // When status changed to LOST"
+        },
+        {
+          "raw": "createdAt                DateTime      "
+        },
+        {
+          "raw": "updatedAt                DateTime      "
+        },
+        {
+          "raw": "user      User      [userId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "lead      Lead      [leadId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "workspace Workspace? [workspaceId], references: [id], onDelete: SetNull)"
+        },
+        {
+          "raw": "@@index([userId]) "
+        },
+        {
+          "raw": "@@index([leadId]) "
+        },
+        {
+          "raw": "@@index([workspaceId]) "
+        }
+      ]
+    },
+    {
+      "name": "SearchHistory",
+      "fields": [
+        {
+          "raw": "id           String  "
+        },
+        {
+          "raw": "workspaceId  String"
+        },
+        {
+          "raw": "userId       String"
+        },
+        {
+          "raw": "textQuery    String"
+        },
+        {
+          "raw": "pageSize     Int?"
+        },
+        {
+          "raw": "filters      Json?    // hasWebsite, hasPhone, includedType, etc."
+        },
+        {
+          "raw": "resultsCount Int?"
+        },
+        {
+          "raw": "resultsData  Json?    // Array of places returned from search, for history detail view"
+        },
+        {
+          "raw": "city         String?"
+        },
+        {
+          "raw": "state        String?"
+        },
+        {
+          "raw": "country      String?"
+        },
+        {
+          "raw": "createdAt    DateTime"
+        },
+        {
+          "raw": "updatedAt   DateTime"
+        },
+        {
+          "raw": "workspace Workspace [workspaceId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "user      User      [userId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "@@index([workspaceId]) "
+        },
+        {
+          "raw": "@@index([userId]) "
+        },
+        {
+          "raw": "@@index([createdAt]) "
+        }
+      ]
+    },
+    {
+      "name": "AuditLog",
+      "fields": [
+        {
+          "raw": "id          String  "
+        },
+        {
+          "raw": "userId      String"
+        },
+        {
+          "raw": "adminEmail  String?"
+        },
+        {
+          "raw": "action      String"
+        },
+        {
+          "raw": "resource    String?"
+        },
+        {
+          "raw": "resourceId  String?"
+        },
+        {
+          "raw": "details     Json?"
+        },
+        {
+          "raw": "createdAt   DateTime"
+        },
+        {
+          "raw": "@@index([userId]) "
+        },
+        {
+          "raw": "@@index([action]) "
+        },
+        {
+          "raw": "@@index([createdAt]) "
+        }
+      ]
+    },
+    {
+      "name": "AiProviderConfig",
+      "fields": [
+        {
+          "raw": "id                String         "
+        },
+        {
+          "raw": "role               AiConfigRole"
+        },
+        {
+          "raw": "provider           AiConfigProvider"
+        },
+        {
+          "raw": "model              String"
+        },
+        {
+          "raw": "apiKeyEncrypted    String?        "
+        },
+        {
+          "raw": "cloudflareAccountId String?        // necessário para CLOUDFLARE"
+        },
+        {
+          "raw": "enabled            Boolean        "
+        },
+        {
+          "raw": "createdAt          DateTime       "
+        },
+        {
+          "raw": "updatedAt          DateTime       "
+        },
+        {
+          "raw": "@@index([role]) "
+        },
+        {
+          "raw": "@@index([enabled]) "
+        }
+      ]
+    },
+    {
+      "name": "UsageEvent",
+      "fields": [
+        {
+          "raw": "id          String        "
+        },
+        {
+          "raw": "workspaceId String"
+        },
+        {
+          "raw": "userId      String?"
+        },
+        {
+          "raw": "type        UsageEventType"
+        },
+        {
+          "raw": "quantity    Int             // e.g. number of Serper queries or 1 per request"
+        },
+        {
+          "raw": "metadata    Json?          // for AI_TOKENS: { provider, model, inputTokens, outputTokens"
+        }
+      ]
+    },
+    {
+      "name": "WebSearchConfig",
+      "fields": [
+        {
+          "raw": "id                String           "
+        },
+        {
+          "raw": "role               AiConfigRole"
+        },
+        {
+          "raw": "provider           WebSearchProvider"
+        },
+        {
+          "raw": "apiKeyEncrypted    String?          "
+        },
+        {
+          "raw": "maxResults         Int              "
+        },
+        {
+          "raw": "enabled            Boolean          "
+        },
+        {
+          "raw": "createdAt          DateTime         "
+        },
+        {
+          "raw": "updatedAt          DateTime         "
+        },
+        {
+          "raw": "@@unique([role]) "
+        },
+        {
+          "raw": "@@index([enabled]) "
+        }
+      ]
+    },
+    {
+      "name": "AiRuntimeConfig",
+      "fields": [
+        {
+          "raw": "id                               String  "
+        },
+        {
+          "raw": "key                              String  "
+        },
+        {
+          "raw": "analyzeRateLimitMax              Int     "
+        },
+        {
+          "raw": "analyzeRateLimitWindowSeconds    Int     "
+        },
+        {
+          "raw": "analyzeBulkheadMaxInFlight       Int     "
+        },
+        {
+          "raw": "analyzeBulkheadAcquireTimeoutMs  Int     "
+        },
+        {
+          "raw": "aiModelMaxInFlight               Int     "
+        },
+        {
+          "raw": "analyzeAiMaxOutputTokens         Int     "
+        },
+        {
+          "raw": "aiCircuitBreakerFailureThreshold Int     "
+        },
+        {
+          "raw": "aiCircuitBreakerOpenMs           Int     "
+        },
+        {
+          "raw": "aiFallbackProvider               String  "
+        },
+        {
+          "raw": "aiCloudflareModelsLeadAnalysis   String  "
+        },
+        {
+          "raw": "aiCloudflareModelsViability      String  "
+        },
+        {
+          "raw": "aiCloudflareModelsCompanyAnalysis String "
+        },
+        {
+          "raw": "createdAt                        DateTime"
+        },
+        {
+          "raw": "updatedAt                        DateTime"
+        }
+      ]
+    },
+    {
+      "name": "LeadTag",
+      "fields": [
+        {
+          "raw": "id          String  "
+        },
+        {
+          "raw": "userId      String"
+        },
+        {
+          "raw": "leadId      String"
+        },
+        {
+          "raw": "workspaceId String?"
+        },
+        {
+          "raw": "label       String        // \"Quente\", \"Morno\", \"Frio\", \"Retornar segunda\", etc"
+        },
+        {
+          "raw": "color       String        // gray, red, amber, green, blue, violet"
+        },
+        {
+          "raw": "createdAt   DateTime"
+        },
+        {
+          "raw": "user      User      [userId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "lead      Lead      [leadId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "@@unique([userId, leadId, label])"
+        },
+        {
+          "raw": "@@index([userId]) "
+        },
+        {
+          "raw": "@@index([leadId]) "
+        },
+        {
+          "raw": "@@index([workspaceId]) "
+        }
+      ]
+    },
+    {
+      "name": "Notification",
+      "fields": [
+        {
+          "raw": "id          String          "
+        },
+        {
+          "raw": "userId      String"
+        },
+        {
+          "raw": "workspaceId String?"
+        },
+        {
+          "raw": "title       String"
+        },
+        {
+          "raw": "message     String          "
+        },
+        {
+          "raw": "type        NotificationType"
+        },
+        {
+          "raw": "link        String?"
+        },
+        {
+          "raw": "readAt      DateTime?"
+        },
+        {
+          "raw": "createdAt   DateTime        "
+        },
+        {
+          "raw": "user User [userId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "@@index([userId]) "
+        },
+        {
+          "raw": "@@index([readAt]) "
+        },
+        {
+          "raw": "@@index([createdAt]) "
+        }
+      ]
+    },
+    {
+      "name": "NotificationChannelConfig",
+      "fields": [
+        {
+          "raw": "key         String  "
+        },
+        {
+          "raw": "name        String"
+        },
+        {
+          "raw": "appEnabled  Boolean "
+        },
+        {
+          "raw": "emailEnabled Boolean"
+        },
+        {
+          "raw": "createdAt   DateTime"
+        },
+        {
+          "raw": "updatedAt   DateTime"
+        }
+      ]
+    },
+    {
+      "name": "PushSubscription",
+      "fields": [
+        {
+          "raw": "id        String  "
+        },
+        {
+          "raw": "userId    String"
+        },
+        {
+          "raw": "endpoint  String  "
+        },
+        {
+          "raw": "p256dh    String"
+        },
+        {
+          "raw": "auth      String"
+        },
+        {
+          "raw": "createdAt DateTime"
+        },
+        {
+          "raw": "user User [userId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "@@unique([userId, endpoint])"
+        },
+        {
+          "raw": "@@index([userId]) "
+        }
+      ]
+    },
+    {
+      "name": "PlanConfig",
+      "fields": [
+        {
+          "raw": "id               String  "
+        },
+        {
+          "raw": "key              String             // FREE, BASIC, PRO, BUSINESS, SCALE, etc."
+        },
+        {
+          "raw": "name             String                     // Display name"
+        },
+        {
+          "raw": "leadsLimit       Int     "
+        },
+        {
+          "raw": "priceMonthlyBrl  Float   "
+        },
+        {
+          "raw": "priceAnnualBrl   Float   "
+        },
+        {
+          "raw": "priceMonthlyUsd  Float   "
+        },
+        {
+          "raw": "priceAnnualUsd   Float   "
+        },
+        {
+          "raw": "modules          Json        // ModuleKey[]"
+        },
+        {
+          "raw": "isActive         Boolean "
+        },
+        {
+          "raw": "sortOrder        Int     "
+        },
+        {
+          "raw": "createdAt        DateTime"
+        },
+        {
+          "raw": "updatedAt        DateTime"
+        },
+        {
+          "raw": "@@index([isActive]) "
+        },
+        {
+          "raw": "@@index([sortOrder]) "
+        }
+      ]
+    },
+    {
+      "name": "IntelligenceReport",
+      "fields": [
+        {
+          "raw": "id           String  "
+        },
+        {
+          "raw": "workspaceId  String"
+        },
+        {
+          "raw": "userId       String"
+        },
+        {
+          "raw": "module       String   // COMPETITORS | MARKET | VIABILITY"
+        },
+        {
+          "raw": "inputQuery   String"
+        },
+        {
+          "raw": "inputCity    String?"
+        },
+        {
+          "raw": "inputState   String?"
+        },
+        {
+          "raw": "resultsData  Json     // Full report JSON"
+        },
+        {
+          "raw": "isFavorite   Boolean "
+        },
+        {
+          "raw": "createdAt    DateTime"
+        },
+        {
+          "raw": "workspace Workspace [workspaceId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "@@index([workspaceId]) "
+        },
+        {
+          "raw": "@@index([module]) "
+        },
+        {
+          "raw": "@@index([createdAt]) "
+        }
+      ]
+    },
+    {
+      "name": "Affiliate",
+      "fields": [
+        {
+          "raw": "id                    String   "
+        },
+        {
+          "raw": "code                  String   "
+        },
+        {
+          "raw": "status                AffiliateStatus"
+        },
+        {
+          "raw": "userId                String?  "
+        },
+        {
+          "raw": "name                  String?"
+        },
+        {
+          "raw": "email                 String?"
+        },
+        {
+          "raw": "document              String?"
+        },
+        {
+          "raw": "notes                 String?  "
+        },
+        {
+          "raw": "commissionRatePercent Int      "
+        },
+        {
+          "raw": "payoutType            String?"
+        },
+        {
+          "raw": "payoutPayload         String?  "
+        },
+        {
+          "raw": "representativeId      String?                // ligado a um representante comercial"
+        },
+        {
+          "raw": "approvedAt            DateTime?"
+        },
+        {
+          "raw": "createdByAdminId      String?"
+        },
+        {
+          "raw": "createdAt             DateTime "
+        },
+        {
+          "raw": "updatedAt             DateTime "
+        },
+        {
+          "raw": "user         User?              [userId], references: [id], onDelete: SetNull)"
+        },
+        {
+          "raw": "representative Representative?  fields: [representativeId], references: [id], onDelete: SetNull)"
+        },
+        {
+          "raw": "referrals    Referral[]"
+        },
+        {
+          "raw": "commissions  AffiliateCommission[]"
+        },
+        {
+          "raw": "clicks       AffiliateClick[]"
+        },
+        {
+          "raw": "@@index([status]) "
+        },
+        {
+          "raw": "@@index([userId]) "
+        },
+        {
+          "raw": "@@index([representativeId]) "
+        }
+      ]
+    },
+    {
+      "name": "AffiliateClick",
+      "fields": [
+        {
+          "raw": "id         String  "
+        },
+        {
+          "raw": "affiliateId String"
+        },
+        {
+          "raw": "createdAt   DateTime"
+        },
+        {
+          "raw": "ipHash      String?  // hash do IP para métricas (opcional)"
+        },
+        {
+          "raw": "userAgent   String?  // truncado"
+        },
+        {
+          "raw": "affiliate Affiliate [affiliateId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "@@index([affiliateId]) "
+        },
+        {
+          "raw": "@@index([createdAt]) "
+        }
+      ]
+    },
+    {
+      "name": "Referral",
+      "fields": [
+        {
+          "raw": "id           String   "
+        },
+        {
+          "raw": "affiliateId  String"
+        },
+        {
+          "raw": "userId       String"
+        },
+        {
+          "raw": "workspaceId  String?"
+        },
+        {
+          "raw": "landedAt     DateTime "
+        },
+        {
+          "raw": "signupAt     DateTime "
+        },
+        {
+          "raw": "convertedAt  DateTime?"
+        },
+        {
+          "raw": "firstPaidAt  DateTime?"
+        },
+        {
+          "raw": "refSource    RefSource"
+        },
+        {
+          "raw": "planId       String?"
+        },
+        {
+          "raw": "valueCents   Int?"
+        },
+        {
+          "raw": "createdAt    DateTime "
+        },
+        {
+          "raw": "updatedAt    DateTime "
+        },
+        {
+          "raw": "affiliate   Affiliate   [affiliateId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "user        User        [userId], references: [id], onDelete: Restrict)"
+        },
+        {
+          "raw": "commissions AffiliateCommission[]"
+        },
+        {
+          "raw": "@@index([affiliateId]) "
+        },
+        {
+          "raw": "@@index([userId]) "
+        },
+        {
+          "raw": "@@index([workspaceId]) "
+        },
+        {
+          "raw": "@@index([convertedAt]) "
+        }
+      ]
+    },
+    {
+      "name": "AffiliateCommission",
+      "fields": [
+        {
+          "raw": "id             String                   "
+        },
+        {
+          "raw": "affiliateId    String"
+        },
+        {
+          "raw": "referralId     String"
+        },
+        {
+          "raw": "workspaceId    String"
+        },
+        {
+          "raw": "amountCents    Int"
+        },
+        {
+          "raw": "currency       String                   "
+        },
+        {
+          "raw": "orderId        String?   // Stripe/MP"
+        },
+        {
+          "raw": "subscriptionId String?"
+        },
+        {
+          "raw": "status         AffiliateCommissionStatus"
+        },
+        {
+          "raw": "availableAt    DateTime  // vira pagável após hold"
+        },
+        {
+          "raw": "paidAt         DateTime?"
+        },
+        {
+          "raw": "paidByAdminId  String?"
+        },
+        {
+          "raw": "paymentProofUrl String?"
+        },
+        {
+          "raw": "commissionType String    // FIRST_PAYMENT | RECURRING"
+        },
+        {
+          "raw": "createdAt      DateTime "
+        },
+        {
+          "raw": "updatedAt      DateTime "
+        },
+        {
+          "raw": "affiliate Affiliate [affiliateId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "referral  Referral  [referralId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "@@index([affiliateId]) "
+        },
+        {
+          "raw": "@@index([status]) "
+        },
+        {
+          "raw": "@@index([availableAt]) "
+        }
+      ]
+    },
+    {
+      "name": "AffiliateSettings",
+      "fields": [
+        {
+          "raw": "id                        String  "
+        },
+        {
+          "raw": "defaultCommissionRatePercent Int   "
+        },
+        {
+          "raw": "cookieDurationDays        Int     "
+        },
+        {
+          "raw": "commissionRule            String   // FIRST_PAYMENT_ONLY | RECURRING"
+        },
+        {
+          "raw": "approvalHoldDays          Int     "
+        },
+        {
+          "raw": "minPayoutCents            Int      // R$ 100"
+        },
+        {
+          "raw": "allowSelfSignup           Boolean "
+        },
+        {
+          "raw": "updatedAt                 DateTime"
+        }
+      ]
+    },
+    {
+      "name": "RfSearchConfig",
+      "fields": [
+        {
+          "raw": "id        String  "
+        },
+        {
+          "raw": "enabled   Boolean "
+        },
+        {
+          "raw": "updatedAt DateTime"
+        }
+      ]
+    },
+    {
+      "name": "EmailConfig",
+      "fields": [
+        {
+          "raw": "id                     String  "
+        },
+        {
+          "raw": "provider               String   // resend | smtp"
+        },
+        {
+          "raw": "resendApiKeyEncrypted  String?  // cifrado; só quando provider = resend"
+        },
+        {
+          "raw": "fromEmail              String?  // Remetente"
+        },
+        {
+          "raw": "smtpHost               String?"
+        },
+        {
+          "raw": "smtpPort               Int?     // 587, 465"
+        },
+        {
+          "raw": "smtpUser               String?"
+        },
+        {
+          "raw": "smtpPasswordEncrypted  String?  // cifrado; só quando provider = smtp"
+        },
+        {
+          "raw": "updatedAt              DateTime"
+        }
+      ]
+    },
+    {
+      "name": "CrmIntegrationConfig",
+      "fields": [
+        {
+          "raw": "id                    String  "
+        },
+        {
+          "raw": "provider              String   // rdstation, hubspot, agendor"
+        },
+        {
+          "raw": "clientId              String"
+        },
+        {
+          "raw": "clientSecretEncrypted String"
+        },
+        {
+          "raw": "updatedAt             DateTime"
+        }
+      ]
+    },
+    {
+      "name": "LeadEvent",
+      "fields": [
+        {
+          "raw": "id           String       "
+        },
+        {
+          "raw": "leadId       String"
+        },
+        {
+          "raw": "userId       String"
+        },
+        {
+          "raw": "workspaceId  String?"
+        },
+        {
+          "raw": "type         LeadEventType"
+        },
+        {
+          "raw": "// Context data (flexible per event type)"
+        },
+        {
+          "raw": "oldValue     String?       // e.g. \"NEW\" for status change, \"45\" for score change"
+        },
+        {
+          "raw": "newValue     String?       // e.g. \"CONTACTED\", \"72\""
+        },
+        {
+          "raw": "metadata     Json?         // Extra: { reason, dealValue, note, tagLabel, crmProvider"
+        }
+      ]
+    },
+    {
+      "name": "PipelineBrief",
+      "fields": [
+        {
+          "raw": "id           String  "
+        },
+        {
+          "raw": "userId       String"
+        },
+        {
+          "raw": "workspaceId  String"
+        },
+        {
+          "raw": "briefDate    DateTime      // One per day per workspace"
+        },
+        {
+          "raw": "recommendations Json                // Array of { leadId, leadName, reason, priority, suggestedAction"
+        }
+      ]
+    },
+    {
+      "name": "EmailTemplate",
+      "fields": [
+        {
+          "raw": "id          String             "
+        },
+        {
+          "raw": "name        String"
+        },
+        {
+          "raw": "slug        String             "
+        },
+        {
+          "raw": "type        EmailTemplateType  "
+        },
+        {
+          "raw": "status      EmailTemplateStatus"
+        },
+        {
+          "raw": "subject     String"
+        },
+        {
+          "raw": "preheader   String?"
+        },
+        {
+          "raw": "body        Json                // { paragraphs, benefits, badge, badgeColor, subtitle, legalNote, expiresAt, accentColor"
+        }
+      ]
+    },
+    {
+      "name": "EmailCampaign",
+      "fields": [
+        {
+          "raw": "id              String               "
+        },
+        {
+          "raw": "name            String"
+        },
+        {
+          "raw": "templateId      String"
+        },
+        {
+          "raw": "template        EmailTemplate         [templateId], references: [id])"
+        },
+        {
+          "raw": "audience        EmailCampaignAudience"
+        },
+        {
+          "raw": "audienceFilter  Json?                 // { plans, inactiveDays, minDaysSinceSignup, cities"
+        }
+      ]
+    },
+    {
+      "name": "EmailCampaignRecipient",
+      "fields": [
+        {
+          "raw": "id         String         "
+        },
+        {
+          "raw": "campaignId String"
+        },
+        {
+          "raw": "campaign   EmailCampaign   [campaignId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "userId     String"
+        },
+        {
+          "raw": "email      String"
+        },
+        {
+          "raw": "status     EmailSendStatus"
+        },
+        {
+          "raw": "sentAt     DateTime?"
+        },
+        {
+          "raw": "error      String?"
+        },
+        {
+          "raw": "@@unique([campaignId, userId])"
+        },
+        {
+          "raw": "@@index([campaignId, status])"
+        }
+      ]
+    },
+    {
+      "name": "EmailSendLog",
+      "fields": [
+        {
+          "raw": "id                String       "
+        },
+        {
+          "raw": "type              EmailSendType"
+        },
+        {
+          "raw": "campaignId        String?"
+        },
+        {
+          "raw": "userId            String?"
+        },
+        {
+          "raw": "email             String"
+        },
+        {
+          "raw": "subject           String"
+        },
+        {
+          "raw": "status            EmailSendStatus"
+        },
+        {
+          "raw": "provider          String?       // resend | smtp"
+        },
+        {
+          "raw": "providerMessageId String?"
+        },
+        {
+          "raw": "error             String?"
+        },
+        {
+          "raw": "createdAt         DateTime     "
+        },
+        {
+          "raw": "@@index([type]) "
+        },
+        {
+          "raw": "@@index([campaignId]) "
+        },
+        {
+          "raw": "@@index([userId]) "
+        },
+        {
+          "raw": "@@index([email]) "
+        },
+        {
+          "raw": "@@index([createdAt]) "
+        }
+      ]
+    },
+    {
+      "name": "EmailUnsubscribe",
+      "fields": [
+        {
+          "raw": "id              String                   "
+        },
+        {
+          "raw": "userId          String?"
+        },
+        {
+          "raw": "email           String"
+        },
+        {
+          "raw": "category        EmailUnsubscribeCategory "
+        },
+        {
+          "raw": "token           String                   "
+        },
+        {
+          "raw": "unsubscribedAt  DateTime                 "
+        },
+        {
+          "raw": "@@unique([email, category])"
+        },
+        {
+          "raw": "@@index([email]) "
+        },
+        {
+          "raw": "@@index([userId]) "
+        }
+      ]
+    },
+    {
+      "name": "WeeklyReportConfig",
+      "fields": [
+        {
+          "raw": "id              String  "
+        },
+        {
+          "raw": "enabled         Boolean "
+        },
+        {
+          "raw": "customTitle     String?"
+        },
+        {
+          "raw": "customHighlight String?"
+        },
+        {
+          "raw": "ctaLabel        String?"
+        },
+        {
+          "raw": "ctaUrl          String?"
+        },
+        {
+          "raw": "footerPromo     String?"
+        },
+        {
+          "raw": "sendDay         Int      // 0=Sunday, 1=Monday ... 6=Saturday"
+        },
+        {
+          "raw": "sendHour        Int      // Hour in BRT (UTC-3)"
+        },
+        {
+          "raw": "updatedAt       DateTime"
+        }
+      ]
+    },
+    {
+      "name": "CnaeCode",
+      "fields": [
+        {
+          "raw": "code        String   // \"7020400\" (7 dígitos, sem pontuação)"
+        },
+        {
+          "raw": "description String                      // \"Atividades de consultoria em gestão empresarial\""
+        },
+        {
+          "raw": "@@index([description]) "
+        }
+      ]
+    },
+    {
+      "name": "RfCompany",
+      "fields": [
+        {
+          "raw": "cnpj          String  // CNPJ completo (14 dígitos)"
+        },
+        {
+          "raw": "razaoSocial   String                      // Razão social"
+        },
+        {
+          "raw": "nomeFantasia  String?                     // Nome fantasia"
+        },
+        {
+          "raw": "cnaePrincipal String       // CNAE fiscal principal (7 dígitos)"
+        },
+        {
+          "raw": "uf            String       // UF (ex: \"SP\")"
+        },
+        {
+          "raw": "municipio     String?                     // Nome do município"
+        },
+        {
+          "raw": "cep           String?      // CEP (8 dígitos)"
+        },
+        {
+          "raw": "bairro        String?                     // Bairro"
+        },
+        {
+          "raw": "logradouro    String?                     // Tipo + Logradouro"
+        },
+        {
+          "raw": "numero        String?                     // Número"
+        },
+        {
+          "raw": "ddd           String?      // DDD telefone"
+        },
+        {
+          "raw": "telefone      String?                     // Telefone"
+        },
+        {
+          "raw": "email         String?                     // Email (correio eletrônico)"
+        },
+        {
+          "raw": "porte         String?                     // \"ME\" (Micro), \"EPP\" (Pequeno Porte), \"DEMAIS\""
+        },
+        {
+          "raw": "capitalSocial Float?                      // Capital social (R$)"
+        },
+        {
+          "raw": "dataAbertura  String?                     // Data início atividade (YYYYMMDD)"
+        },
+        {
+          "raw": "@@index([cnaePrincipal]) "
+        },
+        {
+          "raw": "@@index([uf]) "
+        },
+        {
+          "raw": "@@index([uf, cnaePrincipal])"
+        },
+        {
+          "raw": "@@index([cnaePrincipal, municipio, uf])"
+        },
+        {
+          "raw": "@@index([municipio]) "
+        },
+        {
+          "raw": "@@index([municipio, uf, bairro])"
+        },
+        {
+          "raw": "@@index([ddd, telefone])"
+        },
+        {
+          "raw": "@@index([porte]) "
+        }
+      ]
+    },
+    {
+      "name": "AutoProspeccaoConfig",
+      "fields": [
+        {
+          "raw": "id                   String  "
+        },
+        {
+          "raw": "workspaceId          String  "
+        },
+        {
+          "raw": "isActive             Boolean "
+        },
+        {
+          "raw": "// Agendamento"
+        },
+        {
+          "raw": "scheduleDays         Json      // 1=Seg...7=Dom"
+        },
+        {
+          "raw": "scheduleTimeStart    String  "
+        },
+        {
+          "raw": "scheduleTimeEnd      String  "
+        },
+        {
+          "raw": "searchIntervalHours  Int     "
+        },
+        {
+          "raw": "analyzeDelayMinutes  Int     "
+        },
+        {
+          "raw": "// Limites operacionais"
+        },
+        {
+          "raw": "maxLeadsPerRun       Int     "
+        },
+        {
+          "raw": "maxEmailsPerDay      Int     "
+        },
+        {
+          "raw": "maxCrmPushPerDay     Int     "
+        },
+        {
+          "raw": "// Scoring"
+        },
+        {
+          "raw": "hotScoreMin          Int     "
+        },
+        {
+          "raw": "warmScoreMin         Int     "
+        },
+        {
+          "raw": "// CRM"
+        },
+        {
+          "raw": "crmAutoSend          Boolean "
+        },
+        {
+          "raw": "crmProvider          String?  // \"rdstation\"|\"hubspot\"|\"agendor\"|\"all\""
+        },
+        {
+          "raw": "crmOwnerUserId       String?"
+        },
+        {
+          "raw": "// Email"
+        },
+        {
+          "raw": "emailAutoSend        Boolean "
+        },
+        {
+          "raw": "emailStepIntervalHours Int   "
+        },
+        {
+          "raw": "defaultSequenceId    String?"
+        },
+        {
+          "raw": "// Blacklist de CNPJs que nunca devem ser contatados"
+        },
+        {
+          "raw": "blockedCnpjs         Json    "
+        },
+        {
+          "raw": "// WhatsApp — Fase futura"
+        },
+        {
+          "raw": "whatsappEnabled      Boolean "
+        },
+        {
+          "raw": "createdAt            DateTime"
+        },
+        {
+          "raw": "updatedAt            DateTime"
+        },
+        {
+          "raw": "workspace Workspace [workspaceId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "@@index([workspaceId]) "
+        }
+      ]
+    },
+    {
+      "name": "SearchProfile",
+      "fields": [
+        {
+          "raw": "id            String   "
+        },
+        {
+          "raw": "workspaceId   String?   // null → perfil do sistema (visível para todos)"
+        },
+        {
+          "raw": "isSystem      Boolean  "
+        },
+        {
+          "raw": "isActive      Boolean  "
+        },
+        {
+          "raw": "name          String"
+        },
+        {
+          "raw": "description   String?"
+        },
+        {
+          "raw": "priority      Int       // ordem de execução (menor = primeiro)"
+        },
+        {
+          "raw": "// Filtros de busca"
+        },
+        {
+          "raw": "cnae          String?   // CNAE único (ex: \"7020400\")"
+        },
+        {
+          "raw": "cnaeList      Json?     // Lista de CNAEs [\"7020400\",\"7311400\"]"
+        },
+        {
+          "raw": "uf            Json?     // Lista de UFs [\"SP\",\"RJ\",\"MG\"]"
+        },
+        {
+          "raw": "municipio     String?"
+        },
+        {
+          "raw": "porte         Json?     // [\"ME\",\"EPP\",\"DEMAIS\"]"
+        },
+        {
+          "raw": "hasEmail      Boolean?"
+        },
+        {
+          "raw": "hasPhone      Boolean?"
+        },
+        {
+          "raw": "minCapital    Float?"
+        },
+        {
+          "raw": "openedAfter   String?   // Data mínima de abertura YYYYMMDD"
+        },
+        {
+          "raw": "// Histórico de execução"
+        },
+        {
+          "raw": "lastRunAt     DateTime?"
+        },
+        {
+          "raw": "nextRunAt     DateTime?"
+        },
+        {
+          "raw": "totalFound    Int      "
+        },
+        {
+          "raw": "totalHot      Int      "
+        },
+        {
+          "raw": "createdAt     DateTime "
+        },
+        {
+          "raw": "updatedAt     DateTime "
+        },
+        {
+          "raw": "runs   AutoProspeccaoRun[]"
+        },
+        {
+          "raw": "leads  ProspectedLead[]"
+        },
+        {
+          "raw": "@@index([workspaceId, isActive])"
+        },
+        {
+          "raw": "@@index([isSystem]) "
+        },
+        {
+          "raw": "@@index([nextRunAt]) "
+        }
+      ]
+    },
+    {
+      "name": "ProspectedLead",
+      "fields": [
+        {
+          "raw": "id                String              "
+        },
+        {
+          "raw": "workspaceId       String"
+        },
+        {
+          "raw": "searchProfileId   String"
+        },
+        {
+          "raw": "// Dados da empresa (espelho desnormalizado do RfCompany)"
+        },
+        {
+          "raw": "cnpj              String              "
+        },
+        {
+          "raw": "razaoSocial       String"
+        },
+        {
+          "raw": "nomeFantasia      String?"
+        },
+        {
+          "raw": "email             String?"
+        },
+        {
+          "raw": "ddd               String?"
+        },
+        {
+          "raw": "telefone          String?"
+        },
+        {
+          "raw": "cnaePrincipal     String?"
+        },
+        {
+          "raw": "uf                String?"
+        },
+        {
+          "raw": "municipio         String?"
+        },
+        {
+          "raw": "porte             String?"
+        },
+        {
+          "raw": "// Score e análise IA"
+        },
+        {
+          "raw": "score             Int?"
+        },
+        {
+          "raw": "status            ProspectedLeadStatus"
+        },
+        {
+          "raw": "aiAnalysisSummary String?             "
+        },
+        {
+          "raw": "aiScoreFactors    Json?"
+        },
+        {
+          "raw": "// CRM"
+        },
+        {
+          "raw": "crmProvider       String?"
+        },
+        {
+          "raw": "crmId             String?"
+        },
+        {
+          "raw": "crmPushedAt       DateTime?"
+        },
+        {
+          "raw": "// Email sequence"
+        },
+        {
+          "raw": "emailSequenceId   String?"
+        },
+        {
+          "raw": "createdAt         DateTime            "
+        },
+        {
+          "raw": "updatedAt         DateTime            "
+        },
+        {
+          "raw": "workspace     Workspace      [workspaceId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "searchProfile SearchProfile  [searchProfileId], references: [id], onDelete: Restrict)"
+        },
+        {
+          "raw": "emailEvents   ProspectedLeadEmailEvent[]"
+        },
+        {
+          "raw": "@@unique([workspaceId, cnpj])"
+        },
+        {
+          "raw": "@@index([workspaceId, status])"
+        },
+        {
+          "raw": "@@index([workspaceId, score(sort: Desc)])"
+        },
+        {
+          "raw": "@@index([searchProfileId]) "
+        },
+        {
+          "raw": "@@index([createdAt(sort: Desc)])"
+        }
+      ]
+    },
+    {
+      "name": "ProspectedLeadEmailEvent",
+      "fields": [
+        {
+          "raw": "id         String   "
+        },
+        {
+          "raw": "leadId     String"
+        },
+        {
+          "raw": "step       Int       // 1, 2, 3..."
+        },
+        {
+          "raw": "subject    String"
+        },
+        {
+          "raw": "templateId String?"
+        },
+        {
+          "raw": "sentAt     DateTime?"
+        },
+        {
+          "raw": "openedAt   DateTime?"
+        },
+        {
+          "raw": "clickedAt  DateTime?"
+        },
+        {
+          "raw": "bouncedAt  DateTime?"
+        },
+        {
+          "raw": "lead ProspectedLead [leadId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "@@index([leadId]) "
+        },
+        {
+          "raw": "@@index([leadId, step])"
+        }
+      ]
+    },
+    {
+      "name": "AutoProspSenderPool",
+      "fields": [
+        {
+          "raw": "id                    String  "
+        },
+        {
+          "raw": "workspaceId           String"
+        },
+        {
+          "raw": "label                 String   // Ex: \"Domínio Principal\", \"Backup Gmail\""
+        },
+        {
+          "raw": "provider              String   // \"resend\" | \"smtp\""
+        },
+        {
+          "raw": "fromEmail             String   // Ex: \"Contato <contato@empresa.com>\""
+        },
+        {
+          "raw": "isActive              Boolean "
+        },
+        {
+          "raw": "dailyLimit            Int      // limite de envios/dia por remetente"
+        },
+        {
+          "raw": "sentToday             Int        // resetado pelo cron diário"
+        },
+        {
+          "raw": "sentTodayResetAt      DateTime"
+        },
+        {
+          "raw": "lastUsedAt            DateTime?"
+        },
+        {
+          "raw": "// Resend"
+        },
+        {
+          "raw": "resendApiKeyEncrypted String?"
+        },
+        {
+          "raw": "// SMTP"
+        },
+        {
+          "raw": "smtpHost              String?"
+        },
+        {
+          "raw": "smtpPort              Int?"
+        },
+        {
+          "raw": "smtpUser              String?"
+        },
+        {
+          "raw": "smtpPasswordEncrypted String?"
+        },
+        {
+          "raw": "createdAt             DateTime"
+        },
+        {
+          "raw": "updatedAt             DateTime"
+        },
+        {
+          "raw": "workspace             Workspace [workspaceId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "@@index([workspaceId, isActive])"
+        }
+      ]
+    },
+    {
+      "name": "AutoProspeccaoTemplate",
+      "fields": [
+        {
+          "raw": "id              String               "
+        },
+        {
+          "raw": "name            String"
+        },
+        {
+          "raw": "type            AutoProspTemplateType"
+        },
+        {
+          "raw": "subject         String"
+        },
+        {
+          "raw": "preheader       String?"
+        },
+        {
+          "raw": "bodyHtml        String               "
+        },
+        {
+          "raw": "bodyText        String?                // Versão plain text (fallback)"
+        },
+        {
+          "raw": "variables       Json?                 // [{key,label"
+        }
+      ]
+    },
+    {
+      "name": "AutoProspeccaoRun",
+      "fields": [
+        {
+          "raw": "id              String            "
+        },
+        {
+          "raw": "workspaceId     String"
+        },
+        {
+          "raw": "searchProfileId String?"
+        },
+        {
+          "raw": "triggeredBy     String             // \"cron\"|\"manual\"|userId"
+        },
+        {
+          "raw": "status          AutoProspRunStatus"
+        },
+        {
+          "raw": "// Métricas da execução"
+        },
+        {
+          "raw": "leadsFound      Int"
+        },
+        {
+          "raw": "leadsAnalyzed   Int"
+        },
+        {
+          "raw": "leadsHot        Int"
+        },
+        {
+          "raw": "leadsWarm       Int"
+        },
+        {
+          "raw": "leadsCold       Int"
+        },
+        {
+          "raw": "leadsDedupSkip  Int"
+        },
+        {
+          "raw": "crmPushed       Int"
+        },
+        {
+          "raw": "emailsQueued    Int"
+        },
+        {
+          "raw": "errorLog        String?  "
+        },
+        {
+          "raw": "startedAt       DateTime "
+        },
+        {
+          "raw": "completedAt     DateTime?"
+        },
+        {
+          "raw": "workspace     Workspace      [workspaceId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "searchProfile SearchProfile? [searchProfileId], references: [id], onDelete: SetNull)"
+        },
+        {
+          "raw": "@@index([workspaceId, startedAt(sort: Desc)])"
+        },
+        {
+          "raw": "@@index([status]) "
+        }
+      ]
+    },
+    {
+      "name": "Representative",
+      "fields": [
+        {
+          "raw": "id                    String   "
+        },
+        {
+          "raw": "userId                String?  "
+        },
+        {
+          "raw": "workspaceId           String   "
+        },
+        {
+          "raw": "name                  String"
+        },
+        {
+          "raw": "email                 String   "
+        },
+        {
+          "raw": "phone                 String?"
+        },
+        {
+          "raw": "document              String?"
+        },
+        {
+          "raw": "level                 RepLevel "
+        },
+        {
+          "raw": "directCommissionPct   Decimal  "
+        },
+        {
+          "raw": "affiliateOverridePct  Decimal  "
+        },
+        {
+          "raw": "commissionHoldDays    Int      "
+        },
+        {
+          "raw": "creditLimit           Int      "
+        },
+        {
+          "raw": "payoutType            PayoutType?"
+        },
+        {
+          "raw": "payoutPayload         String?  "
+        },
+        {
+          "raw": "minPayoutCents        Int      "
+        },
+        {
+          "raw": "monthlyGoalCents      Int?"
+        },
+        {
+          "raw": "region                String?"
+        },
+        {
+          "raw": "contractUrl           String?"
+        },
+        {
+          "raw": "notes                 String?  "
+        },
+        {
+          "raw": "status                RepStatus"
+        },
+        {
+          "raw": "lastActivityAt        DateTime?"
+        },
+        {
+          "raw": "createdByAdminId      String"
+        },
+        {
+          "raw": "createdAt             DateTime "
+        },
+        {
+          "raw": "updatedAt             DateTime "
+        },
+        {
+          "raw": "evolutionInstanceName String?  "
+        },
+        {
+          "raw": "whatsappStatus        String   "
+        },
+        {
+          "raw": "whatsappNumber        String?"
+        },
+        {
+          "raw": "whatsappConnectedAt   DateTime?"
+        },
+        {
+          "raw": "/** Which gateway sends/receives for this rep: EVOLUTION (QR-paired personal number) or META (official Cloud API). */"
+        },
+        {
+          "raw": "whatsappProvider      String   "
+        },
+        {
+          "raw": "/** Meta WhatsApp Cloud API phone_number_id, registered externally in Meta Business Suite. */"
+        },
+        {
+          "raw": "metaPhoneNumberId     String?  "
+        },
+        {
+          "raw": "linkClicks            Int      "
+        },
+        {
+          "raw": "user                  User?              [userId], references: [id], onDelete: SetNull)"
+        },
+        {
+          "raw": "workspace             Workspace          [workspaceId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "clients               RepClient[]"
+        },
+        {
+          "raw": "commissions           RepCommission[]"
+        },
+        {
+          "raw": "goals                 RepGoal[]"
+        },
+        {
+          "raw": "affiliates            Affiliate[]       "
+        },
+        {
+          "raw": "whatsappConversations  WhatsAppConversation[]"
+        },
+        {
+          "raw": "@@index([status]) "
+        },
+        {
+          "raw": "@@index([level]) "
+        }
+      ]
+    },
+    {
+      "name": "AdminWhatsAppConfig",
+      "fields": [
+        {
+          "raw": "id                  String   "
+        },
+        {
+          "raw": "label               String    IA\")"
+        },
+        {
+          "raw": "provider            String   "
+        },
+        {
+          "raw": "evolutionInstanceName String?"
+        },
+        {
+          "raw": "whatsappStatus      String   "
+        },
+        {
+          "raw": "whatsappNumber      String?"
+        },
+        {
+          "raw": "whatsappConnectedAt DateTime?"
+        },
+        {
+          "raw": "metaPhoneNumberId   String?  "
+        },
+        {
+          "raw": "createdAt           DateTime "
+        },
+        {
+          "raw": "updatedAt           DateTime "
+        },
+        {
+          "raw": "conversations       WhatsAppConversation[]"
+        }
+      ]
+    },
+    {
+      "name": "WhatsAppConversation",
+      "fields": [
+        {
+          "raw": "id                 String   "
+        },
+        {
+          "raw": "/** Owner: exactly one of representativeId / adminConfigId is set today; workspaceId is reserved for customer rollout. */"
+        },
+        {
+          "raw": "representativeId   String?"
+        },
+        {
+          "raw": "adminConfigId      String?"
+        },
+        {
+          "raw": "workspaceId        String?"
+        },
+        {
+          "raw": "contactNumber      String"
+        },
+        {
+          "raw": "contactName        String?"
+        },
+        {
+          "raw": "repClientId        String?"
+        },
+        {
+          "raw": "lastMessageAt      DateTime?"
+        },
+        {
+          "raw": "lastMessagePreview String?  "
+        },
+        {
+          "raw": "unreadCount        Int      "
+        },
+        {
+          "raw": "createdAt          DateTime "
+        },
+        {
+          "raw": "updatedAt          DateTime "
+        },
+        {
+          "raw": "representative     Representative?      [representativeId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "adminConfig        AdminWhatsAppConfig?  [adminConfigId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "repClient          RepClient?            [repClientId], references: [id], onDelete: SetNull)"
+        },
+        {
+          "raw": "messages           WhatsAppMessage[]"
+        },
+        {
+          "raw": "@@unique([representativeId, contactNumber])"
+        },
+        {
+          "raw": "@@unique([adminConfigId, contactNumber])"
+        },
+        {
+          "raw": "@@index([representativeId, lastMessageAt])"
+        },
+        {
+          "raw": "@@index([adminConfigId, lastMessageAt])"
+        }
+      ]
+    },
+    {
+      "name": "WhatsAppMessage",
+      "fields": [
+        {
+          "raw": "id                String  "
+        },
+        {
+          "raw": "conversationId    String"
+        },
+        {
+          "raw": "direction         String"
+        },
+        {
+          "raw": "provider          String"
+        },
+        {
+          "raw": "providerMessageId String?"
+        },
+        {
+          "raw": "body              String  "
+        },
+        {
+          "raw": "status            String  "
+        },
+        {
+          "raw": "createdAt         DateTime"
+        },
+        {
+          "raw": "conversation      WhatsAppConversation [conversationId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "@@unique([provider, providerMessageId])"
+        },
+        {
+          "raw": "@@index([conversationId, createdAt])"
+        }
+      ]
+    },
+    {
+      "name": "RepClient",
+      "fields": [
+        {
+          "raw": "id                  String   "
+        },
+        {
+          "raw": "representativeId    String"
+        },
+        {
+          "raw": "workspaceId         String?"
+        },
+        {
+          "raw": "name                String"
+        },
+        {
+          "raw": "email               String?"
+        },
+        {
+          "raw": "phone               String?"
+        },
+        {
+          "raw": "company             String?"
+        },
+        {
+          "raw": "planId              String?"
+        },
+        {
+          "raw": "status              String   "
+        },
+        {
+          "raw": "valueCents          Int?"
+        },
+        {
+          "raw": "signedAt            DateTime?"
+        },
+        {
+          "raw": "canceledAt          DateTime?"
+        },
+        {
+          "raw": "notes               String?"
+        },
+        {
+          "raw": "createdAt           DateTime "
+        },
+        {
+          "raw": "updatedAt           DateTime "
+        },
+        {
+          "raw": "representative      Representative  [representativeId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "commissions         RepCommission[]"
+        },
+        {
+          "raw": "whatsappConversations WhatsAppConversation[]"
+        },
+        {
+          "raw": "@@index([representativeId]) "
+        },
+        {
+          "raw": "@@index([status]) "
+        }
+      ]
+    },
+    {
+      "name": "RepCommission",
+      "fields": [
+        {
+          "raw": "id                    String             "
+        },
+        {
+          "raw": "representativeId      String"
+        },
+        {
+          "raw": "source                RepCommissionSource"
+        },
+        {
+          "raw": "repClientId           String?"
+        },
+        {
+          "raw": "affiliateId           String?"
+        },
+        {
+          "raw": "affiliateCommissionId String?"
+        },
+        {
+          "raw": "orderId               String?"
+        },
+        {
+          "raw": "subscriptionId        String?"
+        },
+        {
+          "raw": "amountCents           Int"
+        },
+        {
+          "raw": "commissionPercent     Decimal"
+        },
+        {
+          "raw": "status                RepCommissionStatus"
+        },
+        {
+          "raw": "holdUntil             DateTime?"
+        },
+        {
+          "raw": "paidAt                DateTime?"
+        },
+        {
+          "raw": "paidByAdminId         String?"
+        },
+        {
+          "raw": "paymentProofUrl       String?"
+        },
+        {
+          "raw": "notes                 String?"
+        },
+        {
+          "raw": "createdAt             DateTime           "
+        },
+        {
+          "raw": "updatedAt             DateTime           "
+        },
+        {
+          "raw": "representative        Representative   [representativeId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "repClient             RepClient?       [repClientId], references: [id], onDelete: SetNull)"
+        },
+        {
+          "raw": "@@index([representativeId]) "
+        },
+        {
+          "raw": "@@index([status]) "
+        },
+        {
+          "raw": "@@index([holdUntil]) "
+        }
+      ]
+    },
+    {
+      "name": "RepGoal",
+      "fields": [
+        {
+          "raw": "id                  String   "
+        },
+        {
+          "raw": "representativeId    String"
+        },
+        {
+          "raw": "month               Int"
+        },
+        {
+          "raw": "year                Int"
+        },
+        {
+          "raw": "targetCents         Int"
+        },
+        {
+          "raw": "achievedCents       Int      "
+        },
+        {
+          "raw": "createdAt           DateTime "
+        },
+        {
+          "raw": "updatedAt           DateTime "
+        },
+        {
+          "raw": "representative      Representative [representativeId], references: [id], onDelete: Cascade)"
+        },
+        {
+          "raw": "@@unique([representativeId, month, year])"
+        }
+      ]
+    },
+    {
+      "name": "RepLevelConfig",
+      "fields": [
+        {
+          "raw": "id                    String   "
+        },
+        {
+          "raw": "level                 RepLevel "
+        },
+        {
+          "raw": "directCommissionPct   Decimal  "
+        },
+        {
+          "raw": "affiliateOverridePct  Decimal  "
+        },
+        {
+          "raw": "creditLimit           Int      "
+        },
+        {
+          "raw": "minPayoutCents        Int      "
+        },
+        {
+          "raw": "monthlyGoalCents      Int?"
+        },
+        {
+          "raw": "createdAt             DateTime "
+        },
+        {
+          "raw": "updatedAt             DateTime "
+        }
+      ]
+    }
+  ],
+  "scannedAt": "2026-07-20T00:23:17.235Z"
+}

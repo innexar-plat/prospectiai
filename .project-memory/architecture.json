@@ -1,0 +1,28 @@
+{
+  "name": "prospector-ai",
+  "monorepo": [
+    "frontend",
+    "admin",
+    "backend"
+  ],
+  "frameworks": [
+    "Next.js 16",
+    "Vite 7",
+    "React 19",
+    "Tailwind 4",
+    "Prisma",
+    "Zod 4"
+  ],
+  "scripts": {
+    "dev:backend": "npm run dev -w backend",
+    "dev:frontend": "npm run dev -w frontend",
+    "dev:admin": "npm run dev -w admin",
+    "build:backend": "npm run build -w backend",
+    "build:frontend": "npm run build -w frontend",
+    "build:admin": "npm run build -w admin",
+    "lint": "npm run lint -w backend && npm run lint -w frontend && npm run lint -w admin",
+    "postinstall": "npm run postinstall -w backend",
+    "prepare": "husky"
+  },
+  "scannedAt": "2026-07-20T00:23:17.230Z"
+}

@@ -1,0 +1,1012 @@
+# Repository Index
+
+> Auto-generated at 2026-07-19T23:50:09.555Z
+
+## Stack
+
+- npm
+- TypeScript
+- Frontend
+- Admin
+- Backend
+- Prisma
+- Docker
+
+## Structure
+
+- admin/
+- admin/src/
+- admin/src/__tests__/
+- admin/src/__tests__/components/
+- admin/src/__tests__/components/layout/
+- admin/src/__tests__/components/ui/
+- admin/src/__tests__/lib/
+- admin/src/__tests__/pages/
+- admin/src/assets/
+- admin/src/components/
+- admin/src/components/dashboard/
+- admin/src/components/layout/
+- admin/src/components/ui/
+- admin/src/hooks/
+- admin/src/lib/
+- admin/src/lib/api/
+- admin/src/pages/
+- admin/src/pages/representatives/
+- backend/
+- backend/e2e/
+- backend/prisma/
+- backend/prisma/migrations/
+- backend/prisma/migrations/20250625120000_add_trial_plan/
+- backend/prisma/migrations/20250625120100_trial_plan_data/
+- backend/prisma/migrations/20250711_add_match_confidence_deep_analysis/
+- backend/prisma/migrations/20260222182431_init_nextauth/
+- backend/prisma/migrations/20260222212128_onboarding_and_search_history/
+- backend/prisma/migrations/20260223100000_add_updated_at_audit/
+- backend/prisma/migrations/20260223110000_add_audit_log/
+- backend/prisma/migrations/20260223120000_add_two_fa/
+- backend/prisma/migrations/20260224120000_add_user_disabled_at/
+- backend/prisma/migrations/20260224140000_add_ai_provider_config/
+- backend/prisma/migrations/20260224150000_add_web_search_config/
+- backend/prisma/migrations/20260224160000_add_lead_tag/
+- backend/prisma/migrations/20260224170000_add_usage_event/
+- backend/prisma/migrations/20260225020000_add_plan_config/
+- backend/prisma/migrations/20260225105148_add_results_data_to_search_history/
+- backend/prisma/migrations/20260225120000_add_workspace_member_goals/
+- backend/prisma/migrations/20260225140000_add_grace_period_end/
+- backend/prisma/migrations/20260225160000_add_is_favorite_intelligence_and_lead/
+- backend/prisma/migrations/20260225170000_add_workspace_business_profile/
+- backend/prisma/migrations/20260226110000_add_company_analysis_role/
+- backend/prisma/migrations/20260226180000_add_notifications_and_user_prefs/
+- backend/prisma/migrations/20260226190000_add_email_config/
+- backend/prisma/migrations/20260227000000_rename_business_plan_name/
+- backend/prisma/migrations/20260227100000_add_user_and_workspace_profile_fields/
+- backend/prisma/migrations/20260227120000_add_workspace_billing_cycle/
+- backend/prisma/migrations/20260227120000_add_workspace_pending_plan/
+- backend/prisma/migrations/20260227220000_add_workspace_invitation/
+- backend/prisma/migrations/20260228000000_add_notification_channel_config/
+- backend/prisma/migrations/20260228100000_backfill_workspace_subscription_id/
+- backend/prisma/migrations/20260302000000_add_affiliate_system/
+- backend/prisma/migrations/20260302100000_add_affiliate_click/
+- backend/prisma/migrations/20260306000000_add_member_credit_limits/
+- backend/prisma/migrations/20260405000000_add_lead_search_indexes/
+- backend/prisma/migrations/20260405100000_search_history_location/
+- backend/prisma/migrations/20260405113000_rdstation_refresh_and_crm_config/
+- backend/prisma/migrations/20260406123000_add_user_agendor_token/
+- backend/prisma/migrations/20260408000000_lead_intelligence_engine/
+- backend/prisma/migrations/20260409000000_add_email_marketing_system/
+- backend/prisma/migrations/20260409200000_add_rf_company_and_cnae/
+- backend/prisma/migrations/20260410000000_add_lead_rf_fields/
+- backend/prisma/migrations/20260411000000_add_groq_deepseek_anthropic_providers/
+- backend/prisma/migrations/20260411120000_add_rf_company_relation_indexes/
+- backend/prisma/migrations/20260411153000_add_lead_contact_intelligence_foundation/
+- backend/prisma/migrations/20260411200000_add_auto_prospeccao_module/
+- backend/prisma/migrations/20260412000000_add_email_step_interval_hours/
+- backend/prisma/migrations/20260412010000_add_auto_prosp_sender_pool/
+- backend/prisma/migrations/20260412174000_add_ai_runtime_config/
+- backend/prisma/migrations/20260414110000_add_unaccent_extension/
+- backend/prisma/migrations/20260417113000_enrich_workspace_company_profile/
+- backend/prisma/migrations/20260625000000_add_openrouter_provider/
+- backend/prisma/migrations/20260626120000_add_starter_promo_fields/
+- backend/prisma/migrations/20260626130000_add_reactivation_promo_sent_at/
+- backend/prisma/migrations/20260705000000_add_representative_system/
+- backend/prisma/migrations/20260707000000_add_representative_whatsapp/
+- backend/prisma/migrations/20260709180000_add_representative_link_clicks/
+- backend/prisma/migrations/20260709200000_add_whatsapp_chat_system/
+- backend/prisma/migrations/20260710013300_add_rf_company_municipio_trgm/
+- backend/prisma/migrations/20260719000000_add_rf_search_config/
+- backend/src/
+- backend/src/__tests__/
+- backend/src/app/
+- backend/src/app/api/
+- backend/src/app/api/activity/
+- backend/src/app/api/admin/
+- backend/src/app/api/affiliate/
+- backend/src/app/api/analyze/
+- backend/src/app/api/auth/
+- backend/src/app/api/auto-prospeccao/
+- backend/src/app/api/billing/
+- backend/src/app/api/cnae/
+- backend/src/app/api/company-analysis/
+- backend/src/app/api/competitors/
+- backend/src/app/api/config/
+- backend/src/app/api/cron/
+- backend/src/app/api/csp-report/
+- backend/src/app/api/details/
+- backend/src/app/api/export/
+- backend/src/app/api/health/
+- backend/src/app/api/integrations/
+- backend/src/app/api/intelligence/
+- backend/src/app/api/leads/
+- backend/src/app/api/location/
+- backend/src/app/api/market-report/
+- backend/src/app/api/notifications/
+- backend/src/app/api/oauth/
+- backend/src/app/api/onboarding/
+- backend/src/app/api/pipeline/
+- backend/src/app/api/plans/
+- backend/src/app/api/product/
+- backend/src/app/api/push-subscription/
+- backend/src/app/api/ready/
+- backend/src/app/api/representative/
+- backend/src/app/api/rf-search/
+- backend/src/app/api/search/
+- backend/src/app/api/support/
+- backend/src/app/api/system/
+- backend/src/app/api/tags/
+- backend/src/app/api/team/
+- backend/src/app/api/track/
+- backend/src/app/api/unsubscribe/
+- backend/src/app/api/user/
+- backend/src/app/api/v1/
+- backend/src/app/api/viability/
+- backend/src/app/api/webhooks/
+- backend/src/app/api/workspace/
+- backend/src/lib/
+- backend/src/lib/ai/
+- backend/src/lib/ai/adapters/
+- backend/src/lib/ai/prompts/
+- backend/src/lib/i18n/
+- backend/src/lib/services/
+- backend/src/lib/validations/
+- backend/src/lib/web-search/
+- backend/src/modules/
+- backend/src/modules/analyze/
+- backend/src/modules/analyze/application/
+- backend/src/modules/auto-prospeccao/
+- backend/src/modules/auto-prospeccao/__tests__/
+- backend/src/modules/auto-prospeccao/application/
+- backend/src/modules/auto-prospeccao/domain/
+- backend/src/modules/company-analysis/
+- backend/src/modules/company-analysis/application/
+- backend/src/modules/company-analysis/domain/
+- backend/src/modules/competitors/
+- backend/src/modules/competitors/application/
+- backend/src/modules/competitors/domain/
+- backend/src/modules/email-marketing/
+- backend/src/modules/email-marketing/application/
+- backend/src/modules/email-marketing/domain/
+- backend/src/modules/market/
+- backend/src/modules/market/application/
+- backend/src/modules/market/domain/
+- backend/src/modules/scoring/
+- backend/src/modules/scoring/application/
+- backend/src/modules/scoring/domain/
+- backend/src/modules/search/
+- backend/src/modules/search/application/
+- backend/src/modules/search/domain/
+- backend/src/modules/viability/
+- backend/src/modules/viability/application/
+- backend/src/modules/viability/domain/
+- backend/src/types/
+- backend/test-results/
+- backend/test-users/
+- docs/
+- frontend/
+- frontend/src/
+- frontend/src/assets/
+- frontend/src/components/
+- frontend/src/components/auth/
+- frontend/src/components/brand/
+- frontend/src/components/dashboard/
+- frontend/src/components/dashboard/billing/
+- frontend/src/components/dashboard/shared/
+- frontend/src/components/landing/
+- frontend/src/components/layout/
+- frontend/src/components/legal/
+- frontend/src/components/ui/
+- frontend/src/contexts/
+- frontend/src/hooks/
+- frontend/src/hooks/__tests__/
+- frontend/src/lib/
+- frontend/src/lib/api/
+- frontend/src/lib/i18n/
+- frontend/src/lib/i18n/bundles/
+- frontend/src/pages/
+- frontend/src/pages/auth/
+- frontend/src/pages/blog/
+- frontend/src/pages/checkout/
+- frontend/src/pages/dashboard/
+- frontend/src/pages/dashboard/representative/
+- frontend/src/pages/legal/
+- frontend/src/pages/onboarding/
+- frontend/src/pages/seo/
+- frontend/src/test/
+- implementacoes futuras/
+- plan/
+- planejamentos futuros/
+
+## Source Files
+
+- AFFILIATE-PROGRAM.md (8.4KB)
+- AGENTS.md (7.1KB)
+- ANALISE-ESCALABILIDADE-BUSCA-10K-USUARIOS.md (15.5KB)
+- APRESENTACAO-CONSORCIO-VISUAL.html (47.5KB)
+- APRESENTACAO-CONSORCIO.md (16.0KB)
+- CAMPANHA-PRECISION-IA.md (17.4KB)
+- COMPANY-PROFILE-ENRICHMENT.md (5.1KB)
+- CONTACT-INTELLIGENCE-MERGE-PHONES.md (5.8KB)
+- Dockerfile (2.0KB)
+- FONTES-DADOS-PUBLICOS.md (20.8KB)
+- Guia_Integracao_Agendor_API.docx (21.3KB)
+- Guia_Integracao_Agendor_API.md (13.6KB)
+- IMPLEMENTATION-SUMMARY.md (5.3KB)
+- MANUAL-VISUAL-AFILIADO.md (5.0KB)
+- MARKETING-LANDING-PAGE.md (21.3KB)
+- MODULO-AUTO-PROSPECCAO.md (25.9KB)
+- Makefile (1.4KB)
+- README.md (2.5KB)
+- RELATORIO-CAPACIDADE-LANCAMENTO-2026-04-12.md (4.2KB)
+- RELEASE-2.1.0.md (1.7KB)
+- REVISAO-12-ITENS.md (2.8KB)
+- admin/Dockerfile.dev (0.2KB)
+- admin/README.md (1.6KB)
+- admin/eslint.config.js (0.7KB)
+- admin/index.html (0.7KB)
+- admin/package.json (1.2KB)
+- admin/src/App.tsx (6.1KB)
+- admin/src/__tests__/components/AdminGuard.test.tsx (2.3KB)
+- admin/src/__tests__/components/AdminOnlyRoute.context.test.tsx (1.1KB)
+- admin/src/__tests__/components/AdminOnlyRoute.test.tsx (1.5KB)
+- admin/src/__tests__/components/ConfirmModal.test.tsx (1.9KB)
+- admin/src/__tests__/components/Sparkline.test.tsx (1.2KB)
+- admin/src/__tests__/lib/api.test.ts (17.1KB)
+- admin/src/__tests__/lib/utils.test.ts (0.6KB)
+- admin/src/__tests__/pages/AffiliateDetailPage.test.tsx (1.2KB)
+- admin/src/__tests__/pages/AffiliateSettingsPage.test.tsx (1.1KB)
+- admin/src/__tests__/pages/AffiliatesPage.test.tsx (1.2KB)
+- admin/src/__tests__/pages/AiConfigPage.test.tsx (1.7KB)
+- admin/src/__tests__/pages/AuditPage.test.tsx (1.3KB)
+- admin/src/__tests__/pages/CommissionsPage.test.tsx (1.2KB)
+- admin/src/__tests__/pages/Dashboard.test.tsx (3.2KB)
+- admin/src/__tests__/pages/EmailLogsPage.test.tsx (1.2KB)
+- admin/src/__tests__/pages/EmailPage.test.tsx (1.1KB)
+- admin/src/__tests__/pages/LeadsPage.test.tsx (1.2KB)
+- admin/src/__tests__/pages/NotificationsPage.test.tsx (1.0KB)
+- admin/src/__tests__/pages/PlansPage.test.tsx (1.1KB)
+- admin/src/__tests__/pages/ProfilePage.test.tsx (1.0KB)
+- admin/src/__tests__/pages/ReferralsPage.test.tsx (1.2KB)
+- admin/src/__tests__/pages/SearchHistoryPage.test.tsx (1.0KB)
+- admin/src/__tests__/pages/UserDetailPage.test.tsx (1.5KB)
+- admin/src/__tests__/pages/UsersPage.test.tsx (2.6KB)
+- admin/src/__tests__/pages/WorkspaceDetailPage.test.tsx (1.4KB)
+- admin/src/__tests__/pages/WorkspacesPage.test.tsx (1.3KB)
+- admin/src/__tests__/pages/navigation.smoke.test.tsx (3.7KB)
+- admin/src/__tests__/pages/untested-pages.smoke.test.tsx (9.1KB)
+- admin/src/__tests__/setup.ts (0.2KB)
+- admin/src/__tests__/test-utils.ts (0.9KB)
+- admin/src/assets/react.svg (4.0KB)
+- admin/src/components/AdminGuard.tsx (2.2KB)
+- admin/src/components/AdminOnlyRoute.tsx (0.3KB)
+- admin/src/components/ErrorBoundary.tsx (2.3KB)
+- admin/src/components/UpdateBanner.tsx (0.6KB)
+- admin/src/components/dashboard/MarketComparison.tsx (6.5KB)
+- admin/src/components/layout/AdminFooter.tsx (0.5KB)
+- admin/src/components/layout/AdminHeader.tsx (3.0KB)
+- admin/src/components/layout/AdminLayout.tsx (1.9KB)
+- admin/src/components/layout/AdminSidebar.tsx (5.2KB)
+- admin/src/components/layout/SupportSidebar.tsx (1.7KB)
+- admin/src/components/ui/Badge.tsx (1.1KB)
+- admin/src/components/ui/Button.tsx (1.9KB)
+- admin/src/components/ui/Card.tsx (1.7KB)
+- admin/src/components/ui/Chip.tsx (1.2KB)
+- admin/src/components/ui/ConfirmModal.tsx (2.7KB)
+- admin/src/components/ui/Input.tsx (1.6KB)
+- admin/src/components/ui/Select.tsx (1.6KB)
+- admin/src/components/ui/Skeleton.tsx (0.3KB)
+- admin/src/components/ui/Sparkline.tsx (1.1KB)
+- admin/src/components/ui/ToastProvider.tsx (1.9KB)
+- admin/src/hooks/useVersionCheck.ts (1.4KB)
+- admin/src/index.css (0.8KB)
+- admin/src/lib/api/representatives.ts (7.3KB)
+- admin/src/lib/api/whatsapp.ts (2.8KB)
+- admin/src/lib/api.ts (38.0KB)
+- admin/src/lib/useConfirm.tsx (1.3KB)
+- admin/src/lib/utils.ts (0.4KB)
+- admin/src/main.tsx (0.4KB)
+- admin/src/pages/AffiliateDetailPage.tsx (16.3KB)
+- admin/src/pages/AffiliateSettingsPage.tsx (6.6KB)
+- admin/src/pages/AffiliatesPage.tsx (10.6KB)
+- admin/src/pages/AiConfigPage.tsx (32.7KB)
+- admin/src/pages/AuditPage.tsx (4.7KB)
+- admin/src/pages/AutoProspeccaoConfigPage.tsx (13.5KB)
+- admin/src/pages/AutoProspeccaoSearchProfilesPage.tsx (16.3KB)
+- admin/src/pages/AutoProspeccaoSenderPoolPage.tsx (23.8KB)
+- admin/src/pages/AutoProspeccaoTemplateEditorPage.tsx (15.6KB)
+- admin/src/pages/AutoProspeccaoTemplatesPage.tsx (7.3KB)
+- admin/src/pages/CommissionsPage.tsx (10.6KB)
+- admin/src/pages/CrmIntegrationsPage.tsx (14.7KB)
+- admin/src/pages/Dashboard.tsx (5.7KB)
+- admin/src/pages/EmailAnalyticsPage.tsx (8.6KB)
+- admin/src/pages/EmailCampaignDetailPage.tsx (11.6KB)
+- admin/src/pages/EmailCampaignsPage.tsx (17.9KB)
+- admin/src/pages/EmailLogsPage.tsx (7.0KB)
+- admin/src/pages/EmailPage.tsx (10.7KB)
+- admin/src/pages/EmailTemplateEditorPage.tsx (16.2KB)
+- admin/src/pages/EmailTemplatesPage.tsx (10.5KB)
+- admin/src/pages/LeadsPage.tsx (5.5KB)
+- admin/src/pages/NotificationsPage.tsx (12.2KB)
+- admin/src/pages/PlansPage.tsx (20.4KB)
+- admin/src/pages/ProfilePage.tsx (0.7KB)
+- admin/src/pages/ReferralsPage.tsx (4.8KB)
+- admin/src/pages/RfConfigPage.tsx (3.9KB)
+- admin/src/pages/SearchHistoryPage.tsx (5.6KB)
+- admin/src/pages/UserDetailPage.tsx (15.9KB)
+- admin/src/pages/UsersPage.tsx (7.2KB)
+- admin/src/pages/WeeklyReportConfigPage.tsx (10.1KB)
+- admin/src/pages/WhatsAppPage.tsx (16.1KB)
+- admin/src/pages/WorkspaceDetailPage.tsx (12.9KB)
+- admin/src/pages/WorkspacesPage.tsx (4.8KB)
+- admin/src/pages/representatives/Create.tsx (10.8KB)
+- admin/src/pages/representatives/Detail.tsx (37.2KB)
+- admin/src/pages/representatives/Layout.tsx (1.3KB)
+- admin/src/pages/representatives/Levels.tsx (7.5KB)
+- admin/src/pages/representatives/List.tsx (9.0KB)
+- admin/src/pages/representatives/Stats.tsx (7.3KB)
+- admin/src/vite-env.d.ts (0.0KB)
+- admin/tsconfig.app.json (0.9KB)
+- admin/tsconfig.json (0.1KB)
+- admin/tsconfig.node.json (0.6KB)
+- admin/vite.config.ts (1.3KB)
+- admin/vitest.config.ts (0.9KB)
+- backend/ADMIN.md (1.7KB)
+- backend/AI-MODULE.md (5.5KB)
+- backend/ANALYZE-ESCALABILIDADE-ARQUITETURA.md (2.6KB)
+- backend/API.md (27.3KB)
+- backend/AVALIACAO_BACKEND.md (22.9KB)
+- backend/MODULOS.md (3.6KB)
+- backend/TESTING.md (3.8KB)
+- backend/e2e/README.md (1.7KB)
+- backend/e2e/api-auth.spec.ts (1.2KB)
+- backend/e2e/api-export.spec.ts (0.5KB)
+- backend/e2e/api-health.spec.ts (0.3KB)
+- backend/e2e/api-protected.spec.ts (1.5KB)
+- backend/e2e/api-verify-email.spec.ts (0.7KB)
+- backend/e2e/frontend-routes.spec.ts (1.3KB)
+- backend/e2e/health.spec.ts (0.3KB)
+- backend/e2e/us-market.spec.ts (3.2KB)
+- backend/eslint.config.mjs (0.1KB)
+- backend/jest.config.js (2.5KB)
+- backend/next-env.d.ts (0.2KB)
+- backend/next.config.ts (1.3KB)
+- backend/package-lock.json (389.6KB)
+- backend/package.json (1.7KB)
+- backend/playwright.config.ts (0.3KB)
+- backend/postcss.config.js (0.1KB)
+- backend/prisma/migrations/20250625120000_add_trial_plan/migration.sql (0.1KB)
+- backend/prisma/migrations/20250625120100_trial_plan_data/migration.sql (2.2KB)
+- backend/prisma/migrations/20250711_add_match_confidence_deep_analysis/migration.sql (0.6KB)
+- backend/prisma/migrations/20260222182431_init_nextauth/migration.sql (6.0KB)
+- backend/prisma/migrations/20260222212128_onboarding_and_search_history/migration.sql (1.1KB)
+- backend/prisma/migrations/20260223100000_add_updated_at_audit/migration.sql (0.2KB)
+- backend/prisma/migrations/20260223110000_add_audit_log/migration.sql (0.5KB)
+- backend/prisma/migrations/20260223120000_add_two_fa/migration.sql (0.1KB)
+- backend/prisma/migrations/20260224120000_add_user_disabled_at/migration.sql (0.1KB)
+- backend/prisma/migrations/20260224140000_add_ai_provider_config/migration.sql (0.8KB)
+- backend/prisma/migrations/20260224150000_add_web_search_config/migration.sql (0.7KB)
+- backend/prisma/migrations/20260224160000_add_lead_tag/migration.sql (1.0KB)
+- backend/prisma/migrations/20260224170000_add_usage_event/migration.sql (0.9KB)
+- backend/prisma/migrations/20260225020000_add_plan_config/migration.sql (0.9KB)
+- backend/prisma/migrations/20260225105148_add_results_data_to_search_history/migration.sql (0.2KB)
+- backend/prisma/migrations/20260225120000_add_workspace_member_goals/migration.sql (0.2KB)
+- backend/prisma/migrations/20260225140000_add_grace_period_end/migration.sql (0.1KB)
+- backend/prisma/migrations/20260225160000_add_is_favorite_intelligence_and_lead/migration.sql (0.2KB)
+- backend/prisma/migrations/20260225170000_add_workspace_business_profile/migration.sql (1.0KB)
+- backend/prisma/migrations/20260226110000_add_company_analysis_role/migration.sql (0.1KB)
+- backend/prisma/migrations/20260226180000_add_notifications_and_user_prefs/migration.sql (1.2KB)
+- backend/prisma/migrations/20260226190000_add_email_config/migration.sql (0.3KB)
+- backend/prisma/migrations/20260227000000_rename_business_plan_name/migration.sql (0.2KB)
+- backend/prisma/migrations/20260227100000_add_user_and_workspace_profile_fields/migration.sql (0.7KB)
+- backend/prisma/migrations/20260227120000_add_workspace_billing_cycle/migration.sql (0.1KB)
+- backend/prisma/migrations/20260227120000_add_workspace_pending_plan/migration.sql (0.2KB)
+- backend/prisma/migrations/20260227220000_add_workspace_invitation/migration.sql (1.3KB)
+- backend/prisma/migrations/20260228000000_add_notification_channel_config/migration.sql (0.8KB)
+- backend/prisma/migrations/20260228100000_backfill_workspace_subscription_id/migration.sql (0.6KB)
+- backend/prisma/migrations/20260302000000_add_affiliate_system/migration.sql (4.5KB)
+- backend/prisma/migrations/20260302100000_add_affiliate_click/migration.sql (0.6KB)
+- backend/prisma/migrations/20260306000000_add_member_credit_limits/migration.sql (0.2KB)
+- backend/prisma/migrations/20260405000000_add_lead_search_indexes/migration.sql (0.8KB)
+- backend/prisma/migrations/20260405100000_search_history_location/migration.sql (0.2KB)
+- backend/prisma/migrations/20260405113000_rdstation_refresh_and_crm_config/migration.sql (0.7KB)
+- backend/prisma/migrations/20260406123000_add_user_agendor_token/migration.sql (0.1KB)
+- backend/prisma/migrations/20260408000000_lead_intelligence_engine/migration.sql (2.2KB)
+- backend/prisma/migrations/20260409000000_add_email_marketing_system/migration.sql (5.3KB)
+- backend/prisma/migrations/20260409200000_add_rf_company_and_cnae/migration.sql (1.2KB)
+- backend/prisma/migrations/20260410000000_add_lead_rf_fields/migration.sql (0.4KB)
+- backend/prisma/migrations/20260411000000_add_groq_deepseek_anthropic_providers/migration.sql (0.2KB)
+- backend/prisma/migrations/20260411120000_add_rf_company_relation_indexes/migration.sql (0.5KB)
+- backend/prisma/migrations/20260411153000_add_lead_contact_intelligence_foundation/migration.sql (1.8KB)
+- backend/prisma/migrations/20260411200000_add_auto_prospeccao_module/migration.sql (8.0KB)
+- backend/prisma/migrations/20260412000000_add_email_step_interval_hours/migration.sql (0.1KB)
+- backend/prisma/migrations/20260412010000_add_auto_prosp_sender_pool/migration.sql (1.0KB)
+- backend/prisma/migrations/20260412174000_add_ai_runtime_config/migration.sql (1.1KB)
+- backend/prisma/migrations/20260414110000_add_unaccent_extension/migration.sql (0.1KB)
+- backend/prisma/migrations/20260417113000_enrich_workspace_company_profile/migration.sql (1.3KB)
+- backend/prisma/migrations/20260625000000_add_openrouter_provider/migration.sql (0.1KB)
+- backend/prisma/migrations/20260626120000_add_starter_promo_fields/migration.sql (0.3KB)
+- backend/prisma/migrations/20260626130000_add_reactivation_promo_sent_at/migration.sql (0.2KB)
+- backend/prisma/migrations/20260705000000_add_representative_system/migration.sql (7.0KB)
+- backend/prisma/migrations/20260707000000_add_representative_whatsapp/migration.sql (0.5KB)
+- backend/prisma/migrations/20260709180000_add_representative_link_clicks/migration.sql (0.2KB)
+- backend/prisma/migrations/20260709200000_add_whatsapp_chat_system/migration.sql (3.6KB)
+- backend/prisma/migrations/20260710013300_add_rf_company_municipio_trgm/migration.sql (0.4KB)
+- backend/prisma/migrations/20260719000000_add_rf_search_config/migration.sql (0.3KB)
+- backend/prisma/migrations/migration_lock.toml (0.1KB)
+- backend/prisma/schema.prisma (50.3KB)
+- backend/prisma/seed-auto-prospeccao.ts (10.1KB)
+- backend/prisma/seed-email-marketing.ts (17.4KB)
+- backend/prisma/seed-precision-internal.ts (19.5KB)
+- backend/src/__tests__/2fa-disable.test.ts (1.7KB)
+- backend/src/__tests__/2fa-enable.test.ts (1.7KB)
+- backend/src/__tests__/2fa-verify.test.ts (1.3KB)
+- backend/src/__tests__/activity-route.test.ts (2.1KB)
+- backend/src/__tests__/admin-affiliate-settings.test.ts (3.5KB)
+- backend/src/__tests__/admin-ai-config.test.ts (1.7KB)
+- backend/src/__tests__/admin-audit-logs.test.ts (3.2KB)
+- backend/src/__tests__/admin-commissions.test.ts (2.8KB)
+- backend/src/__tests__/admin-email-config.test.ts (4.6KB)
+- backend/src/__tests__/admin-email-logs.test.ts (6.0KB)
+- backend/src/__tests__/admin-leads.test.ts (1.8KB)
+- backend/src/__tests__/admin-lib.test.ts (0.7KB)
+- backend/src/__tests__/admin-market-stats.test.ts (3.1KB)
+- backend/src/__tests__/admin-search-history.test.ts (1.8KB)
+- backend/src/__tests__/admin-users-id.test.ts (1.5KB)
+- backend/src/__tests__/admin-workspaces-id.test.ts (2.3KB)
+- backend/src/__tests__/admin-workspaces-list.test.ts (2.0KB)
+- backend/src/__tests__/affiliate-lib.test.ts (16.7KB)
+- backend/src/__tests__/ai-prompt-locale.test.ts (5.3KB)
+- backend/src/__tests__/ai-prompts-builder.test.ts (16.1KB)
+- backend/src/__tests__/ai-prompts-sanitize.test.ts (3.1KB)
+- backend/src/__tests__/ai-resolve.test.ts (11.2KB)
+- backend/src/__tests__/ai-schemas.test.ts (2.7KB)
+- backend/src/__tests__/analysis-error-messages.test.ts (1.5KB)
+- backend/src/__tests__/analyze.service.test.ts (18.3KB)
+- backend/src/__tests__/api-admin-representative-detail.test.ts (3.2KB)
+- backend/src/__tests__/api-admin-whatsapp.test.ts (6.3KB)
+- backend/src/__tests__/api-admin.test.ts (8.6KB)
+- backend/src/__tests__/api-analyze-status.test.ts (3.4KB)
+- backend/src/__tests__/api-analyze.test.ts (6.7KB)
+- backend/src/__tests__/api-auth.test.ts (1.2KB)
+- backend/src/__tests__/api-competitors.test.ts (3.9KB)
+- backend/src/__tests__/api-market-report.test.ts (4.4KB)
+- backend/src/__tests__/api-register.test.ts (8.5KB)
+- backend/src/__tests__/api-representative-clients.test.ts (7.5KB)
+- backend/src/__tests__/api-representative-goals.test.ts (3.3KB)
+- backend/src/__tests__/api-representative-stats.test.ts (4.6KB)
+- backend/src/__tests__/api-representative-track-click.test.ts (2.1KB)
+- backend/src/__tests__/api-representative-whatsapp-chat.test.ts (7.2KB)
+- backend/src/__tests__/api-representative-whatsapp-meta.test.ts (3.6KB)
+- backend/src/__tests__/api-representative-whatsapp.test.ts (14.3KB)
+- backend/src/__tests__/api-representative.test.ts (10.3KB)
+- backend/src/__tests__/api-route-errors.test.ts (2.3KB)
+- backend/src/__tests__/api-search-v1.test.ts (2.6KB)
+- backend/src/__tests__/api-search.test.ts (8.7KB)
+- backend/src/__tests__/api-whatsapp-meta-webhook.test.ts (5.3KB)
+- backend/src/__tests__/audit.test.ts (2.2KB)
+- backend/src/__tests__/auth-adapter.test.ts (1.4KB)
+- backend/src/__tests__/auth-lifecycle.test.ts (7.7KB)
+- backend/src/__tests__/auth-session.test.ts (1.5KB)
+- backend/src/__tests__/auth.test.ts (2.5KB)
+- backend/src/__tests__/billing-checkout.test.ts (9.8KB)
+- backend/src/__tests__/billing-config.test.ts (1.9KB)
+- backend/src/__tests__/billing-prices.test.ts (1.6KB)
+- backend/src/__tests__/billing-process-payment.test.ts (2.5KB)
+- backend/src/__tests__/billing-promo.test.ts (3.5KB)
+- backend/src/__tests__/billing-webhook-stripe.test.ts (11.4KB)
+- backend/src/__tests__/billing.test.ts (0.6KB)
+- backend/src/__tests__/change-password.test.ts (5.0KB)
+- backend/src/__tests__/company-analysis-locale.test.ts (3.2KB)
+- backend/src/__tests__/competitor-service.test.ts (2.9KB)
+- backend/src/__tests__/config-public-route.test.ts (1.5KB)
+- backend/src/__tests__/contact-intelligence-integration.test.ts (11.3KB)
+- backend/src/__tests__/contact-intelligence.test.ts (5.0KB)
+- backend/src/__tests__/credentials-authorize.test.ts (4.1KB)
+- backend/src/__tests__/daily-brief-route.test.ts (3.0KB)
+- backend/src/__tests__/db-sync.test.ts (4.2KB)
+- backend/src/__tests__/details.test.ts (2.1KB)
+- backend/src/__tests__/email-config-encrypt.test.ts (2.2KB)
+- backend/src/__tests__/email-i18n.test.ts (9.9KB)
+- backend/src/__tests__/email-templates.test.ts (10.4KB)
+- backend/src/__tests__/email.test.ts (12.5KB)
+- backend/src/__tests__/evolution-lib.test.ts (4.0KB)
+- backend/src/__tests__/export-leads.test.ts (2.5KB)
+- backend/src/__tests__/fetch-http.test.ts (1.1KB)
+- backend/src/__tests__/forgot-password.test.ts (3.1KB)
+- backend/src/__tests__/gemini.test.ts (19.5KB)
+- backend/src/__tests__/google-places.test.ts (2.8KB)
+- backend/src/__tests__/health.test.ts (1.2KB)
+- backend/src/__tests__/heartbeat-route.test.ts (1.2KB)
+- backend/src/__tests__/lead-contact-intelligence-primary-route.test.ts (3.1KB)
+- backend/src/__tests__/lead-contact-intelligence-route.test.ts (3.4KB)
+- backend/src/__tests__/lead-sync-queue.test.ts (0.8KB)
+- backend/src/__tests__/leads-get.test.ts (1.7KB)
+- backend/src/__tests__/leads-id.test.ts (4.0KB)
+- backend/src/__tests__/logger.test.ts (2.4KB)
+- backend/src/__tests__/market-routing.test.ts (6.6KB)
+- backend/src/__tests__/market-service.test.ts (2.7KB)
+- backend/src/__tests__/merge-phone-sources.test.ts (10.7KB)
+- backend/src/__tests__/notifications-route.test.ts (4.1KB)
+- backend/src/__tests__/oauth-registration.test.ts (6.6KB)
+- backend/src/__tests__/oauth-route.test.ts (2.1KB)
+- backend/src/__tests__/oauth-security.test.ts (2.1KB)
+- backend/src/__tests__/onboarding-complete.test.ts (2.8KB)
+- backend/src/__tests__/parse-json.test.ts (2.5KB)
+- backend/src/__tests__/pipeline-stats-route.test.ts (2.0KB)
+- backend/src/__tests__/plans-route.test.ts (3.3KB)
+- backend/src/__tests__/product-modules-lib.test.ts (1.2KB)
+- backend/src/__tests__/product-modules.test.ts (2.4KB)
+- backend/src/__tests__/proration.test.ts (2.6KB)
+- backend/src/__tests__/provider-priority.test.ts (0.8KB)
+- backend/src/__tests__/ratelimit.test.ts (2.1KB)
+- backend/src/__tests__/reactivation-promo-audience.test.ts (2.1KB)
+- backend/src/__tests__/reactivation-promo-email.test.ts (2.5KB)
+- backend/src/__tests__/ready.test.ts (1.0KB)
+- backend/src/__tests__/redis.test.ts (0.9KB)
+- backend/src/__tests__/registration.test.ts (1.6KB)
+- backend/src/__tests__/representative-lib.test.ts (20.9KB)
+- backend/src/__tests__/request-id.test.ts (2.7KB)
+- backend/src/__tests__/resend-verification.test.ts (3.4KB)
+- backend/src/__tests__/reset-password.test.ts (2.7KB)
+- backend/src/__tests__/resolve-analysis-market.test.ts (0.8KB)
+- backend/src/__tests__/schedule-downgrade.test.ts (6.6KB)
+- backend/src/__tests__/search-history-detail.test.ts (3.8KB)
+- backend/src/__tests__/search-history-queue.test.ts (1.1KB)
+- backend/src/__tests__/search-history.test.ts (3.3KB)
+- backend/src/__tests__/search-service.test.ts (18.4KB)
+- backend/src/__tests__/session-revocation.test.ts (2.1KB)
+- backend/src/__tests__/site-url.test.ts (2.2KB)
+- backend/src/__tests__/support-users-activate.test.ts (2.9KB)
+- backend/src/__tests__/support-users-deactivate.test.ts (3.1KB)
+- backend/src/__tests__/support-users-id.test.ts (2.6KB)
+- backend/src/__tests__/support-users-reset-password.test.ts (4.6KB)
+- backend/src/__tests__/support-users.test.ts (2.8KB)
+- backend/src/__tests__/tags-route.test.ts (5.4KB)
+- backend/src/__tests__/team-credits-helper.test.ts (4.5KB)
+- backend/src/__tests__/team-credits-route.test.ts (5.1KB)
+- backend/src/__tests__/team-dashboard.test.ts (4.0KB)
+- backend/src/__tests__/team-goals.test.ts (4.0KB)
+- backend/src/__tests__/team-invite-accept.test.ts (10.1KB)
+- backend/src/__tests__/team-invite-resend.test.ts (6.5KB)
+- backend/src/__tests__/team-invite.test.ts (8.8KB)
+- backend/src/__tests__/team-members.test.ts (1.8KB)
+- backend/src/__tests__/team-progress.test.ts (4.6KB)
+- backend/src/__tests__/team-remove.test.ts (3.0KB)
+- backend/src/__tests__/team-role.test.ts (4.8KB)
+- backend/src/__tests__/team-route.test.ts (14.2KB)
+- backend/src/__tests__/telegram-alert.test.ts (2.7KB)
+- backend/src/__tests__/trial.test.ts (2.9KB)
+- backend/src/__tests__/twofa-lib.test.ts (0.8KB)
+- backend/src/__tests__/us-city-suggestions.test.ts (1.8KB)
+- backend/src/__tests__/us-market.integration.test.ts (2.4KB)
+- backend/src/__tests__/user-me.test.ts (14.2KB)
+- backend/src/__tests__/user-profile.test.ts (2.4KB)
+- backend/src/__tests__/validations.test.ts (1.3KB)
+- backend/src/__tests__/verify-email.test.ts (2.2KB)
+- backend/src/__tests__/viability-prompts.test.ts (2.0KB)
+- backend/src/__tests__/viability-route.test.ts (7.1KB)
+- backend/src/__tests__/webhook-dedup.test.ts (1.5KB)
+- backend/src/__tests__/whatsapp-chat-lib.test.ts (6.6KB)
+- backend/src/__tests__/whatsapp-meta-lib.test.ts (7.7KB)
+- backend/src/__tests__/whatsapp-send-lib.test.ts (4.7KB)
+- backend/src/__tests__/workspace-profile-cnpj.test.ts (2.7KB)
+- backend/src/__tests__/workspace-profile.test.ts (8.1KB)
+- backend/src/auth.ts (10.7KB)
+- backend/src/instrumentation.ts (1.5KB)
+- backend/src/lib/admin-api-helpers.ts (3.0KB)
+- backend/src/lib/admin-market-stats.ts (8.2KB)
+- backend/src/lib/admin-whatsapp.ts (0.7KB)
+- backend/src/lib/admin.ts (2.2KB)
+- backend/src/lib/affiliate.ts (12.0KB)
+- backend/src/lib/agendor-config.ts (1.0KB)
+- backend/src/lib/ai/encrypt.ts (1.8KB)
+- backend/src/lib/ai/index.ts (0.3KB)
+- backend/src/lib/ai/model-bulkhead.ts (1.5KB)
+- backend/src/lib/ai/parse-json.ts (5.5KB)
+- backend/src/lib/ai/provider-priority.ts (0.9KB)
+- backend/src/lib/ai/resolve.ts (17.5KB)
+- backend/src/lib/ai/schemas.ts (3.2KB)
+- backend/src/lib/ai/types.ts (1.1KB)
+- backend/src/lib/ai-runtime-controls.ts (2.7KB)
+- backend/src/lib/analyze-bulkhead.ts (2.2KB)
+- backend/src/lib/api-auth.ts (0.7KB)
+- backend/src/lib/api-route-errors.ts (3.8KB)
+- backend/src/lib/app-origins.ts (1.2KB)
+- backend/src/lib/audit.ts (2.0KB)
+- backend/src/lib/auth-adapter.ts (1.3KB)
+- backend/src/lib/auth-utils.ts (0.1KB)
+- backend/src/lib/billing-config.ts (2.6KB)
+- backend/src/lib/billing-prices.ts (2.2KB)
+- backend/src/lib/billing-promo.ts (7.8KB)
+- backend/src/lib/br-trial-reactivation.ts (3.5KB)
+- backend/src/lib/brasilapi-cnpj.ts (3.2KB)
+- backend/src/lib/contact-intelligence.ts (10.5KB)
+- backend/src/lib/country-locale.ts (4.1KB)
+- backend/src/lib/credentials-authorize.ts (1.8KB)
+- backend/src/lib/credit-alerts.ts (2.1KB)
+- backend/src/lib/db-sync.ts (15.5KB)
+- backend/src/lib/email-config-encrypt.ts (1.6KB)
+- backend/src/lib/email-templates.ts (50.0KB)
+- backend/src/lib/email.ts (12.8KB)
+- backend/src/lib/env-validation.ts (4.3KB)
+- backend/src/lib/evolution.ts (5.5KB)
+- backend/src/lib/fetch-http.ts (2.7KB)
+- backend/src/lib/gemini.ts (27.3KB)
+- backend/src/lib/geocode.ts (1.8KB)
+- backend/src/lib/google-places.ts (9.3KB)
+- backend/src/lib/grace-period.ts (2.1KB)
+- backend/src/lib/hubspot-oauth.ts (8.3KB)
+- backend/src/lib/i18n/analysis-error-messages.ts (5.1KB)
+- backend/src/lib/i18n/locale.ts (1.5KB)
+- backend/src/lib/i18n/messages.ts (31.1KB)
+- backend/src/lib/lead-intelligence.ts (7.5KB)
+- backend/src/lib/lead-sync-queue.ts (2.5KB)
+- backend/src/lib/logger.ts (3.4KB)
+- backend/src/lib/market.ts (5.2KB)
+- backend/src/lib/mercadopago-subscription.ts (4.5KB)
+- backend/src/lib/mercadopago.ts (0.5KB)
+- backend/src/lib/notification-service.ts (6.0KB)
+- backend/src/lib/oauth-registration.ts (3.4KB)
+- backend/src/lib/oauth-security.ts (1.7KB)
+- backend/src/lib/prisma.ts (0.3KB)
+- backend/src/lib/product-modules.ts (5.2KB)
+- backend/src/lib/proration.ts (1.9KB)
+- backend/src/lib/ratelimit.ts (2.9KB)
+- backend/src/lib/rdstation-oauth.ts (9.6KB)
+- backend/src/lib/reactivation-promo-audience.ts (4.6KB)
+- backend/src/lib/reactivation-promo-email.ts (9.2KB)
+- backend/src/lib/redis.ts (3.6KB)
+- backend/src/lib/registration.ts (0.9KB)
+- backend/src/lib/rep-client-status.ts (0.2KB)
+- backend/src/lib/representative.ts (13.1KB)
+- backend/src/lib/request-id.ts (0.8KB)
+- backend/src/lib/rf-fuzzy-match.ts (8.4KB)
+- backend/src/lib/schedule-downgrade.ts (7.4KB)
+- backend/src/lib/search-bulkhead.ts (2.1KB)
+- backend/src/lib/search-history-queue.ts (3.3KB)
+- backend/src/lib/sentry.ts (0.7KB)
+- backend/src/lib/session-revocation.ts (1.2KB)
+- backend/src/lib/site-url.ts (1.3KB)
+- backend/src/lib/smart-relations.ts (18.8KB)
+- backend/src/lib/stripe.ts (0.3KB)
+- backend/src/lib/team-credits.ts (3.7KB)
+- backend/src/lib/telegram-alert.ts (5.7KB)
+- backend/src/lib/telegram-business-alerts.ts (6.3KB)
+- backend/src/lib/trial.ts (5.3KB)
+- backend/src/lib/twofa.ts (0.5KB)
+- backend/src/lib/us-city-suggestions.ts (3.5KB)
+- backend/src/lib/usage.ts (2.7KB)
+- backend/src/lib/user-market.ts (1.2KB)
+- backend/src/lib/utils.ts (0.1KB)
+- backend/src/lib/validations/schemas.ts (20.9KB)
+- backend/src/lib/web-push.ts (2.0KB)
+- backend/src/lib/web-search/resolve.ts (5.8KB)
+- backend/src/lib/web-search/serper.ts (2.8KB)
+- backend/src/lib/webhook-dedup.ts (2.0KB)
+- backend/src/lib/website-scraper.ts (5.9KB)
+- backend/src/lib/whatsapp-chat.ts (5.0KB)
+- backend/src/lib/whatsapp-meta.ts (7.8KB)
+- backend/src/lib/whatsapp-send.ts (2.2KB)
+- backend/src/lib/workspace.ts (0.5KB)
+- backend/src/modules/analyze/index.ts (0.3KB)
+- backend/src/modules/auto-prospeccao/index.ts (0.9KB)
+- backend/src/modules/company-analysis/index.ts (0.2KB)
+- backend/src/modules/competitors/index.ts (0.2KB)
+- backend/src/modules/email-marketing/index.ts (0.5KB)
+- backend/src/modules/market/index.ts (0.2KB)
+- backend/src/modules/scoring/index.ts (0.2KB)
+- backend/src/modules/search/index.ts (0.4KB)
+- backend/src/modules/viability/index.ts (0.2KB)
+- backend/src/next-auth.d.ts (0.8KB)
+- backend/src/types/next-auth.d.ts (1.0KB)
+- backend/tailwind.config.ts (1.4KB)
+- backend/tsconfig.json (0.8KB)
+- backend/tsconfig.tsbuildinfo (2479.2KB)
+- cookies.txt (0.5KB)
+- docker-compose.us.yml (0.6KB)
+- docker-compose.yml (15.1KB)
+- docs/alteracoes-realizadas.md (6.8KB)
+- frontend/Dockerfile (0.6KB)
+- frontend/Dockerfile.dev (0.3KB)
+- frontend/Dockerfile.prod (2.9KB)
+- frontend/README.md (2.5KB)
+- frontend/eslint.config.js (0.8KB)
+- frontend/index.html (10.2KB)
+- frontend/nginx.conf (6.4KB)
+- frontend/package-lock.json (135.1KB)
+- frontend/package.json (1.6KB)
+- frontend/postcss.config.cjs (0.1KB)
+- frontend/security-headers.conf (2.1KB)
+- frontend/src/App.test.tsx (1.1KB)
+- frontend/src/App.tsx (13.6KB)
+- frontend/src/assets/react.svg (4.0KB)
+- frontend/src/components/AppLoadingFallback.tsx (0.3KB)
+- frontend/src/components/ErrorBoundary.test.tsx (1.1KB)
+- frontend/src/components/ErrorBoundary.tsx (2.9KB)
+- frontend/src/components/SmartRelations.tsx (14.7KB)
+- frontend/src/components/UpdateBanner.tsx (0.8KB)
+- frontend/src/components/auth/AuthLayout.test.tsx (1.1KB)
+- frontend/src/components/auth/AuthLayout.tsx (2.6KB)
+- frontend/src/components/brand/Logo.test.tsx (0.6KB)
+- frontend/src/components/brand/Logo.tsx (0.9KB)
+- frontend/src/components/brand/LogoIcon.test.tsx (0.9KB)
+- frontend/src/components/brand/LogoIcon.tsx (0.4KB)
+- frontend/src/components/dashboard/AiAnalysisCardPreview.test.tsx (1.6KB)
+- frontend/src/components/dashboard/AiAnalysisCardPreview.tsx (1.7KB)
+- frontend/src/components/dashboard/CnaeAutocomplete.test.tsx (2.1KB)
+- frontend/src/components/dashboard/CnaeAutocomplete.tsx (7.0KB)
+- frontend/src/components/dashboard/CommandPalette.test.tsx (3.0KB)
+- frontend/src/components/dashboard/CommandPalette.tsx (9.9KB)
+- frontend/src/components/dashboard/CrmSidePanel.test.tsx (3.2KB)
+- frontend/src/components/dashboard/CrmSidePanel.tsx (50.6KB)
+- frontend/src/components/dashboard/DashboardTourTrigger.test.tsx (2.4KB)
+- frontend/src/components/dashboard/DashboardTourTrigger.tsx (1.9KB)
+- frontend/src/components/dashboard/FirstSearchHintBanner.test.tsx (3.6KB)
+- frontend/src/components/dashboard/FirstSearchHintBanner.tsx (3.2KB)
+- frontend/src/components/dashboard/HeaderDashboard.test.tsx (1.8KB)
+- frontend/src/components/dashboard/HeaderDashboard.tsx (3.7KB)
+- frontend/src/components/dashboard/InstallPrompt.test.tsx (1.0KB)
+- frontend/src/components/dashboard/InstallPrompt.tsx (6.9KB)
+- frontend/src/components/dashboard/LocationFields.test.tsx (3.9KB)
+- frontend/src/components/dashboard/LocationFields.tsx (11.5KB)
+- frontend/src/components/dashboard/OnboardingTour.test.tsx (3.1KB)
+- frontend/src/components/dashboard/OnboardingTour.tsx (11.5KB)
+- frontend/src/components/dashboard/ProfileCompletenessBanner.test.tsx (3.8KB)
+- frontend/src/components/dashboard/ProfileCompletenessBanner.tsx (4.8KB)
+- frontend/src/components/dashboard/ReleaseNotesBanner.test.tsx (2.5KB)
+- frontend/src/components/dashboard/ReleaseNotesBanner.tsx (2.8KB)
+- frontend/src/components/dashboard/ResultCardAnalyzeButton.test.tsx (1.9KB)
+- frontend/src/components/dashboard/ResultCardAnalyzeButton.tsx (2.5KB)
+- frontend/src/components/dashboard/ResultCardQuickActions.test.tsx (2.4KB)
+- frontend/src/components/dashboard/ResultCardQuickActions.tsx (3.6KB)
+- frontend/src/components/dashboard/SearchActionBar.test.tsx (1.2KB)
+- frontend/src/components/dashboard/SearchActionBar.tsx (2.7KB)
+- frontend/src/components/dashboard/SearchFiltersRow.test.tsx (0.5KB)
+- frontend/src/components/dashboard/SearchFiltersRow.tsx (10.1KB)
+- frontend/src/components/dashboard/SearchParamsIntelligenceCard.test.tsx (1.5KB)
+- frontend/src/components/dashboard/SearchParamsIntelligenceCard.tsx (8.4KB)
+- frontend/src/components/dashboard/SearchParamsLocationCard.test.tsx (0.9KB)
+- frontend/src/components/dashboard/SearchParamsLocationCard.tsx (9.8KB)
+- frontend/src/components/dashboard/SearchSegmentRow.test.tsx (0.5KB)
+- frontend/src/components/dashboard/SearchSegmentRow.tsx (4.4KB)
+- frontend/src/components/dashboard/SidebarNav.test.tsx (4.0KB)
+- frontend/src/components/dashboard/SidebarNav.tsx (22.9KB)
+- frontend/src/components/dashboard/TeamProgressCard.test.tsx (2.8KB)
+- frontend/src/components/dashboard/TeamProgressCard.tsx (8.5KB)
+- frontend/src/components/dashboard/TrialBanner.test.tsx (2.4KB)
+- frontend/src/components/dashboard/TrialBanner.tsx (3.6KB)
+- frontend/src/components/dashboard/UpgradeCTAModal.test.tsx (2.9KB)
+- frontend/src/components/dashboard/UpgradeCTAModal.tsx (8.5KB)
+- frontend/src/components/landing/LandingConversion.tsx (22.4KB)
+- frontend/src/components/landing/LandingPage.tsx (52.0KB)
+- frontend/src/components/landing/LandingPage.tsx.bak (34.4KB)
+- frontend/src/components/layout/BreadcrumbJsonLd.tsx (0.7KB)
+- frontend/src/components/layout/Header.test.tsx (1.8KB)
+- frontend/src/components/layout/Header.tsx (13.8KB)
+- frontend/src/components/layout/SeoMeta.tsx (1.2KB)
+- frontend/src/components/legal/CookieConsent.test.tsx (0.9KB)
+- frontend/src/components/legal/CookieConsent.tsx (1.8KB)
+- frontend/src/components/legal/LegalFooterLinks.tsx (0.5KB)
+- frontend/src/components/ui/Badge.test.tsx (0.7KB)
+- frontend/src/components/ui/Badge.tsx (1.1KB)
+- frontend/src/components/ui/Button.test.tsx (1.2KB)
+- frontend/src/components/ui/Button.tsx (2.0KB)
+- frontend/src/components/ui/Card.test.tsx (1.6KB)
+- frontend/src/components/ui/Card.tsx (1.7KB)
+- frontend/src/components/ui/Chip.test.tsx (0.8KB)
+- frontend/src/components/ui/Chip.tsx (1.2KB)
+- frontend/src/components/ui/Input.test.tsx (1.2KB)
+- frontend/src/components/ui/Input.tsx (1.9KB)
+- frontend/src/components/ui/MotionWrapper.tsx (0.6KB)
+- frontend/src/components/ui/Select.test.tsx (1.2KB)
+- frontend/src/components/ui/Select.tsx (1.8KB)
+- frontend/src/components/ui/Skeleton.test.tsx (0.6KB)
+- frontend/src/components/ui/Skeleton.tsx (0.3KB)
+- frontend/src/contexts/I18nContext.tsx (3.1KB)
+- frontend/src/contexts/SearchResultsContext.test.tsx (1.8KB)
+- frontend/src/contexts/SearchResultsContext.tsx (3.0KB)
+- frontend/src/contexts/ThemeContext.test.tsx (1.7KB)
+- frontend/src/contexts/ThemeContext.tsx (1.5KB)
+- frontend/src/contexts/ToastContext.test.tsx (2.7KB)
+- frontend/src/contexts/ToastContext.tsx (3.1KB)
+- frontend/src/env.d.ts (0.7KB)
+- frontend/src/hooks/__tests__/useKeyboardShortcuts.test.ts (3.4KB)
+- frontend/src/hooks/__tests__/useVersionCheck.test.ts (4.8KB)
+- frontend/src/hooks/useKeyboardShortcuts.ts (1.2KB)
+- frontend/src/hooks/useVersionCheck.ts (2.3KB)
+- frontend/src/index.css (7.6KB)
+- frontend/src/lib/affiliate-ref.test.ts (6.0KB)
+- frontend/src/lib/affiliate-ref.ts (3.0KB)
+- frontend/src/lib/analysis-preview.test.ts (1.3KB)
+- frontend/src/lib/analysis-preview.ts (1.1KB)
+- frontend/src/lib/analyze-payload.ts (0.9KB)
+- frontend/src/lib/api/_request.ts (3.6KB)
+- frontend/src/lib/api/auth.ts (3.9KB)
+- frontend/src/lib/api/billing.ts (3.0KB)
+- frontend/src/lib/api/crm.ts (3.0KB)
+- frontend/src/lib/api/index.ts (2.0KB)
+- frontend/src/lib/api/representative.ts (5.3KB)
+- frontend/src/lib/api/search.ts (29.1KB)
+- frontend/src/lib/api/types.ts (23.3KB)
+- frontend/src/lib/api/user.ts (1.6KB)
+- frontend/src/lib/api.test.ts (32.9KB)
+- frontend/src/lib/api.ts (0.0KB)
+- frontend/src/lib/app-version.ts (0.8KB)
+- frontend/src/lib/billing-config.test.ts (1.9KB)
+- frontend/src/lib/billing-config.ts (2.9KB)
+- frontend/src/lib/brand.ts (0.4KB)
+- frontend/src/lib/company-profile.test.ts (1.4KB)
+- frontend/src/lib/company-profile.ts (3.2KB)
+- frontend/src/lib/credits-display.test.ts (1.1KB)
+- frontend/src/lib/credits-display.ts (1.1KB)
+- frontend/src/lib/date-utils.test.ts (0.5KB)
+- frontend/src/lib/date-utils.ts (0.2KB)
+- frontend/src/lib/exportService.test.ts (2.9KB)
+- frontend/src/lib/exportService.ts (2.0KB)
+- frontend/src/lib/first-search-hint.test.ts (1.6KB)
+- frontend/src/lib/first-search-hint.ts (1.8KB)
+- frontend/src/lib/i18n/checkout-messages.ts (3.5KB)
+- frontend/src/lib/i18n/common-messages.ts (44.8KB)
+- frontend/src/lib/i18n/conv-messages.ts (23.4KB)
+- frontend/src/lib/i18n/dashboard-messages.ts (58.4KB)
+- frontend/src/lib/i18n/i18n-parity.test.ts (2.5KB)
+- frontend/src/lib/i18n/landing-messages.ts (36.1KB)
+- frontend/src/lib/i18n/legal-messages.ts (13.8KB)
+- frontend/src/lib/i18n/locale-bundles.ts (1.5KB)
+- frontend/src/lib/i18n/log-messages.test.ts (1.0KB)
+- frontend/src/lib/i18n/log-messages.ts (7.3KB)
+- frontend/src/lib/i18n/merge.ts (1.2KB)
+- frontend/src/lib/i18n/pages-messages.ts (316.7KB)
+- frontend/src/lib/i18n/support-messages.ts (41.2KB)
+- frontend/src/lib/i18n/translate.ts (0.9KB)
+- frontend/src/lib/i18n.ts (0.2KB)
+- frontend/src/lib/integrations-rd.test.ts (0.8KB)
+- frontend/src/lib/integrations-rd.ts (0.3KB)
+- frontend/src/lib/lead-contact-utils.ts (2.8KB)
+- frontend/src/lib/locale.ts (2.4KB)
+- frontend/src/lib/locationData.test.ts (3.0KB)
+- frontend/src/lib/locationData.ts (14.9KB)
+- frontend/src/lib/market.test.ts (4.0KB)
+- frontend/src/lib/market.ts (4.2KB)
+- frontend/src/lib/marketing.ts (4.4KB)
+- frontend/src/lib/placeTypes.test.ts (0.9KB)
+- frontend/src/lib/placeTypes.ts (15.1KB)
+- frontend/src/lib/post-auth-redirect.test.ts (6.4KB)
+- frontend/src/lib/post-auth-redirect.ts (2.0KB)
+- frontend/src/lib/profile-completeness.ts (1.4KB)
+- frontend/src/lib/realName.test.ts (1.0KB)
+- frontend/src/lib/realName.ts (1.2KB)
+- frontend/src/lib/rep-client-status.ts (0.7KB)
+- frontend/src/lib/request-helpers.test.ts (1.1KB)
+- frontend/src/lib/request-helpers.ts (0.5KB)
+- frontend/src/lib/searchFormSchema.test.ts (2.0KB)
+- frontend/src/lib/searchFormSchema.ts (1.9KB)
+- frontend/src/lib/searchService.test.ts (3.6KB)
+- frontend/src/lib/searchService.ts (6.4KB)
+- frontend/src/lib/searchTemplateGroups.us.test.ts (1.1KB)
+- frontend/src/lib/searchTemplateGroups.us.ts (6.8KB)
+- frontend/src/lib/seo-local.test.ts (7.6KB)
+- frontend/src/lib/seo-local.ts (12.0KB)
+- frontend/src/lib/site-url.test.ts (2.3KB)
+- frontend/src/lib/site-url.ts (1.3KB)
+- frontend/src/lib/sitemap-routes.test.ts (2.6KB)
+- frontend/src/lib/sitemap-routes.ts (9.7KB)
+- frontend/src/lib/support.test.ts (1.3KB)
+- frontend/src/lib/support.ts (1.5KB)
+- frontend/src/lib/tour-placement.test.ts (1.3KB)
+- frontend/src/lib/tour-placement.ts (6.8KB)
+- frontend/src/lib/tour-steps.test.ts (4.8KB)
+- frontend/src/lib/tour-steps.ts (8.6KB)
+- frontend/src/lib/us-market.integration.test.ts (1.8KB)
+- frontend/src/lib/utils.test.ts (0.6KB)
+- frontend/src/lib/utils.ts (0.2KB)
+- frontend/src/lib/version.ts (0.2KB)
+- frontend/src/main.tsx (2.0KB)
+- frontend/src/pages/AcceptInvitePage.tsx (5.1KB)
+- frontend/src/pages/MaintenancePage.tsx (0.9KB)
+- frontend/src/pages/NotFoundPage.tsx (0.9KB)
+- frontend/src/pages/auth/AffiliateSignIn.tsx (7.7KB)
+- frontend/src/pages/auth/AffiliateSignUp.tsx (11.6KB)
+- frontend/src/pages/auth/ForgotPasswordPage.tsx (2.4KB)
+- frontend/src/pages/auth/ResetPasswordPage.tsx (3.6KB)
+- frontend/src/pages/auth/SignIn.tsx (9.5KB)
+- frontend/src/pages/auth/SignUp.tsx (12.0KB)
+- frontend/src/pages/auth/VerifyEmailPage.tsx (3.4KB)
+- frontend/src/pages/blog/BlogIndex.tsx (4.5KB)
+- frontend/src/pages/blog/BlogPost.tsx (19.6KB)
+- frontend/src/pages/blog/blogData.ts (4.7KB)
+- frontend/src/pages/checkout/CheckoutPage.test.tsx (5.2KB)
+- frontend/src/pages/checkout/CheckoutPage.tsx (22.3KB)
+- frontend/src/pages/dashboard/AfiliadoComissoesPage.tsx (2.8KB)
+- frontend/src/pages/dashboard/AfiliadoConversoesPage.tsx (2.7KB)
+- frontend/src/pages/dashboard/AfiliadoDicasPage.tsx (15.6KB)
+- frontend/src/pages/dashboard/AfiliadoMateriaisPage.tsx (8.3KB)
+- frontend/src/pages/dashboard/AfiliadoPagamentoPage.test.tsx (2.0KB)
+- frontend/src/pages/dashboard/AfiliadoPagamentoPage.tsx (3.6KB)
+- frontend/src/pages/dashboard/AfiliadoPage.tsx (8.7KB)
+- frontend/src/pages/dashboard/AutoProspeccaoConfigPage.tsx (17.8KB)
+- frontend/src/pages/dashboard/AutoProspeccaoHistoricoPage.tsx (7.9KB)
+- frontend/src/pages/dashboard/AutoProspeccaoLeadsPage.tsx (12.2KB)
+- frontend/src/pages/dashboard/AutoProspeccaoPage.tsx (12.7KB)
+- frontend/src/pages/dashboard/AutoProspeccaoPerfisPage.tsx (23.1KB)
+- frontend/src/pages/dashboard/CompareLeadsPage.tsx (4.2KB)
+- frontend/src/pages/dashboard/ConcorrenciaPage.tsx (22.3KB)
+- frontend/src/pages/dashboard/ConfiguracoesPage.tsx (10.7KB)
+- frontend/src/pages/dashboard/Dashboard.tsx (23.0KB)
+- frontend/src/pages/dashboard/DashboardIndex.test.tsx (6.7KB)
+- frontend/src/pages/dashboard/DashboardIndex.tsx (66.6KB)
+- frontend/src/pages/dashboard/DashboardLayout.tsx (36.7KB)
+- frontend/src/pages/dashboard/EmpresaPerfilPage.test.tsx (5.1KB)
+- frontend/src/pages/dashboard/EmpresaPerfilPage.tsx (32.1KB)
+- frontend/src/pages/dashboard/EquipeDashboardPage.tsx (12.0KB)
+- frontend/src/pages/dashboard/EquipePage.tsx (59.4KB)
+- frontend/src/pages/dashboard/HistoricoPage.tsx (30.0KB)
+- frontend/src/pages/dashboard/IntegracoesPage.test.tsx (2.9KB)
+- frontend/src/pages/dashboard/IntegracoesPage.tsx (18.9KB)
+- frontend/src/pages/dashboard/IntelligenceModules.test.tsx (13.3KB)
+- frontend/src/pages/dashboard/LeadDetailPage.tsx (62.4KB)
+- frontend/src/pages/dashboard/LeadsPage.tsx (19.9KB)
+- frontend/src/pages/dashboard/ListasPage.tsx (2.1KB)
+- frontend/src/pages/dashboard/MercadoPage.tsx (18.2KB)
+- frontend/src/pages/dashboard/MinhaEmpresaPage.tsx (31.3KB)
+- frontend/src/pages/dashboard/PerfilPage.tsx (6.6KB)
+- frontend/src/pages/dashboard/PipelinePage.tsx (14.4KB)
+- frontend/src/pages/dashboard/PlanosPage.tsx (34.2KB)
+- frontend/src/pages/dashboard/RelatoriosPage.test.tsx (4.3KB)
+- frontend/src/pages/dashboard/RelatoriosPage.tsx (15.2KB)
+- frontend/src/pages/dashboard/ResultadosPage.test.tsx (8.5KB)
+- frontend/src/pages/dashboard/ResultadosPage.tsx (36.8KB)
+- frontend/src/pages/dashboard/SuportePage.tsx (23.3KB)
+- frontend/src/pages/dashboard/ViabilidadePage.tsx (29.9KB)
+- frontend/src/pages/legal/Privacy.tsx (1.6KB)
+- frontend/src/pages/legal/Terms.tsx (1.6KB)
+- frontend/src/pages/onboarding/OnboardingPage.tsx (8.5KB)
+- frontend/src/pages/seo/SeoLandingPage.tsx (11.3KB)
+- frontend/src/test/jest-axe.d.ts (0.1KB)
+- frontend/src/test/render-with-i18n.tsx (0.3KB)
+- frontend/src/test/setup-mocks.tsx (0.8KB)
+- frontend/src/test/setup.ts (1.0KB)
+- frontend/src/test/test-utils.tsx (2.1KB)
+- frontend/tsconfig.app.json (0.9KB)
+- frontend/tsconfig.json (0.1KB)
+- frontend/tsconfig.node.json (0.7KB)
+- frontend/vite.config.ts (3.1KB)
+- frontend/vitest.config.ts (1.1KB)
+- package-lock.json (270.9KB)
+- package.json (0.9KB)
+- plan/system-improvement-v1.md (23.0KB)
+- planejamentos futuros/ESTRATEGIA-SEO-IA.md (9.4KB)
+- planejamentos futuros/PLANO-AUTO-PROSPECCAO.md (58.5KB)
+- planejamentos futuros/PLANO-CONTACT-INTELLIGENCE.md (10.9KB)
+- planejamentos futuros/PLANO-MESTRE-PRODUCAO-2026.md (3.9KB)
+- rf-import.log (120.7KB)
+- sonar-project.properties (2.2KB)
+- test-login.js (2.2KB)
+- tsconfig.json (0.1KB)
+- tsconfig.sonar.json (0.4KB)
+- verify-session.sh (0.6KB)
+
+## API Routes
+
+- admin/src/lib/api/representatives.ts
+- admin/src/lib/api/whatsapp.ts
+- admin/src/lib/api.ts
+- frontend/src/lib/api/_request.ts
+- frontend/src/lib/api/auth.ts
+- frontend/src/lib/api/billing.ts
+- frontend/src/lib/api/crm.ts
+- frontend/src/lib/api/index.ts
+- frontend/src/lib/api/representative.ts
+- frontend/src/lib/api/search.ts
+- frontend/src/lib/api/types.ts
+- frontend/src/lib/api/user.ts
+- frontend/src/lib/api.ts
+
+## Dependency Graph
+
+npm workspaces: frontend, admin, backend
+
+## Database Graph
+
+Prisma schema: backend/prisma/schema.prisma
+
+---
+*Reindex: node scripts/generate-repo-index.mjs*

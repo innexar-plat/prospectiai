@@ -1,0 +1,679 @@
+{
+  "nodes": [
+    {
+      "id": "project",
+      "type": "project",
+      "label": "prospector-ai-monorepo",
+      "props": {
+        "version": "1.2.0"
+      },
+      "createdAt": "2026-07-20T00:22:51.294Z"
+    },
+    {
+      "id": "ws:frontend",
+      "type": "workspace",
+      "label": "frontend",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.294Z"
+    },
+    {
+      "id": "ws:admin",
+      "type": "workspace",
+      "label": "admin",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.294Z"
+    },
+    {
+      "id": "ws:backend",
+      "type": "workspace",
+      "label": "backend",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.294Z"
+    },
+    {
+      "id": "frontend",
+      "type": "layer",
+      "label": "Frontend (Vite 7 + React 19 + Tailwind 4)",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.294Z"
+    },
+    {
+      "id": "admin",
+      "type": "layer",
+      "label": "Admin (Vite 5 + React 19 + Tailwind 4)",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.294Z"
+    },
+    {
+      "id": "backend",
+      "type": "layer",
+      "label": "Backend (Next.js 16 API + Prisma + Zod 4)",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.294Z"
+    },
+    {
+      "id": "database",
+      "type": "layer",
+      "label": "Database (PostgreSQL + Prisma)",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.295Z"
+    },
+    {
+      "id": "db:User",
+      "type": "model",
+      "label": "User",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.299Z"
+    },
+    {
+      "id": "db:Account",
+      "type": "model",
+      "label": "Account",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.299Z"
+    },
+    {
+      "id": "db:Session",
+      "type": "model",
+      "label": "Session",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.299Z"
+    },
+    {
+      "id": "db:VerificationToken",
+      "type": "model",
+      "label": "VerificationToken",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.299Z"
+    },
+    {
+      "id": "db:Workspace",
+      "type": "model",
+      "label": "Workspace",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.299Z"
+    },
+    {
+      "id": "db:WorkspaceMember",
+      "type": "model",
+      "label": "WorkspaceMember",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.299Z"
+    },
+    {
+      "id": "db:WorkspaceInvitation",
+      "type": "model",
+      "label": "WorkspaceInvitation",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.299Z"
+    },
+    {
+      "id": "db:Lead",
+      "type": "model",
+      "label": "Lead",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.299Z"
+    },
+    {
+      "id": "db:LeadContact",
+      "type": "model",
+      "label": "LeadContact",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.299Z"
+    },
+    {
+      "id": "db:LeadAnalysis",
+      "type": "model",
+      "label": "LeadAnalysis",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.299Z"
+    },
+    {
+      "id": "db:SearchHistory",
+      "type": "model",
+      "label": "SearchHistory",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.299Z"
+    },
+    {
+      "id": "db:AuditLog",
+      "type": "model",
+      "label": "AuditLog",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.299Z"
+    },
+    {
+      "id": "db:AiProviderConfig",
+      "type": "model",
+      "label": "AiProviderConfig",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.300Z"
+    },
+    {
+      "id": "db:UsageEvent",
+      "type": "model",
+      "label": "UsageEvent",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.300Z"
+    },
+    {
+      "id": "db:WebSearchConfig",
+      "type": "model",
+      "label": "WebSearchConfig",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.300Z"
+    },
+    {
+      "id": "db:AiRuntimeConfig",
+      "type": "model",
+      "label": "AiRuntimeConfig",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.300Z"
+    },
+    {
+      "id": "db:LeadTag",
+      "type": "model",
+      "label": "LeadTag",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.300Z"
+    },
+    {
+      "id": "db:Notification",
+      "type": "model",
+      "label": "Notification",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.300Z"
+    },
+    {
+      "id": "db:NotificationChannelConfig",
+      "type": "model",
+      "label": "NotificationChannelConfig",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.300Z"
+    },
+    {
+      "id": "db:PushSubscription",
+      "type": "model",
+      "label": "PushSubscription",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.300Z"
+    },
+    {
+      "id": "db:PlanConfig",
+      "type": "model",
+      "label": "PlanConfig",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.300Z"
+    },
+    {
+      "id": "db:IntelligenceReport",
+      "type": "model",
+      "label": "IntelligenceReport",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.300Z"
+    },
+    {
+      "id": "db:Affiliate",
+      "type": "model",
+      "label": "Affiliate",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.300Z"
+    },
+    {
+      "id": "db:AffiliateClick",
+      "type": "model",
+      "label": "AffiliateClick",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.300Z"
+    },
+    {
+      "id": "db:Referral",
+      "type": "model",
+      "label": "Referral",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:AffiliateCommission",
+      "type": "model",
+      "label": "AffiliateCommission",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:AffiliateSettings",
+      "type": "model",
+      "label": "AffiliateSettings",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:RfSearchConfig",
+      "type": "model",
+      "label": "RfSearchConfig",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:EmailConfig",
+      "type": "model",
+      "label": "EmailConfig",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:CrmIntegrationConfig",
+      "type": "model",
+      "label": "CrmIntegrationConfig",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:LeadEvent",
+      "type": "model",
+      "label": "LeadEvent",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:PipelineBrief",
+      "type": "model",
+      "label": "PipelineBrief",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:EmailTemplate",
+      "type": "model",
+      "label": "EmailTemplate",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:EmailCampaign",
+      "type": "model",
+      "label": "EmailCampaign",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:EmailCampaignRecipient",
+      "type": "model",
+      "label": "EmailCampaignRecipient",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:EmailSendLog",
+      "type": "model",
+      "label": "EmailSendLog",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:EmailUnsubscribe",
+      "type": "model",
+      "label": "EmailUnsubscribe",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:WeeklyReportConfig",
+      "type": "model",
+      "label": "WeeklyReportConfig",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:CnaeCode",
+      "type": "model",
+      "label": "CnaeCode",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:RfCompany",
+      "type": "model",
+      "label": "RfCompany",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:AutoProspeccaoConfig",
+      "type": "model",
+      "label": "AutoProspeccaoConfig",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:SearchProfile",
+      "type": "model",
+      "label": "SearchProfile",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:ProspectedLead",
+      "type": "model",
+      "label": "ProspectedLead",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:ProspectedLeadEmailEvent",
+      "type": "model",
+      "label": "ProspectedLeadEmailEvent",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:AutoProspSenderPool",
+      "type": "model",
+      "label": "AutoProspSenderPool",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:AutoProspeccaoTemplate",
+      "type": "model",
+      "label": "AutoProspeccaoTemplate",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:AutoProspeccaoRun",
+      "type": "model",
+      "label": "AutoProspeccaoRun",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:Representative",
+      "type": "model",
+      "label": "Representative",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:AdminWhatsAppConfig",
+      "type": "model",
+      "label": "AdminWhatsAppConfig",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:WhatsAppConversation",
+      "type": "model",
+      "label": "WhatsAppConversation",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:WhatsAppMessage",
+      "type": "model",
+      "label": "WhatsAppMessage",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:RepClient",
+      "type": "model",
+      "label": "RepClient",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:RepCommission",
+      "type": "model",
+      "label": "RepCommission",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:RepGoal",
+      "type": "model",
+      "label": "RepGoal",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "db:RepLevelConfig",
+      "type": "model",
+      "label": "RepLevelConfig",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "pattern:components",
+      "type": "pattern",
+      "label": "React components (TSX + Tailwind)",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "pattern:api-routes",
+      "type": "pattern",
+      "label": "API Routes (Next.js App Router)",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "pattern:prisma",
+      "type": "pattern",
+      "label": "Prisma ORM",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "pattern:auth",
+      "type": "pattern",
+      "label": "JWT + NextAuth",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "pattern:i18n",
+      "type": "pattern",
+      "label": "i18n pt/en",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "layer:redis",
+      "type": "layer",
+      "label": "Redis (cache, queues)",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "layer:docker",
+      "type": "layer",
+      "label": "Docker Compose (Traefik + Nginx + Backend + Redis + PG)",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "id": "fe:components",
+      "type": "module",
+      "label": "components",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.302Z"
+    },
+    {
+      "id": "fe:pages",
+      "type": "module",
+      "label": "pages",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.302Z"
+    },
+    {
+      "id": "fe:lib",
+      "type": "module",
+      "label": "lib",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.302Z"
+    },
+    {
+      "id": "fe:hooks",
+      "type": "module",
+      "label": "hooks",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.302Z"
+    },
+    {
+      "id": "be:modules",
+      "type": "module",
+      "label": "modules",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.302Z"
+    },
+    {
+      "id": "be:lib",
+      "type": "module",
+      "label": "lib",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.302Z"
+    },
+    {
+      "id": "be:app",
+      "type": "module",
+      "label": "app",
+      "props": {},
+      "createdAt": "2026-07-20T00:22:51.302Z"
+    }
+  ],
+  "edges": [
+    {
+      "from": "project",
+      "to": "ws:frontend",
+      "relation": "contains",
+      "createdAt": "2026-07-20T00:22:51.294Z"
+    },
+    {
+      "from": "project",
+      "to": "ws:admin",
+      "relation": "contains",
+      "createdAt": "2026-07-20T00:22:51.294Z"
+    },
+    {
+      "from": "project",
+      "to": "ws:backend",
+      "relation": "contains",
+      "createdAt": "2026-07-20T00:22:51.294Z"
+    },
+    {
+      "from": "project",
+      "to": "frontend",
+      "relation": "contains",
+      "createdAt": "2026-07-20T00:22:51.294Z"
+    },
+    {
+      "from": "project",
+      "to": "admin",
+      "relation": "contains",
+      "createdAt": "2026-07-20T00:22:51.294Z"
+    },
+    {
+      "from": "project",
+      "to": "backend",
+      "relation": "contains",
+      "createdAt": "2026-07-20T00:22:51.294Z"
+    },
+    {
+      "from": "project",
+      "to": "database",
+      "relation": "contains",
+      "createdAt": "2026-07-20T00:22:51.295Z"
+    },
+    {
+      "from": "backend",
+      "to": "database",
+      "relation": "queries",
+      "createdAt": "2026-07-20T00:22:51.295Z"
+    },
+    {
+      "from": "backend",
+      "to": "pattern:api-routes",
+      "relation": "implements",
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "from": "frontend",
+      "to": "pattern:components",
+      "relation": "implements",
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "from": "backend",
+      "to": "pattern:prisma",
+      "relation": "implements",
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "from": "backend",
+      "to": "pattern:auth",
+      "relation": "implements",
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "from": "pattern:i18n",
+      "to": "frontend",
+      "relation": "used_by",
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "from": "layer:redis",
+      "to": "backend",
+      "relation": "used_by",
+      "createdAt": "2026-07-20T00:22:51.301Z"
+    },
+    {
+      "from": "frontend",
+      "to": "fe:components",
+      "relation": "contains",
+      "createdAt": "2026-07-20T00:22:51.302Z"
+    },
+    {
+      "from": "frontend",
+      "to": "fe:pages",
+      "relation": "contains",
+      "createdAt": "2026-07-20T00:22:51.302Z"
+    },
+    {
+      "from": "frontend",
+      "to": "fe:lib",
+      "relation": "contains",
+      "createdAt": "2026-07-20T00:22:51.302Z"
+    },
+    {
+      "from": "frontend",
+      "to": "fe:hooks",
+      "relation": "contains",
+      "createdAt": "2026-07-20T00:22:51.302Z"
+    },
+    {
+      "from": "backend",
+      "to": "be:modules",
+      "relation": "contains",
+      "createdAt": "2026-07-20T00:22:51.302Z"
+    },
+    {
+      "from": "backend",
+      "to": "be:lib",
+      "relation": "contains",
+      "createdAt": "2026-07-20T00:22:51.302Z"
+    },
+    {
+      "from": "backend",
+      "to": "be:app",
+      "relation": "contains",
+      "createdAt": "2026-07-20T00:22:51.302Z"
+    }
+  ],
+  "meta": {
+    "version": 1,
+    "updatedAt": "2026-07-20T00:22:51.302Z",
+    "nodeCount": 77,
+    "edgeCount": 21
+  }
+}

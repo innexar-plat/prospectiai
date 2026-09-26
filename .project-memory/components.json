@@ -1,0 +1,1496 @@
+[
+  {
+    "path": "frontend/src/main.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/App.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/contexts/ThemeContext.tsx",
+    "exports": [
+      "ThemeProvider",
+      "useTheme"
+    ]
+  },
+  {
+    "path": "frontend/src/contexts/I18nContext.tsx",
+    "exports": [
+      "I18nProvider",
+      "useI18n"
+    ]
+  },
+  {
+    "path": "frontend/src/contexts/ToastContext.tsx",
+    "exports": [
+      "ToastProvider",
+      "useToast"
+    ]
+  },
+  {
+    "path": "frontend/src/contexts/ThemeContext.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/contexts/SearchResultsContext.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/contexts/ToastContext.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/contexts/SearchResultsContext.tsx",
+    "exports": [
+      "SearchResultsProvider",
+      "useSearchResults"
+    ]
+  },
+  {
+    "path": "frontend/src/components/ErrorBoundary.tsx",
+    "exports": [
+      "ErrorBoundary"
+    ]
+  },
+  {
+    "path": "frontend/src/components/landing/LandingConversion.tsx",
+    "exports": [
+      "LandingConversion"
+    ]
+  },
+  {
+    "path": "frontend/src/components/landing/LandingPage.tsx",
+    "exports": [
+      "LandingPage"
+    ]
+  },
+  {
+    "path": "frontend/src/components/UpdateBanner.tsx",
+    "exports": [
+      "UpdateBanner"
+    ]
+  },
+  {
+    "path": "frontend/src/components/SmartRelations.tsx",
+    "exports": [
+      "SmartRelations"
+    ]
+  },
+  {
+    "path": "frontend/src/components/brand/Logo.tsx",
+    "exports": [
+      "Logo"
+    ]
+  },
+  {
+    "path": "frontend/src/components/brand/Logo.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/brand/LogoIcon.tsx",
+    "exports": [
+      "LogoIcon"
+    ]
+  },
+  {
+    "path": "frontend/src/components/brand/LogoIcon.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/legal/LegalFooterLinks.tsx",
+    "exports": [
+      "LegalFooterLinks"
+    ]
+  },
+  {
+    "path": "frontend/src/components/legal/CookieConsent.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/legal/CookieConsent.tsx",
+    "exports": [
+      "CookieConsent"
+    ]
+  },
+  {
+    "path": "frontend/src/components/AppLoadingFallback.tsx",
+    "exports": [
+      "AppLoadingFallback"
+    ]
+  },
+  {
+    "path": "frontend/src/components/ui/Card.tsx",
+    "exports": [
+      "Card",
+      "CardHeader",
+      "CardTitle",
+      "CardDescription"
+    ]
+  },
+  {
+    "path": "frontend/src/components/ui/Select.tsx",
+    "exports": [
+      "Select"
+    ]
+  },
+  {
+    "path": "frontend/src/components/ui/Button.tsx",
+    "exports": [
+      "Button"
+    ]
+  },
+  {
+    "path": "frontend/src/components/ui/Skeleton.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/ui/Badge.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/ui/Select.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/ui/Input.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/ui/Button.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/ui/Input.tsx",
+    "exports": [
+      "Input"
+    ]
+  },
+  {
+    "path": "frontend/src/components/ui/MotionWrapper.tsx",
+    "exports": [
+      "MotionDiv"
+    ]
+  },
+  {
+    "path": "frontend/src/components/ui/Chip.tsx",
+    "exports": [
+      "Chip"
+    ]
+  },
+  {
+    "path": "frontend/src/components/ui/Skeleton.tsx",
+    "exports": [
+      "Skeleton"
+    ]
+  },
+  {
+    "path": "frontend/src/components/ui/Badge.tsx",
+    "exports": [
+      "Badge"
+    ]
+  },
+  {
+    "path": "frontend/src/components/ui/Chip.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/ui/Card.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/auth/AuthLayout.tsx",
+    "exports": [
+      "AuthLayout"
+    ]
+  },
+  {
+    "path": "frontend/src/components/auth/AuthLayout.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/dashboard/LocationFields.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/dashboard/TeamProgressCard.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/dashboard/ResultCardQuickActions.tsx",
+    "exports": [
+      "ResultCardQuickActions"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/OnboardingTour.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/dashboard/ReleaseNotesBanner.tsx",
+    "exports": [
+      "ReleaseNotesBanner"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/SearchParamsIntelligenceCard.tsx",
+    "exports": [
+      "SearchParamsIntelligenceCard"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/OnboardingTour.tsx",
+    "exports": [
+      "OnboardingTour"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/FirstSearchHintBanner.tsx",
+    "exports": [
+      "FirstSearchHintBanner"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/SearchSegmentRow.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/dashboard/SearchParamsLocationCard.tsx",
+    "exports": [
+      "SearchParamsLocationCard"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/CommandPalette.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/dashboard/SearchSegmentRow.tsx",
+    "exports": [
+      "SearchSegmentRow"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/UpgradeCTAModal.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/dashboard/FirstSearchHintBanner.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/dashboard/SearchActionBar.tsx",
+    "exports": [
+      "SearchActionBar"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/AiAnalysisCardPreview.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/dashboard/SearchParamsIntelligenceCard.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/dashboard/ProfileCompletenessBanner.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/dashboard/InstallPrompt.tsx",
+    "exports": [
+      "InstallPrompt"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/ProfileCompletenessBanner.tsx",
+    "exports": [
+      "ProfileCompletenessBanner"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/ResultCardAnalyzeButton.tsx",
+    "exports": [
+      "ResultCardAnalyzeButton"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/TrialBanner.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/dashboard/UpgradeCTAModal.tsx",
+    "exports": [
+      "UpgradeCTAModal"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/CnaeAutocomplete.tsx",
+    "exports": [
+      "CnaeAutocomplete"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/SidebarNav.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/dashboard/ReleaseNotesBanner.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/dashboard/HeaderDashboard.tsx",
+    "exports": [
+      "COMPACT_HEADER_STICKY_TOP",
+      "HeaderDashboard"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/TeamProgressCard.tsx",
+    "exports": [
+      "TeamProgressCard"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/LocationFields.tsx",
+    "exports": [
+      "createDefaultLocationValue",
+      "LocationFields"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/AiAnalysisCardPreview.tsx",
+    "exports": [
+      "AiAnalysisCardPreview"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/ResultCardAnalyzeButton.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/dashboard/TrialBanner.tsx",
+    "exports": [
+      "TrialBanner"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/CommandPalette.tsx",
+    "exports": [
+      "CommandPalette",
+      "CommandPaletteTrigger"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/SidebarNav.tsx",
+    "exports": [
+      "SidebarNav"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/billing/Pricing.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/dashboard/billing/MercadoPagoBrick.tsx",
+    "exports": [
+      "MercadoPagoBrick"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/billing/Pricing.tsx",
+    "exports": [
+      "Pricing"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/ResultCardQuickActions.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/dashboard/HeaderDashboard.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/dashboard/InstallPrompt.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/dashboard/CrmSidePanel.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/dashboard/SearchFiltersRow.tsx",
+    "exports": [
+      "SearchFiltersRow"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/CnaeAutocomplete.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/dashboard/CrmSidePanel.tsx",
+    "exports": [
+      "CrmSidePanel"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/shared/DashboardUI.tsx",
+    "exports": [
+      "StatCard",
+      "LoadingState",
+      "EmptyState",
+      "PresenceBar"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/shared/IntelligenceUI.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/dashboard/shared/IntelligenceUI.tsx",
+    "exports": [
+      "INTELLIGENCE_CONTENT_CLASS",
+      "INTELLIGENCE_STAT_GRID_CLASS",
+      "IntelligenceSectionCard",
+      "IntelligenceFormCard",
+      "IntelligenceErrorBanner",
+      "IntelligenceLoadingSkeleton",
+      "AiInsightsPanel"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/shared/DashboardUI.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/dashboard/SearchFiltersRow.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/dashboard/SearchActionBar.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/dashboard/DashboardTourTrigger.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/dashboard/DashboardTourTrigger.tsx",
+    "exports": [
+      "DashboardTourTrigger"
+    ]
+  },
+  {
+    "path": "frontend/src/components/dashboard/SearchParamsLocationCard.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/ErrorBoundary.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/components/layout/BreadcrumbJsonLd.tsx",
+    "exports": [
+      "BreadcrumbJsonLd"
+    ]
+  },
+  {
+    "path": "frontend/src/components/layout/SeoMeta.tsx",
+    "exports": [
+      "SeoMeta"
+    ]
+  },
+  {
+    "path": "frontend/src/components/layout/Header.tsx",
+    "exports": [
+      "Header"
+    ]
+  },
+  {
+    "path": "frontend/src/components/layout/Header.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/test/render-with-i18n.tsx",
+    "exports": [
+      "renderWithI18n"
+    ]
+  },
+  {
+    "path": "frontend/src/test/test-utils.tsx",
+    "exports": [
+      "renderWithProviders",
+      "createMockFetch"
+    ]
+  },
+  {
+    "path": "frontend/src/test/setup-mocks.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/App.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/pages/AcceptInvitePage.tsx",
+    "exports": [
+      "AcceptInvitePage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/MaintenancePage.tsx",
+    "exports": [
+      "MaintenancePage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/seo/SeoLandingPage.tsx",
+    "exports": [
+      "SeoLandingPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/NotFoundPage.tsx",
+    "exports": [
+      "NotFoundPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/legal/Privacy.tsx",
+    "exports": [
+      "Privacy"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/legal/Terms.tsx",
+    "exports": [
+      "Terms"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/auth/AffiliateSignUp.tsx",
+    "exports": [
+      "AffiliateSignUpPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/auth/ResetPasswordPage.tsx",
+    "exports": [
+      "ResetPasswordPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/auth/SignIn.tsx",
+    "exports": [
+      "SignInPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/auth/SignUp.tsx",
+    "exports": [
+      "SignUpPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/auth/AffiliateSignIn.tsx",
+    "exports": [
+      "AffiliateSignInPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/auth/VerifyEmailPage.tsx",
+    "exports": [
+      "VerifyEmailPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/auth/ForgotPasswordPage.tsx",
+    "exports": [
+      "ForgotPasswordPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/checkout/CheckoutPage.tsx",
+    "exports": [
+      "CheckoutPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/checkout/CheckoutPage.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/pages/dashboard/AfiliadoConversoesPage.tsx",
+    "exports": [
+      "AfiliadoConversoesPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/CompareLeadsPage.tsx",
+    "exports": [
+      "CompareLeadsPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/EmpresaPerfilPage.tsx",
+    "exports": [
+      "EmpresaPerfilPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/representative/Payments.tsx",
+    "exports": [
+      "RepPayments"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/representative/Affiliates.tsx",
+    "exports": [
+      "RepAffiliates"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/representative/Clients.tsx",
+    "exports": [
+      "RepClients"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/representative/Goals.tsx",
+    "exports": [
+      "RepGoals"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/representative/MyLink.tsx",
+    "exports": [
+      "RepMyLink"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/representative/WhatsApp.tsx",
+    "exports": [
+      "RepWhatsApp"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/representative/Commissions.tsx",
+    "exports": [
+      "RepCommissions"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/representative/Overview.tsx",
+    "exports": [
+      "RepOverview"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/AfiliadoPagamentoPage.tsx",
+    "exports": [
+      "AfiliadoPagamentoPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/AfiliadoDicasPage.tsx",
+    "exports": [
+      "AfiliadoDicasPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/AfiliadoComissoesPage.tsx",
+    "exports": [
+      "AfiliadoComissoesPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/IntelligenceModules.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/pages/dashboard/AutoProspeccaoPage.tsx",
+    "exports": [
+      "AutoProspeccaoPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/DashboardIndex.tsx",
+    "exports": [
+      "DashboardIndex"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/ConcorrenciaPage.tsx",
+    "exports": [
+      "ConcorrenciaPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/LeadsPage.tsx",
+    "exports": [
+      "LeadsPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/ViabilidadePage.tsx",
+    "exports": [
+      "ViabilidadePage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/AfiliadoPagamentoPage.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/pages/dashboard/MercadoPage.tsx",
+    "exports": [
+      "MercadoPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/ResultadosPage.tsx",
+    "exports": [
+      "ResultadosPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/EquipePage.tsx",
+    "exports": [
+      "EquipePage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/SuportePage.tsx",
+    "exports": [
+      "SuportePage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/ListasPage.tsx",
+    "exports": [
+      "ListasPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/IntegracoesPage.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/pages/dashboard/DashboardLayout.tsx",
+    "exports": [
+      "DashboardLayout"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/ConfiguracoesPage.tsx",
+    "exports": [
+      "ConfiguracoesPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/AfiliadoPage.tsx",
+    "exports": [
+      "AfiliadoPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/LeadDetailPage.tsx",
+    "exports": [
+      "LeadDetailPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/IntegracoesPage.tsx",
+    "exports": [
+      "IntegracoesPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/EquipeDashboardPage.tsx",
+    "exports": [
+      "EquipeDashboardPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/DashboardIndex.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/pages/dashboard/Dashboard.tsx",
+    "exports": [
+      "Dashboard"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/RelatoriosPage.tsx",
+    "exports": [
+      "RelatoriosPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/RelatoriosPage.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/pages/dashboard/HistoricoPage.tsx",
+    "exports": [
+      "HistoricoPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/AutoProspeccaoConfigPage.tsx",
+    "exports": [
+      "AutoProspeccaoConfigPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/AfiliadoMateriaisPage.tsx",
+    "exports": [
+      "AfiliadoMateriaisPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/AutoProspeccaoLeadsPage.tsx",
+    "exports": [
+      "AutoProspeccaoLeadsPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/AutoProspeccaoHistoricoPage.tsx",
+    "exports": [
+      "AutoProspeccaoHistoricoPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/EmpresaPerfilPage.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/pages/dashboard/PerfilPage.tsx",
+    "exports": [
+      "PerfilPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/MinhaEmpresaPage.tsx",
+    "exports": [
+      "MinhaEmpresaPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/AutoProspeccaoPerfisPage.tsx",
+    "exports": [
+      "AutoProspeccaoPerfisPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/ResultadosPage.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/pages/dashboard/PipelinePage.tsx",
+    "exports": [
+      "PipelinePage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/dashboard/PlanosPage.tsx",
+    "exports": [
+      "PlanosPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/public/HubspotIntegration.tsx",
+    "exports": [
+      "HubspotIntegration"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/public/AgendorIntegration.tsx",
+    "exports": [
+      "AgendorIntegration"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/public/Landing.tsx",
+    "exports": [
+      "PublicEntryClient"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/public/Landing.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/pages/public/PricingPage.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "frontend/src/pages/public/AffiliateProgram.tsx",
+    "exports": [
+      "AffiliateProgram"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/public/SiteMapPage.tsx",
+    "exports": [
+      "SiteMapPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/public/RdStationIntegration.tsx",
+    "exports": [
+      "RdStationIntegration"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/public/PricingPage.tsx",
+    "exports": [
+      "PricingPage"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/blog/BlogIndex.tsx",
+    "exports": [
+      "BlogIndex"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/blog/BlogPost.tsx",
+    "exports": [
+      "BlogPost"
+    ]
+  },
+  {
+    "path": "frontend/src/pages/onboarding/OnboardingPage.tsx",
+    "exports": [
+      "OnboardingPage"
+    ]
+  },
+  {
+    "path": "admin/src/main.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/App.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/components/ErrorBoundary.tsx",
+    "exports": [
+      "ErrorBoundary"
+    ]
+  },
+  {
+    "path": "admin/src/components/UpdateBanner.tsx",
+    "exports": [
+      "UpdateBanner"
+    ]
+  },
+  {
+    "path": "admin/src/components/ui/ToastProvider.tsx",
+    "exports": [
+      "ToastProvider",
+      "useToast"
+    ]
+  },
+  {
+    "path": "admin/src/components/ui/Card.tsx",
+    "exports": [
+      "Card",
+      "CardHeader",
+      "CardTitle",
+      "CardDescription"
+    ]
+  },
+  {
+    "path": "admin/src/components/ui/Select.tsx",
+    "exports": [
+      "Select"
+    ]
+  },
+  {
+    "path": "admin/src/components/ui/Button.tsx",
+    "exports": [
+      "Button"
+    ]
+  },
+  {
+    "path": "admin/src/components/ui/Input.tsx",
+    "exports": [
+      "Input"
+    ]
+  },
+  {
+    "path": "admin/src/components/ui/Chip.tsx",
+    "exports": [
+      "Chip"
+    ]
+  },
+  {
+    "path": "admin/src/components/ui/Skeleton.tsx",
+    "exports": [
+      "Skeleton"
+    ]
+  },
+  {
+    "path": "admin/src/components/ui/Sparkline.tsx",
+    "exports": [
+      "Sparkline"
+    ]
+  },
+  {
+    "path": "admin/src/components/ui/Badge.tsx",
+    "exports": [
+      "Badge"
+    ]
+  },
+  {
+    "path": "admin/src/components/ui/ConfirmModal.tsx",
+    "exports": [
+      "ConfirmModal"
+    ]
+  },
+  {
+    "path": "admin/src/components/AdminOnlyRoute.tsx",
+    "exports": [
+      "AdminOnlyRoute"
+    ]
+  },
+  {
+    "path": "admin/src/components/AdminGuard.tsx",
+    "exports": [
+      "AdminGuard"
+    ]
+  },
+  {
+    "path": "admin/src/components/dashboard/MarketComparison.tsx",
+    "exports": [
+      "MarketComparison"
+    ]
+  },
+  {
+    "path": "admin/src/components/layout/AdminLayout.tsx",
+    "exports": [
+      "AdminLayout"
+    ]
+  },
+  {
+    "path": "admin/src/components/layout/SupportSidebar.tsx",
+    "exports": [
+      "SupportSidebar"
+    ]
+  },
+  {
+    "path": "admin/src/components/layout/AdminHeader.tsx",
+    "exports": [
+      "AdminHeader"
+    ]
+  },
+  {
+    "path": "admin/src/components/layout/AdminSidebar.tsx",
+    "exports": [
+      "AdminSidebar"
+    ]
+  },
+  {
+    "path": "admin/src/components/layout/AdminFooter.tsx",
+    "exports": [
+      "AdminFooter"
+    ]
+  },
+  {
+    "path": "admin/src/__tests__/components/AdminGuard.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/components/AdminOnlyRoute.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/components/ui/Skeleton.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/components/ui/Badge.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/components/ui/Select.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/components/ui/Input.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/components/ui/Button.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/components/ui/Chip.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/components/ui/Card.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/components/AdminOnlyRoute.context.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/components/ConfirmModal.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/components/layout/AdminFooter.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/components/layout/AdminHeader.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/components/layout/AdminSidebar.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/components/layout/AdminLayout.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/components/layout/SupportSidebar.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/components/Sparkline.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/pages/navigation.smoke.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/pages/WorkspacesPage.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/pages/UserDetailPage.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/pages/EmailLogsPage.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/pages/Dashboard.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/pages/LeadsPage.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/pages/AuditPage.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/pages/AffiliatesPage.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/pages/PlansPage.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/pages/WorkspaceDetailPage.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/pages/AffiliateDetailPage.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/pages/EmailPage.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/pages/AiConfigPage.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/pages/CommissionsPage.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/pages/ReferralsPage.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/pages/SearchHistoryPage.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/pages/untested-pages.smoke.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/pages/AffiliateSettingsPage.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/pages/NotificationsPage.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/pages/ProfilePage.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/__tests__/pages/UsersPage.test.tsx",
+    "exports": []
+  },
+  {
+    "path": "admin/src/pages/ProfilePage.tsx",
+    "exports": [
+      "ProfilePage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/NotificationsPage.tsx",
+    "exports": [
+      "NotificationsPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/AiConfigPage.tsx",
+    "exports": [
+      "AiConfigPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/EmailTemplateEditorPage.tsx",
+    "exports": [
+      "EmailTemplateEditorPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/LeadsPage.tsx",
+    "exports": [
+      "LeadsPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/UserDetailPage.tsx",
+    "exports": [
+      "UserDetailPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/PlansPage.tsx",
+    "exports": [
+      "PlansPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/RfConfigPage.tsx",
+    "exports": [
+      "RfConfigPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/ReferralsPage.tsx",
+    "exports": [
+      "ReferralsPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/EmailTemplatesPage.tsx",
+    "exports": [
+      "EmailTemplatesPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/WhatsAppPage.tsx",
+    "exports": [
+      "WhatsAppPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/AutoProspeccaoTemplateEditorPage.tsx",
+    "exports": [
+      "AutoProspeccaoTemplateEditorPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/SearchHistoryPage.tsx",
+    "exports": [
+      "SearchHistoryPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/EmailAnalyticsPage.tsx",
+    "exports": [
+      "EmailAnalyticsPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/WorkspaceDetailPage.tsx",
+    "exports": [
+      "WorkspaceDetailPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/AutoProspeccaoSearchProfilesPage.tsx",
+    "exports": [
+      "AutoProspeccaoSearchProfilesPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/AutoProspeccaoSenderPoolPage.tsx",
+    "exports": [
+      "AutoProspeccaoSenderPoolPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/EmailCampaignsPage.tsx",
+    "exports": [
+      "EmailCampaignsPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/WeeklyReportConfigPage.tsx",
+    "exports": [
+      "WeeklyReportConfigPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/CrmIntegrationsPage.tsx",
+    "exports": [
+      "CrmIntegrationsPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/Dashboard.tsx",
+    "exports": [
+      "Dashboard"
+    ]
+  },
+  {
+    "path": "admin/src/pages/AuditPage.tsx",
+    "exports": [
+      "AuditPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/WorkspacesPage.tsx",
+    "exports": [
+      "WorkspacesPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/AffiliateSettingsPage.tsx",
+    "exports": [
+      "AffiliateSettingsPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/AffiliatesPage.tsx",
+    "exports": [
+      "AffiliatesPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/representatives/List.tsx",
+    "exports": [
+      "RepresentativesList"
+    ]
+  },
+  {
+    "path": "admin/src/pages/representatives/Stats.tsx",
+    "exports": [
+      "RepStatsPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/representatives/Detail.tsx",
+    "exports": [
+      "RepresentativesDetail"
+    ]
+  },
+  {
+    "path": "admin/src/pages/representatives/Layout.tsx",
+    "exports": [
+      "RepresentativesLayout"
+    ]
+  },
+  {
+    "path": "admin/src/pages/representatives/Create.tsx",
+    "exports": [
+      "RepresentativesCreate"
+    ]
+  },
+  {
+    "path": "admin/src/pages/representatives/Levels.tsx",
+    "exports": [
+      "RepLevels"
+    ]
+  },
+  {
+    "path": "admin/src/pages/AutoProspeccaoConfigPage.tsx",
+    "exports": [
+      "AutoProspeccaoConfigPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/UsersPage.tsx",
+    "exports": [
+      "UsersPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/EmailCampaignDetailPage.tsx",
+    "exports": [
+      "EmailCampaignDetailPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/AffiliateDetailPage.tsx",
+    "exports": [
+      "AffiliateDetailPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/EmailLogsPage.tsx",
+    "exports": [
+      "EmailLogsPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/CommissionsPage.tsx",
+    "exports": [
+      "CommissionsPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/EmailPage.tsx",
+    "exports": [
+      "EmailPage"
+    ]
+  },
+  {
+    "path": "admin/src/pages/AutoProspeccaoTemplatesPage.tsx",
+    "exports": [
+      "AutoProspeccaoTemplatesPage"
+    ]
+  },
+  {
+    "path": "admin/src/lib/useConfirm.tsx",
+    "exports": [
+      "useConfirm"
+    ]
+  }
+]
