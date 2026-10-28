@@ -88,6 +88,27 @@ function filterPlaces<T extends PlaceLike>(
     });
 }
 
+/** UF from a Google address: "..., Campo Grande - MS, 79006-720, Brasil" → "MS". */
+export function addressUf(address: string | undefined): string | null {
+    if (!address) return null;
+    const m = address.match(/\s-\s([A-Z]{2})(?:,|\s*$)/);
+    return m ? m[1]! : null;
+}
+
+/**
+ * Drops listings from another state when the user picked one. Google matches city names, and
+ * many repeat across states (Campo Grande is also a neighbourhood of Rio de Janeiro).
+ * Listings whose address has no recognisable UF are kept.
+ */
+export function filterByState<T extends PlaceLike & { formattedAddress?: string }>(places: T[], state?: string | null): T[] {
+    const uf = state?.trim().toUpperCase();
+    if (!uf || uf.length !== 2) return places;
+    return places.filter((p) => {
+        const placeUf = addressUf(p.formattedAddress);
+        return !placeUf || placeUf === uf;
+    });
+}
+
 function enrichWithOpportunityScore(places: PlaceResult[]): PlaceResult[] {
     return places
         .map((place) => {
@@ -567,7 +588,8 @@ async function executeGoogleSearchAndPersist(
     const rawCount = result.places?.length ?? 0;
     if (result.places) {
         const googlePlaces = enrichWithOpportunityScore(
-            filterPlaces(result.places, input.hasWebsite, input.hasPhone).slice(0, input.effectivePageSize)
+            filterByState(filterPlaces(result.places, input.hasWebsite, input.hasPhone), location?.state)
+                .slice(0, input.effectivePageSize)
         );
 
         if (!input.pageToken) {
@@ -635,9 +657,25 @@ export function normalizeSearchQuery(textQuery: string, ...locations: Array<stri
     return q;
 }
 
+/**
+ * Qualifiers Google Maps cannot apply ("com até 10 funcionários", "pequenas empresas",
+ * "para empresas") only dilute the text match — real searches like "bares e restaurantes com
+ * até 10 funcionarios" returned noise. They are removed from the Google query; the category
+ * and location stay.
+ */
+export function stripUnsupportedQualifiers(textQuery: string): string {
+    return textQuery
+        .replace(/\b(com\s+)?(at[eé]|mais\s+de|acima\s+de|menos\s+de)\s+\d+\s+(funcion[aá]rios?|colaboradores?|empregados?|pessoas)\b/gi, ' ')
+        .replace(/\b(de\s+)?(pequeno|m[eé]dio|grande)\s+porte\b/gi, ' ')
+        .replace(/\b(pequen[ao]s|m[eé]di[ao]s|micro)\s+(empresas?|neg[oó]cios?)\b/gi, ' ')
+        .replace(/\bpara\s+empresas\b/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 export async function runSearch(input: SearchInput, userId: string): Promise<SearchResult> {
     const { includedType, pageSize, pageToken, hasWebsite, hasPhone, city, state, country, radiusKm, bypassDbAndRf } = input;
-    const textQuery = normalizeSearchQuery(input.textQuery, city, state);
+    const textQuery = stripUnsupportedQualifiers(normalizeSearchQuery(input.textQuery, city, state)) || input.textQuery;
     const effectivePageSize = Math.min(PLACES_PAGE_SIZE_MAX, Math.max(1, pageSize ?? PLACES_PAGE_SIZE_MAX));
     const filtersPayload = {
         includedType: includedType ?? null,

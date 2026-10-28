@@ -46,7 +46,7 @@ export function buildCacheKey(
     const s = (state ?? '').toLowerCase().trim();
     const k = (country ?? '').toLowerCase().trim();
     // v2: results ranked by the reach-aware opportunity score; radius is part of the query.
-    return `search:v2:${textQuery.toLowerCase().trim()}:${includedType || ''}:${pageSize || 20}:${hasWebsite || 'any'}:${hasPhone || 'any'}:${c}:${s}:${k}:${radiusKm ?? ''}`;
+    return `search:v3:${textQuery.toLowerCase().trim()}:${includedType || ''}:${pageSize || 20}:${hasWebsite || 'any'}:${hasPhone || 'any'}:${c}:${s}:${k}:${radiusKm ?? ''}`;
 }
 
 function buildTextSearchDedupKey(

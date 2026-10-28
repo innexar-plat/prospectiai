@@ -275,7 +275,7 @@ describe('SearchService', () => {
         await runSearch({ textQuery: 'cacheable' } as any, mockUserId);
         expect(redis.setCached).toHaveBeenCalled();
         const cacheKeys = (redis.setCached as jest.Mock).mock.calls.map((call) => call[0]);
-        expect(cacheKeys.some((key: string) => key.includes('search:v2:cacheable'))).toBe(true);
+        expect(cacheKeys.some((key: string) => key.includes('search:v3:cacheable'))).toBe(true);
     });
 
     it('should filter out places without website when hasWebsite is yes', async () => {

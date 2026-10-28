@@ -41,6 +41,12 @@ const SEARCH_RF_STOP_WORDS = new Set([
     'de', 'da', 'do', 'das', 'dos', 'e', 'em', 'para', 'com', 'no', 'na', 'nos', 'nas',
     'a', 'o', 'as', 'os', 'um', 'uma', 'negocios', 'negocio', 'empresa', 'empresas',
     'servicos', 'servico', 'brasil', 'estado', 'mato', 'grosso', 'sul', 'norte',
+    // Generic business words: alone they match unrelated CNAEs ("distribuidora" → securities
+    // dealers / power distribution, "loja" → anything retail). They still reach the AI as context.
+    'distribuidora', 'distribuidoras', 'distribuidor', 'distribuidores', 'distribuicao',
+    'fornecedor', 'fornecedores', 'fornecedora', 'loja', 'lojas', 'comercio', 'atacado',
+    'atacadista', 'varejo', 'fabrica', 'fabricas', 'industria', 'centro', 'cidade', 'grande',
+    'campo', 'regiao', 'perto', 'proximo', 'melhores', 'melhor',
 ]);
 
 const SEARCH_RF_CNAE_HINTS_BY_TYPE: Record<string, string[]> = {
@@ -333,7 +339,39 @@ async function inferCnaesWithAI(textQuery: string): Promise<string[]> {
     }
 }
 
-export async function inferCnaesForSearch(textQuery: string, includedType?: string | null): Promise<string[]> {
+/**
+ * Removes the location from a search ("distribuidora de salgados campo grande MS" →
+ * "distribuidora de salgados"): city words used to leak into CNAE inference and matched
+ * unrelated activities ("campo" → "aeroportos e campos de aterrissagem").
+ */
+export function stripLocationFromQuery(textQuery: string, city?: string | null, state?: string | null): string {
+    let q = ` ${normalizeRfTerm(textQuery)} `;
+    const parts = [city, state && state !== 'Todos' ? state : null, 'brasil', 'brazil']
+        .filter((p): p is string => !!p && !!p.trim())
+        .map((p) => normalizeRfTerm(p));
+    for (const p of parts) {
+        q = q.replace(new RegExp(`\\s${p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=\\s)`, 'g'), ' ');
+    }
+    return q.replace(/\s+/g, ' ').trim();
+}
+
+/** Keeps only CNAE codes/prefixes that exist in the CNAE table (AI answers are not trusted blindly). */
+async function validCnaes(codes: string[]): Promise<string[]> {
+    const clean = [...new Set(codes.map((c) => c.replace(/\D/g, '')).filter((c) => c.length >= 4))];
+    const valid: string[] = [];
+    for (const code of clean) {
+        const hit = await prisma.cnaeCode.findFirst({ where: { code: { startsWith: code } }, select: { code: true } });
+        if (hit) valid.push(code);
+    }
+    return valid;
+}
+
+export async function inferCnaesForSearch(
+    rawQuery: string,
+    includedType?: string | null,
+    location?: { city?: string | null; state?: string | null },
+): Promise<string[]> {
+    const textQuery = stripLocationFromQuery(rawQuery, location?.city, location?.state) || rawQuery;
     const terms: string[] = [textQuery];
     if (includedType) {
         terms.push(...(SEARCH_RF_CNAE_HINTS_BY_TYPE[includedType] ?? []));
@@ -390,7 +428,9 @@ export async function inferCnaesForSearch(textQuery: string, includedType?: stri
         return Array.from(found).slice(0, Math.max(1, SEARCH_RF_AUTO_CNAE_LIMIT));
     }
 
-    const aiCodes = await inferCnaesWithAI(textQuery);
+    // Semantic fallback (handles typos like "distrribuidora" and phrases with no literal CNAE
+    // wording like "salgados"), validated against the CNAE table.
+    const aiCodes = await validCnaes(await inferCnaesWithAI(textQuery));
     return aiCodes.slice(0, Math.max(1, SEARCH_RF_AUTO_CNAE_LIMIT));
 }
 
@@ -469,7 +509,9 @@ async function searchRfPlacesForCross(
     return companies.map((item) => {
         const phone = item.ddd && item.telefone ? `(${item.ddd}) ${item.telefone}` : item.telefone || undefined;
         const address = [item.logradouro, item.numero, item.bairro, item.municipio, item.uf].filter(Boolean).join(', ');
-        const porteScore = item.porte === 'DEMAIS' ? 60 : item.porte === 'EPP' ? 50 : 40;
+        // Registry-only companies have no Google listing (no reviews, hours or photos to judge
+        // them by): keep them below the real listings instead of inventing a 40–60 score.
+        const porteScore = item.porte === 'DEMAIS' ? 30 : item.porte === 'EPP' ? 25 : 20;
 
         return {
             id: `rf_${item.cnpj}`,
@@ -723,7 +765,7 @@ export async function crossWithReceitaIfEligible(
         const releaseSlot = await acquireRfCrossSlot();
         try {
             const cnaes = await withTimeout(
-                inferCnaesForSearch(textQuery, includedType),
+                inferCnaesForSearch(textQuery, includedType, { city, state }),
                 SEARCH_RF_CROSS_TIMEOUT_MS,
                 'RF_CNAE_INFERENCE_TIMEOUT',
             );
