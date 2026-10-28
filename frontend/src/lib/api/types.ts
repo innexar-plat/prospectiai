@@ -104,6 +104,7 @@ export interface Place {
         openNow?: boolean;
         weekdayDescriptions?: string[];
     };
+    priceLevel?: string;
     reviews?: Array<{
         rating: number;
         text?: { text: string };

@@ -98,6 +98,9 @@ export interface BusinessData {
     types?: string[];
     businessStatus?: string;
     primaryType?: string;
+    /** Google's own one-line description of the place, when it has one. */
+    editorialSummary?: { text: string };
+    priceLevel?: string;
     hasOpeningHours?: boolean;
     currentOpeningHours?: {
         openNow?: boolean;

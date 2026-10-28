@@ -16,7 +16,7 @@ import {
     buildTaskDescription,
     buildCompanyContext,
     buildLeadAnalysisPrompt,
-    buildLeadReportSectionPrompt,
+    buildLeadDossierPrompt,
     buildRfDataBlock,
     buildReviewSignalsText,
     buildOpeningHoursText,
@@ -206,31 +206,6 @@ async function resolveFinalProfile(
     return finalProfile;
 }
 
-type ReportSectionDefinition = {
-    title: string;
-    instruction: string;
-};
-
-function getReportSectionDefinitions(isEn: boolean): ReportSectionDefinition[] {
-    return isEn
-        ? [
-            { title: 'Executive Summary', instruction: 'Summarize the lead context, urgency, buying fit, and why this opportunity matters for our company.' },
-            { title: 'Business Analysis', instruction: 'Analyze company maturity, operations, digital posture when relevant, reputation signals, and commercial readiness.' },
-            { title: 'Market and Competition', instruction: 'Explain the local competitive landscape, market pressures, sector trends, and positioning implications.' },
-            { title: 'Pain Points and Opportunities', instruction: 'Detail the most relevant pains, operational gaps, and where our offering can create measurable value.' },
-            { title: 'Approach Strategy', instruction: 'Describe the recommended sales angle, sequencing, objections to expect, proof points, and contact channel strategy.' },
-            { title: 'Next Steps', instruction: 'Provide a practical action plan with short-term next steps, cadence, and success criteria for the sales team.' },
-        ]
-        : [
-            { title: 'Resumo Executivo', instruction: 'Resuma o contexto do lead, urgência, fit de compra e por que esta oportunidade importa para a nossa empresa.' },
-            { title: 'Análise do Negócio', instruction: 'Analise maturidade da empresa, operação, presença digital quando relevante, sinais de reputação e prontidão comercial.' },
-            { title: 'Mercado e Concorrência', instruction: 'Explique o cenário competitivo local, pressões de mercado, tendências do setor e implicações de posicionamento.' },
-            { title: 'Dores e Oportunidades', instruction: 'Detalhe as dores mais relevantes, lacunas operacionais e onde a nossa oferta pode gerar valor mensurável.' },
-            { title: 'Estratégia de Abordagem', instruction: 'Descreva o melhor ângulo comercial, sequência de abordagem, objeções esperadas, provas e canais de contato ideais.' },
-            { title: 'Próximos Passos', instruction: 'Forneça um plano prático de ação com próximos passos de curto prazo, cadência e critérios de sucesso para o time comercial.' },
-        ];
-}
-
 function normalizeMarkdownBody(input: string): string {
     const trimmed = input.trim();
     if (!trimmed) return '';
@@ -254,72 +229,30 @@ function mergeUsage(
     };
 }
 
+/**
+ * Sales dossier (stored as fullReport): ONE call with a compact fact sheet + the core analysis.
+ * Previously six section calls each re-sent the full lead context (~40k input tokens/analysis)
+ * and mostly repeated what the structured cards already show.
+ */
 async function generateLeadFullReport(
     promptInput: BuildLeadPromptInput,
     analysis: LeadAnalysisCore,
 ): Promise<{ fullReport: string; usage?: { inputTokens: number; outputTokens: number } }> {
-    const sections = getReportSectionDefinitions(promptInput.isEn);
-    const coreAnalysisJson = JSON.stringify(analysis, null, 2);
-    let usage: { inputTokens: number; outputTokens: number } | undefined;
-
-    const concurrencyLimit = 3;
-    const results: Array<{ index: number; result?: Awaited<ReturnType<typeof generateCompletionForRole>>; error?: unknown; section: ReportSectionDefinition }> = [];
-
-    for (let i = 0; i < sections.length; i += concurrencyLimit) {
-        const chunk = sections.slice(i, i + concurrencyLimit);
-        const chunkPromises = chunk.map(async (section) => {
-            const idx = sections.indexOf(section);
-            try {
-                const result = await generateCompletionForRole('lead_analysis', {
-                    prompt: buildLeadReportSectionPrompt({
-                        ...promptInput,
-                        sectionTitle: section.title,
-                        sectionInstruction: section.instruction,
-                        coreAnalysisJson,
-                    }),
-                    maxOutputTokens: getAnalyzeReportSectionMaxOutputTokens(),
-                });
-                return { index: idx, result, section };
-            } catch (error) {
-                const { logger } = await import('@/lib/logger');
-                logger.warn('Lead report section generation failed', {
-                    section: section.title,
-                    placeId: promptInput.business.placeId,
-                    error: error instanceof Error ? error.message : 'Unknown',
-                });
-                return { index: idx, error, section };
-            }
+    try {
+        const result = await generateCompletionForRole('lead_analysis', {
+            prompt: buildLeadDossierPrompt(promptInput, analysis as unknown as Record<string, unknown>),
+            maxOutputTokens: getAnalyzeReportSectionMaxOutputTokens(),
         });
-        const settled = await Promise.allSettled(chunkPromises);
-        for (const item of settled) {
-            if (item.status === 'fulfilled') {
-                results.push(item.value);
-            } else {
-                const { logger } = await import('@/lib/logger');
-                logger.warn('Lead report section promise rejected', { reason: item.reason });
-            }
-        }
+        const body = normalizeMarkdownBody(result.text);
+        return { fullReport: body || buildUnavailableSectionBody(promptInput.isEn), usage: result.usage };
+    } catch (error) {
+        const { logger } = await import('@/lib/logger');
+        logger.warn('Lead dossier generation failed', {
+            placeId: promptInput.business.placeId,
+            error: error instanceof Error ? error.message : 'Unknown',
+        });
+        return { fullReport: buildUnavailableSectionBody(promptInput.isEn) };
     }
-
-    const renderedSections: string[] = [];
-    for (const { index, result: sectionResult, section } of results) {
-        if (sectionResult) {
-            usage = mergeUsage(usage, sectionResult.usage);
-            const body = normalizeMarkdownBody(sectionResult.text) || buildUnavailableSectionBody(promptInput.isEn);
-            renderedSections[index] = `## ${section.title}\n\n${body}`;
-        } else {
-            renderedSections[index] = `## ${section.title}\n\n${buildUnavailableSectionBody(promptInput.isEn)}`;
-        }
-    }
-
-    // Fill any gaps from rejected/undefined entries
-    for (let i = 0; i < sections.length; i++) {
-        if (!renderedSections[i]) {
-            renderedSections[i] = `## ${sections[i]!.title}\n\n${buildUnavailableSectionBody(promptInput.isEn)}`;
-        }
-    }
-
-    return { fullReport: renderedSections.join('\n\n'), usage };
 }
 
 

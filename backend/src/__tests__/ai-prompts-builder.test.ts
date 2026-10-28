@@ -5,7 +5,7 @@ import {
     buildTaskDescription,
     buildCompanyContext,
     buildLeadAnalysisPrompt,
-    buildLeadReportSectionPrompt,
+    buildLeadDossierPrompt,
     buildRfDataBlock,
     buildReviewSignalsText,
     buildOpeningHoursText,
@@ -15,6 +15,7 @@ import {
     buildGapsRequirement,
     buildIndustryGuardrails,
     buildSellerServicesBlock,
+    buildGoogleProfileLines,
 } from '@/lib/ai/prompts/builder';
 import type { BusinessData, UserBusinessProfile } from '@/lib/ai/prompts/analyze-types';
 
@@ -371,32 +372,50 @@ describe('AI Prompts Builder', () => {
             expect(result).toContain('cnpjAnalysis');
         });
 
-        it('builds a segmented report section prompt', () => {
-            const result = buildLeadReportSectionPrompt({
+        it('builds a compact one-call sales dossier prompt without raw context', () => {
+            const result = buildLeadDossierPrompt({
                 business: { placeId: 'p1', name: 'Coffee Shop', rating: 4.5, primaryType: 'cafe' } as BusinessData,
-                isEn: true,
+                isEn: false,
                 companyContext: 'We sell marketing services',
                 taskDescription: 'You are a lead analyst',
-                address: '123 Main St',
-                phone: '+5511999999999',
-                website: 'https://coffee.com',
+                sellerProfile: { companyName: 'Agência Norte', productService: 'tráfego pago', targetAudience: 'cafés', mainBenefit: 'resultado em 30 dias' },
+                address: 'Rua A, 1 - Centro, Blumenau - SC',
+                phone: '+5547999999999',
+                website: '',
                 reviewCount: 42,
-                reviewsText: 'Great coffee!',
-                reviewSignalsText: 'No negative signals',
+                reviewsText: 'RAW REVIEWS TEXT',
+                reviewSignalsText: 'Sem sinais',
                 openingHoursText: 'Open now',
-                webContext: 'Web intel here',
+                webContext: 'RAW WEB CONTEXT',
                 isBusinessPlan: false,
-                conversionContext: 'Conversion data here',
+                conversionContext: '',
                 rfDataBlock: '',
-                websiteScrapingBlock: '',
-                sectionTitle: 'Executive Summary',
-                sectionInstruction: 'Summarize the opportunity.',
-                coreAnalysisJson: '{"score":90}',
-            });
+                websiteScrapingBlock: 'RAW SCRAPE',
+            }, { score: 80, summary: 'Bom lead', messageVariants: { whatsapp: { short: 'oi' } } });
 
-            expect(result).toContain('CORE ANALYSIS JSON');
-            expect(result).toContain('Executive Summary');
-            expect(result).toContain('Write only the Markdown body');
+            expect(result).toContain('## Roteiro da primeira conversa');
+            expect(result).toContain('### Objeções prováveis');
+            expect(result).toContain('Agência Norte');
+            expect(result).toContain('"summary":"Bom lead"');
+            // compact: raw context blocks and message variants never reach the dossier call
+            expect(result).not.toContain('RAW WEB CONTEXT');
+            expect(result).not.toContain('RAW REVIEWS TEXT');
+            expect(result).not.toContain('RAW SCRAPE');
+            expect(result).not.toContain('messageVariants');
         });
+    });
+});
+
+describe('buildGoogleProfileLines', () => {
+    it('includes Google description and price band when present', () => {
+        const business = {
+            placeId: 'p', name: 'Cafe',
+            editorialSummary: { text: 'Cafeteria artesanal com doces caseiros.' },
+            priceLevel: 'PRICE_LEVEL_MODERATE',
+        } as BusinessData;
+        const out = buildGoogleProfileLines(business, false);
+        expect(out).toContain('Descrição no Google: Cafeteria artesanal');
+        expect(out).toContain('Faixa de preço: moderado ($$)');
+        expect(buildGoogleProfileLines({ placeId: 'p', name: 'X' } as BusinessData, true)).toBe('');
     });
 });

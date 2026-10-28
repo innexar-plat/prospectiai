@@ -110,6 +110,8 @@ export const analyzeSchema = z.object({
     openNow: z.boolean().optional(),
     weekdayDescriptions: z.array(z.string()).optional(),
   }).optional(),
+  editorialSummary: z.object({ text: z.string().max(1000) }).optional(),
+  priceLevel: z.string().max(40).optional(),
 });
 
 /** POST /api/user/profile (personal profile only) */

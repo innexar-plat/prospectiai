@@ -116,7 +116,9 @@ describe('Gemini AI Lib', () => {
 
         expect(result.analysis.score).toBe(8);
         expect(result.analysis.scoreLabel).toBe('Hot');
-        expect(result.analysis.fullReport).toContain('## Resumo Executivo');
+        // Dossier comes from a single extra AI call (was one call per report section).
+        expect(result.analysis.fullReport).toBe('Detailed markdown section body.');
+        expect(generateCompletionForRole).toHaveBeenCalledTimes(1);
     });
 
     it('should include deep analysis instructions for BUSINESS plan', async () => {

@@ -18,5 +18,7 @@ export function buildAnalyzePayload(place: PlaceDetail | Place, locale: string) 
     businessStatus: place.businessStatus ?? undefined,
     reviews: place.reviews ?? undefined,
     currentOpeningHours: place.currentOpeningHours ?? undefined,
+    editorialSummary: 'editorialSummary' in place ? place.editorialSummary : undefined,
+    priceLevel: place.priceLevel ?? undefined,
   };
 }

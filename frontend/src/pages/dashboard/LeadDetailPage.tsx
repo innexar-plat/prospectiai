@@ -278,11 +278,11 @@ function renderSimpleMarkdown(md: string): string {
     .replace(/^# (.+)$/gm, '<h1>$1</h1>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/^- (.+)$/gm, '<li>$1</li>')
-    .replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>')
-    .replace(/(<li>.*<\/li>\n?)+/g, (match) => {
-      return `<ul>${match}</ul>`;
-    })
+    .replace(/^- (.+)$/gm, '<li data-ul>$1</li>')
+    .replace(/^\d+\. (.+)$/gm, '<li data-ol>$1</li>')
+    .replace(/(<li data-ul>.*<\/li>\n?)+/g, (match) => `<ul>${match.replace(/ data-ul/g, '')}</ul>`)
+    .replace(/(<li data-ol>.*<\/li>\n?)+/g, (match) => `<ol>${match.replace(/ data-ol/g, '')}</ol>`)
+    .replace(/<\/(h[1-3]|ul|ol)>\n+/g, '</$1>')
     .replace(/\n{2,}/g, '<br/><br/>')
     .replace(/\n/g, '<br/>');
 }
@@ -344,7 +344,8 @@ function LeadDetailAnalysisView({
   const showBrRegistry = isMarketFeatureEnabled('cnae');
   const showReclameAqui = isMarketFeatureEnabled('reclameAqui');
   const isUsMarket = getActiveMarket() === 'US';
-  const [showFullReport, setShowFullReport] = useState(false);
+  // The dossier (why now, call script, objections) is the most actionable part — open by default.
+  const [showFullReport, setShowFullReport] = useState(true);
   const strengths = Array.isArray(analysis.strengths) ? (analysis.strengths as string[]) : [];
   const gaps = Array.isArray(analysis.gaps) ? (analysis.gaps as string[]) : [];
   const painPoints = Array.isArray(analysis.painPoints) ? (analysis.painPoints as string[]) : [];
@@ -556,7 +557,7 @@ function LeadDetailAnalysisView({
           {showFullReport && (
             <div className="px-4 pb-4">
               <div
-                className="prose prose-sm prose-invert max-w-none text-muted p-4 bg-surface rounded-xl border border-border shadow-inner text-sm overflow-x-auto leading-relaxed [&_h1]:text-lg [&_h1]:font-bold [&_h1]:text-foreground [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-foreground [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:text-foreground [&_h3]:mt-3 [&_h3]:mb-1 [&_strong]:text-foreground [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1"
+                className="max-w-none text-foreground/90 text-sm leading-relaxed overflow-x-auto [&_h1]:text-lg [&_h1]:font-bold [&_h2]:text-[15px] [&_h2]:font-bold [&_h2]:text-violet-700 dark:[&_h2]:text-violet-300 [&_h2]:mt-5 [&_h2]:first:mt-0 [&_h2]:mb-2 [&_h2]:pb-1 [&_h2]:border-b [&_h2]:border-border [&_h3]:text-[11px] [&_h3]:font-bold [&_h3]:uppercase [&_h3]:tracking-wider [&_h3]:text-muted [&_h3]:mt-3 [&_h3]:mb-1 [&_strong]:text-foreground [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1 [&_li]:mb-1 [&_li]:marker:text-violet-400"
                 dangerouslySetInnerHTML={{ __html: renderSimpleMarkdown(fullReport) }}
               />
             </div>

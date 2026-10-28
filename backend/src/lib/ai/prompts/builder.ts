@@ -312,10 +312,21 @@ export interface BuildLeadPromptInput {
     websiteScrapingBlock: string;
 }
 
-export interface BuildLeadReportSectionPromptInput extends BuildLeadPromptInput {
-    sectionTitle: string;
-    sectionInstruction: string;
-    coreAnalysisJson: string;
+const PRICE_LEVEL_LABELS: Record<string, { pt: string; en: string }> = {
+    PRICE_LEVEL_INEXPENSIVE: { pt: 'barato ($)', en: 'inexpensive ($)' },
+    PRICE_LEVEL_MODERATE: { pt: 'moderado ($$)', en: 'moderate ($$)' },
+    PRICE_LEVEL_EXPENSIVE: { pt: 'caro ($$$)', en: 'expensive ($$$)' },
+    PRICE_LEVEL_VERY_EXPENSIVE: { pt: 'muito caro ($$$$)', en: 'very expensive ($$$$)' },
+};
+
+/** Google's own description and price band — cheap context that sharpens positioning. */
+export function buildGoogleProfileLines(business: BusinessData, isEn: boolean): string {
+    const lines: string[] = [];
+    const summary = business.editorialSummary?.text?.trim();
+    if (summary) lines.push(`- ${isEn ? 'Google description' : 'Descrição no Google'}: ${summary.slice(0, 300)}`);
+    const price = business.priceLevel ? PRICE_LEVEL_LABELS[business.priceLevel] : undefined;
+    if (price) lines.push(`- ${isEn ? 'Price band' : 'Faixa de preço'}: ${isEn ? price.en : price.pt}`);
+    return lines.join('\n');
 }
 
 function buildLeadContextBlock(opts: BuildLeadPromptInput): string {
@@ -355,7 +366,7 @@ ${D.section}
 - ${D.rating}: ${opts.business.rating ?? D.noRating}/5
 - ${D.reviews}: ${opts.reviewCount}
 - ${D.status}: ${opts.business.businessStatus || 'OPERATIONAL'}
-${getWebsiteNote(opts.website, isEn)}
+${buildGoogleProfileLines(opts.business, isEn)}${getWebsiteNote(opts.website, isEn)}
 ${opts.rfDataBlock}
 ${opts.websiteScrapingBlock}
 
@@ -422,19 +433,83 @@ ${getExtendedJsonSchemaBlock(isBusinessPlan, isEn)}
 }`;
 }
 
-export function buildLeadReportSectionPrompt(opts: BuildLeadReportSectionPromptInput): string {
-        return `${buildLeadContextBlock(opts)}
 
-CORE ANALYSIS JSON:
-${opts.coreAnalysisJson}
+/**
+ * One-call "sales dossier" (replaces six section calls that each re-sent the whole lead context:
+ * ~40k input tokens per analysis). Uses a compact fact sheet plus the core analysis, and asks
+ * only for what the structured cards do not already show: why now, a first-conversation script
+ * with objection handling, and red flags.
+ */
+export function buildLeadDossierPrompt(opts: BuildLeadPromptInput, core: Record<string, unknown>): string {
+    const { isEn } = opts;
+    const seller = opts.sellerProfile;
+    const pick = (keys: string[]) => Object.fromEntries(keys.filter((k) => core[k] != null).map((k) => [k, core[k]]));
+    const coreBrief = JSON.stringify(pick(['score', 'summary', 'strengths', 'gaps', 'painPoints', 'approach', 'closeProbability', 'bestContactWindow']));
+    const facts = [
+        `${isEn ? 'Lead' : 'Lead'}: ${opts.business.name}`,
+        `${isEn ? 'Niche' : 'Nicho'}: ${formatLeadNiche(opts.business.primaryType, opts.business.types) || opts.business.primaryType || '-'}`,
+        `${isEn ? 'Location' : 'Local'}: ${extractLeadLocation(opts.address) || opts.address || '-'}`,
+        `${isEn ? 'Google rating' : 'Nota Google'}: ${opts.business.rating ?? '-'} (${opts.reviewCount} ${isEn ? 'reviews' : 'avaliações'})`,
+        `${isEn ? 'Website' : 'Site'}: ${opts.website || (isEn ? 'none' : 'não tem')}`,
+        buildGoogleProfileLines(opts.business, isEn).replace(/^- /gm, ''),
+        opts.rfDataBlock ? opts.rfDataBlock.split('\n').filter((l) => l.startsWith('- ') && !/Confian|Confidence|Email/.test(l)).join('\n') : '',
+        opts.reviewSignalsText ? `${isEn ? 'Negative review signals' : 'Sinais de reviews negativas'}:\n${opts.reviewSignalsText.slice(0, 600)}` : '',
+    ].filter(Boolean).join('\n');
+    const sellerLine = seller
+        ? `${seller.companyName || (isEn ? 'Our company' : 'Nossa empresa')} — ${isEn ? 'sells' : 'vende'}: ${seller.productService || '-'}; ${isEn ? 'differentiator' : 'diferencial'}: ${seller.mainBenefit || '-'}${seller.averageTicket ? `; ${isEn ? 'average ticket' : 'ticket médio'}: ${seller.averageTicket}` : ''}`
+        : '';
 
-TASK:
-Write only the Markdown body for the section "${opts.sectionTitle}".
+    return isEn
+        ? `You are a senior B2B sales coach. Write a short, concrete sales dossier for the rep who will contact this lead.
 
-SECTION REQUIREMENTS:
-- ${opts.sectionInstruction}
-- Use concrete evidence from the lead data, reviews, web context, RF data, and core analysis.
-- Keep the writing dense and specific. Avoid generic filler.
-- Do not output JSON, code fences, or explanations outside the section body.
-- Do not repeat the section title in the body.`;
+SELLER: ${sellerLine || '-'}
+
+LEAD FACTS:
+${facts}
+
+ANALYSIS ALREADY SHOWN TO THE REP (do NOT repeat it):
+${coreBrief}
+
+Write Markdown with exactly these sections and nothing else:
+## Why now
+2-3 bullets with the trigger that makes this the right moment (use the facts; never invent numbers).
+## First-call script
+### Opening
+One or two sentences the rep says first, mentioning a specific fact about the lead.
+### Discovery questions
+3 numbered questions that uncover the pain our offer solves.
+### Likely objections
+2-3 bullets: **"objection"** → short answer that uses our differentiator.
+### Close
+The concrete next step to propose (meeting, trial, diagnosis) with a suggested time.
+## Red flags
+1-3 bullets on risks (credit, fit, timing). Write "None found" if there are none.
+
+Rules: max 380 words, plain language, no generic advice, no URLs, do not restate the summary/strengths/gaps.`
+        : `Você é um coach sênior de vendas B2B. Escreva um dossiê de vendas curto e concreto para o vendedor que vai abordar este lead.
+
+VENDEDOR: ${sellerLine || '-'}
+
+DADOS DO LEAD:
+${facts}
+
+ANÁLISE QUE O VENDEDOR JÁ VÊ (NÃO repita):
+${coreBrief}
+
+Escreva em Markdown exatamente estas seções e nada mais:
+## Por que agora
+2-3 tópicos com o gatilho que torna este o momento certo (use os dados; nunca invente números).
+## Roteiro da primeira conversa
+### Abertura
+Uma ou duas frases que o vendedor fala primeiro, citando um fato específico do lead.
+### Perguntas de descoberta
+3 perguntas numeradas que revelam a dor que nossa oferta resolve.
+### Objeções prováveis
+2-3 tópicos: **"objeção"** → resposta curta usando nosso diferencial.
+### Fechamento
+O próximo passo concreto a propor (reunião, teste, diagnóstico) com sugestão de horário.
+## Sinais de alerta
+1-3 tópicos sobre riscos (crédito, encaixe, momento). Escreva "Nenhum identificado" se não houver.
+
+Regras: máximo 380 palavras, linguagem simples, nada genérico, sem URLs, não repita resumo/pontos fortes/lacunas.`;
 }

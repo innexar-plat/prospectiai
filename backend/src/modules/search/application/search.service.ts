@@ -100,12 +100,25 @@ export function addressUf(address: string | undefined): string | null {
  * many repeat across states (Campo Grande is also a neighbourhood of Rio de Janeiro).
  * Listings whose address has no recognisable UF are kept.
  */
-export function filterByState<T extends PlaceLike & { formattedAddress?: string }>(places: T[], state?: string | null): T[] {
+type StatefulPlace = PlaceLike & {
+    formattedAddress?: string;
+    addressComponents?: Array<{ shortText?: string; types?: string[] }>;
+};
+
+/** UF from Google's structured address when present, else parsed from the formatted string. */
+export function placeUf(place: StatefulPlace): string | null {
+    const area = place.addressComponents?.find((c) => c.types?.includes('administrative_area_level_1'));
+    const short = area?.shortText?.trim().toUpperCase();
+    if (short && /^[A-Z]{2}$/.test(short)) return short;
+    return addressUf(place.formattedAddress);
+}
+
+export function filterByState<T extends StatefulPlace>(places: T[], state?: string | null): T[] {
     const uf = state?.trim().toUpperCase();
     if (!uf || uf.length !== 2) return places;
     return places.filter((p) => {
-        const placeUf = addressUf(p.formattedAddress);
-        return !placeUf || placeUf === uf;
+        const found = placeUf(p);
+        return !found || found === uf;
     });
 }
 

@@ -16,7 +16,7 @@ jest.mock('@/lib/ai', () => ({
 }));
 
 import { stripLocationFromQuery, inferCnaesForSearch } from '@/modules/search/application/search-rf-integration';
-import { addressUf, filterByState, stripUnsupportedQualifiers } from '@/modules/search/application/search.service';
+import { addressUf, filterByState, placeUf, stripUnsupportedQualifiers } from '@/modules/search/application/search.service';
 
 beforeEach(() => jest.clearAllMocks());
 
@@ -83,5 +83,17 @@ describe('stripUnsupportedQualifiers', () => {
         expect(stripUnsupportedQualifiers('clínicas de pequeno porte em SP')).toBe('clínicas em SP');
         expect(stripUnsupportedQualifiers('pequenas empresas de contabilidade')).toBe('de contabilidade');
         expect(stripUnsupportedQualifiers('dentista Blumenau')).toBe('dentista Blumenau');
+    });
+});
+
+describe('placeUf', () => {
+    it('prefers the structured address component over the formatted string', () => {
+        expect(placeUf({
+            id: 'x',
+            formattedAddress: 'Rua Campo Grande, 10 - Rio de Janeiro',
+            addressComponents: [{ shortText: 'RJ', types: ['administrative_area_level_1', 'political'] }],
+        })).toBe('RJ');
+        expect(placeUf({ id: 'y', formattedAddress: 'Av. Afonso Pena, 1 - Centro, Campo Grande - MS, 79002-070' })).toBe('MS');
+        expect(placeUf({ id: 'z', addressComponents: [{ shortText: 'Mato Grosso do Sul', types: ['administrative_area_level_1'] }] })).toBeNull();
     });
 });

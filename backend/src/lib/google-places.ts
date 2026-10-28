@@ -46,6 +46,9 @@ export interface PlaceResult {
     opportunityScore?: number;
     primaryType?: string;
     primaryTypeDisplayName?: { text: string };
+    editorialSummary?: { text: string };
+    priceLevel?: string;
+    addressComponents?: Array<{ longText?: string; shortText?: string; types?: string[] }>;
     /** Additional fields populated by search enrichment pipeline */
     phone?: string | null;
     email?: string;
@@ -112,6 +115,10 @@ const SEARCH_FIELD_MASK = [
     'places.photos',
     'places.primaryType',
     'places.primaryTypeDisplayName',
+    // Same billing tier as reviews (already requested), so these add no cost.
+    'places.editorialSummary',
+    'places.priceLevel',
+    'places.addressComponents',
     'nextPageToken',
 ].join(',');
 
@@ -131,6 +138,9 @@ const DETAILS_FIELD_MASK = [
     'reviews',
     'primaryType',
     'primaryTypeDisplayName',
+    'editorialSummary',
+    'priceLevel',
+    'addressComponents',
 ].join(',');
 
 /**
