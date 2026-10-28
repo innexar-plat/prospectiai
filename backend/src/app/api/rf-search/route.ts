@@ -5,6 +5,8 @@ import { getOrCreateRequestId, jsonWithRequestId } from '@/lib/request-id';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
 import { estimateRfCompanyCount, searchRfCompanies } from '@/lib/rf-query';
+import { assertWorkspaceCanUseProduct } from '@/lib/trial';
+import { inferCnaesForSearch } from '@/modules/search/application/search-rf-integration';
 
 const rfSearchSchema = z.object({
   cnae: z.string().max(7).optional(),
@@ -13,6 +15,12 @@ const rfSearchSchema = z.object({
   municipio: z.string().max(200).optional(),
   porte: z.string().max(20).optional(),
   razaoSocial: z.string().max(200).optional(),
+  /** Free-text niche ("distribuidora de salgados"): CNAEs are inferred when none are given. */
+  niche: z.string().max(120).optional(),
+  /** Only companies opened in the last N days. */
+  openedWithinDays: z.coerce.number().int().min(1).max(3650).optional(),
+  hasPhone: z.boolean().optional(),
+  hasEmail: z.boolean().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
 });
@@ -39,9 +47,37 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { cnae, cnaes, uf, municipio, porte, razaoSocial, page, pageSize } = parsed.data;
+    const { cnae, cnaes, uf, municipio, porte, razaoSocial, niche, openedWithinDays, hasPhone, hasEmail, page, pageSize } = parsed.data;
 
-    const effectiveCnaes = cnaes?.length ? cnaes : cnae ? [cnae] : [];
+    // Plan gate + credits: one credit per NEW search (page 1); paging through it is free.
+    const membership = await prisma.workspaceMember.findFirst({
+      where: { userId: session.user.id },
+      orderBy: { createdAt: 'asc' },
+      select: { workspace: { select: { id: true, plan: true, leadsUsed: true, leadsLimit: true, subscriptionStatus: true, currentPeriodEnd: true } } },
+    });
+    const workspace = membership?.workspace;
+    if (!workspace) return jsonWithRequestId({ error: 'Workspace not found' }, { status: 404, requestId });
+    const gate = assertWorkspaceCanUseProduct(workspace);
+    if (!gate.ok) return jsonWithRequestId({ error: gate.message, code: gate.code }, { status: 403, requestId });
+    if (page === 1 && workspace.leadsUsed >= workspace.leadsLimit) {
+      return jsonWithRequestId({ error: 'Limit reached', code: 'LIMIT_EXCEEDED' }, { status: 403, requestId });
+    }
+
+    let inferredCnaes: string[] = [];
+    if (niche?.trim() && !(cnaes?.length) && !cnae) {
+      inferredCnaes = await inferCnaesForSearch(niche, null, { city: municipio, state: uf }).catch(() => []);
+      if (inferredCnaes.length === 0) {
+        return jsonWithRequestId(
+          { error: 'Não identificamos a atividade desse nicho. Tente outro termo ou escolha um CNAE.', code: 'NICHE_NOT_RECOGNIZED' },
+          { status: 422, requestId },
+        );
+      }
+    }
+    const openedSince = openedWithinDays
+      ? new Date(Date.now() - openedWithinDays * 86400000).toISOString().slice(0, 10).replace(/-/g, '')
+      : null;
+
+    const effectiveCnaes = cnaes?.length ? cnaes : cnae ? [cnae] : inferredCnaes;
     const filterCount = effectiveCnaes.length + (uf ? 1 : 0) + (municipio ? 1 : 0) + (porte ? 1 : 0) + (razaoSocial ? 1 : 0);
     if (filterCount === 0) {
       return jsonWithRequestId(
@@ -67,10 +103,15 @@ export async function POST(req: NextRequest) {
     });
 
     const { companies, total, capped } = await searchRfCompanies(
-      { cnaes: effectiveCnaes, uf, municipio, porte, razaoSocial },
+      { cnaes: effectiveCnaes, uf, municipio, porte, razaoSocial, openedSince, hasPhone, hasEmail },
       page,
       pageSize,
     );
+
+    if (page === 1 && companies.length > 0) {
+      await prisma.workspace.update({ where: { id: workspace.id }, data: { leadsUsed: { increment: 1 } } });
+      import('@/lib/credit-alerts').then(({ maybeSendLowCreditsAlert }) => maybeSendLowCreditsAlert(workspace.id)).catch(() => {});
+    }
 
     // Enrich with CNAE description
     const cnaeCodes = [...new Set(companies.map((c) => c.cnaePrincipal))];
@@ -99,6 +140,7 @@ export async function POST(req: NextRequest) {
       porte: c.porte,
       capitalSocial: c.capitalSocial,
       dataAbertura: c.dataAbertura,
+      placeId: `rf_${c.cnpj}`,
     }));
 
     // Background: persist RF results as Leads for future enrichment
@@ -118,6 +160,8 @@ export async function POST(req: NextRequest) {
       companies: results,
       total,
       totalCapped: capped,
+      cnaesUsed: effectiveCnaes,
+      cnaeDescriptions: Object.fromEntries(cnaeMap),
       page,
       pageSize,
       totalPages: Math.ceil(total / pageSize),

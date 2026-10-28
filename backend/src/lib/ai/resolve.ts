@@ -252,6 +252,10 @@ export function createLanguageModel(config: ResolvedAiConfig): LanguageModel {
             const ds = createOpenAICompatible({
                 name: 'deepseek',
                 baseURL: 'https://api.deepseek.com/v1',
+                transformRequestBody: (body) => ({
+                    ...body,
+                    thinking: body.thinking ?? { type: 'disabled' },
+                }),
                 headers: { Authorization: `Bearer ${config.apiKey}` },
             });
             return ds(config.model);

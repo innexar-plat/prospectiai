@@ -16,6 +16,10 @@ This replaces the previous manual adapter pattern (removed in April 2026).
 | DeepSeek | `DEEPSEEK` | `@ai-sdk/openai-compatible` | `api.deepseek.com` |
 | Anthropic | `ANTHROPIC` | `@ai-sdk/openai-compatible` | `api.anthropic.com` |
 
+DeepSeek requests disable thinking mode by default. Models such as `deepseek-flash`
+enable it by default, but lead analysis expects a final text/JSON response. The
+adapter preserves an explicitly supplied `thinking` option if one is added later.
+
 ## File Structure
 
 ```

@@ -13,7 +13,6 @@ import { getActiveMarket, isMarketFeatureEnabled } from '@/lib/market';
 import { buildMapsUrl, buildWhatsAppNumber, getPrimaryPhone, getPrimaryEmail, buildMailtoUrl } from '@/lib/lead-contact-utils';
 import { CrmSidePanel } from '@/components/dashboard/CrmSidePanel';
 import { representativeApi } from '@/lib/api/representative';
-import { AiAnalysisCardPreview } from '@/components/dashboard/AiAnalysisCardPreview';
 import SmartRelations from '@/components/SmartRelations';
 import { cn } from '@/lib/utils';
 
@@ -345,11 +344,7 @@ function LeadDetailAnalysisView({
   const showBrRegistry = isMarketFeatureEnabled('cnae');
   const showReclameAqui = isMarketFeatureEnabled('reclameAqui');
   const isUsMarket = getActiveMarket() === 'US';
-  const currencyPrefix = isUsMarket ? '$' : 'R$';
-  const currencyLocale = isUsMarket ? 'en-US' : 'pt-BR';
   const [showFullReport, setShowFullReport] = useState(false);
-  const scoreLabel = String(analysis.scoreLabel ?? t('page.leadDetail.scoreAnalytic'));
-  const summary = String(analysis.summary ?? '');
   const strengths = Array.isArray(analysis.strengths) ? (analysis.strengths as string[]) : [];
   const gaps = Array.isArray(analysis.gaps) ? (analysis.gaps as string[]) : [];
   const painPoints = Array.isArray(analysis.painPoints) ? (analysis.painPoints as string[]) : [];
@@ -360,7 +355,6 @@ function LeadDetailAnalysisView({
     : {};
   const fullReport = analysis.fullReport != null ? String(analysis.fullReport) : '';
   const reviewTrend = analysis.reviewTrend != null ? String(analysis.reviewTrend) : '';
-  const suggestedContactTime = analysis.suggestedContactTime != null ? String(analysis.suggestedContactTime) : '';
   const reviewAnalysis = analysis.reviewAnalysis != null ? String(analysis.reviewAnalysis) : '';
   const closeProbability = typeof analysis.closeProbability === 'number' ? analysis.closeProbability : null;
   const estimatedDealValue = typeof analysis.estimatedDealValue === 'number' ? analysis.estimatedDealValue : null;
@@ -377,54 +371,10 @@ function LeadDetailAnalysisView({
   );
 
   return (
-    <div className="space-y-6 pt-2 min-w-0 [&_*]:break-words [&_*]:[overflow-wrap:anywhere]">
-      {/* Score + Summary — compact top row with stat chips */}
-      <div className="flex items-start gap-3 px-3 py-2.5 sm:p-4 rounded-xl bg-violet-500/10 border border-violet-500/20 overflow-hidden">
-        <div className="w-14 h-14 rounded-full border-[3px] border-violet-500 flex items-center justify-center shrink-0">
-          <span className="text-xl font-black text-violet-500">{analysis.score ?? 0}</span>
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <h3 className="text-sm sm:text-base font-bold text-foreground break-words [overflow-wrap:anywhere]">{t('page.leadDetail.closeChance', { label: scoreLabel })}</h3>
-            {analysis.aiProvider && <span className="text-[9px] text-muted uppercase tracking-wider bg-surface/50 px-2 py-0.5 rounded-full border border-border/50">{t('page.leadDetail.aiLabel', { provider: getProviderLabel(analysis.aiProvider) ?? analysis.aiProvider })}</span>}
-          </div>
-          {(closeProbability != null || estimatedDealValue != null || bestContactWindow) && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {closeProbability != null && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
-                  {closeProbability}% {t('page.leadDetail.closeProb')}
-                </span>
-              )}
-              {estimatedDealValue != null && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300">
-                  {currencyPrefix}{estimatedDealValue.toLocaleString(currencyLocale)} {t('page.leadDetail.estimatedValue')}
-                </span>
-              )}
-              {bestContactWindow && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300 max-w-full">
-                  {bestContactWindow}
-                </span>
-              )}
-            </div>
-          )}
-          <p className="text-sm text-muted mt-2 leading-relaxed break-words [overflow-wrap:anywhere]">{summary}</p>
-          {(reviewTrend || suggestedContactTime) && (
-            <div className="mt-2 flex flex-col sm:flex-row sm:flex-wrap gap-1.5">
-              {reviewTrend && (
-                <span className="inline-flex w-full sm:w-auto text-[10px] font-medium px-2 py-0.5 rounded-full border border-amber-500/40 bg-amber-500/15 text-foreground break-words [overflow-wrap:anywhere]">
-                  {t('page.leadDetail.trend', { value: reviewTrend })}
-                </span>
-              )}
-              {suggestedContactTime && (
-                <span className="inline-flex w-full sm:w-auto text-[10px] font-medium px-2 py-0.5 rounded-full border border-cyan-500/40 bg-cyan-500/15 text-foreground break-words [overflow-wrap:anywhere]">
-                  {t('page.leadDetail.bestTime', { value: suggestedContactTime })}
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
+    <div className="stagger-in space-y-6 pt-2 min-w-0 [&_*]:break-words [&_*]:[overflow-wrap:anywhere]">
+      {analysis.aiProvider && (
+        <p className="text-[11px] text-muted -mt-2">{t('page.leadDetail.aiLabel', { provider: getProviderLabel(analysis.aiProvider) ?? analysis.aiProvider })}</p>
+      )}
       {(quickActions.length > 0 || keyMetrics.length > 0) && (
         <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 px-4 py-3 sm:p-4 space-y-3">
           <div>
@@ -468,7 +418,14 @@ function LeadDetailAnalysisView({
 
       {reviewAnalysis && (
         <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 sm:p-4 space-y-2 overflow-visible">
-          <h3 className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest">{t('page.leadDetail.reviewTrendTitle')}</h3>
+          <h3 className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest flex items-center gap-2 flex-wrap">
+            {t('page.leadDetail.reviewTrendTitle')}
+            {reviewTrend && (
+              <span className="normal-case tracking-normal font-semibold text-[11px] px-2 py-0.5 rounded-full bg-card border border-amber-500/30 text-foreground">
+                {({ IMPROVING: 'Em alta', STABLE: 'Estável', DECLINING: 'Em queda' } as Record<string, string>)[reviewTrend.toUpperCase()] ?? reviewTrend}
+              </span>
+            )}
+          </h3>
           <p className="text-sm text-foreground leading-relaxed break-words [overflow-wrap:anywhere]">{reviewAnalysis}</p>
         </div>
       )}
@@ -515,7 +472,7 @@ function LeadDetailAnalysisView({
 
       {/* Approach + Social Media — 2 columns */}
       {(approach || socialEntries.length > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className={cn('grid grid-cols-1 gap-4', approach && socialEntries.length > 0 && 'md:grid-cols-2')}>
           {approach && (
             <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 sm:p-4 space-y-3">
               <h3 className="text-xs font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-widest flex items-center gap-1.5">
@@ -608,6 +565,72 @@ function LeadDetailAnalysisView({
       )}
 
     </div>
+  );
+}
+
+/** Score tier colours shared by the hero card. */
+function scoreTone(score: number): { ring: string; text: string; label: string } {
+  if (score >= 70) return { ring: '#10b981', text: 'text-emerald-600 dark:text-emerald-400', label: 'Lead quente' };
+  if (score >= 45) return { ring: '#f59e0b', text: 'text-amber-600 dark:text-amber-400', label: 'Lead morno' };
+  return { ring: '#94a3b8', text: 'text-muted', label: 'Lead frio' };
+}
+
+/**
+ * Result at a glance, next to the lead data: score ring, close chance, deal value, best time and
+ * a jump to the full report below (which takes the whole page width).
+ */
+function AnalysisHeroCard({ analysis, onReanalyze, analyzing }: { analysis: Analysis; onReanalyze: () => void; analyzing: boolean }) {
+  const { t } = useI18n();
+  const isUs = getActiveMarket() === 'US';
+  const score = Math.max(0, Math.min(100, Number(analysis.score ?? 0)));
+  const tone = scoreTone(score);
+  const radius = 34;
+  const circumference = 2 * Math.PI * radius;
+  const close = typeof analysis.closeProbability === 'number' ? analysis.closeProbability : null;
+  const deal = typeof analysis.estimatedDealValue === 'number' ? analysis.estimatedDealValue : null;
+  const window = analysis.bestContactWindow ? String(analysis.bestContactWindow) : analysis.suggestedContactTime ? String(analysis.suggestedContactTime) : '';
+  const tiles = [
+    close != null ? { label: t('page.leadDetail.closeProb'), value: `${close}%` } : null,
+    deal != null ? { label: t('page.leadDetail.estimatedValue'), value: deal.toLocaleString(isUs ? 'en-US' : 'pt-BR', { style: 'currency', currency: isUs ? 'USD' : 'BRL', maximumFractionDigits: 0 }) } : null,
+    window ? { label: t('page.leadDetail.bestSchedule'), value: window } : null,
+  ].filter((x): x is { label: string; value: string } => x != null);
+
+  return (
+    <section className="stagger-in rounded-xl border border-border bg-card p-5 space-y-4 min-w-0">
+      <div className="flex items-center gap-4">
+        <svg width="84" height="84" viewBox="0 0 84 84" className="shrink-0" role="img" aria-label={`Score ${score} de 100`}>
+          <circle cx="42" cy="42" r={radius} fill="none" stroke="currentColor" strokeWidth="8" className="text-border" />
+          <circle
+            cx="42" cy="42" r={radius} fill="none" stroke={tone.ring} strokeWidth="8" strokeLinecap="round"
+            strokeDasharray={circumference} strokeDashoffset={circumference * (1 - score / 100)}
+            transform="rotate(-90 42 42)" style={{ transition: 'stroke-dashoffset 900ms cubic-bezier(0.22,1,0.36,1)' }}
+          />
+          <text x="42" y="47" textAnchor="middle" className="fill-foreground" style={{ fontSize: 22, fontWeight: 800 }}>{score}</text>
+        </svg>
+        <div className="min-w-0">
+          <p className={cn('text-xs font-bold uppercase tracking-wider', tone.text)}>{analysis.scoreLabel ? String(analysis.scoreLabel) : tone.label}</p>
+          <p className="text-sm text-foreground leading-relaxed mt-1 line-clamp-4">{String(analysis.summary ?? '')}</p>
+        </div>
+      </div>
+      {tiles.length > 0 && (
+        <div className="grid grid-cols-3 gap-2">
+          {tiles.map((tile) => (
+            <div key={tile.label} className="rounded-lg border border-border bg-surface/50 px-3 py-2 min-w-0">
+              <div className="text-sm font-bold text-foreground truncate" title={tile.value}>{tile.value}</div>
+              <div className="text-[10px] text-muted leading-tight">{tile.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant="primary" onClick={() => document.getElementById('analise-completa')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
+          {t('page.leadDetail.viewFullAnalysis')}
+        </Button>
+        <Button size="sm" variant="secondary" onClick={onReanalyze} disabled={analyzing} icon={analyzing ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}>
+          {t('page.leadDetail.reanalyze')}
+        </Button>
+      </div>
+    </section>
   );
 }
 
@@ -844,10 +867,10 @@ function LeadDetailInfoSection({ place, trackAction }: { place: PlaceDetail | Pl
   ].filter((item) => item.value);
 
   return (
-    <section className="rounded-xl border border-border bg-card p-5 space-y-4">
+    <section className="rounded-xl border border-border bg-card p-5 space-y-4 min-w-0 overflow-hidden">
       <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">{t('page.leadDetail.leadInfo')}</h2>
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="rounded-2xl border border-border bg-surface/40 p-4 space-y-3 text-sm">
+      <div className="grid gap-4 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] items-start">
+        <div className="min-w-0 rounded-2xl border border-border bg-surface/40 p-4 space-y-3 text-sm">
           {place.formattedAddress && (
             <div className="flex items-start gap-2 text-muted">
               <MapPin size={16} className="shrink-0 mt-0.5" />
@@ -865,11 +888,12 @@ function LeadDetailInfoSection({ place, trackAction }: { place: PlaceDetail | Pl
           {websites.length > 0 && (
             <div className="space-y-2">
               {websites.slice(0, 2).map((website) => (
-                <div key={website} className="flex items-center gap-2">
+                <div key={website} className="flex items-center gap-2 min-w-0">
                   <Globe size={16} className="shrink-0 text-muted" />
-                  <a href={website} target="_blank" rel="noopener noreferrer" className="min-w-0 text-violet-500 hover:underline inline-flex items-center gap-1 break-all">
-                    <span className="truncate">{website.replace(/^https?:\/\//, '')}</span>
-                    <ExternalLink size={12} />
+                  <a href={website} target="_blank" rel="noopener noreferrer" title={website} className="min-w-0 flex-1 text-violet-500 hover:underline flex items-center gap-1">
+                    {/* Tracking parameters (utm_*) made the URL overflow the card. */}
+                    <span className="truncate">{website.replace(/^https?:\/\/(www\.)?/, '').replace(/[?#].*$/, '').replace(/\/$/, '')}</span>
+                    <ExternalLink size={12} className="shrink-0" />
                   </a>
                 </div>
               ))}
@@ -890,28 +914,28 @@ function LeadDetailInfoSection({ place, trackAction }: { place: PlaceDetail | Pl
             </div>
           )}
         </div>
-        <div className="rounded-2xl border border-violet-500/15 bg-violet-500/5 p-4 space-y-3 text-sm">
+        <div className="min-w-0 rounded-2xl border border-violet-500/15 bg-violet-500/5 p-4 space-y-3 text-sm">
           <h3 className="text-xs font-bold uppercase tracking-wider text-violet-700 dark:text-violet-300">{t('page.leadDetail.businessData')}</h3>
           {companyMeta.length > 0 ? (
-            <div className="grid gap-2">
+            <dl className="divide-y divide-border/60">
               {companyMeta.map((item) => (
-                <div key={item.label} className="rounded-xl border border-border/60 bg-card/80 px-3 py-2">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-muted">{item.label}</div>
-                  <div className="mt-1 text-foreground break-words [overflow-wrap:anywhere]">{item.value}</div>
+                <div key={item.label} className="py-1.5 first:pt-0">
+                  <dt className="text-[10px] font-bold uppercase tracking-wider text-muted">{item.label}</dt>
+                  <dd className="text-foreground text-[13px] leading-snug break-words [overflow-wrap:anywhere]">{item.value}</dd>
                 </div>
               ))}
-            </div>
+            </dl>
           ) : (
             <p className="text-muted">{t('page.leadDetail.noBusinessData')}</p>
           )}
           {openingHours.length > 0 && (
-            <div className="rounded-xl border border-border/60 bg-card/80 px-3 py-2">
+            <div className="pt-2 border-t border-border/60">
               <div className="text-[10px] font-bold uppercase tracking-wider text-muted">{t('page.leadDetail.hours')}</div>
-              <div className="mt-1 space-y-1 text-foreground">
+              <ul className="mt-1 space-y-0.5 text-[12px] text-foreground">
                 {openingHours.map((line) => (
-                  <div key={line} className="break-words [overflow-wrap:anywhere]">{line}</div>
+                  <li key={line} className="break-words [overflow-wrap:anywhere]">{line}</li>
                 ))}
-              </div>
+              </ul>
             </div>
           )}
         </div>
@@ -1116,19 +1140,27 @@ function LeadDetailContent(props: LeadDetailContentProps) {
       <div className="px-4 py-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-5 box-border w-full">
         <ProfileCompletenessBanner user={user} onPrimaryAction={onOpenCompanyProfile} />
         <LeadDetailToolbar onBack={onBack} leadAnalysisItem={leadAnalysisItem} togglingFavorite={togglingFavorite} onToggleFavorite={onToggleFavorite} onSaveLead={onSaveLead} saving={savingLead} />
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 xl:gap-6 items-start min-w-0">
+        {/* Lead data and the analysis call-to-action side by side; once analysed, the report takes
+            the full width (its 3-column diagnostics were unreadable squeezed into half the page). */}
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-5 xl:gap-6 items-start">
           <div className="space-y-5 min-w-0">
             <LeadDetailInfoSection place={place} trackAction={trackAction} />
-            {analysis?.score != null && (
-              <section className="rounded-xl border border-violet-500/20 bg-violet-500/5 px-4 py-3 min-w-0">
-                <AiAnalysisCardPreview source={analysis} />
-              </section>
-            )}
             <LeadDetailTagsSection tags={tags} showTagInput={showTagInput} newTag={newTag} onAddTag={onAddTag} onRemoveTag={onRemoveTag} setNewTag={setNewTag} setShowTagInput={setShowTagInput} />
-            {isMarketFeatureEnabled('smartRelations') && <SmartRelations placeId={place.id} />}
           </div>
-          <LeadDetailAnalysisSection analysis={analysis} analyzing={analyzing} currentStep={currentStep} onAnalyze={onAnalyze} ownerName={ownerName} place={place} isRepresentative={user.isRepresentative} />
+          <div className="space-y-5 min-w-0">
+            {analysis?.score != null ? (
+              <AnalysisHeroCard analysis={analysis} onReanalyze={onAnalyze} analyzing={analyzing} />
+            ) : (
+              <LeadDetailAnalysisSection analysis={analysis} analyzing={analyzing} currentStep={currentStep} onAnalyze={onAnalyze} ownerName={ownerName} place={place} isRepresentative={user.isRepresentative} />
+            )}
+          </div>
         </div>
+        {analysis && (
+          <div id="analise-completa" className="scroll-mt-24">
+          <LeadDetailAnalysisSection analysis={analysis} analyzing={analyzing} currentStep={currentStep} onAnalyze={onAnalyze} ownerName={ownerName} place={place} isRepresentative={user.isRepresentative} />
+          </div>
+        )}
+        {isMarketFeatureEnabled('smartRelations') && <SmartRelations placeId={place.id} />}
       </div>
     </>
   );

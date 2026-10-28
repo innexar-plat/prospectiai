@@ -76,8 +76,8 @@ const PROVIDER_MODELS: Record<AiConfigProvider, { value: string; label: string }
     { value: 'qwen/qwen3-32b', label: 'Qwen3 32B (preview)' },
   ],
   DEEPSEEK: [
-    { value: 'deepseek-chat', label: 'DeepSeek Chat (V3.2, 128K ctx)' },
-    { value: 'deepseek-reasoner', label: 'DeepSeek Reasoner (V3.2 thinking mode)' },
+    { value: 'deepseek-flash', label: 'DeepSeek Flash' },
+    { value: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro' },
   ],
   ANTHROPIC: [
     { value: 'claude-opus-4-6', label: 'Claude Opus 4.6 (mais inteligente, 1M ctx)' },
@@ -683,6 +683,9 @@ export function AiConfigPage() {
                 )}
                 {form.provider === 'OPENROUTER' && (
                   <p className="text-xs text-gray-500 mb-1">OpenRouter usa API OpenAI-compatível. Modelos free terminam em :free.</p>
+                )}
+                {form.provider === 'DEEPSEEK' && (
+                  <p className="text-xs text-gray-500 mb-1">O modo de raciocínio fica desativado para gerar respostas e JSON de forma confiável.</p>
                 )}
                 <Select
                   value={PROVIDER_MODELS[form.provider].some((m) => m.value === form.model) ? form.model : '__custom__'}

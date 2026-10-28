@@ -18,6 +18,8 @@ type SidebarItem = {
   icon: typeof Search;
   labelKey: string;
   badge?: 'PRO' | 'BIZ' | 'SCALE';
+  /** Hidden when this market feature is off (e.g. the Receita Federal base is BR-only). */
+  feature?: 'rfSearch';
 };
 
 type SidebarSection = {
@@ -33,6 +35,7 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
     titleKey: 'dash.section.prospection',
     items: [
       { to: '/dashboard', end: true, icon: Search, labelKey: 'dash.nav.newSearch' },
+      { to: '/dashboard/empresas', end: false, icon: Building2, labelKey: 'dash.nav.companyBase', feature: 'rfSearch' },
       { to: '/dashboard/historico', end: false, icon: Clock, labelKey: 'dash.nav.history' },
       { to: '/dashboard/leads', end: false, icon: Target, labelKey: 'dash.nav.savedLeads' },
     ],
@@ -283,7 +286,7 @@ export function SidebarNav({
               )}
               {(!isNarrow && !isSecCollapsed) || isNarrow ? (
                 <div className={cn('space-y-0.5', isNarrow && 'space-y-1')}>
-                  {section.items.map(({ to, end, icon: Icon, labelKey, badge }) => {
+                  {section.items.filter((item) => !item.feature || isMarketFeatureEnabled(item.feature)).map(({ to, end, icon: Icon, labelKey, badge }) => {
                     const label = t(labelKey);
                     const locked = badge && !hasPlanAccess(user.plan, badge);
                     const planName = badge ? (BADGE_TO_PLAN_NAME[badge] ?? '') : '';

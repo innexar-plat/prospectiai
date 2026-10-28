@@ -32,11 +32,14 @@ export async function POST(
             apiKey,
             accountId: config.cloudflareAccountId ?? undefined,
         });
-        await generateText({
+        const result = await generateText({
             model,
             prompt: 'Respond with exactly: OK',
             maxOutputTokens: 10,
         });
+        if (!result.text.trim()) {
+            throw new Error('Provider returned an empty response');
+        }
         logAdminAction(session, 'admin.ai-config.test', { resource: 'ai-config', resourceId: id }).catch(() => {});
         return NextResponse.json({ success: true });
     } catch (e) {

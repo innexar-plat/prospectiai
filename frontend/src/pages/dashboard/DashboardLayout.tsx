@@ -25,6 +25,7 @@ const BREADCRUMB_KEYS: Record<string, string> = {
   '/dashboard': 'dash.nav.newSearch',
   '/dashboard/historico': 'dash.nav.history',
   '/dashboard/leads': 'dash.nav.savedLeads',
+  '/dashboard/empresas': 'dash.nav.companyBase',
   '/dashboard/resultados': 'dash.nav.results',
   '/dashboard/concorrencia': 'dash.nav.competition',
   '/dashboard/pipeline': 'dash.nav.pipeline',

@@ -19,6 +19,10 @@ export interface RfFilters {
     municipio?: string | null;
     porte?: string | null;
     razaoSocial?: string | null;
+    /** YYYYMMDD — only companies opened on/after this date. */
+    openedSince?: string | null;
+    hasPhone?: boolean;
+    hasEmail?: boolean;
 }
 
 /** Next lexicographic string after a prefix: '5611' → '5612' (prefix match as an index range). */
@@ -44,6 +48,9 @@ export function buildRfWhere(f: RfFilters): { sql: string; params: string[] } {
         // upper(...) LIKE uses the trigram GIN index on upper("razaoSocial").
         conds.push(`upper("razaoSocial") LIKE ${p(`%${toRfText(f.razaoSocial).replace(/[%_]/g, '')}%`)}`);
     }
+    if (f.openedSince && /^\d{8}$/.test(f.openedSince)) conds.push(`"dataAbertura" >= ${p(f.openedSince)}`);
+    if (f.hasPhone) conds.push(`telefone IS NOT NULL AND telefone <> ''`);
+    if (f.hasEmail) conds.push(`email IS NOT NULL AND email <> ''`);
     return { sql: conds.length ? conds.join(' AND ') : 'false', params };
 }
 
@@ -68,6 +75,8 @@ export async function searchRfCompanies(
     const { sql, params } = buildRfWhere(filters);
     const offset = Math.min(RF_MAX_OFFSET, Math.max(0, (page - 1) * pageSize));
     const companies = await bounded(RF_QUERY_TIMEOUT_MS, (tx) => tx.$queryRawUnsafe<RfCompany[]>(
+        // No ORDER BY: sorting a sector (even within one city) means reading every match — measured
+        // at >5 s for restaurants in São Paulo. The date window already keeps results recent.
         `SELECT * FROM "RfCompany" WHERE ${sql} LIMIT ${pageSize} OFFSET ${offset}`,
         ...params,
     ));

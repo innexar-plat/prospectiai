@@ -20,6 +20,7 @@ const DashboardLayout = lazy(() => import('./pages/dashboard/DashboardLayout').t
 const DashboardIndex = lazy(() => import('./pages/dashboard/DashboardIndex'));
 const HistoricoPage = lazy(() => import('./pages/dashboard/HistoricoPage'));
 const LeadsPage = lazy(() => import('./pages/dashboard/LeadsPage'));
+const EmpresasPage = lazy(() => import('./pages/dashboard/EmpresasPage'));
 const ListasPage = lazy(() => import('./pages/dashboard/ListasPage'));
 const RelatoriosPage = lazy(() => import('./pages/dashboard/RelatoriosPage'));
 const ResultadosPage = lazy(() => import('./pages/dashboard/ResultadosPage'));
@@ -174,6 +175,7 @@ function App() {
           <Route index element={<DashboardIndex />} />
           <Route path="historico" element={<HistoricoPage />} />
           <Route path="leads" element={<LeadsPage />} />
+          <Route path="empresas" element={<EmpresasPage />} />
           <Route path="listas" element={<ListasPage />} />
           <Route path="relatorios" element={<RelatoriosPage />} />
           <Route path="resultados" element={<ResultadosPage />} />

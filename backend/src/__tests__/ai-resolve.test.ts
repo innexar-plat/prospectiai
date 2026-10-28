@@ -16,9 +16,18 @@ jest.mock('@/lib/ai/encrypt', () => ({
 
 const mockGenerateText = jest.fn();
 const mockGenerateObject = jest.fn();
+type CompatibleProviderOptions = {
+  transformRequestBody?: (body: Record<string, unknown>) => Record<string, unknown>;
+};
+const mockCreateOpenAICompatible = jest.fn(
+  (options: CompatibleProviderOptions) => (modelId: string) => ({ modelId, options }),
+);
 jest.mock('ai', () => ({
   generateText: (...args: unknown[]) => mockGenerateText(...args),
   generateObject: (...args: unknown[]) => mockGenerateObject(...args),
+}));
+jest.mock('@ai-sdk/openai-compatible', () => ({
+  createOpenAICompatible: (options: CompatibleProviderOptions) => mockCreateOpenAICompatible(options),
 }));
 import { generateObjectForRole } from '@/lib/ai';
 
@@ -311,5 +320,26 @@ describe('AI resolve', () => {
       model: 'test',
       apiKey: 'key',
     })).toThrow(/requires accountId/);
+  });
+
+  it('disables DeepSeek thinking mode by default and preserves explicit overrides', () => {
+    createLanguageModel({
+      provider: 'DEEPSEEK',
+      model: 'deepseek-flash',
+      apiKey: 'test-key',
+    });
+
+    const options = mockCreateOpenAICompatible.mock.calls[0]?.[0];
+    expect(options?.transformRequestBody?.({ model: 'deepseek-flash' })).toEqual({
+      model: 'deepseek-flash',
+      thinking: { type: 'disabled' },
+    });
+    expect(options?.transformRequestBody?.({
+      model: 'deepseek-flash',
+      thinking: { type: 'enabled' },
+    })).toEqual({
+      model: 'deepseek-flash',
+      thinking: { type: 'enabled' },
+    });
   });
 });

@@ -83,6 +83,17 @@ describe('rf-query', () => {
         expect(r.capped).toBe(true);
     });
 
+    it('adds opening-date and contact filters without ordering the match set', async () => {
+        const { sql, params } = buildRfWhere({ cnaes: ['4637'], uf: 'MS', openedSince: '20260101', hasPhone: true, hasEmail: true });
+        expect(sql).toContain('"dataAbertura" >= $4');
+        expect(sql).toContain("telefone IS NOT NULL AND telefone <> ''");
+        expect(sql).toContain("email IS NOT NULL AND email <> ''");
+        expect(params).toEqual(['4637', '4638', 'MS', '20260101']);
+        mockTx.$queryRawUnsafe.mockResolvedValueOnce([]).mockResolvedValueOnce([{ n: BigInt(0) }]);
+        await searchRfCompanies({ cnaes: ['4637'], uf: 'MS', openedSince: '20260101' }, 1, 20);
+        expect(mockTx.$queryRawUnsafe.mock.calls[0][0]).not.toContain('ORDER BY');
+    });
+
     it('estimates the table size instead of counting 27M rows', async () => {
         expect(await estimateRfCompanyCount()).toBe(27133836);
     });

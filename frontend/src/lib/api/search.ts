@@ -477,12 +477,18 @@ export const rfSearchApi = {
         municipio?: string;
         porte?: string;
         razaoSocial?: string;
+        niche?: string;
+        openedWithinDays?: number;
+        hasPhone?: boolean;
+        hasEmail?: boolean;
         page?: number;
         pageSize?: number;
     }) =>
         request<{
-            companies: RfCompanyResult[];
+            companies: Array<RfCompanyResult & { placeId: string }>;
             total: number;
+            totalCapped?: boolean;
+            cnaesUsed?: string[];
             page: number;
             pageSize: number;
             totalPages: number;
