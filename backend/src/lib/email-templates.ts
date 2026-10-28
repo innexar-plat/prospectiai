@@ -327,7 +327,8 @@ export function buildEmail(options: BuildEmailOptions): string {
     : '';
 
   let content = greeting + titleHtml(title);
-  body.forEach(p => { content += paragraph(p); });
+  // Block-level HTML (e.g. a table of companies) goes in as-is; text becomes a paragraph.
+  body.forEach(p => { content += /^\s*<(table|div)/i.test(p) ? p : paragraph(p); });
   if (ctaHref && ctaLabel) {
     content += ctaButton(safeUrl(ctaHref, siteUrl) ?? '#', ctaLabel, accentColor);
   }

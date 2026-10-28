@@ -497,6 +497,27 @@ async function runExpiry(ctx: Ctx): Promise<void> {
     }
 }
 
+// ── 8. Activation emails ────────────────────────────────────────────────────
+
+async function runActivation(ctx: Ctx): Promise<void> {
+    const { runActivationEmails } = await import('@/lib/activation-lifecycle');
+    const r = await runActivationEmails(ctx.now, ctx.dryRun);
+    if (r.firstSearch) ctx.report.counts.activation_first_search = r.firstSearch;
+    if (r.nudge) ctx.report.counts.activation_nudge = r.nudge;
+}
+
+// ── 9. Win-back emails ──────────────────────────────────────────────────────
+
+async function runReengagement(ctx: Ctx): Promise<void> {
+    const { runReengagementEmails } = await import('@/lib/reengagement');
+    const r = await runReengagementEmails(ctx.now, ctx.dryRun);
+    if (r.sent) {
+        ctx.report.counts.reengagement_sent = r.sent;
+        ctx.report.counts.reengagement_new_companies = r.fromRf;
+        ctx.report.counts.reengagement_own_history = r.fromHistory;
+    }
+}
+
 export async function runBillingLifecycleJob(options: { dryRun?: boolean; now?: Date } = {}): Promise<LifecycleReport> {
     const ctx: Ctx = {
         now: options.now ?? new Date(),
@@ -511,6 +532,8 @@ export async function runBillingLifecycleJob(options: { dryRun?: boolean; now?: 
         ['credits_notice', runCreditsExpiringNotices],
         ['pix', runPixRenewals],
         ['expiry', runExpiry],
+        ['activation', runActivation],
+        ['reengagement', runReengagement],
     ];
     for (const [name, step] of steps) {
         try {

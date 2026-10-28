@@ -51,6 +51,9 @@ export const onboardingCompleteSchema = z.object({
   productService: z.string().max(500).optional().transform(normalizeOptionalText),
   targetAudience: z.string().max(500).optional().transform(normalizeOptionalText),
   mainBenefit: z.string().max(500).optional().transform(normalizeOptionalText),
+  /** City/UF where the user wants customers — default location for searches. */
+  city: z.string().max(120).optional(),
+  state: z.string().max(40).optional(),
 });
 
 /** POST /api/search — city/state/country/radiusKm for locationBias (Places API) */

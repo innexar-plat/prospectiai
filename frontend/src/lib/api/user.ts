@@ -21,8 +21,14 @@ export const workspaceProfileApi = {
 };
 
 export const onboardingApi = {
-    complete: (data: { companyName?: string; productService?: string; targetAudience?: string; mainBenefit?: string }) =>
+    complete: (data: { companyName?: string; productService?: string; targetAudience?: string; mainBenefit?: string; city?: string; state?: string }) =>
         request<{ message: string; onboardingCompletedAt: string }>('/onboarding/complete', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        }),
+    /** Concrete niches to prospect, inferred from the seller profile (empty body = saved profile). */
+    suggestSearches: (data: { productService?: string; targetAudience?: string; locale?: 'pt' | 'en' } = {}) =>
+        request<{ terms: string[] }>('/onboarding/suggest-searches', {
             method: 'POST',
             body: JSON.stringify(data),
         }),

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Building2, Package, Users, Sparkles } from 'lucide-react'
+import { Building2, Package, Users, Sparkles, MapPin } from 'lucide-react'
 import { authApi, onboardingApi, type SessionUser } from '@/lib/api'
 import { trackPendingFreeSignupConversion } from '@/lib/marketing'
 import { Button } from '@/components/ui/Button'
@@ -10,6 +10,11 @@ import { useI18n } from '@/lib/i18n'
 import { getActiveMarket } from '@/lib/market'
 import { clearCheckoutDone, isCheckoutDone } from '@/lib/post-auth-redirect'
 import { markPostOnboardingVisit } from '@/lib/first-search-hint'
+import { BR_STATES, US_STATES } from '@/lib/locationData'
+import { buildTextQuery, startSearch, type SearchPayload } from '@/lib/searchService'
+import { saveToSession } from '@/lib/last-search-storage'
+import { FIRST_SEARCH_SUGGESTIONS_KEY } from '@/components/dashboard/FirstListBanner'
+
 
 export default function OnboardingPage({ user }: { user: SessionUser | null }) {
     const navigate = useNavigate()
@@ -23,6 +28,11 @@ export default function OnboardingPage({ user }: { user: SessionUser | null }) {
     const [productService, setProductService] = useState('')
     const [targetAudience, setTargetAudience] = useState('')
     const [mainBenefit, setMainBenefit] = useState('')
+    const [city, setCity] = useState('')
+    const [uf, setUf] = useState('')
+    const [progress, setProgress] = useState('')
+    const market = getActiveMarket()
+    const states = market === 'US' ? US_STATES : BR_STATES
 
     useEffect(() => {
         const market = getActiveMarket()
@@ -89,12 +99,45 @@ export default function OnboardingPage({ user }: { user: SessionUser | null }) {
                 productService: productService.trim() || undefined,
                 targetAudience: targetAudience.trim() || undefined,
                 mainBenefit: mainBenefit.trim() || undefined,
+                city: city.trim() || undefined,
+                state: uf || undefined,
             })
             markPostOnboardingVisit()
             clearCheckoutDone()
-            window.location.href = '/dashboard'
         } catch {
             setSubmitting(false)
+            return
+        }
+        // The user leaves onboarding with a first customer list instead of an empty dashboard.
+        if (await runFirstSearch()) return
+        window.location.href = '/dashboard'
+    }
+
+    const runFirstSearch = async (): Promise<boolean> => {
+        const cityTrim = city.trim()
+        if (!cityTrim || (!productService.trim() && !targetAudience.trim())) return false
+        try {
+            setProgress(t('page.onboarding.finding', { city: cityTrim }))
+            const { terms } = await onboardingApi.suggestSearches({
+                productService: productService.trim() || undefined,
+                targetAudience: targetAudience.trim() || undefined,
+                locale: market === 'US' ? 'en' : 'pt',
+            })
+            const term = terms[0]
+            if (!term) return false
+            const payload: SearchPayload = { advancedTerm: term, city: cityTrim, state: uf || undefined, countryCode: market, niches: [] }
+            const result = await startSearch(payload, t)
+            if (!result.places?.length) return false
+            saveToSession({
+                places: result.places,
+                nextPageToken: result.nextPageToken,
+                params: { textQuery: buildTextQuery(payload), city: cityTrim, state: uf || undefined, country: market },
+            })
+            try { sessionStorage.setItem(FIRST_SEARCH_SUGGESTIONS_KEY, JSON.stringify({ terms, city: cityTrim, state: uf })) } catch { /* optional */ }
+            window.location.href = '/dashboard/resultados?primeira=1'
+            return true
+        } catch {
+            return false
         }
     }
 
@@ -175,6 +218,34 @@ export default function OnboardingPage({ user }: { user: SessionUser | null }) {
                             icon={<Sparkles size={16} />}
                         />
                     </div>
+
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-muted uppercase tracking-wider ml-1">{t('page.onboarding.city')}</label>
+                        <div className="flex gap-2">
+                            <div className="flex-1">
+                                <Input
+                                    value={city}
+                                    onChange={(e) => setCity(e.target.value)}
+                                    placeholder={t('page.onboarding.cityPlaceholder')}
+                                    icon={<MapPin size={16} />}
+                                />
+                            </div>
+                            <select
+                                value={uf}
+                                onChange={(e) => setUf(e.target.value)}
+                                aria-label={t('page.onboarding.state')}
+                                className="w-24 rounded-xl border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/30"
+                            >
+                                <option value="">{t('page.onboarding.state')}</option>
+                                {states.filter((s) => s.value !== 'Todos').map((s) => <option key={s.value} value={s.value}>{s.value}</option>)}
+                            </select>
+                        </div>
+                        <p className="text-[11px] text-muted ml-1">{t('page.onboarding.cityHint')}</p>
+                    </div>
+
+                    {progress && (
+                        <p className="text-sm text-center text-violet-700 dark:text-violet-300 font-medium" role="status">{progress}</p>
+                    )}
 
                     <Button
                         type="submit"

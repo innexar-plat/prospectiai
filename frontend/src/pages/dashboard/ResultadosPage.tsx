@@ -10,6 +10,7 @@ import { ProfileCompletenessBanner } from '@/components/dashboard/ProfileComplet
 import { ResultCardAnalyzeButton } from '@/components/dashboard/ResultCardAnalyzeButton';
 import { ResultCardQuickActions } from '@/components/dashboard/ResultCardQuickActions';
 import { AiAnalysisCardPreview } from '@/components/dashboard/AiAnalysisCardPreview';
+import { FirstListBanner } from '@/components/dashboard/FirstListBanner';
 import { cn } from '@/lib/utils';
 import { buildAnalyzePayload } from '@/lib/analyze-payload';
 import { exportToCSV, flattenForExport } from '@/lib/exportService';
@@ -615,6 +616,8 @@ export default function ResultadosPage() {
             ))}
           </div>
         )}
+
+        <FirstListBanner resultsCount={places.length} />
 
         {isFree && places.length > 10 && (
           <div className="rounded-2xl p-4 bg-violet-600/10 border border-violet-500/20 flex flex-col sm:flex-row gap-4 items-center justify-between">

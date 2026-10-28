@@ -333,7 +333,7 @@ async function inferCnaesWithAI(textQuery: string): Promise<string[]> {
     }
 }
 
-async function inferCnaesForSearch(textQuery: string, includedType?: string | null): Promise<string[]> {
+export async function inferCnaesForSearch(textQuery: string, includedType?: string | null): Promise<string[]> {
     const terms: string[] = [textQuery];
     if (includedType) {
         terms.push(...(SEARCH_RF_CNAE_HINTS_BY_TYPE[includedType] ?? []));

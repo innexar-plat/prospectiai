@@ -23,6 +23,11 @@ const STEP_LABEL: Record<string, string> = {
   period_synced: 'Períodos sincronizados com o provedor',
   plan_expired: 'Planos expirados',
   reactivation_pix: 'PIX de reativação gerados',
+  activation_first_search: 'E-mails "primeira busca" (D+1)',
+  activation_nudge: 'E-mails de ativação (D+3)',
+  reengagement_sent: 'E-mails de reengajamento enviados',
+  reengagement_new_companies: '…com empresas recém-abertas',
+  reengagement_own_history: '…com leads da última busca',
 };
 
 type Filter = 'all' | 'paying' | 'expiring' | 'attention' | 'manual';

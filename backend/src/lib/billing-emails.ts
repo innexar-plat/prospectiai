@@ -4,7 +4,7 @@
  * so a cron re-run never emails the same customer twice for the same event.
  * Fire-and-forget: failures are logged, never thrown.
  */
-import { buildEmail, trialExpiringTemplate, trialExpiredTemplate, subscriptionCancelledTemplate, dunningThirdTemplate } from '@/lib/email-templates';
+import { buildEmail, trialExpiringTemplate, trialExpiredTemplate, subscriptionCancelledTemplate, dunningThirdTemplate, trialActivationNudgeTemplate } from '@/lib/email-templates';
 import { sendEmail } from '@/lib/email';
 import { acquireRedisLock } from '@/lib/redis';
 import { getSiteUrlForMarket } from '@/lib/site-url';
@@ -264,4 +264,98 @@ export function sendTrialExpiredEmail(workspaceId: string, to: BillingRecipient)
     const base = siteFor(to);
     const html = trialExpiredTemplate(`${base}/dashboard/planos`, to.name ?? undefined);
     return sendOnce(`trial-expired:${workspaceId}`, to.email, 'Seu teste gratuito encerrou', html);
+}
+
+// ── Activation (users who signed up but have not found value yet) ───────────
+
+/** D+1 without any search: one click to a first list built from their profile. */
+export function sendFirstSearchEmail(userId: string, to: BillingRecipient, suggestions: string[], city?: string | null): Promise<boolean> {
+    if (isEn(to)) return Promise.resolve(false);
+    const base = siteFor(to);
+    const niches = suggestions.slice(0, 3);
+    const body = [
+        'Você criou sua conta, mas ainda não fez sua primeira busca — e é nela que a plataforma mostra o valor.',
+        niches.length > 0
+            ? `Com base no que você vende, separamos nichos com boa chance de comprar de você${city ? ` em ${escapeText(city)}` : ''}: <strong>${niches.map(escapeText).join('</strong>, <strong>')}</strong>.`
+            : 'Escolha o tipo de empresa que você atende e a cidade: em menos de um minuto você tem uma lista com telefone, site e nota no Google.',
+        'Depois, clique em <strong>Analisar com IA</strong> em qualquer lead para receber a mensagem de WhatsApp pronta para enviar.',
+    ];
+    const html = buildEmail({
+        title: 'Sua primeira lista de clientes está a um clique',
+        preheader: 'Leva menos de um minuto e já sai com telefone e mensagem pronta.',
+        userName: to.name ?? undefined,
+        body,
+        ctaHref: `${base}/dashboard${niches[0] ? `?q=${encodeURIComponent(niches[0])}${city ? `&city=${encodeURIComponent(city)}` : ''}` : ''}`,
+        ctaLabel: 'Fazer minha primeira busca',
+        accentColor: BRAND_COLOR,
+        siteUrl: base,
+    });
+    return sendOnce(`activation-first-search:${userId}`, to.email, 'Sua primeira lista de clientes está a um clique', html);
+}
+
+/** D+3 with at most one search: the existing activation nudge. */
+export function sendActivationNudgeEmail(userId: string, to: BillingRecipient): Promise<boolean> {
+    if (isEn(to)) return Promise.resolve(false);
+    const base = siteFor(to);
+    const html = trialActivationNudgeTemplate(`${base}/dashboard`, to.name ?? undefined);
+    return sendOnce(`activation-nudge:${userId}`, to.email, 'Encontre seus próximos clientes em 2 minutos', html);
+}
+
+// ── Win-back (inactive users) ───────────────────────────────────────────────
+
+export interface ReengagementCompany {
+    name: string;
+    detail: string;
+    phone: string | null;
+}
+
+function companyList(companies: ReengagementCompany[]): string {
+    const rows = companies.map((c) => `
+      <tr><td style="padding:10px 12px;border-bottom:1px solid #eef0f4;">
+        <div style="font-size:15px;font-weight:600;color:#111827;">${escapeText(c.name)}</div>
+        ${c.detail ? `<div style="font-size:13px;color:#6b7280;margin-top:2px;">${escapeText(c.detail)}</div>` : ''}
+        ${c.phone ? `<div style="font-size:13px;color:#374151;margin-top:4px;">☎ ${escapeText(c.phone)}</div>` : ''}
+      </td></tr>`).join('');
+    return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #e5e7eb;border-radius:10px;border-collapse:separate;overflow:hidden;">${rows}</table>`;
+}
+
+/**
+ * Weekly win-back: companies that recently opened in the user's niche/city (or the best leads
+ * they left behind). Unsubscribe link is the user id, as the /unsubscribe route expects.
+ */
+export function sendReengagementEmail(
+    userId: string,
+    to: BillingRecipient,
+    p: { source: 'rf' | 'history'; niche: string; city: string | null; companies: ReengagementCompany[]; total: number; week: string },
+): Promise<boolean> {
+    if (isEn(to)) return Promise.resolve(false);
+    const base = siteFor(to);
+    const where = p.city ? ` em ${escapeText(p.city)}` : '';
+    const niche = escapeText(p.niche);
+    const title = p.source === 'rf'
+        ? `${p.total >= 300 ? '300+' : p.total} empresas de ${niche} abriram${where} recentemente`
+        : `${p.companies.length} empresas da sua busca "${niche}" ainda esperam seu contato`;
+    const intro = p.source === 'rf'
+        ? `Empresas recém-abertas ainda não têm fornecedor definido — é o melhor momento para chegar primeiro. Separamos algumas${where}:`
+        : `Na sua última busca encontramos empresas com boa chance de fechar e você ainda não falou com elas. Estas se destacam:`;
+    const ctaHref = `${base}/dashboard?q=${encodeURIComponent(p.niche)}${p.city ? `&city=${encodeURIComponent(p.city)}` : ''}&utm_source=email&utm_campaign=reengagement`;
+    const html = buildEmail({
+        title,
+        preheader: p.source === 'rf' ? 'Chegue antes da concorrência: veja os contatos completos.' : 'Os contatos completos e a mensagem pronta estão na plataforma.',
+        userName: to.name ?? undefined,
+        body: [
+            intro,
+            companyList(p.companies),
+            'Na plataforma você vê o telefone completo, WhatsApp, site e recebe a mensagem de abordagem escrita pela IA para cada uma.',
+        ],
+        ctaHref,
+        ctaLabel: 'Ver contatos completos',
+        accentColor: BRAND_COLOR,
+        unsubscribeToken: userId,
+        siteUrl: base,
+    });
+    const subject = p.source === 'rf'
+        ? `${p.total >= 300 ? '300+' : p.total} empresas de ${p.niche} abriram${p.city ? ` em ${p.city}` : ''} recentemente`
+        : `${p.companies.length} empresas da sua busca "${p.niche}" ainda esperam seu contato`;
+    return sendOnce(`reengagement:${userId}:${p.week}`, to.email, subject, html);
 }

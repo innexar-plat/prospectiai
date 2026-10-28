@@ -41,7 +41,7 @@ async function ensureWorkspaceMembership(userId: string, market: ReturnType<type
  * Conclui o onboarding: atualiza perfil do negócio e marca onboardingCompletedAt.
  * Após isso o usuário pode acessar o dashboard (busca baseada nesses dados).
  *
- * Body: { companyName?, productService?, targetAudience?, mainBenefit? }
+ * Body: { companyName?, productService?, targetAudience?, mainBenefit?, city?, state? }
  */
 export async function POST(req: Request) {
     const session = await auth()
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
         if (!parsed.success) {
             return NextResponse.json({ error: formatZodError(parsed) }, { status: 400 })
         }
-        const { companyName, productService, targetAudience, mainBenefit } = parsed.data
+        const { companyName, productService, targetAudience, mainBenefit, city, state } = parsed.data
 
         const market = getRequestMarket(req);
         const membership = await ensureWorkspaceMembership(session.user.id, market);
@@ -75,6 +75,8 @@ export async function POST(req: Request) {
                     productService: productService ?? undefined,
                     targetAudience: targetAudience ?? undefined,
                     mainBenefit: mainBenefit ?? undefined,
+                    city: city?.trim() || undefined,
+                    state: state?.trim() || undefined,
                 },
             }),
         ])
