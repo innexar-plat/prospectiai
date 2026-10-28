@@ -1,3 +1,4 @@
+import { instrumentCron } from '@/lib/ops-telemetry';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { runEmailSequenceWorker } from '@/modules/auto-prospeccao/application/email-sequence.worker';
@@ -10,7 +11,7 @@ const CRON_SECRET = process.env.CRON_SECRET;
  * Processa sequências de email para todos os workspaces com emailAutoSend ativo.
  * Deve ser chamado a cada 30 minutos.
  */
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   if (CRON_SECRET) {
     const auth = req.headers.get('authorization');
     if (auth !== `Bearer ${CRON_SECRET}`) {
@@ -57,3 +58,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = instrumentCron('auto-prospeccao/email-sequence', handlePOST);

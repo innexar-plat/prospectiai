@@ -37,6 +37,11 @@ jest.mock('@/lib/affiliate', () => ({
   createCommissionForRecurring: jest.fn().mockResolvedValue(undefined),
 }));
 
+jest.mock('@/lib/billing-ledger', () => ({
+  recordPayment: jest.fn().mockResolvedValue(undefined),
+  markPaymentRefunded: jest.fn().mockResolvedValue(undefined),
+}));
+jest.mock('@/lib/ops-telemetry', () => ({ recordWebhook: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('@/lib/logger', () => ({
   logger: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },
 }));

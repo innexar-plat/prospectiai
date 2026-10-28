@@ -119,7 +119,7 @@ export function RepLevels() {
                     <input type="number" min={0} value={editForm.monthlyGoal} onChange={(e) => setEditForm({ ...editForm, monthlyGoal: parseInt(e.target.value, 10) || 0 })} className="w-full rounded border border-gray-300 bg-gray-100 px-2 py-1 text-gray-700" />
                   </div>
                   <div className="flex gap-2 pt-2">
-                    <button type="button" onClick={handleSave} disabled={saving} className="px-3 py-1.5 rounded bg-violet-600 text-white text-xs disabled:opacity-50">
+                    <button type="button" onClick={handleSave} disabled={saving} className="px-3 py-1.5 rounded bg-indigo-600 text-white text-xs disabled:opacity-50">
                       {saving ? '…' : 'Salvar'}
                     </button>
                     <button type="button" onClick={cancelEdit} className="px-3 py-1.5 rounded border border-gray-300 text-gray-600 text-xs">

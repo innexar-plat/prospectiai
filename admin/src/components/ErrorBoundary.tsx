@@ -60,7 +60,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
           <button
             type="button"
             onClick={() => isChunk ? window.location.reload() : this.setState({ hasError: false, error: null })}
-            className="px-4 py-2 rounded-xl bg-violet-600 text-white font-medium hover:bg-violet-500"
+            className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-500"
           >
             {isChunk ? 'Recarregar' : 'Tentar novamente'}
           </button>

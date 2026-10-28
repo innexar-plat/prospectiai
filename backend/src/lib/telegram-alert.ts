@@ -101,7 +101,7 @@ export async function sendTelegramAlert(opts: AlertOptions): Promise<boolean> {
     }
 
     text += `\n🕐 ${escapeHtml(timestamp)}`;
-    text += `\n🏷 ${escapeHtml('PrecisionAI')}`;
+    text += `\n🏷 ${escapeHtml('Precision IA')}`;
 
     text = truncate(text, MAX_MESSAGE_LENGTH);
 

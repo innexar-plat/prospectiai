@@ -1,3 +1,4 @@
+import { instrumentCron } from '@/lib/ops-telemetry';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { approveCommissionsByAvailableAt, buildAffiliateDashboardUrl } from '@/lib/affiliate';
@@ -9,7 +10,7 @@ import { logger } from '@/lib/logger';
  * Envia e-mail "comissão disponível" para cada afiliado que teve comissões aprovadas.
  * Chamar com Authorization: Bearer <CRON_SECRET> ou header x-cron-secret.
  */
-export async function GET(req: Request) {
+async function handleGET(req: Request) {
   const authHeader = req.headers.get('authorization');
   const secretHeader = req.headers.get('x-cron-secret');
   const secret = process.env.CRON_SECRET;
@@ -55,3 +56,5 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Job failed' }, { status: 500 });
   }
 }
+
+export const GET = instrumentCron('affiliate-approve-commissions', handleGET);

@@ -1,3 +1,4 @@
+import { instrumentCron } from '@/lib/ops-telemetry';
 import { NextResponse } from 'next/server';
 import { runBrTrialReactivationCampaign } from '@/lib/br-trial-reactivation';
 import { logger } from '@/lib/logger';
@@ -8,7 +9,7 @@ import { logger } from '@/lib/logger';
  *
  * Auth: Authorization: Bearer <CRON_SECRET> or x-cron-secret header.
  */
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const authHeader = req.headers.get('authorization');
   const secretHeader = req.headers.get('x-cron-secret');
   const secret = process.env.CRON_SECRET;
@@ -53,3 +54,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Job failed' }, { status: 500 });
   }
 }
+
+export const POST = instrumentCron('br-trial-reactivation', handlePOST);

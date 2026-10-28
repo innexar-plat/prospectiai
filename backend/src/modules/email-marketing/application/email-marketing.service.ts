@@ -108,7 +108,7 @@ export function renderTemplatePreview(template: {
     text
       .replace(/\{\{firstName\}\}/gi, firstName)
       .replace(/\{\{name\}\}/gi, userName ?? '')
-      .replace(/\{\{appName\}\}/gi, 'PrecisionAI');
+      .replace(/\{\{appName\}\}/gi, 'Precision IA');
   const replaceArrayVars = (arr: string[]) => arr.map(replaceVars);
 
   const paragraphs = replaceArrayVars(body.paragraphs ?? []);

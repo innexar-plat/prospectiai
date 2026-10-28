@@ -55,6 +55,12 @@ jest.mock('@/lib/affiliate', () => ({
     cancelCommissionsByOrderOrSubscription: jest.fn().mockResolvedValue(0),
 }));
 jest.mock('@/lib/telegram-business-alerts', () => new Proxy({}, { get: () => jest.fn() }));
+const mockRecordPayment = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/lib/billing-ledger', () => ({
+    recordPayment: (...a: unknown[]) => mockRecordPayment(...a),
+    markPaymentRefunded: jest.fn().mockResolvedValue(undefined),
+}));
+jest.mock('@/lib/ops-telemetry', () => ({ recordWebhook: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('@/lib/logger', () => ({ logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() } }));
 
 import { POST } from '@/app/api/billing/webhook/mercadopago/route';
@@ -131,6 +137,9 @@ describe('MP webhook — card subscription', () => {
         }));
         expect(mockRecurringCommission).toHaveBeenCalledWith(expect.objectContaining({ orderId: '555', valueCents: 9900 }));
         expect(mockRenewalEmail).toHaveBeenCalled();
+        expect(mockRecordPayment).toHaveBeenCalledWith(expect.objectContaining({
+            externalId: 'mp:555', kind: 'RENEWAL', method: 'credit_card', amountCents: 9900, workspaceId: 'w1',
+        }));
     });
 
     it('pending PreApproval (checkout in progress) does not mark the account past_due', async () => {
@@ -182,6 +191,7 @@ describe('MP webhook — recurring PIX', () => {
         expect(mockRecurringCommission).toHaveBeenCalled();
         expect(mockFirstCommission).not.toHaveBeenCalled();
         expect(mockRenewalEmail).toHaveBeenCalled();
+        expect(mockRecordPayment).toHaveBeenCalledWith(expect.objectContaining({ externalId: 'mp:777', kind: 'RENEWAL', amountCents: 9900 }));
     });
 
     it('first PIX purchase replacing a card subscription cancels the card PreApproval', async () => {

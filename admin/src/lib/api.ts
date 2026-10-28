@@ -429,8 +429,96 @@ export const authApi = {
   },
 };
 
+export interface CronStatus {
+  name: string;
+  label: string;
+  intervalMin: number;
+  scheduled: boolean;
+  stale: boolean;
+  last: { at: string; ok: boolean; durationMs: number; summary?: string } | null;
+  history: Array<{ at: string; ok: boolean; durationMs: number; summary?: string }>;
+}
+
+export interface SystemHealth {
+  status: 'ok' | 'degraded' | 'down';
+  problems: string[];
+  checkedAt: string;
+  app: { version: string | null; node: string; uptimeSec: number; memory: { rssMb: number; heapUsedMb: number; heapTotalMb: number } };
+  db: { ok: boolean; latencyMs: number; detail?: { sizeBytes?: number; connections?: number; activeConnections?: number; lastMigration?: string | null; lastMigrationAt?: string | null; error?: string } };
+  redis: { ok: boolean; latencyMs: number; detail?: { usedMemory?: string | null; maxMemory?: string | null; keys?: number; evictedKeys?: number; uptimeDays?: number; version?: string | null; error?: string } };
+  queues: Record<string, Record<string, number | boolean | string>>;
+  integrations: {
+    email: { provider: string; ok: boolean; note?: string };
+    mercadoPago: { ok: boolean; token: boolean; webhookSecret: boolean };
+    stripe: { ok: boolean; key: boolean; webhookSecret: boolean };
+    googlePlaces: { ok: boolean };
+    serper: { ok: boolean };
+    telegram: { ok: boolean };
+    googleLogin: { ok: boolean };
+    cronSecret: { ok: boolean };
+    ai: { ok: boolean; configured: Array<{ role: string; provider: string; model: string }>; envFallbacks: Record<string, boolean> };
+  };
+  crons: CronStatus[];
+  webhooks: Record<string, { lastAt?: string; lastOkAt?: string; lastError?: string; lastErrorAt?: string }>;
+  errors: { perHour: Array<{ hour: string; count: number }>; recent: Array<{ at: string; message: string; route?: string }> };
+  billing: { paidPlansPastPeriod: number; pastDue: number; openPixCharges: number; overduePlanChanges: number; workspacesOverLimit: number } | null;
+  usage: { searches: number; analyses: number; signups: number; byType: Record<string, number> } | null;
+}
+
+export interface BillingSubscription {
+  id: string;
+  name: string | null;
+  ownerEmail: string | null;
+  ownerName: string | null;
+  market: string;
+  plan: string;
+  provider: 'card_mp' | 'pix' | 'stripe' | 'manual';
+  status: string | null;
+  billingCycle: string | null;
+  currentPeriodEnd: string | null;
+  creditsResetAt: string | null;
+  leadsUsed: number;
+  leadsLimit: number;
+  pendingPlanId: string | null;
+  pendingPlanEffectiveAt: string | null;
+  gracePeriodEnd: string | null;
+  openPix: { paymentId: string | null; url: string | null; expiresAt: string } | null;
+  promoPaymentsRemaining: number | null;
+  mrr: number;
+  currency: 'BRL' | 'USD';
+}
+
+export interface BillingOverview {
+  summary: {
+    mrrBrl: number;
+    mrrUsd: number;
+    paying: number;
+    byProvider: { card_mp: number; pix: number; stripe: number };
+    manualGrants: number;
+    expiring7d: number;
+    pastDue: number;
+    openPix: number;
+    scheduledChanges: number;
+    revenue30d: Array<{ currency: string; amount: number; payments: number }>;
+  };
+  subscriptions: BillingSubscription[];
+  payments: Array<{ id: string; workspaceId: string | null; provider: string; externalId: string; method: string | null; kind: string; status: string; amount: number; currency: string; planId: string | null; createdAt: string }>;
+  revenueByMonth: Array<{ month: string; currency: string; amount: number; payments: number }>;
+}
+
+export interface LifecycleReport {
+  dryRun: boolean;
+  counts: Record<string, number>;
+  actions: Array<{ step: string; workspaceId: string; detail: string }>;
+  errors: Array<{ step: string; workspaceId: string; detail: string }>;
+}
+
 export const adminApi = {
   stats: () => request<AdminStats>('/admin/stats'),
+  systemHealth: () => request<SystemHealth>('/admin/system-health'),
+  billing: () => request<BillingOverview>('/admin/billing'),
+  runBillingLifecycle: (dryRun: boolean) =>
+    request<LifecycleReport>('/admin/billing/lifecycle', { method: 'POST', body: JSON.stringify({ dryRun }) }),
   statsHistory: (days = 7) => request<StatsHistoryResponse>(`/admin/stats/history?days=${days}`),
 
   users: (params?: AdminListParams) =>

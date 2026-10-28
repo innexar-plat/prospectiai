@@ -280,7 +280,7 @@ async function tryCacheOrDbSearch(
     saveHistory: SaveHistoryFn,
 ): Promise<SearchResult | null> {
     if (pageToken) return null;
-    const { workspaceId, textQuery, includedType, effectivePageSize, hasWebsite, hasPhone, city, state, country, radiusKm } = params;
+    const { textQuery, includedType, effectivePageSize, hasWebsite, hasPhone, city, state, country, radiusKm } = params;
     const cacheKey = buildCacheKey(textQuery, includedType, effectivePageSize, hasWebsite, hasPhone, city, state, country, radiusKm);
     const cached = await getCached<{ places: PlaceResult[]; nextPageToken?: string }>(cacheKey);
     const cachedCount = cached?.places?.length ?? 0;
@@ -290,7 +290,6 @@ async function tryCacheOrDbSearch(
         const crossedPlaces = await crossWithReceitaIfEligible(cached.places, textQuery, includedType, city, state, country);
         const unified = await hydratePlacesWithLeadSnapshot(collectAllContacts(crossedPlaces));
         await saveHistory(unified.length, unified);
-        await chargeSearchCredit(workspaceId);
         return { ...cached, places: unified, fromCache: true };
     }
     if (cachedCount > 0) logger.info('Search: cache skipped (below minimum)', { cachedCount, minAcceptableFromCache });
@@ -358,14 +357,12 @@ async function tryCacheOrDbSearch(
     const enriched = await enrichWebsitesFromSerper(crossedPlaces);
     const unified = collectAllContacts(enriched);
     await saveHistory(unified.length, unified);
-    await chargeSearchCredit(workspaceId);
     return { places: unified, fromLocalDb: true };
 }
 
 /**
- * One credit per search that returns results, whatever the source (Google, shared cache or
- * local lead base). Cache/local hits used to be free, so the same query cost a credit for one
- * customer and nothing for the next.
+ * One credit per search served by Google Places. Results from the shared cache or the local
+ * lead base are free (product decision, 2026-10-28).
  */
 async function chargeSearchCredit(workspaceId: string): Promise<void> {
     await prisma.workspace.update({

@@ -159,7 +159,7 @@ export function CrmIntegrationsPage() {
                 onClick={handleSaveRd}
                 disabled={savingRd || !rdClientId.trim()}
                 isLoading={savingRd}
-                className="bg-violet-600 hover:bg-violet-500 text-white border-0"
+                className="bg-indigo-600 hover:bg-indigo-500 text-white border-0"
               >
                 <Save className="w-4 h-4 mr-2" />
                 Salvar app RD

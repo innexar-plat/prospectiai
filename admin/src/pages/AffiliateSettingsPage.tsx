@@ -162,7 +162,7 @@ export function AffiliateSettingsPage() {
         <button
           type="submit"
           disabled={saving}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-500 disabled:opacity-50"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 disabled:opacity-50"
         >
           <Save className="w-4 h-4" />
           {saving ? 'Salvando…' : 'Salvar'}

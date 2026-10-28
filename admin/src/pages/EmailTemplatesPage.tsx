@@ -101,7 +101,7 @@ export function EmailTemplatesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-violet-600" />
+            <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" />
             Templates de Email
           </h1>
           <p className="text-sm text-gray-500 mt-1">{total} template{total !== 1 ? 's' : ''}</p>
@@ -165,7 +165,7 @@ export function EmailTemplatesPage() {
                     <div className="text-xs text-gray-400">{t.slug}</div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="inline-block bg-violet-50 text-violet-700 text-xs font-medium px-2 py-0.5 rounded-full">
+                    <span className="inline-block bg-indigo-50 text-indigo-700 text-xs font-medium px-2 py-0.5 rounded-full">
                       {TYPE_LABELS[t.type] ?? t.type}
                     </span>
                   </td>
@@ -179,7 +179,7 @@ export function EmailTemplatesPage() {
                   <td className="px-4 py-3 text-gray-400 text-xs">{new Date(t.updatedAt).toLocaleDateString('pt-BR')}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => navigate(`${t.id}`)} className="p-1.5 rounded-lg hover:bg-violet-50 text-gray-400 hover:text-violet-600" title="Editar">
+                      <button onClick={() => navigate(`${t.id}`)} className="p-1.5 rounded-lg hover:bg-indigo-50 text-gray-400 hover:text-indigo-600" title="Editar">
                         <Pencil className="w-4 h-4" />
                       </button>
                       <button onClick={() => handleDelete(t.id, t.name)} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600" title="Excluir">

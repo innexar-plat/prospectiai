@@ -222,7 +222,7 @@ export function EmailTemplateEditorPage() {
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-semibold text-gray-900">Parágrafos</h2>
-              <button onClick={addParagraph} className="text-violet-600 hover:text-violet-700 text-sm flex items-center gap-1">
+              <button onClick={addParagraph} className="text-indigo-600 hover:text-indigo-700 text-sm flex items-center gap-1">
                 <Plus className="w-4 h-4" /> Adicionar
               </button>
             </div>
@@ -234,7 +234,7 @@ export function EmailTemplateEditorPage() {
                     value={p}
                     onChange={(e) => updateParagraph(i, e.target.value)}
                     placeholder={`Parágrafo ${i + 1}`}
-                    className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm min-h-[60px] resize-y focus:outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400"
+                    className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm min-h-[60px] resize-y focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
                   />
                   {paragraphs.length > 1 && (
                     <button onClick={() => removeParagraph(i)} className="p-1.5 text-gray-400 hover:text-red-500">
@@ -250,7 +250,7 @@ export function EmailTemplateEditorPage() {
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-semibold text-gray-900">Benefícios (lista com check)</h2>
-              <button onClick={addBenefit} className="text-violet-600 hover:text-violet-700 text-sm flex items-center gap-1">
+              <button onClick={addBenefit} className="text-indigo-600 hover:text-indigo-700 text-sm flex items-center gap-1">
                 <Plus className="w-4 h-4" /> Adicionar
               </button>
             </div>

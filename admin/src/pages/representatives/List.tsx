@@ -126,7 +126,7 @@ export function RepresentativesList() {
         <button
           type="button"
           onClick={() => navigate('novo')}
-          className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-500 w-full sm:w-auto text-center"
+          className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 w-full sm:w-auto text-center"
         >
           Novo Representante
         </button>
@@ -177,7 +177,7 @@ export function RepresentativesList() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <Link to={r.id} className="text-violet-600 hover:text-violet-700 text-sm">
+                      <Link to={r.id} className="text-indigo-600 hover:text-indigo-700 text-sm">
                         Ver detalhes
                       </Link>
                       {r.status === 'ACTIVE' && (

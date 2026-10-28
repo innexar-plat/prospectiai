@@ -149,6 +149,8 @@ export async function getAdminMarketStats(): Promise<MarketStatsResult> {
             where: {
                 plan: { in: PAID_PLANS },
                 subscriptionStatus: { in: ['active', 'trialing'] },
+                // Manual/admin grants have no subscription and bring no revenue.
+                subscriptionId: { not: null },
             },
             select: {
                 plan: true,
@@ -168,9 +170,10 @@ export async function getAdminMarketStats(): Promise<MarketStatsResult> {
                 priceAnnualUsd: true,
             },
         }),
-        prisma.affiliateCommission.groupBy({
+        // Revenue actually received (payment ledger), not affiliate commissions.
+        prisma.billingPayment.groupBy({
             by: ['currency'],
-            where: { status: { in: ['APPROVED', 'PAID'] } },
+            where: { status: 'APPROVED' },
             _sum: { amountCents: true },
         }),
     ]);

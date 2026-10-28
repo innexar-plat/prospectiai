@@ -17,7 +17,7 @@ describe('reactivation-promo-email', () => {
 
   it('returns compelling PT subject without spam patterns', () => {
     const subject = getReactivationPromoEmailSubject();
-    expect(subject).toContain('PrecisionAI');
+    expect(subject).toContain('Precision IA');
     expect(subject).toContain('R$ 59');
     expect(subject).not.toMatch(/!!!|URGENTE|CLIQUE AQUI/i);
   });

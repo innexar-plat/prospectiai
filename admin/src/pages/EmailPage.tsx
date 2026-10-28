@@ -216,7 +216,7 @@ export function EmailPage() {
               onClick={handleSaveConfig}
               disabled={saving}
               isLoading={saving}
-              className="bg-violet-600 hover:bg-violet-500 text-white border-0"
+              className="bg-indigo-600 hover:bg-indigo-500 text-white border-0"
             >
               <Save className="w-4 h-4 mr-2" />
               Salvar configuração
@@ -268,7 +268,7 @@ export function EmailPage() {
                 onClick={handleSendTest}
                 disabled={!configured || sending}
                 isLoading={sending}
-                className="bg-violet-600 hover:bg-violet-500 text-white border-0"
+                className="bg-indigo-600 hover:bg-indigo-500 text-white border-0"
               >
                 Enviar teste
               </Button>

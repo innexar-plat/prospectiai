@@ -119,3 +119,8 @@ export async function countOnlineUsers(): Promise<number> {
         return 0;
     }
 }
+
+/** Shared client for modules that need raw Redis commands (ops telemetry). May be null when Redis is down. */
+export function getRedisClient(): Redis | null {
+    return getRedis();
+}

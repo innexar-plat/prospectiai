@@ -140,7 +140,7 @@ export function EmailCampaignDetailPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <StatCard icon={<Users className="w-5 h-5 text-violet-600" />} label="Total destinatários" value={campaign.totalSent + campaign.totalFailed} />
+        <StatCard icon={<Users className="w-5 h-5 text-indigo-600" />} label="Total destinatários" value={campaign.totalSent + campaign.totalFailed} />
         <StatCard icon={<CheckCircle2 className="w-5 h-5 text-emerald-600" />} label="Enviados" value={campaign.totalSent} />
         <StatCard icon={<AlertCircle className="w-5 h-5 text-red-500" />} label="Falhas" value={campaign.totalFailed} />
         <StatCard

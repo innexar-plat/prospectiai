@@ -196,9 +196,9 @@ const TEAM_INVITE: Record<Locale, TeamInviteEmailCopy> = {
     pt: {
         subject: (ws) => `Convite para o workspace "${ws}" – Precision IA`,
         title: (ws) => `Você foi convidado para "${ws}"`,
-        preheader: (inv) => `${inv} quer colaborar com você no PrecisionAI.`,
+        preheader: (inv) => `${inv} quer colaborar com você no Precision IA.`,
         body: (inv, ws) => [
-            `<strong>${inv}</strong> convidou você para o workspace <strong>"${ws}"</strong> no PrecisionAI.`,
+            `<strong>${inv}</strong> convidou você para o workspace <strong>"${ws}"</strong> no Precision IA.`,
             'Aceite o convite para acessar os leads, análises e prospecções compartilhadas da equipe.',
         ],
         ctaLabel: 'Aceitar convite',
@@ -245,7 +245,7 @@ const TEAM_INVITE_ACCOUNT: Record<Locale, TeamInviteAccountCreatedCopy> = {
     pt: {
         subject: (ws) => `Defina sua senha – ${ws} – Precision IA`,
         title: (ws) => `Sua conta foi criada em "${ws}"`,
-        preheader: 'Defina sua senha para começar a usar o PrecisionAI.',
+        preheader: 'Defina sua senha para começar a usar o Precision IA.',
         body: (inv, ws) => [
             `<strong>${inv}</strong> criou uma conta para você no workspace <strong>"${ws}"</strong>.`,
             'Clique no botão abaixo para definir sua senha e acessar o dashboard. Após isso, você já pode explorar leads e análises com IA.',
@@ -294,9 +294,9 @@ const REPRESENTATIVE_INVITE: Record<Locale, RepresentativeInviteCopy> = {
     pt: {
         subject: 'Você foi convidado como Representante – Precision IA',
         title: 'Sua conta de Representante foi criada',
-        preheader: 'Defina sua senha para acessar o painel Comercial do PrecisionAI.',
+        preheader: 'Defina sua senha para acessar o painel Comercial do Precision IA.',
         body: [
-            'Você foi cadastrado como <strong>Representante Comercial</strong> no PrecisionAI.',
+            'Você foi cadastrado como <strong>Representante Comercial</strong> no Precision IA.',
             'Clique no botão abaixo para definir sua senha e acessar o menu Comercial, com seus clientes, comissões e link de divulgação.',
         ],
         ctaLabel: 'Definir minha senha',
@@ -345,7 +345,7 @@ const REPRESENTATIVE_PROMOTED: Record<Locale, RepresentativePromotedCopy> = {
         title: 'Você ganhou acesso ao menu Comercial',
         preheader: 'Sua conta Precision AI agora tem acesso de Representante.',
         body: [
-            'Sua conta existente no PrecisionAI foi promovida a <strong>Representante Comercial</strong>.',
+            'Sua conta existente no Precision IA foi promovida a <strong>Representante Comercial</strong>.',
             'Acesse o dashboard e procure a seção "Canais de Vendas" no menu lateral para ver seus clientes, comissões e link de divulgação.',
         ],
         ctaLabel: 'Acessar o dashboard',
@@ -511,7 +511,7 @@ const AFFILIATE_APPROVED: Record<Locale, AffiliateApprovedEmailCopy> = {
         title: 'Sua conta de afiliado foi aprovada!',
         preheader: (code) => `Seu código de afiliado: ${code}. Comece a indicar agora.`,
         body: [
-            'Você está no programa de afiliados PrecisionAI. Compartilhe seu link e ganhe comissão recorrente por cada assinante ativo.',
+            'Você está no programa de afiliados Precision IA. Compartilhe seu link e ganhe comissão recorrente por cada assinante ativo.',
             'Quando alguém se cadastrar pelo seu link e assinar um plano pago, você receberá comissão conforme a política do programa.',
         ],
         codeLabel: 'Seu código exclusivo',
@@ -522,7 +522,7 @@ const AFFILIATE_APPROVED: Record<Locale, AffiliateApprovedEmailCopy> = {
         title: 'Your affiliate account was approved!',
         preheader: (code) => `Your affiliate code: ${code}. Start referring now.`,
         body: [
-            'You are in the PrecisionAI affiliate program. Share your link and earn recurring commission for every active subscriber.',
+            'You are in the Precision AI affiliate program. Share your link and earn recurring commission for every active subscriber.',
             'When someone signs up through your link and subscribes to a paid plan, you earn commission per the program policy.',
         ],
         codeLabel: 'Your exclusive code',
@@ -533,7 +533,7 @@ const AFFILIATE_APPROVED: Record<Locale, AffiliateApprovedEmailCopy> = {
         title: '¡Tu cuenta de afiliado fue aprobada!',
         preheader: (code) => `Tu código de afiliado: ${code}. Empieza a referir ahora.`,
         body: [
-            'Estás en el programa de afiliados PrecisionAI. Comparte tu enlace y gana comisión recurrente por cada suscriptor activo.',
+            'Estás en el programa de afiliados Precision AI. Comparte tu enlace y gana comisión recurrente por cada suscriptor activo.',
             'Cuando alguien se registre con tu enlace y contrate un plan de pago, recibirás comisión según la política del programa.',
         ],
         codeLabel: 'Tu código exclusivo',
@@ -703,12 +703,12 @@ export type ReactivationPromoEmailCopy = {
 };
 
 const REACTIVATION_PROMO_PT: ReactivationPromoEmailCopy = {
-    subject: 'Volte ao PrecisionAI — Starter por R$ 59/mês nos primeiros 6 meses',
+    subject: 'Volte ao Precision IA — Starter por R$ 59/mês nos primeiros 6 meses',
     preheader: 'Seus leads e análises estão guardados. Oferta exclusiva de reativação por tempo limitado.',
     badge: 'Oferta de reativação',
     title: 'Seu teste encerrou — mas sua prospecção não precisa parar',
     subtitle: 'Condição exclusiva para quem já conhece a plataforma',
-    intro: 'Você explorou o PrecisionAI no período de teste e construiu uma base valiosa de leads e análises. Agora é o momento de retomar com tudo — com um desconto especial no plano Starter.',
+    intro: 'Você explorou o Precision IA no período de teste e construiu uma base valiosa de leads e análises. Agora é o momento de retomar com tudo — com um desconto especial no plano Starter.',
     dataPreserved: 'Todos os seus leads salvos, buscas e análises de IA continuam guardados. Ao assinar, você recupera o acesso imediatamente.',
     promoHeadline: 'Plano Starter com desconto de reativação',
     planName: 'Starter',

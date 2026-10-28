@@ -41,7 +41,7 @@ export function Dashboard() {
   if (!stats) return null;
 
   const mainCards = [
-    { label: 'Usuários', value: stats.users, color: 'text-violet-600', sparkColor: '#8B5CF6', key: 'users' as const },
+    { label: 'Usuários', value: stats.users, color: 'text-indigo-600', sparkColor: '#8B5CF6', key: 'users' as const },
     { label: 'Workspaces', value: stats.workspaces, color: 'text-blue-600', sparkColor: '#2563EB', key: null },
     { label: 'Em trial', value: stats.trialWorkspaces ?? 0, color: 'text-indigo-600', sparkColor: '#6366F1', key: null },
     { label: 'Trial expirado', value: stats.trialExpiredWorkspaces ?? 0, color: 'text-amber-600', sparkColor: '#D97706', key: null },

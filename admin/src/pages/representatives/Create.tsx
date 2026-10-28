@@ -183,7 +183,7 @@ export function RepresentativesCreate() {
           <textarea value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} className="w-full rounded border border-gray-300 bg-gray-100 px-3 py-2 text-gray-700" rows={3} />
         </div>
         <div className="flex gap-2 pt-2">
-          <button type="submit" disabled={submitting} className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm disabled:opacity-50">
+          <button type="submit" disabled={submitting} className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm disabled:opacity-50">
             {submitting ? 'Criando…' : 'Criar Representante'}
           </button>
           <Link to=".." className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm">

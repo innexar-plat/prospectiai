@@ -108,7 +108,7 @@ export function AffiliatesPage() {
         <button
           type="button"
           onClick={() => setModalOpen(true)}
-          className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-500 w-full sm:w-auto text-center"
+          className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 w-full sm:w-auto text-center"
         >
           Novo afiliado externo
         </button>
@@ -157,7 +157,7 @@ export function AffiliatesPage() {
                 <textarea value={createForm.notes} onChange={(e) => setCreateForm((f) => ({ ...f, notes: e.target.value }))} className="w-full rounded border border-gray-300 bg-gray-100 px-3 py-2 text-gray-700" rows={2} />
               </div>
               <div className="flex gap-2 pt-2">
-                <button type="submit" disabled={createSubmitting} className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm disabled:opacity-50">Criar</button>
+                <button type="submit" disabled={createSubmitting} className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm disabled:opacity-50">Criar</button>
                 <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm">Cancelar</button>
               </div>
             </form>
@@ -187,7 +187,7 @@ export function AffiliatesPage() {
                 </tr>
               ) : items.map((a) => (
                 <tr key={a.id} className="border-b border-gray-200 hover:bg-gray-50">
-                  <td className="px-4 py-3 font-mono text-violet-700">{a.code}</td>
+                  <td className="px-4 py-3 font-mono text-indigo-700">{a.code}</td>
                   <td className="px-4 py-3 text-gray-700">{a.name ?? a.email ?? '—'}</td>
                   <td className="px-4 py-3">
                     <span className={a.status === 'APPROVED' ? 'text-green-600' : a.status === 'SUSPENDED' ? 'text-red-600' : 'text-amber-600'}>{a.status}</span>
@@ -203,7 +203,7 @@ export function AffiliatesPage() {
                     >
                       {copiedCode === a.code ? 'Copiado' : 'Copiar link'}
                     </button>
-                    <Link to={a.id} className="text-violet-600 hover:text-violet-700 text-sm">Detalhes</Link>
+                    <Link to={a.id} className="text-indigo-600 hover:text-indigo-700 text-sm">Detalhes</Link>
                   </td>
                 </tr>
               ))}

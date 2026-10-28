@@ -94,10 +94,10 @@ export async function DELETE() {
       if (user.email) {
         await sendEmail(
           user.email,
-          'Sua conta PrecisionAI foi desativada',
+          'Sua conta Precision IA foi desativada',
           `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
             <h2>Conta desativada</h2>
-            <p>Sua conta no PrecisionAI foi desativada conforme solicitado.</p>
+            <p>Sua conta no Precision IA foi desativada conforme solicitado.</p>
             <p>Seus dados pessoais foram anonimizados imediatamente. O registro será permanentemente removido em <strong>30 dias</strong>.</p>
             <p>Se isso foi um engano, entre em contato com nosso suporte antes desse prazo para reverter.</p>
             <p style="color:#666;font-size:12px">Esta ação foi realizada em conformidade com a LGPD (Lei Geral de Proteção de Dados).</p>

@@ -22,6 +22,8 @@ import {
   Search,
   Layers,
   MessageCircle,
+  HeartPulse,
+  Wallet,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -33,6 +35,8 @@ const sections: NavSection[] = [
     title: 'Principal',
     items: [
       { to: '.', end: true, label: 'Dashboard', icon: LayoutDashboard },
+      { to: 'system-health', end: false, label: 'Saúde do sistema', icon: HeartPulse },
+      { to: 'billing', end: false, label: 'Assinaturas e cobrança', icon: Wallet },
       { to: 'users', end: false, label: 'Usuários', icon: Users },
       { to: 'workspaces', end: false, label: 'Workspaces', icon: Building2 },
       { to: 'leads', end: false, label: 'Leads', icon: FileText },
@@ -93,7 +97,7 @@ const sections: NavSection[] = [
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   cn(
     'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-    isActive ? 'bg-violet-50 text-violet-700 border border-violet-200' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+    isActive ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
   );
 
 export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
@@ -102,7 +106,7 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center gap-2">
           <img
-            src="/brands/precision-favicon.svg"
+            src={`${import.meta.env.BASE_URL}brands/precision-favicon.svg?v=4`}
             alt=""
             aria-hidden
             className="w-8 h-8 object-contain"

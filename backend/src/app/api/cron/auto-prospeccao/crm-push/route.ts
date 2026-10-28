@@ -1,3 +1,4 @@
+import { instrumentCron } from '@/lib/ops-telemetry';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { runCrmPushWorker } from '@/modules/auto-prospeccao/application/crm-push.worker';
@@ -10,7 +11,7 @@ const CRON_SECRET = process.env.CRON_SECRET;
  * Envia leads HOT ao CRM configurado para workspaces com crmAutoSend ativo.
  * Deve ser chamado a cada 15 minutos.
  */
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   if (CRON_SECRET) {
     const auth = req.headers.get('authorization');
     if (auth !== `Bearer ${CRON_SECRET}`) {
@@ -61,3 +62,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = instrumentCron('auto-prospeccao/crm-push', handlePOST);

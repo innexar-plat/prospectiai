@@ -10,7 +10,7 @@ import {
 import { ctaButton, ctaButtonSecondary } from '@/lib/email-templates';
 import { getSiteUrlForMarket } from '@/lib/site-url';
 
-const APP_NAME = 'PrecisionAI';
+const APP_NAME = 'Precision IA';
 const BRAND_COLOR = '#4F46E5';
 const BRAND_DARK = '#0c1930';
 const TEXT_COLOR = '#1f2937';

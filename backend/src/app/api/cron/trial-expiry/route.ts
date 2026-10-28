@@ -1,3 +1,4 @@
+import { instrumentCron } from '@/lib/ops-telemetry';
 import { NextResponse } from 'next/server';
 import { runTrialExpiryJob } from '@/lib/trial';
 import { logger } from '@/lib/logger';
@@ -6,7 +7,7 @@ import { logger } from '@/lib/logger';
  * Cron endpoint: expire trials past currentPeriodEnd.
  * Call with Authorization: Bearer <CRON_SECRET> or x-cron-secret header.
  */
-export async function GET(req: Request) {
+async function handleGET(req: Request) {
     const authHeader = req.headers.get('authorization');
     const secretHeader = req.headers.get('x-cron-secret');
     const secret = process.env.CRON_SECRET;
@@ -25,3 +26,5 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: 'Job failed' }, { status: 500 });
     }
 }
+
+export const GET = instrumentCron('trial-expiry', handleGET);

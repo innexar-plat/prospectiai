@@ -42,6 +42,8 @@ import { RepresentativesDetail } from '@/pages/representatives/Detail';
 import { RepLevels } from '@/pages/representatives/Levels';
 import { RepStatsPage } from '@/pages/representatives/Stats';
 import { WhatsAppPage } from '@/pages/WhatsAppPage';
+import { SystemHealthPage } from '@/pages/SystemHealthPage';
+import { BillingPage } from '@/pages/BillingPage';
 
 function App() {
   return (
@@ -52,6 +54,8 @@ function App() {
           <Route element={<AdminLayout />}>
             <Route element={<AdminOnlyRoute />}>
               <Route index element={<Dashboard />} />
+              <Route path="system-health" element={<SystemHealthPage />} />
+              <Route path="billing" element={<BillingPage />} />
               <Route path="workspaces" element={<WorkspacesPage />} />
               <Route path="workspaces/:id" element={<WorkspaceDetailPage />} />
               <Route path="leads" element={<LeadsPage />} />

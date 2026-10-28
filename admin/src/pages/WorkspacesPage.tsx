@@ -90,7 +90,7 @@ export function WorkspacesPage() {
                     <td className="px-4 py-3">
                       <Link
                         to={w.id}
-                        className="text-violet-600 hover:text-violet-700 text-xs font-medium"
+                        className="text-indigo-600 hover:text-indigo-700 text-xs font-medium"
                       >
                         Ver
                       </Link>

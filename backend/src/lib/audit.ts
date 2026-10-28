@@ -30,7 +30,10 @@ export type AuditAction =
   | 'admin.users.reset-password'
   | 'admin.users.force-logout'
   | 'admin.workspaces.update'
-  | 'support.users.reset-password';
+  | 'support.users.reset-password'
+  | 'admin.system-health'
+  | 'admin.billing.list'
+  | 'admin.billing.lifecycle-run';
 
 /**
  * Registra ação admin no audit log (não bloqueia a resposta em caso de falha).

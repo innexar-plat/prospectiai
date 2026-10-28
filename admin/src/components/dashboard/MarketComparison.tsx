@@ -115,7 +115,7 @@ export function MarketComparison({ usersByMarket, revenueByMarket }: MarketCompa
                 <tr className="border-b border-gray-100 text-left text-gray-500">
                   <th className="pb-2 font-medium">Mercado</th>
                   <th className="pb-2 font-medium text-right">MRR</th>
-                  <th className="pb-2 font-medium text-right">Total pago</th>
+                  <th className="pb-2 font-medium text-right">Recebido</th>
                   <th className="pb-2 font-medium text-right">Assinantes</th>
                 </tr>
               </thead>
@@ -148,7 +148,7 @@ export function MarketComparison({ usersByMarket, revenueByMarket }: MarketCompa
             </table>
           </div>
           <p className="text-xs text-gray-400 mt-3">
-            MRR estimado a partir de assinaturas ativas. Total pago soma comissões de afiliados (pagamentos confirmados).
+            MRR das assinaturas pagas ativas (concessões manuais não entram). "Recebido" soma os pagamentos confirmados registrados desde 28/10/2026.
           </p>
         </div>
       </div>

@@ -53,7 +53,7 @@ function getAllowedSiteBases(preferredBase?: string): string[] {
   add(getSiteUrlForMarket('US'));
   return [...bases];
 }
-const APP_NAME  = 'PrecisionAI';
+const APP_NAME  = 'Precision IA';
 const LOGO_URL  = process.env.EMAIL_LOGO_URL ?? `${SITE_URL.replace(/\/$/, '')}/brands/precision-logo-white.png`;
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL ?? 'suporte@precisionai.com.br';
 
@@ -543,7 +543,7 @@ export function testEmailTemplate(): string {
     title: 'E-mail de teste',
     preheader: 'Configuração de e-mail funcionando corretamente.',
     body: [
-      'Este é um e-mail de teste enviado pelo painel administrativo do PrecisionAI.',
+      'Este é um e-mail de teste enviado pelo painel administrativo do Precision IA.',
       'Se você recebeu esta mensagem, a configuração de e-mail está funcionando corretamente.',
     ],
     accentColor: MUTED_COLOR,
@@ -601,7 +601,7 @@ export function paymentSuccessTemplate(
     content += `<p style="margin:0 0 16px;font-size:15px;color:${MUTED_COLOR};">Olá, <strong style="color:${TEXT_COLOR};">${escapeHtml(userName)}</strong>.</p>`;
   }
   content += titleHtml('Seu plano está ativo!');
-  content += paragraph('Seu pagamento foi aprovado. Bem-vindo ao PrecisionAI — sua equipe de prospecção com inteligência artificial.');
+  content += paragraph('Seu pagamento foi aprovado. Bem-vindo ao Precision IA — sua equipe de prospecção com inteligência artificial.');
   content += infoBox(
     `<p style="margin:0;font-size:15px;color:#5b21b6;font-weight:600;">Plano <strong>${safePlan}</strong> ativado</p>
      <p style="margin:4px 0 0;font-size:14px;color:#6d28d9;">Você tem <strong>${leadsLimit.toLocaleString('pt-BR')} buscas/mês</strong> disponíveis agora.</p>`,
@@ -633,7 +633,7 @@ export function paymentFailureTemplate(
     preheader: 'Houve um problema com o pagamento do seu plano. Veja como resolver.',
     userName,
     body: [
-      'O pagamento do seu plano PrecisionAI não foi processado. Isso pode ocorrer por dados incorretos, limite insuficiente ou recusa do emissor.',
+      'O pagamento do seu plano Precision IA não foi processado. Isso pode ocorrer por dados incorretos, limite insuficiente ou recusa do emissor.',
       'Verifique os dados do cartão ou tente outro meio de pagamento. Sua conta continua ativa por mais 3 dias enquanto você resolve.',
     ],
     ctaHref: dashboardOrPlansUrl,
@@ -698,10 +698,10 @@ export function dunningThirdTemplate(
 ): string {
   return buildEmail({
     title: 'Sua conta foi suspensa',
-    preheader: 'Reative sua conta para recuperar o acesso ao PrecisionAI.',
+    preheader: 'Reative sua conta para recuperar o acesso ao Precision IA.',
     userName,
     body: [
-      'Devido a pagamentos em atraso, sua conta PrecisionAI foi suspensa.',
+      'Devido a pagamentos em atraso, sua conta Precision IA foi suspensa.',
       'Seus dados, leads salvos e histórico de buscas estão preservados por 30 dias.',
       'Para reativar, escolha um plano e atualize sua forma de pagamento. Todo seu histórico será restaurado imediatamente.',
     ],
@@ -723,7 +723,7 @@ export function trialExpiringTemplate(
   const base = SITE_URL.replace(/\/$/, '');
   return buildEmail({
     title: 'Seu período de teste termina amanhã',
-    preheader: 'Assine agora para não perder o acesso ao PrecisionAI.',
+    preheader: 'Assine agora para não perder o acesso ao Precision IA.',
     userName,
     body: [
       `Seu período de teste gratuito encerra em <strong>${formatDate(trialEndDate)}</strong>.`,
@@ -748,7 +748,7 @@ export function trialExpiredTemplate(
     preheader: 'Seus dados estão guardados — assine para recuperar o acesso.',
     userName,
     body: [
-      'Seu período de teste no PrecisionAI chegou ao fim.',
+      'Seu período de teste no Precision IA chegou ao fim.',
       '<strong>Boa notícia:</strong> todos os seus leads salvos, buscas e análises estão preservados por 15 dias. Ao assinar, você recupera tudo imediatamente.',
       'Escolha o plano ideal para o tamanho da sua prospecção e continue onde parou.',
     ],
@@ -769,7 +769,7 @@ export function trialActivationNudgeTemplate(
     preheader: 'Leva menos de 2 minutos. Encontre leads qualificados agora.',
     userName,
     body: [
-      'Sua conta PrecisionAI está ativa, mas você ainda não explorou a plataforma.',
+      'Sua conta Precision IA está ativa, mas você ainda não explorou a plataforma.',
       'Em menos de 2 minutos você pode encontrar dezenas de empresas qualificadas para prospectar — com score de IA, dados de contato e análise de potencial.',
       'Que tal fazer sua primeira busca agora? Escolha uma cidade e um segmento e veja o resultado.',
     ],
@@ -851,7 +851,7 @@ export function twoFactorEnabledTemplate(userName?: string): string {
     preheader: 'Sua conta está mais segura agora.',
     userName,
     body: [
-      'A autenticação em dois fatores (2FA) foi ativada com sucesso na sua conta PrecisionAI.',
+      'A autenticação em dois fatores (2FA) foi ativada com sucesso na sua conta Precision IA.',
       'A partir de agora, você precisará do código do seu aplicativo autenticador a cada login.',
       '<strong>Guarde seus códigos de recuperação em um lugar seguro.</strong> Eles são a única forma de recuperar o acesso caso perca o dispositivo.',
     ],
@@ -881,7 +881,7 @@ export function newDeviceLoginTemplate(
     content += `<p style="margin:0 0 16px;font-size:15px;color:${MUTED_COLOR};">Olá, <strong style="color:${TEXT_COLOR};">${escapeHtml(userName)}</strong>.</p>`;
   }
   content += titleHtml('Novo login detectado na sua conta');
-  content += paragraph('Detectamos um acesso à sua conta PrecisionAI a partir de um dispositivo ou localização não reconhecidos:');
+  content += paragraph('Detectamos um acesso à sua conta Precision IA a partir de um dispositivo ou localização não reconhecidos:');
   content += detailTable(details);
   content += paragraph('Se foi você, pode ignorar este e-mail. Se não reconhece este acesso, proteja sua conta imediatamente.');
   content += ctaButton(safeUrl(securityUrl) ?? '#', 'Proteger minha conta', DANGER_COLOR);
@@ -916,12 +916,12 @@ function affiliateCommissionPaidLine(locale: Locale, amount: string): string {
 
 function affiliateBalanceAvailableLine(locale: Locale, amount: string): string {
   if (locale === 'en') {
-    return `You have <strong>${amount}</strong> available for payout in the PrecisionAI affiliate program.`;
+    return `You have <strong>${amount}</strong> available for payout in the Precision AI affiliate program.`;
   }
   if (locale === 'es') {
-    return `Tienes <strong>${amount}</strong> disponibles para retiro en el programa de afiliados PrecisionAI.`;
+    return `Tienes <strong>${amount}</strong> disponibles para retiro en el programa de afiliados Precision AI.`;
   }
-  return `Você tem <strong>${amount}</strong> disponíveis para saque no programa de afiliados PrecisionAI.`;
+  return `Você tem <strong>${amount}</strong> disponíveis para saque no programa de afiliados Precision IA.`;
 }
 
 // ── Afiliados ──────────────────────────────────────────────────────────────
@@ -1086,7 +1086,7 @@ export function weeklyReportTemplate(
   } = config;
 
   const {
-    customTitle = `Seu resumo da semana — PrecisionAI`,
+    customTitle = `Seu resumo da semana — Precision IA`,
     customHighlight,
     ctaLabel = 'Ver todos os leads',
     ctaUrl,
@@ -1284,7 +1284,7 @@ export function featureAnnouncementTemplate(
   content += ctaButton(safeUrl(ctaUrl) ?? '#', ctaLabel, BRAND_COLOR);
 
   return wrapContent(content, {
-    preheader: `Novidade no PrecisionAI: ${escapeHtml(featureName)} — ${escapeHtml(tagline)}`.slice(0, 90),
+    preheader: `Novidade no Precision IA: ${escapeHtml(featureName)} — ${escapeHtml(tagline)}`.slice(0, 90),
     accentColor: BRAND_COLOR,
   });
 }
@@ -1306,11 +1306,11 @@ export function reengagementTemplate(
 ): string {
   const { inactiveDays, highlight, incentive, ctaLabel, ctaUrl } = config;
   return buildEmail({
-    title: 'Sentimos sua falta no PrecisionAI',
+    title: 'Sentimos sua falta no Precision IA',
     preheader: incentive ?? `Volte e veja o que mudou nos últimos ${inactiveDays} dias.`,
     userName,
     body: [
-      `Faz ${inactiveDays} dias que você não acessa o PrecisionAI.`,
+      `Faz ${inactiveDays} dias que você não acessa o Precision IA.`,
       `Enquanto isso, melhoramos bastante: ${escapeHtml(highlight)}`,
       ...(incentive ? [`<strong>${escapeHtml(incentive)}</strong> — para você que está voltando.`] : []),
     ],

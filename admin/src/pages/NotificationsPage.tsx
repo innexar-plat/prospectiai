@@ -160,7 +160,7 @@ export function NotificationsPage() {
                           onClick={() => handleChannelToggle(ch.key, 'appEnabled', !ch.appEnabled)}
                           className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                             ch.appEnabled
-                              ? 'bg-violet-600 text-white hover:bg-violet-500'
+                              ? 'bg-indigo-600 text-white hover:bg-indigo-500'
                               : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                           }`}
                         >
@@ -174,7 +174,7 @@ export function NotificationsPage() {
                           onClick={() => handleChannelToggle(ch.key, 'emailEnabled', !ch.emailEnabled)}
                           className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                             ch.emailEnabled
-                              ? 'bg-violet-600 text-white hover:bg-violet-500'
+                              ? 'bg-indigo-600 text-white hover:bg-indigo-500'
                               : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                           }`}
                         >
@@ -230,7 +230,7 @@ export function NotificationsPage() {
             onClick={openConfirm}
             disabled={sending}
             isLoading={sending}
-            className="bg-violet-600 hover:bg-violet-500 text-white border-0"
+            className="bg-indigo-600 hover:bg-indigo-500 text-white border-0"
           >
             Enviar para todos os usuários
           </Button>
@@ -260,7 +260,7 @@ export function NotificationsPage() {
               <Button
                 onClick={handleSendAll}
                 isLoading={sending}
-                className="bg-violet-600 hover:bg-violet-500 text-white border-0"
+                className="bg-indigo-600 hover:bg-indigo-500 text-white border-0"
               >
                 Confirmar
               </Button>

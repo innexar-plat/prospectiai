@@ -222,10 +222,10 @@ export function WhatsAppPage() {
         ) : (
           <div className="space-y-4">
             <div className="flex items-center gap-0.5 p-1 bg-gray-100 rounded-lg border border-gray-200 w-fit">
-              <button type="button" onClick={() => setConnectMode('EVOLUTION')} className={cn('text-xs font-bold px-3 py-1.5 rounded-md transition-all', connectMode === 'EVOLUTION' ? 'bg-violet-600 text-white' : 'text-gray-500 hover:text-gray-900')}>
+              <button type="button" onClick={() => setConnectMode('EVOLUTION')} className={cn('text-xs font-bold px-3 py-1.5 rounded-md transition-all', connectMode === 'EVOLUTION' ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:text-gray-900')}>
                 Número via QR (Evolution)
               </button>
-              <button type="button" onClick={() => setConnectMode('META')} className={cn('text-xs font-bold px-3 py-1.5 rounded-md transition-all', connectMode === 'META' ? 'bg-violet-600 text-white' : 'text-gray-500 hover:text-gray-900')}>
+              <button type="button" onClick={() => setConnectMode('META')} className={cn('text-xs font-bold px-3 py-1.5 rounded-md transition-all', connectMode === 'META' ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:text-gray-900')}>
                 Número oficial (Meta)
               </button>
             </div>
@@ -235,7 +235,7 @@ export function WhatsAppPage() {
                 type="button"
                 onClick={handleConnectEvolution}
                 disabled={connecting}
-                className="px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
+                className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
               >
                 {connecting ? 'Gerando QR Code…' : 'Conectar WhatsApp'}
               </button>
@@ -253,7 +253,7 @@ export function WhatsAppPage() {
                   type="button"
                   onClick={handleConnectMeta}
                   disabled={connecting || !metaPhoneNumberId.trim()}
-                  className="px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
+                  className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
                 >
                   {connecting ? 'Conectando…' : 'Conectar via Meta'}
                 </button>
@@ -286,7 +286,7 @@ export function WhatsAppPage() {
                   <div className="flex items-center justify-between gap-2 mt-1">
                     <p className="text-xs text-gray-500 truncate">{c.lastMessagePreview ?? '—'}</p>
                     {c.unreadCount > 0 && (
-                      <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-violet-600 text-white text-[10px] font-bold flex items-center justify-center">
+                      <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center">
                         {c.unreadCount}
                       </span>
                     )}
@@ -309,7 +309,7 @@ export function WhatsAppPage() {
                     <p className="text-sm text-gray-500">Nenhuma mensagem ainda.</p>
                   ) : messages.map((m) => (
                     <div key={m.id} className={cn('flex', m.direction === 'OUT' ? 'justify-end' : 'justify-start')}>
-                      <div className={cn('max-w-[75%] rounded-2xl px-3 py-2 text-sm', m.direction === 'OUT' ? 'bg-violet-600 text-white rounded-br-sm' : 'bg-gray-100 text-gray-900 rounded-bl-sm')}>
+                      <div className={cn('max-w-[75%] rounded-2xl px-3 py-2 text-sm', m.direction === 'OUT' ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-gray-100 text-gray-900 rounded-bl-sm')}>
                         <p className="whitespace-pre-wrap break-words">{m.body}</p>
                         <p className={cn('text-[10px] mt-1', m.direction === 'OUT' ? 'text-white/70' : 'text-gray-500')}>
                           {new Date(m.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
@@ -326,7 +326,7 @@ export function WhatsAppPage() {
                     placeholder="Digite uma mensagem…"
                     className="flex-1 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm"
                   />
-                  <button type="submit" disabled={!draft.trim() || sending} className="p-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-50 transition-colors">
+                  <button type="submit" disabled={!draft.trim() || sending} className="p-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50 transition-colors">
                     {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   </button>
                 </form>

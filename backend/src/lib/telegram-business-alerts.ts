@@ -56,7 +56,7 @@ export function notifyNewSignup(ctx: WorkspaceContext & { verificationEmailSent?
   notify(
     'success',
     'Novo cadastro',
-    'Novo usuário criado na PrecisionAI.',
+    'Novo usuário criado na Precision IA.',
     withCommonMeta(
       {
         emailConfirmacaoEnviado: ctx.verificationEmailSent ?? undefined,

@@ -239,7 +239,7 @@ export function RepresentativesDetail() {
               className={cn(
                 'px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors whitespace-nowrap',
                 tab === t.id
-                  ? 'border-violet-500 text-violet-700 bg-white'
+                  ? 'border-indigo-500 text-indigo-700 bg-white'
                   : 'border-transparent text-gray-500 hover:text-gray-600',
               )}
             >
@@ -293,7 +293,7 @@ export function RepresentativesDetail() {
                   <p className="text-lg font-semibold text-gray-900">{rep.currency === 'USD' ? '$' : 'R$'} {(rep.monthlyGoal / 100).toFixed(2)}</p>
                   <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
                     <div
-                      className="bg-violet-600 rounded-full h-2 transition-all"
+                      className="bg-indigo-600 rounded-full h-2 transition-all"
                       style={{ width: `${Math.min(100, ((rep.monthlyGoalProgress ?? 0) / rep.monthlyGoal) * 100)}%` }}
                     />
                   </div>
@@ -491,7 +491,7 @@ export function RepresentativesDetail() {
               <input type="number" min={0} step="0.01" value={goalTarget} onChange={(e) => setGoalTarget(parseFloat(e.target.value) || 0)} className="w-full rounded border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-700" />
             </div>
           </div>
-          <button type="button" onClick={handleSetGoal} className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm">Salvar Meta</button>
+          <button type="button" onClick={handleSetGoal} className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm">Salvar Meta</button>
 
           {goals.length > 0 && (
             <div className="mt-6">
@@ -504,7 +504,7 @@ export function RepresentativesDetail() {
                     {g.currentProgress != null && (
                       <div className="flex items-center gap-2">
                         <div className="w-24 bg-gray-200 rounded-full h-2">
-                          <div className="bg-violet-600 rounded-full h-2" style={{ width: `${Math.min(100, g.targetAmount > 0 ? (g.currentProgress / g.targetAmount) * 100 : 0)}%` }} />
+                          <div className="bg-indigo-600 rounded-full h-2" style={{ width: `${Math.min(100, g.targetAmount > 0 ? (g.currentProgress / g.targetAmount) * 100 : 0)}%` }} />
                         </div>
                         <span className="text-xs text-gray-500">{((g.currentProgress ?? 0) / 100).toFixed(2)}</span>
                       </div>
@@ -527,7 +527,7 @@ export function RepresentativesDetail() {
               onChange={(e) => setAffiliateLinkInput(e.target.value)}
               className="rounded border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-700 w-64"
             />
-            <button type="button" onClick={handleLinkAffiliate} className="px-3 py-2 rounded-lg bg-violet-600 text-white text-sm">Vincular</button>
+            <button type="button" onClick={handleLinkAffiliate} className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm">Vincular</button>
           </div>
           <div className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
             <h2 className="px-4 py-3 font-medium text-gray-900 border-b border-gray-200">Afiliados ({affiliatesTotal})</h2>
@@ -549,7 +549,7 @@ export function RepresentativesDetail() {
                     <tr key={a.id} className="border-b border-gray-200">
                       <td className="px-4 py-3 text-gray-700">{a.name ?? '—'}</td>
                       <td className="px-4 py-3 text-gray-600">{a.email ?? '—'}</td>
-                      <td className="px-4 py-3 font-mono text-violet-700 text-xs">{a.code ?? '—'}</td>
+                      <td className="px-4 py-3 font-mono text-indigo-700 text-xs">{a.code ?? '—'}</td>
                       <td className="px-4 py-3 text-gray-600">{a.status ?? '—'}</td>
                       <td className="px-4 py-3 text-gray-500">{new Date(a.createdAt).toLocaleDateString('pt-BR')}</td>
                     </tr>
@@ -651,7 +651,7 @@ export function RepresentativesDetail() {
             <textarea value={rep.notes ?? ''} onChange={(e) => setRep({ ...rep, notes: e.target.value || null })} className="w-full rounded border border-gray-300 bg-gray-100 px-2 py-1 text-gray-700 text-sm" rows={3} />
           </div>
           <div className="mt-4 flex gap-2">
-            <button type="button" onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm disabled:opacity-50">
+            <button type="button" onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm disabled:opacity-50">
               {saving ? 'Salvando…' : 'Salvar'}
             </button>
           </div>

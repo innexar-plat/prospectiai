@@ -23,7 +23,7 @@ export function RepresentativesLayout() {
                 cn(
                   'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors',
                   isActive
-                    ? 'border-violet-500 text-violet-700 bg-white'
+                    ? 'border-indigo-500 text-indigo-700 bg-white'
                     : 'border-transparent text-gray-500 hover:text-gray-600',
                 )
               }

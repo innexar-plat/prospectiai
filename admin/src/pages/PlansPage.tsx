@@ -130,7 +130,7 @@ export function PlansPage() {
                 <h1 className="text-xl font-semibold text-gray-900">Configuração de Planos</h1>
                 <button
                     onClick={openCreate}
-                    className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-600 w-full sm:w-auto text-center"
+                    className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-600 w-full sm:w-auto text-center"
                 >
                     + Novo Plano
                 </button>
@@ -192,7 +192,7 @@ export function PlansPage() {
                                         <td className="px-4 py-3">
                                             <div className="flex flex-wrap gap-1">
                                                 {(plan.modules as string[]).map((m) => (
-                                                    <span key={m} className="px-1.5 py-0.5 rounded bg-violet-50 text-violet-600 text-[10px] font-medium">
+                                                    <span key={m} className="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 text-[10px] font-medium">
                                                         {m.replace(/_/g, ' ')}
                                                     </span>
                                                 ))}
@@ -341,7 +341,7 @@ export function PlansPage() {
                                                 type="button"
                                                 onClick={() => toggleModule(mod.key)}
                                                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${active
-                                                        ? 'bg-violet-50 border-violet-500/40 text-violet-700'
+                                                        ? 'bg-indigo-50 border-indigo-500/40 text-indigo-700'
                                                         : 'bg-gray-100 border-gray-300 text-gray-500 hover:text-gray-600'
                                                     }`}
                                             >
@@ -376,7 +376,7 @@ export function PlansPage() {
                                 type="button"
                                 onClick={handleSave}
                                 disabled={saving || !form.key?.trim() || !form.name?.trim()}
-                                className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-500 disabled:opacity-50"
+                                className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 disabled:opacity-50"
                             >
                                 {(() => {
                                 if (saving) return 'Salvando...';

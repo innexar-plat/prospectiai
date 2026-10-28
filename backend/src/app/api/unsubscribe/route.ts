@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
       buildHtmlPage(
         'Descadastro confirmado',
         `<p>Você foi removido da lista de emails <strong>${categoryLabel(category)}</strong>.</p>
-         <p style="margin-top:16px;color:#6b7280;">Você pode reverter esta escolha em <strong>Configurações</strong> dentro do PrecisionAI.</p>`,
+         <p style="margin-top:16px;color:#6b7280;">Você pode reverter esta escolha em <strong>Configurações</strong> dentro do Precision IA.</p>`,
       ),
       { headers: { 'Content-Type': 'text/html; charset=utf-8' } },
     );
@@ -144,7 +144,7 @@ function buildHtmlPage(title: string, body: string): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${escapeHtml(title)} — PrecisionAI</title>
+  <title>${escapeHtml(title)} — Precision IA</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f3f4f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
     .card { background: #fff; border-radius: 12px; padding: 32px; max-width: 480px; width: 100%; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }

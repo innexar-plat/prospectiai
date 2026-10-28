@@ -1,3 +1,4 @@
+import { instrumentCron } from '@/lib/ops-telemetry';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email';
@@ -13,7 +14,7 @@ const BATCH_DELAY_MS = 1000;
  * POST /api/cron/weekly-report
  * Send weekly reports to users who opted in. Should run once a week.
  */
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   if (CRON_SECRET) {
     const auth = req.headers.get('authorization');
     if (auth !== `Bearer ${CRON_SECRET}`) {
@@ -122,7 +123,7 @@ export async function POST(req: NextRequest) {
           };
 
           const html = weeklyReportTemplate(reportData, adminConfig);
-          const result = await sendEmail(user.email!, `Seu resumo semanal — PrecisionAI`, html);
+          const result = await sendEmail(user.email!, `Seu resumo semanal — Precision IA`, html);
 
           if (result.sent) totalSent++;
           else totalFailed++;
@@ -132,7 +133,7 @@ export async function POST(req: NextRequest) {
               type: 'WEEKLY_REPORT',
               userId: user.id,
               email: user.email!,
-              subject: 'Seu resumo semanal — PrecisionAI',
+              subject: 'Seu resumo semanal — Precision IA',
               status: result.sent ? 'SENT' : 'FAILED',
               error: result.error,
             },
@@ -158,3 +159,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = instrumentCron('weekly-report', handlePOST);

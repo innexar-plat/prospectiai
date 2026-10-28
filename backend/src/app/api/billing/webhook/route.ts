@@ -18,6 +18,8 @@ import {
 import { logger } from '@/lib/logger';
 import { freshCreditCycle } from '@/lib/billing-period';
 import { freePlanData } from '@/lib/billing-lifecycle';
+import { markPaymentRefunded, recordPayment } from '@/lib/billing-ledger';
+import { recordWebhook } from '@/lib/ops-telemetry';
 
 type SubscriptionWithPeriod = Stripe.Subscription & { current_period_end: number };
 
@@ -284,6 +286,7 @@ export async function POST(req: Request) {
             process.env.STRIPE_WEBHOOK_SECRET!
         );
     } catch (err: unknown) {
+        if (signature) await recordWebhook('stripe', false, 'invalid signature');
         await logWebhookVerificationFailure(req, signature, err);
         return NextResponse.json({ error: 'Webhook Error' }, { status: 400 });
     }
@@ -295,9 +298,25 @@ export async function POST(req: Request) {
 
     const session = event.data.object as Stripe.Checkout.Session;
 
+    await recordWebhook('stripe', true);
+
     if (event.type === 'checkout.session.completed') {
         const res = await handleCheckoutCompleted(session);
         if (res) return res;
+        const paid = (session as { amount_total?: number | null }).amount_total ?? 0;
+        const ws = session.subscription
+            ? await prisma.workspace.findFirst({ where: { subscriptionId: session.subscription as string }, select: { id: true } })
+            : null;
+        await recordPayment({
+            workspaceId: ws?.id ?? null,
+            provider: 'stripe',
+            externalId: `stripe:${session.id}`,
+            method: 'card',
+            kind: 'FIRST',
+            amountCents: paid,
+            currency: (session.currency ?? 'usd').toUpperCase() === 'BRL' ? 'BRL' : 'USD',
+            planId: session.metadata?.planId ?? null,
+        });
     }
 
     if (event.type === 'customer.subscription.deleted' || event.type === 'customer.subscription.updated') {
@@ -316,6 +335,7 @@ export async function POST(req: Request) {
                 const invoiceRaw = await stripe.invoices.retrieve(charge.invoice);
                 const invoice = invoiceRaw as { subscription?: string | { id?: string } };
                 const subId = typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id;
+                await markPaymentRefunded(`stripe:${charge.invoice}`);
                 if (subId) {
                     const cancelled = await cancelCommissionsByOrderOrSubscription(null, subId);
                     const { logger } = await import('@/lib/logger');
@@ -356,6 +376,16 @@ export async function POST(req: Request) {
                         const planId = (workspace.plan || 'BASIC') as PlanType;
                         const valueCents = invoice.amount_paid ?? 0;
                         const currency = (invoice.currency ?? 'usd').toUpperCase();
+                        await recordPayment({
+                            workspaceId: workspace.id,
+                            provider: 'stripe',
+                            externalId: `stripe:${invoice.id}`,
+                            method: 'card',
+                            kind: 'RENEWAL',
+                            amountCents: valueCents,
+                            currency: currency === 'BRL' ? 'BRL' : 'USD',
+                            planId,
+                        });
                         await createCommissionForRecurring({
                             workspaceId: workspace.id,
                             subscriptionId: subId,

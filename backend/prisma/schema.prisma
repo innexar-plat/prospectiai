@@ -1576,3 +1576,22 @@ model RepLevelConfig {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 }
+
+/// Payments actually received (one row per provider payment). Source of truth for revenue in the admin.
+model BillingPayment {
+  id          String   @id @default(cuid())
+  workspaceId String?
+  provider    String   // mercadopago | stripe
+  externalId  String   @unique // provider payment / invoice id
+  method      String?  // pix | credit_card | card
+  kind        String   // FIRST | RENEWAL
+  status      String   @default("APPROVED") // APPROVED | REFUNDED
+  amountCents Int
+  currency    String   // BRL | USD
+  planId      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([workspaceId])
+  @@index([createdAt])
+}

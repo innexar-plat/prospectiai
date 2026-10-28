@@ -28,6 +28,7 @@ export async function GET() {
                 where: {
                     plan: { in: ['BASIC', 'PRO', 'BUSINESS', 'SCALE'] },
                     subscriptionStatus: 'active',
+                    subscriptionId: { not: null },
                 },
             }),
             getAdminMarketStats(),

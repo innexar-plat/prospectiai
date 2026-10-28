@@ -1,3 +1,4 @@
+import { instrumentCron } from '@/lib/ops-telemetry';
 import { NextResponse } from 'next/server';
 import { runBillingLifecycleJob } from '@/lib/billing-lifecycle';
 import { acquireRedisLock, releaseRedisLock } from '@/lib/redis';
@@ -39,5 +40,5 @@ async function handle(req: Request) {
     }
 }
 
-export const GET = handle;
-export const POST = handle;
+export const GET = instrumentCron('billing-lifecycle', handle);
+export const POST = instrumentCron('billing-lifecycle', handle);

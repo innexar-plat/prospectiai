@@ -169,7 +169,7 @@ export function AutoProspeccaoTemplateEditorPage() {
               value={form.name}
               onChange={(e) => set('name', e.target.value)}
               placeholder="Nome interno do template"
-              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
           <div>
@@ -177,7 +177,7 @@ export function AutoProspeccaoTemplateEditorPage() {
             <select
               value={form.type}
               onChange={(e) => set('type', e.target.value)}
-              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               {TEMPLATE_TYPES.map((t) => (
                 <option key={t.value} value={t.value}>{t.label}</option>
@@ -194,7 +194,7 @@ export function AutoProspeccaoTemplateEditorPage() {
               value={form.subject}
               onChange={(e) => set('subject', e.target.value)}
               placeholder="Assunto do email (suporta {{razaoSocial}})"
-              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
           <div>
@@ -203,7 +203,7 @@ export function AutoProspeccaoTemplateEditorPage() {
               value={form.preheader}
               onChange={(e) => set('preheader', e.target.value)}
               placeholder="Texto de pré-visualização"
-              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
         </div>
@@ -216,7 +216,7 @@ export function AutoProspeccaoTemplateEditorPage() {
               value={form.targetCnae}
               onChange={(e) => set('targetCnae', e.target.value)}
               placeholder="ex: 7020400"
-              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
           <div>
@@ -225,7 +225,7 @@ export function AutoProspeccaoTemplateEditorPage() {
               value={form.targetSegment}
               onChange={(e) => set('targetSegment', e.target.value)}
               placeholder="ex: consultorias, saas, agencias"
-              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
         </div>
@@ -237,7 +237,7 @@ export function AutoProspeccaoTemplateEditorPage() {
             type="checkbox"
             checked={form.isSystem}
             onChange={(e) => set('isSystem', e.target.checked)}
-            className="w-4 h-4 rounded accent-violet-600"
+            className="w-4 h-4 rounded accent-indigo-600"
           />
           <label htmlFor="isSystem" className="text-sm font-medium text-gray-700">
             Template do sistema <span className="text-gray-400 font-normal">(visível para todos os workspaces)</span>
@@ -253,7 +253,7 @@ export function AutoProspeccaoTemplateEditorPage() {
             onClick={() => setActiveTab('editor')}
             className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
               activeTab === 'editor'
-                ? 'border-violet-600 text-violet-700'
+                ? 'border-indigo-600 text-indigo-700'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -264,7 +264,7 @@ export function AutoProspeccaoTemplateEditorPage() {
             onClick={() => setActiveTab('preview')}
             className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
               activeTab === 'preview'
-                ? 'border-violet-600 text-violet-700'
+                ? 'border-indigo-600 text-indigo-700'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -278,7 +278,7 @@ export function AutoProspeccaoTemplateEditorPage() {
               <input
                 value={previewCompany}
                 onChange={(e) => setPreviewCompany(e.target.value)}
-                className="text-xs border border-gray-300 rounded px-2 py-1 w-48 focus:outline-none focus:ring-1 focus:ring-violet-400"
+                className="text-xs border border-gray-300 rounded px-2 py-1 w-48 focus:outline-none focus:ring-1 focus:ring-indigo-400"
               />
             </div>
           )}
@@ -297,7 +297,7 @@ export function AutoProspeccaoTemplateEditorPage() {
                 onChange={(e) => set('bodyHtml', e.target.value)}
                 rows={16}
                 placeholder={'<p>Olá, {{razaoSocial}}!</p>\n<p>Seu texto aqui...</p>'}
-                className="w-full text-sm font-mono border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500 resize-y"
+                className="w-full text-sm font-mono border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y"
                 spellCheck={false}
               />
             </div>
@@ -310,7 +310,7 @@ export function AutoProspeccaoTemplateEditorPage() {
                 onChange={(e) => set('bodyText', e.target.value)}
                 rows={4}
                 placeholder="Versão sem HTML para clientes que não suportam HTML"
-                className="w-full text-sm font-mono border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500 resize-y"
+                className="w-full text-sm font-mono border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y"
                 spellCheck={false}
               />
             </div>

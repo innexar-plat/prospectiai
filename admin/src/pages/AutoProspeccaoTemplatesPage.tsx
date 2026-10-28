@@ -78,7 +78,7 @@ export function AutoProspeccaoTemplatesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <Mail className="w-5 h-5 text-violet-600" />
+            <Mail className="w-5 h-5 text-indigo-600" />
             Templates de Email — Auto-Prospecção
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">{total} template{total !== 1 ? 's' : ''} encontrado{total !== 1 ? 's' : ''}</p>
@@ -93,7 +93,7 @@ export function AutoProspeccaoTemplatesPage() {
         <select
           value={filterSystem}
           onChange={(e) => setFilterSystem(e.target.value)}
-          className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+          className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
           <option value="">Todos (sistema + workspace)</option>
           <option value="true">Apenas sistema</option>
@@ -134,13 +134,13 @@ export function AutoProspeccaoTemplatesPage() {
                   <td className="px-4 py-3 text-gray-600 max-w-xs truncate">{t.subject}</td>
                   <td className="px-4 py-3 text-gray-500">{t.targetSegment ?? t.targetCnae ?? <span className="text-gray-300">—</span>}</td>
                   <td className="px-4 py-3 text-center">
-                    {t.isSystem && <Star className="w-4 h-4 text-violet-500 inline" />}
+                    {t.isSystem && <Star className="w-4 h-4 text-indigo-500 inline" />}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => navigate(`${t.id}`)}
-                        className="p-1.5 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded-md transition-colors"
+                        className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
                         title="Editar"
                       >
                         <Pencil className="w-4 h-4" />

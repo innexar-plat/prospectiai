@@ -22,7 +22,7 @@ export async function register() {
       await new Promise((resolve) => setTimeout(resolve, 5_000));
       await alertSuccess(
         'Server Started',
-        `PrecisionAI backend iniciado com sucesso`,
+        `Precision IA backend iniciado com sucesso`,
         {
           nodeEnv: process.env.NODE_ENV || 'unknown',
           version,

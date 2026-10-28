@@ -61,6 +61,13 @@ function write(level: LogLevel, message: string, meta?: Record<string, unknown>,
     process.stdout.write(line + '\n');
   }
 
+  if (level === 'error') {
+    // Error counters for the admin system-health page (lazy import avoids a load-time cycle).
+    import('./ops-telemetry')
+      .then(({ recordErrorEvent }) => recordErrorEvent(message, meta?.route != null ? String(meta.route) : undefined))
+      .catch(() => {});
+  }
+
   // Send errors and critical warnings to Telegram (fire-and-forget)
   if (level === 'error' && shouldAlertTelegram(message)) {
     const alertMeta: Record<string, string> = {};

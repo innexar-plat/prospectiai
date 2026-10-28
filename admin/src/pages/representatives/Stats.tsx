@@ -56,8 +56,8 @@ export function RepStatsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center">
-              <Users className="w-5 h-5 text-violet-600" />
+            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+              <Users className="w-5 h-5 text-indigo-600" />
             </div>
             <div>
               <p className="text-xs text-gray-500 uppercase tracking-wider">Total Representantes</p>

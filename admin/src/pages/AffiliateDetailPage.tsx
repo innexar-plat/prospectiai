@@ -203,7 +203,7 @@ export function AffiliateDetailPage() {
               className={cn(
                 'px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors',
                 tab === t.id
-                  ? 'border-violet-500 text-violet-700 bg-white'
+                  ? 'border-indigo-500 text-indigo-700 bg-white'
                   : 'border-transparent text-gray-500 hover:text-gray-600'
               )}
             >
@@ -252,7 +252,7 @@ export function AffiliateDetailPage() {
             </select>
             <label className="text-gray-500 text-sm ml-2">Taxa %</label>
             <input type="number" min={0} max={100} value={rate} onChange={(e) => setRate(parseInt(e.target.value, 10) || 0)} className="w-20 rounded border border-gray-300 bg-gray-100 text-gray-700 px-3 py-2" />
-            <button type="button" onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm disabled:opacity-50">Salvar</button>
+            <button type="button" onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm disabled:opacity-50">Salvar</button>
           </div>
         </div>
       )}
@@ -300,7 +300,7 @@ export function AffiliateDetailPage() {
                     <td className="px-4 py-3">{c.paidAt ? new Date(c.paidAt).toLocaleDateString('pt-BR') : '—'}</td>
                     <td className="px-4 py-3">
                       {c.paymentProofUrl ? (
-                        <a href={c.paymentProofUrl} target="_blank" rel="noopener noreferrer" className="text-violet-600 hover:underline text-xs break-all">Link</a>
+                        <a href={c.paymentProofUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline text-xs break-all">Link</a>
                       ) : '—'}
                     </td>
                     <td className="px-4 py-3">

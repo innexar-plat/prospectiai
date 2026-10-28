@@ -1,3 +1,4 @@
+import { instrumentCron } from '@/lib/ops-telemetry';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendCampaign } from '@/modules/email-marketing';
@@ -9,7 +10,7 @@ const CRON_SECRET = process.env.CRON_SECRET;
  * POST /api/cron/campaign-processor
  * Processes scheduled campaigns that are due. Call every 5 minutes.
  */
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   // Validate cron secret
   if (CRON_SECRET) {
     const auth = req.headers.get('authorization');
@@ -55,3 +56,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = instrumentCron('campaign-processor', handlePOST);

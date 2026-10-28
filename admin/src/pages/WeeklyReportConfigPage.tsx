@@ -98,7 +98,7 @@ export function WeeklyReportConfigPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-violet-600" />
+            <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" />
             Relatório Semanal
           </h1>
           <p className="text-sm text-gray-500 mt-1">Configure o envio automático de relatórios semanais</p>
@@ -135,7 +135,7 @@ export function WeeklyReportConfigPage() {
               </div>
               <button
                 onClick={() => setEnabled(!enabled)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enabled ? 'bg-violet-600' : 'bg-gray-300'}`}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enabled ? 'bg-indigo-600' : 'bg-gray-300'}`}
               >
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${enabled ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>

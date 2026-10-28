@@ -389,14 +389,14 @@ export function AiConfigPage() {
                         type="button"
                         onClick={() => handleTest(c.id)}
                         disabled={!c.hasApiKey || testingId === c.id}
-                        className="text-violet-600 hover:text-violet-700 text-xs font-medium disabled:opacity-50"
+                        className="text-indigo-600 hover:text-indigo-700 text-xs font-medium disabled:opacity-50"
                       >
                         {testingId === c.id ? 'Testando...' : 'Testar'}
                       </button>
                       <button
                         type="button"
                         onClick={() => openEdit(c)}
-                        className="text-violet-600 hover:text-violet-700 text-xs font-medium"
+                        className="text-indigo-600 hover:text-indigo-700 text-xs font-medium"
                       >
                         Editar
                       </button>
@@ -498,7 +498,7 @@ export function AiConfigPage() {
                             [role]: { ...prev[role], enabled: e.target.checked },
                           }))
                         }
-                        className="rounded border-gray-300 bg-gray-100 text-violet-500"
+                        className="rounded border-gray-300 bg-gray-100 text-indigo-500"
                       />
                     </td>
                     <td className="px-4 py-3">
@@ -736,7 +736,7 @@ export function AiConfigPage() {
                   id="enabled"
                   checked={form.enabled}
                   onChange={(e) => setForm((f) => ({ ...f, enabled: e.target.checked }))}
-                  className="rounded border-gray-300 bg-gray-100 text-violet-500"
+                  className="rounded border-gray-300 bg-gray-100 text-indigo-500"
                 />
                 <label htmlFor="enabled" className="text-sm text-gray-500">
                   Ativo

@@ -279,7 +279,7 @@ export function AutoProspeccaoSenderPoolPage() {
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                         sender.provider === 'resend'
-                          ? 'bg-violet-100 text-violet-700'
+                          ? 'bg-indigo-100 text-indigo-700'
                           : 'bg-sky-100 text-sky-700'
                       }`}
                     >

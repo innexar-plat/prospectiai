@@ -59,12 +59,12 @@ export function ConfirmModal({
           <div className="flex items-center gap-3">
             <div
               className={`flex-shrink-0 flex items-center justify-center rounded-full w-10 h-10 ${
-                variant === 'danger' ? 'bg-red-100' : 'bg-violet-100'
+                variant === 'danger' ? 'bg-red-100' : 'bg-indigo-100'
               }`}
             >
               <AlertTriangle
                 size={20}
-                className={variant === 'danger' ? 'text-red-600' : 'text-violet-600'}
+                className={variant === 'danger' ? 'text-red-600' : 'text-indigo-600'}
               />
             </div>
             <h3 id="confirm-title" className="text-base font-semibold text-gray-900">

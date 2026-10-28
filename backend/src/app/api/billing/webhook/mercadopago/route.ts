@@ -12,6 +12,8 @@ import { paymentSuccessTemplate, paymentFailureTemplate } from '@/lib/email-temp
 import { logger } from '@/lib/logger';
 import { extendPeriodEnd, freshCreditCycle, isMpPreapprovalId, toCycle } from '@/lib/billing-period';
 import { freePlanData } from '@/lib/billing-lifecycle';
+import { markPaymentRefunded, recordPayment } from '@/lib/billing-ledger';
+import { recordWebhook } from '@/lib/ops-telemetry';
 import { sendRenewalConfirmedEmail, sendSubscriptionCancelledEmail, type BillingRecipient } from '@/lib/billing-emails';
 import { createCommissionForFirstPayment, cancelCommissionsByOrderOrSubscription, createCommissionForRecurring } from '@/lib/affiliate';
 import { isWebhookDuplicate } from '@/lib/webhook-dedup';
@@ -146,6 +148,7 @@ type MpPaymentData = {
     status_detail?: string;
     transaction_amount?: number;
     date_created?: string;
+    payment_type_id?: string;
     external_reference?: string;
     metadata?: Record<string, unknown>;
     point_of_interaction?: { transaction_data?: { subscription_id?: string } };
@@ -296,6 +299,16 @@ async function handleOneTimeApproved(data: MpPaymentData, id: string): Promise<v
     const applied = await applyApprovedPaymentMp(data, userId, planId, interval, id, promoId);
     if (!applied) return;
     const valueCents = Math.round((data.transaction_amount ?? getPlanPrices(PLANS[planId], toCycle(interval)).price_brl) * 100);
+    await recordPayment({
+        workspaceId: applied.workspaceId,
+        provider: 'mercadopago',
+        externalId: `mp:${id}`,
+        method: data.payment_type_id === 'bank_transfer' ? 'pix' : data.payment_type_id ?? null,
+        kind: applied.isRenewal ? 'RENEWAL' : 'FIRST',
+        amountCents: valueCents,
+        currency: 'BRL',
+        planId,
+    });
 
     if (applied.isRenewal) {
         notifyPaymentRenewed({
@@ -409,6 +422,7 @@ async function handlePaymentTopic(id: string): Promise<void> {
             status: data.status,
         });
         await revokeRefundedOneTimePayment(id, data.status);
+        if (data.status !== 'cancelled') await markPaymentRefunded(`mp:${id}`);
         try {
             const cancelled = await cancelCommissionsByOrderOrSubscription(id, undefined);
             if (cancelled > 0) logger.info('Affiliate commissions cancelled (MP refund/cancel)', { paymentId: id, count: cancelled });
@@ -507,6 +521,19 @@ async function activatePreapproval(preapproval: PreApprovalData, charge?: { paym
             ...(promo?.endsNow ? { promoRegularAmountBrl: null, starterPromoCode: null } : {}),
         },
     });
+
+    if (charge) {
+        await recordPayment({
+            workspaceId: workspace.id,
+            provider: 'mercadopago',
+            externalId: `mp:${charge.paymentId}`,
+            method: 'credit_card',
+            kind: isRenewal ? 'RENEWAL' : 'FIRST',
+            amountCents: valueCents,
+            currency: 'BRL',
+            planId,
+        });
+    }
 
     if (promo?.endsNow) {
         const regular = workspace.promoRegularAmountBrl ?? STARTER_PROMO_BR.regularPriceBrl;
@@ -781,6 +808,7 @@ export async function POST(req: Request) {
 
     // Validate HMAC signature
     if (!validateMpSignature(xSignature, xRequestId, dataId)) {
+        await recordWebhook('mercadopago', false, 'invalid signature');
         logger.warn('MP Webhook signature validation failed', { topic, dataId });
         return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
@@ -794,5 +822,6 @@ export async function POST(req: Request) {
     }
 
     await dispatchMpWebhook(topic, dataId);
+    await recordWebhook('mercadopago', true);
     return NextResponse.json({ received: true });
 }

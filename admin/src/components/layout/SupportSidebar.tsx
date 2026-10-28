@@ -11,7 +11,7 @@ export function SupportSidebar({ onNavigate }: { onNavigate?: () => void }) {
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center gap-2">
           <img
-            src="/brands/precision-favicon.svg"
+            src={`${import.meta.env.BASE_URL}brands/precision-favicon.svg?v=4`}
             alt=""
             aria-hidden
             className="w-8 h-8 object-contain"
@@ -33,7 +33,7 @@ export function SupportSidebar({ onNavigate }: { onNavigate?: () => void }) {
               cn(
                 'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                 isActive
-                  ? 'bg-violet-50 text-violet-700 border border-violet-200'
+                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
                   : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
               )
             }

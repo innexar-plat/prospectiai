@@ -201,7 +201,7 @@ export function EmailCampaignsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Send className="w-5 h-5 sm:w-6 sm:h-6 text-violet-600" />
+            <Send className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" />
             Campanhas de Email
           </h1>
           <p className="text-sm text-gray-500 mt-1">{total} campanha{total !== 1 ? 's' : ''}</p>
@@ -272,7 +272,7 @@ export function EmailCampaignsPage() {
                   </div>
                   <div className="flex items-center gap-1">
                     {(c.status === 'DRAFT' || c.status === 'SCHEDULED') && (
-                      <button onClick={() => openEdit(c)} className="p-2 rounded-lg hover:bg-violet-50 text-gray-400 hover:text-violet-600" title="Editar">
+                      <button onClick={() => openEdit(c)} className="p-2 rounded-lg hover:bg-indigo-50 text-gray-400 hover:text-indigo-600" title="Editar">
                         <Pencil className="w-4 h-4" />
                       </button>
                     )}
@@ -287,7 +287,7 @@ export function EmailCampaignsPage() {
                       </button>
                     )}
                     {c.status === 'SENT' && (
-                      <button onClick={() => navigate(`${c.id}`)} className="p-2 rounded-lg hover:bg-violet-50 text-gray-400 hover:text-violet-600" title="Ver detalhes">
+                      <button onClick={() => navigate(`${c.id}`)} className="p-2 rounded-lg hover:bg-indigo-50 text-gray-400 hover:text-indigo-600" title="Ver detalhes">
                         <Eye className="w-4 h-4" />
                       </button>
                     )}

@@ -147,7 +147,7 @@ export function AutoProspeccaoSearchProfilesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <Search className="w-5 h-5 text-violet-600" />
+            <Search className="w-5 h-5 text-indigo-600" />
             Perfis de Busca — Auto-Prospecção
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">{total} perfil{total !== 1 ? 'is' : ''} encontrado{total !== 1 ? 's' : ''}</p>
@@ -196,7 +196,7 @@ export function AutoProspeccaoSearchProfilesPage() {
                     {p.totalHot > 0 && <span className="ml-1 text-xs text-red-600">({p.totalHot} HOT)</span>}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    {p.isSystem && <Star className="w-4 h-4 text-violet-500 inline" />}
+                    {p.isSystem && <Star className="w-4 h-4 text-indigo-500 inline" />}
                   </td>
                   <td className="px-4 py-3 text-center">
                     <button onClick={() => handleToggleActive(p)} title={p.isActive ? 'Desativar' : 'Ativar'}>
@@ -209,7 +209,7 @@ export function AutoProspeccaoSearchProfilesPage() {
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => openEdit(p)}
-                        className="p-1.5 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded-md transition-colors"
+                        className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
                         title="Editar"
                       >
                         <Pencil className="w-4 h-4" />
@@ -241,20 +241,20 @@ export function AutoProspeccaoSearchProfilesPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
                 <input value={form.name as string} onChange={(e) => setField('name', e.target.value)}
-                  className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="ex: Consultorias SP" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
                 <input value={form.description as string} onChange={(e) => setField('description', e.target.value)}
-                  className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="Descrição opcional" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">CNAE único</label>
                   <input value={form.cnae as string} onChange={(e) => setField('cnae', e.target.value)}
-                    className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     placeholder="ex: 7020400" />
                 </div>
                 <div>
@@ -262,7 +262,7 @@ export function AutoProspeccaoSearchProfilesPage() {
                   <input
                     value={(form.cnaeList as string[]).join(',')}
                     onChange={(e) => setField('cnaeList', e.target.value ? e.target.value.split(',').map(s => s.trim()).filter(Boolean) : [])}
-                    className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     placeholder="7020400,7311400 (separado por vírgula)" />
                 </div>
               </div>
@@ -272,7 +272,7 @@ export function AutoProspeccaoSearchProfilesPage() {
                   <input
                     value={(form.uf as string[]).join(',')}
                     onChange={(e) => setField('uf', e.target.value ? e.target.value.split(',').map(s => s.trim().toUpperCase()).filter(Boolean) : [])}
-                    className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     placeholder="SP,RJ,MG" />
                 </div>
                 <div>
@@ -280,7 +280,7 @@ export function AutoProspeccaoSearchProfilesPage() {
                   <input
                     value={(form.porte as string[]).join(',')}
                     onChange={(e) => setField('porte', e.target.value ? e.target.value.split(',').map(s => s.trim().toUpperCase()).filter(Boolean) : [])}
-                    className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     placeholder="ME,EPP,DEMAIS" />
                 </div>
               </div>
@@ -291,7 +291,7 @@ export function AutoProspeccaoSearchProfilesPage() {
                     type="number"
                     value={form.minCapital ?? ''}
                     onChange={(e) => setField('minCapital', e.target.value ? parseFloat(e.target.value) : null)}
-                    className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     placeholder="ex: 100000" />
                 </div>
                 <div>
@@ -300,24 +300,24 @@ export function AutoProspeccaoSearchProfilesPage() {
                     type="number"
                     value={form.priority as number}
                     onChange={(e) => setField('priority', parseInt(e.target.value, 10) || 0)}
-                    className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500" />
+                    className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                 </div>
               </div>
               <div className="flex flex-col gap-2">
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={form.isSystem as boolean} onChange={(e) => setField('isSystem', e.target.checked)} className="rounded accent-violet-600" />
+                  <input type="checkbox" checked={form.isSystem as boolean} onChange={(e) => setField('isSystem', e.target.checked)} className="rounded accent-indigo-600" />
                   <span className="text-sm font-medium text-gray-700">Template do sistema (global)</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={form.isActive as boolean} onChange={(e) => setField('isActive', e.target.checked)} className="rounded accent-violet-600" />
+                  <input type="checkbox" checked={form.isActive as boolean} onChange={(e) => setField('isActive', e.target.checked)} className="rounded accent-indigo-600" />
                   <span className="text-sm font-medium text-gray-700">Ativo</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={form.hasEmail === true} onChange={(e) => setField('hasEmail', e.target.checked ? true : null)} className="rounded accent-violet-600" />
+                  <input type="checkbox" checked={form.hasEmail === true} onChange={(e) => setField('hasEmail', e.target.checked ? true : null)} className="rounded accent-indigo-600" />
                   <span className="text-sm font-medium text-gray-700">Exigir email</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={form.hasPhone === true} onChange={(e) => setField('hasPhone', e.target.checked ? true : null)} className="rounded accent-violet-600" />
+                  <input type="checkbox" checked={form.hasPhone === true} onChange={(e) => setField('hasPhone', e.target.checked ? true : null)} className="rounded accent-indigo-600" />
                   <span className="text-sm font-medium text-gray-700">Exigir telefone</span>
                 </label>
               </div>

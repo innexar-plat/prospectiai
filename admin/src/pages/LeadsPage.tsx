@@ -71,7 +71,7 @@ export function LeadsPage() {
           placeholder="Workspace ID (opcional)"
           value={workspaceId}
           onChange={(e) => setWorkspaceId(e.target.value)}
-          className="px-3 py-1.5 rounded-lg bg-gray-100 border border-gray-300 text-gray-700 text-sm w-56 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-violet-400"
+          className="px-3 py-1.5 rounded-lg bg-gray-100 border border-gray-300 text-gray-700 text-sm w-56 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
         />
         <button
           type="button"

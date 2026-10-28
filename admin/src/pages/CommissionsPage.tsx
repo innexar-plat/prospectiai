@@ -196,7 +196,7 @@ export function CommissionsPage() {
                     <input type="checkbox" checked={selectedIds.has(c.id)} onChange={() => toggleSelection(c.id)} className="rounded border-gray-300" />
                   )}
                 </td>
-                <td className="px-4 py-3"><Link to={`../affiliates/${c.affiliateId}`} className="text-violet-600 font-mono">{c.affiliateCode}</Link></td>
+                <td className="px-4 py-3"><Link to={`../affiliates/${c.affiliateId}`} className="text-indigo-600 font-mono">{c.affiliateCode}</Link></td>
                 <td className="px-4 py-3">{c.currency === 'BRL' ? 'R$' : '$'} {(c.amountCents / 100).toFixed(2)}</td>
                 <td className="px-4 py-3">{c.status}</td>
                 <td className="px-4 py-3 text-gray-500">{new Date(c.availableAt).toLocaleDateString('pt-BR')}</td>

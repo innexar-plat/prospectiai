@@ -54,7 +54,7 @@ export function EmailAnalyticsPage() {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-violet-600" />
+          <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" />
           Email Analytics
         </h1>
         <p className="text-sm text-gray-500 mt-1">Visão geral do sistema de email marketing</p>
@@ -63,7 +63,7 @@ export function EmailAnalyticsPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <StatCard
-          icon={<FileText className="w-5 h-5 text-violet-600" />}
+          icon={<FileText className="w-5 h-5 text-indigo-600" />}
           label="Templates"
           value={stats?.totalTemplates ?? 0}
           onClick={() => navigate('../email-templates')}
@@ -105,7 +105,7 @@ export function EmailAnalyticsPage() {
           <h2 className="font-semibold text-gray-900 flex items-center gap-2">
             <BarChart3 className="w-4 h-4 text-gray-400" /> Campanhas Recentes
           </h2>
-          <Button variant="ghost" size="sm" onClick={() => navigate('../email-campaigns')} className="flex items-center gap-1 text-violet-600">
+          <Button variant="ghost" size="sm" onClick={() => navigate('../email-campaigns')} className="flex items-center gap-1 text-indigo-600">
             Ver todas <ArrowRight className="w-3.5 h-3.5" />
           </Button>
         </div>
@@ -113,7 +113,7 @@ export function EmailAnalyticsPage() {
           <div className="p-8 text-center text-gray-400">
             <Send className="w-10 h-10 mx-auto mb-2 opacity-40" />
             <p>Nenhuma campanha ainda.</p>
-            <Button variant="ghost" onClick={() => navigate('../email-campaigns')} className="mt-2 text-violet-600">Criar primeira campanha</Button>
+            <Button variant="ghost" onClick={() => navigate('../email-campaigns')} className="mt-2 text-indigo-600">Criar primeira campanha</Button>
           </div>
         ) : (
           <div className="divide-y divide-gray-50">
@@ -160,7 +160,7 @@ export function EmailAnalyticsPage() {
           title="Criar Template"
           description="Crie um novo template para suas campanhas"
           onClick={() => navigate('../email-templates')}
-          icon={<FileText className="w-5 h-5 text-violet-600" />}
+          icon={<FileText className="w-5 h-5 text-indigo-600" />}
         />
         <QuickAction
           title="Nova Campanha"
@@ -198,7 +198,7 @@ function QuickAction({ title, description, onClick, icon }: {
   title: string; description: string; onClick: () => void; icon: React.ReactNode;
 }) {
   return (
-    <button onClick={onClick} className="text-left bg-white rounded-xl border border-gray-200 p-4 hover:border-violet-300 hover:shadow-sm transition-all">
+    <button onClick={onClick} className="text-left bg-white rounded-xl border border-gray-200 p-4 hover:border-indigo-300 hover:shadow-sm transition-all">
       <div className="flex items-center gap-2 mb-1">{icon}<span className="font-semibold text-gray-900 text-sm">{title}</span></div>
       <p className="text-xs text-gray-500">{description}</p>
     </button>
