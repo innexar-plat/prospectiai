@@ -1,9 +1,22 @@
 const mockUsers = jest.fn();
+const histories = new Map<string, { searchHistory: unknown; analyses: unknown }>();
 const mockUnsub = jest.fn().mockResolvedValue([]);
 const mockTx = { $executeRawUnsafe: jest.fn().mockResolvedValue(0), $queryRawUnsafe: jest.fn() };
 jest.mock('@/lib/prisma', () => ({
     prisma: {
-        user: { findMany: (...a: unknown[]) => mockUsers(...a) },
+        user: { findMany: (...a: unknown[]) => mockUsers(...a).then((us: Array<Record<string, unknown>>) => us.map(({ searchHistory, analyses, ...rest }) => { histories.set(rest.id as string, { searchHistory, analyses }); return rest; })) },
+        searchHistory: {
+            findFirst: async ({ where }: { where: { userId: string } }) => {
+                const h = (histories.get(where.userId)?.searchHistory as Array<Record<string, unknown>> | undefined)?.[0];
+                return h ? { id: `sh-${where.userId}`, ...h } : null;
+            },
+            findUnique: async ({ where }: { where: { id: string } }) => {
+                const uid = where.id.replace('sh-', '');
+                const h = (histories.get(uid)?.searchHistory as Array<Record<string, unknown>> | undefined)?.[0];
+                return h ? { resultsData: h.resultsData } : null;
+            },
+        },
+        leadAnalysis: { findMany: async ({ where }: { where: { userId: string } }) => (histories.get(where.userId)?.analyses as unknown[]) ?? [] },
         emailUnsubscribe: { findMany: (...a: unknown[]) => mockUnsub(...a) },
         $queryRaw: jest.fn().mockResolvedValue([{ d: '20260315' }]),
         $transaction: jest.fn((fn: (tx: unknown) => unknown) => fn(mockTx)),

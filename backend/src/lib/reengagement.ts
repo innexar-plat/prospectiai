@@ -121,6 +121,9 @@ function fromHistory(resultsData: unknown, savedNames: Set<string>): Reengagemen
 export async function runReengagementEmails(now: Date, dryRun: boolean): Promise<ReengagementResult> {
     const result: ReengagementResult = { candidates: 0, sent: 0, fromRf: 0, fromHistory: 0 };
     const cutoff = addDays(now, -INACTIVE_DAYS);
+    // Only lightweight user fields here. Loading searchHistory/analyses as nested relations
+    // pulled every stored search (with full results JSON) for heavy accounts into memory and
+    // OOM-killed the backend; the last search is fetched per user below instead.
     const users = await prisma.user.findMany({
         where: {
             notifyByEmail: true,
@@ -129,11 +132,7 @@ export async function runReengagementEmails(now: Date, dryRun: boolean): Promise
             market: 'BR',
             searchHistory: { some: {}, none: { createdAt: { gte: cutoff } } },
         },
-        select: {
-            id: true, email: true, name: true, market: true,
-            searchHistory: { orderBy: { createdAt: 'desc' }, take: 1, select: { textQuery: true, city: true, state: true, filters: true, resultsData: true } },
-            analyses: { select: { lead: { select: { name: true } } }, take: 200 },
-        },
+        select: { id: true, email: true, name: true, market: true },
         take: BATCH_LIMIT * 2,
     });
     if (users.length === 0) return result;
@@ -151,11 +150,16 @@ export async function runReengagementEmails(now: Date, dryRun: boolean): Promise
 
     for (const u of users) {
         if (result.sent >= BATCH_LIMIT) break;
-        const last = u.searchHistory[0];
-        if (!u.email || !last || unsubscribed.has(u.email.toLowerCase())) continue;
+        if (!u.email || unsubscribed.has(u.email.toLowerCase())) continue;
         const sends = Number((await redis?.get(`reengage:count:${u.id}`).catch(() => null)) ?? 0);
         if (sends >= MAX_SENDS) continue;
         if (await redis?.get(`reengage:week:${u.id}:${week}`).catch(() => null)) continue;
+        const last = await prisma.searchHistory.findFirst({
+            where: { userId: u.id },
+            orderBy: { createdAt: 'desc' },
+            select: { id: true, textQuery: true, city: true, state: true, filters: true },
+        });
+        if (!last) continue;
         result.candidates++;
 
         const niche = last.textQuery.replace(new RegExp(`\\b${(last.city ?? '').replace(/[.*+?^${}()|[\]\\]/g, '')}\\b`, 'gi'), '').replace(/\s+/g, ' ').trim() || last.textQuery;
@@ -173,7 +177,12 @@ export async function runReengagementEmails(now: Date, dryRun: boolean): Promise
             logger.warn('Reengagement RF lookup failed', { userId: u.id, error: err instanceof Error ? err.message : 'Unknown' });
         }
         if (companies.length === 0) {
-            companies = fromHistory(last.resultsData, new Set(u.analyses.map((a) => a.lead.name.toLowerCase())));
+            // Fallback only: load this one search's stored results and the user's saved lead names.
+            const [stored, saved] = await Promise.all([
+                prisma.searchHistory.findUnique({ where: { id: last.id }, select: { resultsData: true } }),
+                prisma.leadAnalysis.findMany({ where: { userId: u.id }, select: { lead: { select: { name: true } } }, take: 500 }),
+            ]);
+            companies = fromHistory(stored?.resultsData, new Set(saved.map((a) => a.lead.name.toLowerCase())));
             total = companies.length;
         }
         if (companies.length < 2) continue;
