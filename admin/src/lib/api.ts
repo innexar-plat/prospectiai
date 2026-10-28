@@ -439,6 +439,28 @@ export interface CronStatus {
   history: Array<{ at: string; ok: boolean; durationMs: number; summary?: string }>;
 }
 
+export interface RetentionReport {
+  cohortDays: number;
+  funnel: {
+    signups: number;
+    onboarded: number;
+    searched: number;
+    savedLead: number;
+    contacted: number;
+    paid: number;
+    eligibleForReturn: number;
+    returnedAfter7d: number;
+  };
+  weekly: {
+    activeSearchers: number;
+    contactsLogged: number;
+    usersContacting: number;
+    followUpsScheduled: number;
+    followUpsOverdue: number;
+  };
+  aiCost: Array<{ day: string; calls: number; avgInput: number; avgOutput: number }>;
+}
+
 export interface SystemHealth {
   status: 'ok' | 'degraded' | 'down';
   problems: string[];
@@ -516,6 +538,7 @@ export interface LifecycleReport {
 export const adminApi = {
   stats: () => request<AdminStats>('/admin/stats'),
   systemHealth: () => request<SystemHealth>('/admin/system-health'),
+  retention: (days: number) => request<RetentionReport>(`/admin/retention?days=${days}`),
   billing: () => request<BillingOverview>('/admin/billing'),
   runBillingLifecycle: (dryRun: boolean) =>
     request<LifecycleReport>('/admin/billing/lifecycle', { method: 'POST', body: JSON.stringify({ dryRun }) }),

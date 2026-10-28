@@ -26,10 +26,7 @@ export async function POST(req: Request) {
 
         const user = await prisma.user.findFirst({
             where: {
-                OR: [
-                    { resetTokenHash: tokenHash },
-                    { resetToken: token },
-                ],
+                resetTokenHash: tokenHash,
                 resetTokenExpires: {
                     gt: new Date()
                 }
@@ -47,6 +44,7 @@ export async function POST(req: Request) {
             data: {
                 password: hashedPassword,
                 resetToken: null,
+                resetTokenHash: null,
                 resetTokenExpires: null,
                 tokenVersion: { increment: 1 }
             }

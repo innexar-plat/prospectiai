@@ -43,6 +43,7 @@ import { RepLevels } from '@/pages/representatives/Levels';
 import { RepStatsPage } from '@/pages/representatives/Stats';
 import { WhatsAppPage } from '@/pages/WhatsAppPage';
 import { SystemHealthPage } from '@/pages/SystemHealthPage';
+import { RetentionPage } from '@/pages/RetentionPage';
 import { BillingPage } from '@/pages/BillingPage';
 
 function App() {
@@ -55,6 +56,7 @@ function App() {
             <Route element={<AdminOnlyRoute />}>
               <Route index element={<Dashboard />} />
               <Route path="system-health" element={<SystemHealthPage />} />
+              <Route path="retention" element={<RetentionPage />} />
               <Route path="billing" element={<BillingPage />} />
               <Route path="workspaces" element={<WorkspacesPage />} />
               <Route path="workspaces/:id" element={<WorkspaceDetailPage />} />

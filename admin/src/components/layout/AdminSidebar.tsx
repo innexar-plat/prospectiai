@@ -37,6 +37,7 @@ const sections: NavSection[] = [
       { to: '.', end: true, label: 'Dashboard', icon: LayoutDashboard },
       { to: 'system-health', end: false, label: 'Saúde do sistema', icon: HeartPulse },
       { to: 'billing', end: false, label: 'Assinaturas e cobrança', icon: Wallet },
+      { to: 'retention', end: false, label: 'Retenção e ativação', icon: TrendingUp },
       { to: 'users', end: false, label: 'Usuários', icon: Users },
       { to: 'workspaces', end: false, label: 'Workspaces', icon: Building2 },
       { to: 'leads', end: false, label: 'Leads', icon: FileText },

@@ -56,3 +56,6 @@ next-env.d.ts
 
 # dependências em qualquer nível (backend/, .opencode/)
 node_modules/
+
+# Database dumps (scripts/backup-db.sh)
+backups/

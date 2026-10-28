@@ -9,6 +9,7 @@ set -euo pipefail
 #   0 3 * * * cd /opt/prospector-ai && ./scripts/backup-db.sh >> /var/log/prospector-backup.log 2>&1
 
 BACKUP_DIR="${BACKUP_DIR:-/opt/prospector-ai/backups}"
+# RfCompany rows are excluded (public Receita data, re-importable via rf-monthly-import.sh).
 RETENTION_DAYS="${RETENTION_DAYS:-7}"
 CONTAINER_NAME="${DB_CONTAINER:-prospector-db}"
 DB_NAME="${POSTGRES_DB:-prospector_db}"
@@ -16,16 +17,17 @@ DB_USER="${POSTGRES_USER:-}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="${BACKUP_DIR}/prospector_${TIMESTAMP}.sql.gz"
 
-# Load .env if available (for POSTGRES_USER / POSTGRES_DB / TELEGRAM_*)
+# Read only the keys we need from .env — sourcing it breaks on values like "Name <a@b.c>".
 ENV_FILE="$(dirname "$0")/../.env"
-if [[ -f "$ENV_FILE" ]]; then
-    set -a
-    # shellcheck disable=SC1090
-    source "$ENV_FILE"
-    set +a
-    DB_NAME="${POSTGRES_DB:-prospector_db}"
-    DB_USER="${POSTGRES_USER:-}"
-fi
+env_get() {
+    [[ -f "$ENV_FILE" ]] || return 0
+    grep -E "^$1=" "$ENV_FILE" | tail -1 | cut -d= -f2- | sed -E 's/^"(.*)"$/\1/; s/^'"'"'(.*)'"'"'$/\1/'
+}
+DB_USER="${POSTGRES_USER:-$(env_get POSTGRES_USER)}"
+DB_NAME="${POSTGRES_DB:-$(env_get POSTGRES_DB)}"
+DB_NAME="${DB_NAME:-prospector_db}"
+TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-$(env_get TELEGRAM_BOT_TOKEN)}"
+TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID:-$(env_get TELEGRAM_CHAT_ID)}"
 
 # ── Telegram alert helper ─────────────────────────────────────────────────────
 send_telegram() {
@@ -51,7 +53,7 @@ mkdir -p "$BACKUP_DIR"
 
 echo "[$(date -Iseconds)] Starting backup → ${BACKUP_FILE}"
 
-if ! docker exec "$CONTAINER_NAME" pg_dump -U "$DB_USER" -d "$DB_NAME" --no-owner --no-acl | gzip > "$BACKUP_FILE"; then
+if ! docker exec "$CONTAINER_NAME" pg_dump -U "$DB_USER" -d "$DB_NAME" --no-owner --no-acl --exclude-table-data='"RfCompany"' | gzip > "$BACKUP_FILE"; then
     echo "[ERROR] pg_dump failed"
     rm -f "$BACKUP_FILE"
     send_telegram "🔴" "Backup FALHOU" "pg_dump retornou erro para ${DB_NAME}"
