@@ -275,7 +275,7 @@ describe('SearchService', () => {
         await runSearch({ textQuery: 'cacheable' } as any, mockUserId);
         expect(redis.setCached).toHaveBeenCalled();
         const cacheKeys = (redis.setCached as jest.Mock).mock.calls.map((call) => call[0]);
-        expect(cacheKeys.some((key: string) => key.includes('search:cacheable'))).toBe(true);
+        expect(cacheKeys.some((key: string) => key.includes('search:v2:cacheable'))).toBe(true);
     });
 
     it('should filter out places without website when hasWebsite is yes', async () => {
@@ -437,5 +437,17 @@ describe('SearchService', () => {
             expect(callArg.locationBias).toBeDefined();
             expect(callArg.locationBias?.center).toEqual({ latitude: -22.9, longitude: -43.2 });
         });
+    });
+});
+
+describe('normalizeSearchQuery', () => {
+    const { normalizeSearchQuery } = require('@/modules/search/application/search.service');
+    it('collapses a location repeated back to back', () => {
+        expect(normalizeSearchQuery('consorcio para empresas Campo Grande Campo Grande Campo Grande', 'Campo Grande', null)).toBe('consorcio para empresas Campo Grande');
+        expect(normalizeSearchQuery('Médico SP SP', null, 'SP')).toBe('Médico SP');
+        expect(normalizeSearchQuery('Dentista  Blumenau blumenau', 'Blumenau')).toBe('Dentista Blumenau');
+    });
+    it('keeps queries without repetition untouched', () => {
+        expect(normalizeSearchQuery('São Paulo Burger São Paulo', 'São Paulo')).toBe('São Paulo Burger São Paulo');
     });
 });

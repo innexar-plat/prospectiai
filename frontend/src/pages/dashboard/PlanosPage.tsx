@@ -9,6 +9,7 @@ import { getPlanDisplayName, isTrialExpiredUser } from '@/lib/billing-config';
 import { getAffiliateRef, getRepCode } from '@/lib/affiliate-ref';
 import { getSupportEmail, getSupportWhatsAppUrl } from '@/lib/support';
 import { Button } from '@/components/ui/Button';
+import { PaymentMethodDialog, type BrPaymentChoice } from '@/components/dashboard/billing/PaymentMethodDialog';
 import { useToast } from '@/contexts/ToastContext';
 import { useI18n } from '@/lib/i18n';
 import { getActiveMarket, getMarketConfig, isTrialEnabled } from '@/lib/market';
@@ -95,6 +96,39 @@ function renderFeatureCellValue(val: boolean | string | undefined) {
     return <span className="text-xs font-bold text-violet-600 dark:text-violet-400 tabular-nums">{String(val ?? '—')}</span>;
 }
 
+function RenewalPixBox({ pix, dateLocale }: { pix: NonNullable<SessionUser['renewalPix']>; dateLocale: string }) {
+    const [copied, setCopied] = useState(false);
+    const copy = async () => {
+        if (!pix.qrCode) return;
+        try {
+            await navigator.clipboard.writeText(pix.qrCode);
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 2000);
+        } catch {
+            // clipboard unavailable — the code stays visible for manual copy
+        }
+    };
+    return (
+        <div className="mt-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 space-y-2">
+            <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">
+                PIX de renovação disponível até {new Date(pix.expiresAt).toLocaleDateString(dateLocale)}. Pague para renovar o plano e os créditos.
+            </p>
+            <div className="flex flex-wrap gap-2">
+                {pix.url && (
+                    <a href={pix.url} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">
+                        Pagar com PIX
+                    </a>
+                )}
+                {pix.qrCode && (
+                    <button type="button" onClick={copy} className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-emerald-600/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10">
+                        {copied ? 'Copiado!' : 'Copiar PIX copia e cola'}
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+}
+
 function PlanosCurrentPlanCard({
     user,
     plans,
@@ -152,6 +186,16 @@ function PlanosCurrentPlanCard({
                         <p className="text-xs text-muted mt-1">
                             {t('dash.planos.renewal', { date: new Date(user.currentPeriodEnd).toLocaleDateString(dateLocale) })}
                         </p>
+                    )}
+                    {user.plan !== 'FREE' && user.plan !== 'TRIAL' && user.creditsResetAt && (
+                        <p className="text-xs text-muted mt-1">
+                            {locale === 'pt'
+                                ? `Créditos renovam em ${new Date(user.creditsResetAt).toLocaleDateString(dateLocale)} — o saldo não usado vence nessa data.`
+                                : `Credits renew on ${new Date(user.creditsResetAt).toLocaleDateString(dateLocale)} — unused credits expire on that date.`}
+                        </p>
+                    )}
+                    {user.renewalPix && (
+                        <RenewalPixBox pix={user.renewalPix} dateLocale={dateLocale} />
                     )}
                     {user.pendingPlanId && user.pendingPlanEffectiveAt && pendingPlanName && (
                         <div className="mt-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
@@ -459,6 +503,7 @@ export default function PlanosPage() {
     const [plansError, setPlansError] = useState<string | null>(null);
     const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
     const [cancelLoading, setCancelLoading] = useState(false);
+    const [payDialogPlanId, setPayDialogPlanId] = useState<string | null>(null);
     const [billingCycle, setBillingCycle] = useState<BillingCycle>(user.billingCycle ?? 'monthly');
     const [promoState, setPromoState] = useState<PromoValidateResponse | null>(null);
     const promoParam = searchParams.get('promo');
@@ -529,10 +574,15 @@ export default function PlanosPage() {
     };
     const isDowngrade = (targetKey: string) => planTierIndex(targetKey) < planTierIndex(user.plan);
 
-    const handleUpgrade = async (planId: string) => {
+    const handleUpgrade = async (planId: string, choice?: BrPaymentChoice) => {
         if (planId === 'FREE' || planId === 'TRIAL') return;
         const isCycleChangeOnly = planId === user.plan && billingCycle !== (user.billingCycle ?? 'monthly');
         if (planId === user.plan && !isCycleChangeOnly) return;
+        // BR: ask card (recurring) or PIX before creating a new charge; downgrades are only scheduled.
+        if (currency === 'BRL' && !choice && !isDowngrade(planId)) {
+            setPayDialogPlanId(planId);
+            return;
+        }
         setLoadingPlan(planId);
         try {
             const affiliateCode = getAffiliateRef();
@@ -543,6 +593,7 @@ export default function PlanosPage() {
                 interval: billingCycle,
                 locale: checkoutLocale,
                 scheduleAtPeriodEnd: isDowngrade(planId),
+                ...(choice ?? {}),
                 ...(affiliateCode && { affiliateCode }),
                 ...(repCode && { repCode }),
                 ...(usePromo && promoParam && { promoCode: promoParam }),
@@ -561,6 +612,7 @@ export default function PlanosPage() {
             addToast('error', err instanceof Error ? err.message : t('dash.planos.checkoutError'));
         } finally {
             setLoadingPlan(null);
+            setPayDialogPlanId(null);
         }
     };
 
@@ -583,7 +635,26 @@ export default function PlanosPage() {
         <>
             <HeaderDashboard title={t('dash.planos.title')} subtitle={t('dash.planos.subtitle')} breadcrumb={t('dash.planos.breadcrumb')} />
             <div className="p-6 sm:p-8 max-w-6xl mx-auto w-full space-y-8">
-
+                {payDialogPlanId && (() => {
+                    const dialogPlan = plans.find((p) => p.key === payDialogPlanId);
+                    const usePromoDialog = payDialogPlanId === 'BASIC' && !!effectivePromo?.eligible && billingCycle === 'monthly';
+                    const amount = dialogPlan
+                        ? (usePromoDialog && effectivePromo ? effectivePromo.priceMonthlyBrl : getPlanPrice(dialogPlan, billingCycle, 'BRL'))
+                        : 0;
+                    return (
+                        <PaymentMethodDialog
+                            open
+                            planName={dialogPlan?.name ?? payDialogPlanId}
+                            amountBrl={amount}
+                            cycleLabel={billingCycle === 'annual' ? 'por ano' : 'por mês'}
+                            payerEmail={user.email ?? ''}
+                            busy={loadingPlan === payDialogPlanId}
+                            onChoose={(choice) => { void handleUpgrade(payDialogPlanId, choice); }}
+                            onClose={() => setPayDialogPlanId(null)}
+                        />
+                    );
+                })()}
+                
                 <PlanosCurrentPlanCard
                     user={user}
                     plans={plans}

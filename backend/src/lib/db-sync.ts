@@ -181,48 +181,65 @@ async function syncLeadContacts(leadId: string, input: {
  * Compute an opportunity score (0-100) based on lead signals.
  * Higher score = more likely to benefit from outreach.
  */
+/**
+ * Opportunity score (0-100) used to rank search results.
+ *
+ * need  — how much the business would benefit from what our customers sell (no website,
+ *         weak reputation). These add points.
+ * reach — whether the lead is actually workable. Missing phone or a closed business used to
+ *         ADD points, which pushed unreachable / dead listings to the top of every search;
+ *         now they scale the score down (closed permanently = 0).
+ * Factor keys are stable (noWebsite, fewReviews, lowRating, noPhone, noHoursData, noPhotos)
+ * because the UI renders them as badges.
+ */
 export function computeOpportunityScore(place: PlaceResult): { score: number; factors: Record<string, boolean> } {
-    let score = 0;
     const factors: Record<string, boolean> = {};
+    let need = 0;
 
-    // No website → high opportunity (needs digital presence)
     if (!place.websiteUri) {
-        score += 30;
+        need += 35;
         factors.noWebsite = true;
     }
 
-    // Few or no reviews → needs reputation building
     const reviews = place.userRatingCount ?? 0;
     if (reviews < 10) {
-        score += 20;
+        need += 20;
         factors.fewReviews = true;
+    } else if (reviews < 40) {
+        need += 8;
     }
 
-    // Low rating → pain point
     if (place.rating != null && place.rating < 3.5) {
-        score += 20;
+        need += 25;
         factors.lowRating = true;
+    } else if (place.rating != null && place.rating < 4.2) {
+        need += 10;
     }
 
-    // No phone → accessibility gap
-    if (!place.nationalPhoneNumber && !place.internationalPhoneNumber) {
-        score += 15;
-        factors.noPhone = true;
-    }
-
-    // Not currently open / no hours data → possible inactive
-    if (!place.currentOpeningHours?.weekdayDescriptions?.length) {
-        score += 10;
-        factors.noHoursData = true;
-    }
-
-    // No photos → poor online presence
     if (!place.photos?.length) {
-        score += 5;
+        need += 5;
         factors.noPhotos = true;
     }
 
-    return { score: Math.min(100, score), factors };
+    const hasHours = Boolean(place.currentOpeningHours?.weekdayDescriptions?.length);
+    if (hasHours) need += 10; // active, maintained listing
+    else factors.noHoursData = true;
+
+    let reach = 1;
+    if (!place.nationalPhoneNumber && !place.internationalPhoneNumber) {
+        reach *= 0.6;
+        factors.noPhone = true;
+    }
+    if (place.businessStatus === 'CLOSED_TEMPORARILY') {
+        reach *= 0.3;
+        factors.closedTemporarily = true;
+    }
+    if (place.businessStatus === 'CLOSED_PERMANENTLY') {
+        reach = 0;
+        factors.closedPermanently = true;
+    }
+
+    return { score: Math.min(100, Math.round(need * reach)), factors };
 }
 
 /**

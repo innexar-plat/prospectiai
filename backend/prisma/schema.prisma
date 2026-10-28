@@ -212,6 +212,13 @@ model Workspace {
   promoRegularAmountBrl  Int?
   /** When BR trial reactivation promo email was sent (dedup for cron/script). */
   reactivationPromoSentAt DateTime?
+  /** Next monthly credit cycle boundary: unused credits expire and leadsUsed resets to 0. */
+  creditsResetAt         DateTime?
+  /** Pending PIX renewal charge (recurring PIX: one charge generated per cycle before currentPeriodEnd). */
+  renewalPaymentId       String?
+  renewalPaymentUrl      String?
+  renewalPaymentQrCode   String?
+  renewalPaymentExpiresAt DateTime?
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -414,6 +421,8 @@ model LeadAnalysis {
   cnpjAnalysis             String?        @db.Text  // AI analysis of CNPJ/RF data
   reviewTrend              String?        // IMPROVING, STABLE, DECLINING
   suggestedContactTime     String?        // e.g. "Segunda a Sexta, 9h-11h"
+  /// { quickActions, keyMetrics, messageVariants, reviewAnalysis } — AI output beyond the fixed columns.
+  extras                   Json?
   conversionReason         String?        @db.Text  // Why converted/lost (user fills)
   dealValue                Float?         // Actual deal value (user fills on CONVERTED)
   lostReason               String?        // PRICE | NO_NEED | COMPETITOR | NO_RESPONSE | OTHER

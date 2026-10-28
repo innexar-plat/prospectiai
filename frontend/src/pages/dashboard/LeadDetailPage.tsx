@@ -17,6 +17,47 @@ import { AiAnalysisCardPreview } from '@/components/dashboard/AiAnalysisCardPrev
 import SmartRelations from '@/components/SmartRelations';
 import { cn } from '@/lib/utils';
 
+/**
+ * Rebuilds the full analysis from a saved LeadAnalysis row. Only a handful of fields used to be
+ * copied, so strengths, gaps, strategy, social links, full report and message variants vanished
+ * when an analysed lead was reopened.
+ */
+function analysisFromSavedRecord(item: LeadAnalysisListItem): Analysis {
+  const row = item as unknown as Record<string, unknown>;
+  const extras = (row.extras && typeof row.extras === 'object' ? row.extras : {}) as Record<string, unknown>;
+  const str = (k: string) => (typeof row[k] === 'string' ? (row[k] as string) : undefined);
+  const arr = (v: unknown) => (Array.isArray(v) ? (v as string[]) : undefined);
+  return {
+    score: typeof row.score === 'number' ? row.score : undefined,
+    scoreLabel: str('scoreLabel'),
+    summary: str('summary'),
+    strengths: arr(row.strengths),
+    weaknesses: arr(row.weaknesses),
+    painPoints: arr(row.painPoints),
+    gaps: arr(row.gaps),
+    approach: str('approach'),
+    contactStrategy: str('contactStrategy'),
+    firstContactMessage: str('firstContactMessage'),
+    suggestedWhatsAppMessage: str('suggestedWhatsAppMessage'),
+    fullReport: str('fullReport'),
+    socialMedia: { instagram: str('socialInstagram'), facebook: str('socialFacebook'), linkedin: str('socialLinkedin') },
+    closeProbability: row.closeProbability,
+    estimatedDealValue: row.estimatedDealValue,
+    bestContactWindow: str('bestContactWindow'),
+    reviewTrend: str('reviewTrend'),
+    suggestedContactTime: str('suggestedContactTime'),
+    reclameAquiAnalysis: str('reclameAquiAnalysis'),
+    jusBrasilAnalysis: str('jusBrasilAnalysis'),
+    cnpjAnalysis: str('cnpjAnalysis'),
+    reviewAnalysis: typeof extras.reviewAnalysis === 'string' ? extras.reviewAnalysis : undefined,
+    quickActions: arr(extras.quickActions),
+    keyMetrics: Array.isArray(extras.keyMetrics) ? (extras.keyMetrics as Analysis['keyMetrics']) : undefined,
+    messageVariants: extras.messageVariants && typeof extras.messageVariants === 'object'
+      ? (extras.messageVariants as Analysis['messageVariants'])
+      : undefined,
+  };
+}
+
 /** Rótulo amigável do provedor de IA (não expõe Cloudflare ao usuário). */
 function getAnalysisProviderLabel(provider: string | undefined, t: (key: string) => string): string | undefined {
   if (!provider) return undefined;
@@ -61,15 +102,24 @@ function MessageTemplatesPanel({
 }) {
   const { t } = useI18n();
   const { addToast } = useToast();
-  const whatsappRaw = analysis.suggestedWhatsAppMessage != null ? String(analysis.suggestedWhatsAppMessage) : '';
-  const emailRaw = analysis.firstContactMessage != null ? String(analysis.firstContactMessage) : '';
-  const linkedinRaw = emailRaw;
+  const [length, setLength] = useState<'short' | 'medium'>('medium');
+  const variants = analysis.messageVariants ?? {};
+  const pick = (channel: MessageTab, fallback: string): { short: string; medium: string } => {
+    const v = variants[channel];
+    const short = v?.short?.trim() ?? '';
+    const medium = v?.medium?.trim() || fallback;
+    return { short, medium };
+  };
+  const whatsapp = pick('whatsapp', analysis.suggestedWhatsAppMessage != null ? String(analysis.suggestedWhatsAppMessage) : '');
+  const email = pick('email', analysis.firstContactMessage != null ? String(analysis.firstContactMessage) : '');
+  // LinkedIn used to repeat the email text; only show it when the AI wrote a LinkedIn message.
+  const linkedin = pick('linkedin', '');
 
   const tabs = useMemo(() => [
-    { key: 'whatsapp' as const, label: t('page.leadDetail.tabWhatsApp'), raw: whatsappRaw, available: !!whatsappRaw },
-    { key: 'email' as const, label: t('page.leadDetail.tabEmail'), raw: emailRaw, available: !!emailRaw },
-    { key: 'linkedin' as const, label: t('page.leadDetail.tabLinkedIn'), raw: linkedinRaw, available: !!linkedinRaw },
-  ].filter((tab) => tab.available), [t, whatsappRaw, emailRaw, linkedinRaw]);
+    { key: 'whatsapp' as const, label: t('page.leadDetail.tabWhatsApp'), msg: whatsapp },
+    { key: 'email' as const, label: t('page.leadDetail.tabEmail'), msg: email },
+    { key: 'linkedin' as const, label: t('page.leadDetail.tabLinkedIn'), msg: linkedin },
+  ].filter((tab) => tab.msg.medium || tab.msg.short), [t, whatsapp, email, linkedin]);
 
   const defaultTab = tabs[0]?.key ?? 'whatsapp';
   const [activeTab, setActiveTab] = useState<MessageTab>(defaultTab);
@@ -85,7 +135,9 @@ function MessageTemplatesPanel({
   if (tabs.length === 0) return null;
 
   const current = tabs.find((tab) => tab.key === activeTab) ?? tabs[0]!;
-  const displayText = personalized ? personalizeMessage(current.raw, ownerName) : current.raw;
+  const hasBothLengths = !!current.msg.short && !!current.msg.medium;
+  const raw = (length === 'short' && current.msg.short) || current.msg.medium || current.msg.short;
+  const displayText = personalized ? personalizeMessage(raw, ownerName) : raw;
   const mailtoUrl = buildMailtoUrl({
     to: recipientEmail,
     subject: businessName ? t('page.leadDetail.sendEmailSubject', { business: businessName }) : undefined,
@@ -147,6 +199,24 @@ function MessageTemplatesPanel({
           </button>
         ))}
       </div>
+      {hasBothLengths && (
+        <div className="flex gap-1 p-0.5 rounded-lg bg-surface border border-border w-fit" role="group">
+          {(['short', 'medium'] as const).map((len) => (
+            <button
+              key={len}
+              type="button"
+              onClick={() => setLength(len)}
+              aria-pressed={length === len}
+              className={cn(
+                'px-2.5 py-0.5 rounded-md text-[11px] font-semibold transition-colors',
+                length === len ? 'bg-card text-foreground shadow-sm border border-border' : 'text-muted hover:text-foreground',
+              )}
+            >
+              {len === 'short' ? t('page.leadDetail.msgShort') : t('page.leadDetail.msgFull')}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="bg-surface/60 p-3 rounded-lg border border-border/30">
         <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{displayText}</p>
       </div>
@@ -298,6 +368,10 @@ function LeadDetailAnalysisView({
   const reclameAquiAnalysis = analysis.reclameAquiAnalysis != null ? String(analysis.reclameAquiAnalysis) : '';
   const jusBrasilAnalysis = analysis.jusBrasilAnalysis != null ? String(analysis.jusBrasilAnalysis) : '';
   const cnpjAnalysis = analysis.cnpjAnalysis != null ? String(analysis.cnpjAnalysis) : '';
+  const quickActions = Array.isArray(analysis.quickActions) ? analysis.quickActions.filter((a) => typeof a === 'string' && a.trim()) : [];
+  const keyMetrics = Array.isArray(analysis.keyMetrics)
+    ? analysis.keyMetrics.filter((m) => m && typeof m.label === 'string' && typeof m.value === 'string' && m.value.trim())
+    : [];
   const socialEntries = Object.entries(socialMedia).filter(
     ([, link]) => link && String(link).toLowerCase() !== 'não encontrado' && String(link).toLowerCase() !== 'not found'
   );
@@ -350,6 +424,37 @@ function LeadDetailAnalysisView({
           )}
         </div>
       </div>
+
+      {(quickActions.length > 0 || keyMetrics.length > 0) && (
+        <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 px-4 py-3 sm:p-4 space-y-3">
+          <div>
+            <h3 className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
+              <Target size={14} /> {t('page.leadDetail.nextSteps')}
+            </h3>
+            <p className="text-[11px] text-muted mt-0.5">{t('page.leadDetail.nextStepsHint')}</p>
+          </div>
+          {quickActions.length > 0 && (
+            <ol className="space-y-2">
+              {quickActions.map((action, i) => (
+                <li key={`qa-${i}-${action.slice(0, 40)}`} className="flex gap-3 items-start text-sm text-foreground">
+                  <span className="shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white text-xs font-bold flex items-center justify-center tabular-nums">{i + 1}</span>
+                  <span className="leading-relaxed pt-0.5">{action}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+          {keyMetrics.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
+              {keyMetrics.slice(0, 6).map((m) => (
+                <div key={`km-${m.label}`} className="rounded-lg bg-card border border-border px-3 py-2 min-w-0" title={m.hint}>
+                  <div className="text-base font-bold text-foreground tabular-nums truncate">{m.value}</div>
+                  <div className="text-[11px] text-muted leading-tight">{m.label}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Lead Intelligence — kept for contact window emphasis on mobile */}
       {bestContactWindow && (closeProbability == null && estimatedDealValue == null) && (
@@ -1090,19 +1195,7 @@ export default function LeadDetailPage() {
           hydrate(item.lead.analysis);
           return;
         }
-        if (item.score != null) {
-          hydrate({
-            score: item.score,
-            summary: item.summary,
-            painPoints: item.painPoints,
-            approach: item.approach,
-            firstContactMessage: item.firstContactMessage,
-            suggestedWhatsAppMessage: item.suggestedWhatsAppMessage,
-            closeProbability: item.closeProbability,
-            estimatedDealValue: item.estimatedDealValue,
-            bestContactWindow: item.bestContactWindow,
-          });
-        }
+        if (item.score != null) hydrate(analysisFromSavedRecord(item));
       })
       .catch(() => {});
 

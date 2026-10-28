@@ -71,12 +71,12 @@ export default function SeoLandingPage() {
     setMeta('og:description', description, true);
     setMeta('og:type', 'website', true);
     setMeta('og:locale', 'pt_BR', true);
-    setMeta('og:image', `${baseUrl}/og-image-precisionia.png?v=20260420-2`, true);
+    setMeta('og:image', `${baseUrl}/og-image-precisionia.png?v=20261028`, true);
     setMeta('twitter:card', 'summary_large_image');
     setMeta('twitter:url', pageUrl);
     setMeta('twitter:title', title);
     setMeta('twitter:description', description);
-    setMeta('twitter:image', `${baseUrl}/og-image-precisionia.png?v=20260420-2`);
+    setMeta('twitter:image', `${baseUrl}/og-image-precisionia.png?v=20261028`);
 
     return () => {
       document.title = savedTitle;
@@ -85,11 +85,11 @@ export default function SeoLandingPage() {
       setMeta('og:url', `${baseUrl}/`, true);
       setMeta('og:title', 'Precision — Busca B2B e prospecção com IA', true);
       setMeta('og:description', 'Encontre e analise empresas por nicho e região com IA. Gestão de leads, exportação e trabalho em equipe.', true);
-      setMeta('og:image', `${baseUrl}/og-image-precisionia.png?v=20260420-2`, true);
+      setMeta('og:image', `${baseUrl}/og-image-precisionia.png?v=20261028`, true);
       setMeta('twitter:url', `${baseUrl}/`);
       setMeta('twitter:title', 'Precision — Busca B2B e prospecção com IA');
       setMeta('twitter:description', 'Plataforma B2B para encontrar, analisar e converter empresas com inteligência artificial.');
-      setMeta('twitter:image', `${baseUrl}/og-image-precisionia.png?v=20260420-2`);
+      setMeta('twitter:image', `${baseUrl}/og-image-precisionia.png?v=20261028`);
     };
   }, [entry]);
 

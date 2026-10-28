@@ -19,7 +19,7 @@ type Props = {
 };
 
 const HIGHLIGHT_PAD = 6;
-const BRAND = '#1047da';
+const BRAND = '#4F46E5';
 
 function SpotlightOverlay({ hl, maskId }: { hl: HighlightRect | null; maskId: string }) {
   if (!hl) {
@@ -55,7 +55,7 @@ function SpotlightOverlay({ hl, maskId }: { hl: HighlightRect | null; maskId: st
         stroke={BRAND}
         strokeWidth={2}
         strokeOpacity={0.85}
-        style={{ filter: 'drop-shadow(0 0 12px rgba(16, 71, 218, 0.35))' }}
+        style={{ filter: 'drop-shadow(0 0 12px rgba(79, 70, 229, 0.35))' }}
       />
     </svg>
   );
@@ -239,7 +239,7 @@ export function OnboardingTour({ sectionId, steps, onComplete, onSkip }: Props) 
       <SpotlightOverlay hl={hl} maskId={maskId} />
 
       <div
-        className="rounded-2xl border border-[#1047da]/15 bg-card text-foreground shadow-[0_24px_64px_-12px_rgba(15,23,42,0.35)] overflow-hidden"
+        className="rounded-2xl border border-[#4F46E5]/15 bg-card text-foreground shadow-[0_24px_64px_-12px_rgba(15,23,42,0.35)] overflow-hidden"
         style={{
           ...popover.style,
           pointerEvents: tipVisible ? 'auto' : 'none',
@@ -255,15 +255,15 @@ export function OnboardingTour({ sectionId, steps, onComplete, onSkip }: Props) 
 
         {isWelcome && (
           <div
-            className="px-5 pt-5 pb-4 border-b border-border/60 bg-gradient-to-br from-[#1047da]/10 via-[#1047da]/5 to-transparent"
+            className="px-5 pt-5 pb-4 border-b border-border/60 bg-gradient-to-br from-[#4F46E5]/10 via-[#4F46E5]/5 to-transparent"
             aria-hidden
           >
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-[#1047da]/10 flex items-center justify-center ring-1 ring-[#1047da]/20">
+              <div className="w-11 h-11 rounded-xl bg-[#4F46E5]/10 flex items-center justify-center ring-1 ring-[#4F46E5]/20">
                 <LogoIcon size={28} />
               </div>
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#1047da]">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#4F46E5]">
                   {t('common.tour.brandTag')}
                 </p>
                 <p className="text-xs text-muted">{t('common.tour.welcomeHint')}</p>
@@ -280,7 +280,7 @@ export function OnboardingTour({ sectionId, steps, onComplete, onSkip }: Props) 
               </p>
               <div className="h-1 rounded-full bg-border/80 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-[#1047da] transition-all duration-500 ease-out"
+                  className="h-full rounded-full bg-[#4F46E5] transition-all duration-500 ease-out"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -313,7 +313,7 @@ export function OnboardingTour({ sectionId, steps, onComplete, onSkip }: Props) 
                 <button
                   type="button"
                   onClick={prev}
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-border bg-surface text-sm font-semibold text-foreground hover:bg-card hover:border-[#1047da]/25 transition-colors min-h-[44px]"
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-border bg-surface text-sm font-semibold text-foreground hover:bg-card hover:border-[#4F46E5]/25 transition-colors min-h-[44px]"
                 >
                   <ChevronLeft size={16} aria-hidden />
                   {t('common.previous')}
@@ -331,7 +331,7 @@ export function OnboardingTour({ sectionId, steps, onComplete, onSkip }: Props) 
             <button
               type="button"
               onClick={next}
-              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#1047da] hover:bg-[#0d3bb8] text-white text-sm font-semibold transition-colors shadow-[0_4px_14px_rgba(16,71,218,0.28)] min-h-[44px]"
+              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#4F46E5] hover:bg-[#4338CA] text-white text-sm font-semibold transition-colors shadow-[0_4px_14px_rgba(79,70,229,0.28)] min-h-[44px]"
             >
               {isLast ? t('common.tour.complete') : t('common.next')}
               {!isLast && <ChevronRight size={16} aria-hidden />}

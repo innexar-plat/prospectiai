@@ -48,6 +48,7 @@ type CheckoutContext = {
     priceBrl: number;
     priceUsd: number;
     cardTokenId: string | undefined;
+    paymentMethod: 'card' | 'pix' | undefined;
     affiliateCode: string | undefined;
     repCode: string | undefined;
     promoId?: StarterPromoId;
@@ -107,11 +108,11 @@ function logScheduleAtPeriodEndNotDowngrade(
 
 async function getCheckoutContext(
     session: { user: SessionUser },
-    parsed: { data: { planId: string; interval?: string; cycle?: string; locale?: string; card_token_id?: string; scheduleAtPeriodEnd?: boolean; affiliateCode?: string; promoCode?: string; promoToken?: string; repCode?: string } },
+    parsed: { data: { planId: string; interval?: string; cycle?: string; locale?: string; card_token_id?: string; paymentMethod?: 'card' | 'pix'; scheduleAtPeriodEnd?: boolean; affiliateCode?: string; promoCode?: string; promoToken?: string; repCode?: string } },
     appUrl: string,
     market: ReturnType<typeof getRequestMarket>,
 ): Promise<CheckoutContextResult> {
-    const { planId: rawPlanId, interval, cycle: cycleParam, locale, card_token_id, scheduleAtPeriodEnd, affiliateCode, promoCode, promoToken, repCode } = parsed.data;
+    const { planId: rawPlanId, interval, cycle: cycleParam, locale, card_token_id, paymentMethod, scheduleAtPeriodEnd, affiliateCode, promoCode, promoToken, repCode } = parsed.data;
     const cycle: BillingCycle = (interval ?? cycleParam) === 'annual' ? 'annual' : 'monthly';
 
     let promoId = resolvePromoIdFromInput(promoCode, rawPlanId);
@@ -184,6 +185,7 @@ async function getCheckoutContext(
             priceBrl,
             priceUsd,
             cardTokenId: card_token_id,
+            paymentMethod,
             affiliateCode: affiliateCode ?? undefined,
             repCode: repCode ?? undefined,
             promoId: promoId ?? undefined,
@@ -341,6 +343,7 @@ async function tryStripeUpgrade(
 
 async function handlePtLocaleCheckout(params: {
     cardTokenId: string | undefined;
+    paymentMethod: 'card' | 'pix' | undefined;
     planId: string;
     cycle: BillingCycle;
     plan: { name: string; leadsLimit: number };
@@ -357,10 +360,10 @@ async function handlePtLocaleCheckout(params: {
     promoRegularPriceBrl?: number;
 }): Promise<NextResponse> {
     const {
-        cardTokenId, planId, cycle, plan, priceBrl, sessionUser, appUrl, localePath,
+        cardTokenId, paymentMethod, planId, cycle, plan, priceBrl, sessionUser, appUrl, localePath,
         currentPlan, workspaceId, affiliateCode, repCode, promoId, promoPaymentsMonths, promoRegularPriceBrl,
     } = params;
-    if (cardTokenId) {
+    if (cardTokenId || paymentMethod === 'card') {
         const extRef = buildMpExternalReference({
             userId: sessionUser.id,
             planId: planId as PlanType,
@@ -412,7 +415,7 @@ async function handlePtLocaleCheckout(params: {
         return NextResponse.json({ url });
     }
     const mpUrl = await createMPCheckoutUrl(
-        planId, cycle, plan, priceBrl, sessionUser, appUrl, localePath, affiliateCode, repCode, promoId,
+        planId, cycle, plan, priceBrl, sessionUser, appUrl, localePath, affiliateCode, repCode, promoId, paymentMethod === 'pix',
     );
     return NextResponse.json({ url: mpUrl });
 }
@@ -428,6 +431,7 @@ async function createMPCheckoutUrl(
     affiliateCode?: string,
     repCode?: string,
     promoId?: StarterPromoId,
+    pixOnly = false,
 ): Promise<string> {
     const fullName = user.name || 'Cliente Precision IA';
     const spaceIdx = fullName.trim().indexOf(' ');
@@ -441,8 +445,8 @@ async function createMPCheckoutUrl(
                     id: `${planId}_${cycle}${promoId ? '_promo' : ''}`,
                     title: `Precision IA Plano ${plan.name} (${cycle})${promoLabel}`,
                     description: promoId
-                        ? `Assinatura promocional R$${priceBrl}/mês por 6 meses. Depois R$99/mês. ${plan.leadsLimit} buscas/mês.`
-                        : `Assinatura ${cycle} para ${plan.leadsLimit} buscas por mês.`,
+                        ? `Assinatura promocional R$${priceBrl}/mês por 6 meses. Depois R$99/mês. ${plan.leadsLimit} créditos/mês.`
+                        : `Assinatura ${cycle === 'annual' ? 'anual' : 'mensal'} — ${plan.leadsLimit} créditos por mês. Renovação via PIX ou cartão.`,
                     quantity: 1,
                     unit_price: priceBrl,
                     currency_id: 'BRL'
@@ -454,6 +458,14 @@ async function createMPCheckoutUrl(
                 pending: `${appUrl}/dashboard/planos?billing=pending`
             },
             auto_return: 'approved',
+            // Only credit card and PIX: no boleto, lottery (atm), debit or prepaid cards.
+            payment_methods: {
+                excluded_payment_types: [
+                    { id: 'ticket' }, { id: 'atm' }, { id: 'debit_card' }, { id: 'prepaid_card' },
+                    ...(pixOnly ? [{ id: 'credit_card' }] : []),
+                ],
+                installments: 1,
+            },
             notification_url: `${appUrl}/api/billing/webhook/mercadopago`,
             metadata: {
                 user_id: user.id,
@@ -538,6 +550,7 @@ async function executeCheckoutFlow(
     if (ctx.useMercadoPago) {
         return handlePtLocaleCheckout({
             cardTokenId: ctx.cardTokenId,
+            paymentMethod: ctx.paymentMethod,
             planId: ctx.planId,
             cycle: ctx.cycle,
             plan: ctx.plan,

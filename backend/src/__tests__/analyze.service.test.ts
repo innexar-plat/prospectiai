@@ -41,7 +41,7 @@ jest.mock('@/lib/ai', () => ({
 
 jest.mock('@/lib/gemini');
 jest.mock('@/lib/usage', () => ({ recordUsageEvent: jest.fn() }));
-jest.mock('@/lib/logger', () => ({ logger: { info: jest.fn(), error: jest.fn() } }));
+jest.mock('@/lib/logger', () => ({ logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() } }));
 jest.mock('@/lib/redis', () => ({
     getCached: jest.fn().mockResolvedValue(null),
     setCached: jest.fn().mockResolvedValue(undefined),
@@ -282,6 +282,35 @@ describe('runAnalyze', () => {
         expect(err).toBeInstanceOf(AnalyzeHttpError);
         expect(err!.status).toBe(403);
         expect(err!.body.code).toBe('LIMIT_EXCEEDED');
+        expect(analyzeLead).not.toHaveBeenCalled();
+    });
+
+    it('does not charge a credit nor cache when the AI call failed (user can retry)', async () => {
+        const { setCached } = require('@/lib/redis');
+        (analyzeLead as jest.Mock).mockResolvedValue({
+            analysis: { score: 0, summary: 'Serviço de IA indisponível', gaps: [], firstContactMessage: '', suggestedWhatsAppMessage: '' },
+            failed: true,
+        });
+        const result = await runAnalyze(defaultInput(), userId);
+        expect(result.summary).toBe('Serviço de IA indisponível');
+        expect(prisma.workspace.update).not.toHaveBeenCalled();
+        expect(setCached).not.toHaveBeenCalled();
+    });
+
+    it('reuses an analysis made by a teammate in the same workspace', async () => {
+        (prisma.leadAnalysis.findFirst as jest.Mock).mockResolvedValue({
+            score: 7, scoreLabel: 'Morno', summary: 'Teammate', strengths: [], weaknesses: [], painPoints: [], gaps: [],
+            approach: '', contactStrategy: '', firstContactMessage: '', suggestedWhatsAppMessage: '', fullReport: null,
+            socialInstagram: null, socialFacebook: null, socialLinkedin: null,
+            extras: { quickActions: ['Ligar terça'], messageVariants: { whatsapp: { short: 'Oi' } }, keyMetrics: [{ label: 'X', value: '1' }] },
+        });
+        const result = await runAnalyze(defaultInput(), userId);
+        expect(prisma.leadAnalysis.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+            where: expect.objectContaining({ OR: [{ userId }, { workspaceId }] }),
+        }));
+        expect(result.summary).toBe('Teammate');
+        expect(result.quickActions).toEqual(['Ligar terça']);
+        expect(result.messageVariants?.whatsapp?.short).toBe('Oi');
         expect(analyzeLead).not.toHaveBeenCalled();
     });
 

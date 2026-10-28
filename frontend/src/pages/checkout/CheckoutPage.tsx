@@ -14,6 +14,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { Logo } from '@/components/brand/Logo';
 import { Button } from '@/components/ui/Button';
+import { PaymentMethodDialog, type BrPaymentChoice } from '@/components/dashboard/billing/PaymentMethodDialog';
 import { useToast } from '@/contexts/ToastContext';
 import { authApi, billingApi, plansApi, type PlanFromApi, type PromoValidateResponse, type SessionUser } from '@/lib/api';
 import { getAffiliateRef, getRepCode } from '@/lib/affiliate-ref';
@@ -120,6 +121,7 @@ export default function CheckoutPage({ user }: { user: SessionUser }) {
     const [plansLoading, setPlansLoading] = useState(true);
     const [plansError, setPlansError] = useState<string | null>(null);
     const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+    const [payDialogPlanId, setPayDialogPlanId] = useState<string | null>(null);
     const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
     const [promoState, setPromoState] = useState<PromoValidateResponse | null>(null);
     const [ready, setReady] = useState(false);
@@ -209,8 +211,13 @@ export default function CheckoutPage({ user }: { user: SessionUser }) {
         window.location.replace('/auth/signin');
     };
 
-    const handleSubscribe = async (planId: string) => {
+    const handleSubscribe = async (planId: string, choice?: BrPaymentChoice) => {
         if (planId === 'FREE' || planId === 'TRIAL') return;
+        // BR: ask card (recurring) or PIX first.
+        if (currency === 'BRL' && !choice) {
+            setPayDialogPlanId(planId);
+            return;
+        }
         setLoadingPlan(planId);
         try {
             const affiliateCode = getAffiliateRef();
@@ -220,6 +227,7 @@ export default function CheckoutPage({ user }: { user: SessionUser }) {
                 planId: usePromo ? effectivePromo.checkoutPlanId : planId,
                 interval: billingCycle,
                 locale: checkoutLocale,
+                ...(choice ?? {}),
                 ...(affiliateCode && { affiliateCode }),
                 ...(repCode && { repCode }),
                 ...(usePromo && promoParam && { promoCode: promoParam }),
@@ -233,6 +241,7 @@ export default function CheckoutPage({ user }: { user: SessionUser }) {
             addToast('error', err instanceof Error ? err.message : t('page.checkout.checkoutError'));
         } finally {
             setLoadingPlan(null);
+            setPayDialogPlanId(null);
         }
     };
 
@@ -249,7 +258,26 @@ export default function CheckoutPage({ user }: { user: SessionUser }) {
     return (
         <div className="min-h-screen flex flex-col items-center p-6 sm:p-10 bg-background">
             <div className="w-full max-w-5xl">
-                <div className="relative flex justify-center mb-8">
+                {payDialogPlanId && (() => {
+                    const dialogPlan = plans.find((p) => p.key === payDialogPlanId);
+                    const usePromoDialog = payDialogPlanId === 'BASIC' && !!effectivePromo?.eligible && billingCycle === 'monthly';
+                    const amount = dialogPlan
+                        ? (usePromoDialog && effectivePromo ? effectivePromo.priceMonthlyBrl : getPlanPrice(dialogPlan, billingCycle, 'BRL'))
+                        : 0;
+                    return (
+                        <PaymentMethodDialog
+                            open
+                            planName={dialogPlan?.name ?? payDialogPlanId}
+                            amountBrl={amount}
+                            cycleLabel={billingCycle === 'annual' ? 'por ano' : 'por mês'}
+                            payerEmail={user.email ?? ''}
+                            busy={loadingPlan === payDialogPlanId}
+                            onChoose={(choice) => { void handleSubscribe(payDialogPlanId, choice); }}
+                            onClose={() => setPayDialogPlanId(null)}
+                        />
+                    );
+                })()}
+                                <div className="relative flex justify-center mb-8">
                     <Logo height={48} />
                     <button
                         type="button"

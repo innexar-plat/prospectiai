@@ -46,6 +46,10 @@ export interface SessionUser {
     gracePeriodEnd?: string | null;
     pendingPlanId?: string | null;
     pendingPlanEffectiveAt?: string | null;
+    /** Next monthly credit reset: unused credits expire at this date. */
+    creditsResetAt?: string | null;
+    /** Open recurring-PIX renewal charge (BR). */
+    renewalPix?: { url: string | null; qrCode: string | null; expiresAt: string } | null;
     notifyByEmail?: boolean;
     autoProspeccaoEnabled?: boolean;
     isTrialing?: boolean;
@@ -150,6 +154,9 @@ export interface Analysis {
     painPoints?: string[];
     gaps?: string[];
     aiProvider?: string;
+    quickActions?: string[];
+    keyMetrics?: Array<{ label: string; value: string; hint?: string }>;
+    messageVariants?: Partial<Record<'whatsapp' | 'email' | 'linkedin', { short?: string; medium?: string }>>;
     [key: string]: unknown;
 }
 

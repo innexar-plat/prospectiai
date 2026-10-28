@@ -77,6 +77,23 @@ function typeValueToEnglish(type: string): string {
   return type.replace(/_/g, ' ');
 }
 
+/** Lowercase, accent-free form used to check whether a place name is already in the query. */
+function normalizeForMatch(text: string): string {
+  return ` ${text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()} `;
+}
+
+/**
+ * Appends a location only when it is not already part of the query — a term re-used from
+ * search history already contains the city, and appending it again produced queries like
+ * "Dentista Blumenau Blumenau".
+ */
+function pushLocation(parts: string[], value: string | undefined | null): void {
+  const v = value?.trim();
+  if (!v) return;
+  if (normalizeForMatch(parts.join(' ')).includes(normalizeForMatch(v))) return;
+  parts.push(v);
+}
+
 export function buildTextQuery(payload: SearchPayload): string {
   const parts: string[] = [];
   const isPortuguese = !payload.countryCode || PT_SPEAKING.has(payload.countryCode);
@@ -103,8 +120,8 @@ export function buildTextQuery(payload: SearchPayload): string {
   }
 
   // 2. Always append location context for better Google Places relevance
-  if (payload.city?.trim()) parts.push(payload.city.trim());
-  if (payload.state?.trim() && payload.state !== 'Todos') parts.push(payload.state.trim());
+  pushLocation(parts, payload.city);
+  if (payload.state !== 'Todos') pushLocation(parts, payload.state);
 
   // 3. Append country using a search-friendly label (e.g. 'USA' not 'Estados Unidos')
   //    Only when no city/state to avoid overly long queries
@@ -112,7 +129,7 @@ export function buildTextQuery(payload: SearchPayload): string {
     const countryForQuery = payload.countryCode
       ? getCountryQueryLabel(payload.countryCode)
       : (payload.country || 'Brasil');
-    parts.push(countryForQuery);
+    pushLocation(parts, countryForQuery);
   }
 
   return parts.join(' ');

@@ -43,6 +43,25 @@ function getOpeningHoursLabel(
   return openNow ? t('page.resultados.hoursOpen') : t('page.resultados.hoursClosed');
 }
 
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+/** Opportunity tier shown instead of a raw number: one colour per tier, readable at a glance. */
+function getOpportunityTier(score: number, t: Translate): { label: string; className: string } {
+  if (score >= 60) return { label: t('page.resultados.tierHigh'), className: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' };
+  if (score >= 35) return { label: t('page.resultados.tierMedium'), className: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300' };
+  return { label: t('page.resultados.tierLow'), className: 'border-border bg-surface text-muted' };
+}
+
+/** Plain-language reasons behind the opportunity score ("Sem site · 4 avaliações · nota 3,2"). */
+function getOpportunityReasons(p: { websiteUri?: string; userRatingCount?: number; rating?: number; businessStatus?: string }, t: Translate, numberLocale: string): string[] {
+  const reasons: string[] = [];
+  if (p.businessStatus === 'CLOSED_TEMPORARILY') reasons.push(t('page.resultados.whyClosedTemp'));
+  if (!p.websiteUri) reasons.push(t('page.resultados.noWebsite'));
+  if ((p.userRatingCount ?? 0) < 10) reasons.push(t('page.resultados.whyReviews', { count: p.userRatingCount ?? 0 }));
+  if (p.rating != null && p.rating < 4.2) reasons.push(t('page.resultados.whyRating', { rating: p.rating.toLocaleString(numberLocale, { maximumFractionDigits: 1 }) }));
+  return reasons;
+}
+
 function stopCardNavigation(e: React.MouseEvent | React.KeyboardEvent) {
   e.stopPropagation();
   e.preventDefault();
@@ -90,6 +109,7 @@ export default function ResultadosPage() {
   const { lastSearchResults, appendSearchResults } = useSearchResults();
   const { addToast } = useToast();
   const { t, locale } = useI18n();
+  const numberLocale = locale === 'en' ? 'en-US' : locale === 'es' ? 'es-ES' : 'pt-BR';
   const state = (location.state ?? {}) as ResultadosState;
   const error = state.error;
   const loading = state.loading;
@@ -614,6 +634,8 @@ export default function ResultadosPage() {
             {displayedPlaces.map((p, index) => {
               const goToDetail = () => navigateToLeadDetail(p);
               const phone = p.phones?.[0] ?? p.nationalPhoneNumber ?? p.internationalPhoneNumber;
+              const tier = getOpportunityTier(Number(p.opportunityScore ?? 0), t);
+              const reasons = getOpportunityReasons(p, t, numberLocale);
               return (
               <motion.li
                 key={p.id}
@@ -621,9 +643,8 @@ export default function ResultadosPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.03, type: "spring", stiffness: 100 }}
-                whileHover={{ y: -2, boxShadow: "0 8px 30px rgba(124,58,237,0.15)" }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="group flex items-stretch min-w-0 backdrop-blur-xl bg-white/[0.02] dark:bg-black/[0.02]"
+                className="group flex items-stretch min-w-0 hover:bg-surface/50 transition-colors"
               >
                 <div className="pl-3 flex items-center shrink-0">
                   <input
@@ -662,9 +683,9 @@ export default function ResultadosPage() {
                     </div>
                     <div className="flex items-center gap-1 flex-wrap justify-start sm:justify-end w-full sm:w-auto min-w-0">
                       <ScoreBadgeWithInfo
-                        label={t('page.resultados.badgeOpp', { score: p.opportunityScore ?? 0 })}
+                        label={`${tier.label} · ${p.opportunityScore ?? 0}`}
                         tooltipKey="page.resultados.oppTooltip"
-                        badgeClassName="border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300"
+                        badgeClassName={tier.className}
                         t={t}
                       />
                       {leadIndex[p.id]?.score != null && (
@@ -703,42 +724,40 @@ export default function ResultadosPage() {
                     <MapPin size={11} className="shrink-0" aria-hidden />
                     <span className="min-w-0 break-words [overflow-wrap:anywhere] line-clamp-1">{p.formattedAddress ?? '—'}</span>
                   </div>
-                  <div className="flex items-center gap-1.5 mt-2 flex-wrap min-w-0">
-                    {p.websiteUri ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-md border border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
-                        <Globe size={10} aria-hidden /> {t('page.resultados.hasWebsite')}
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-md border border-red-500/20 bg-red-500/5 text-red-600 dark:text-red-400/80">
-                        <Globe size={10} aria-hidden /> {t('page.resultados.noWebsite')}
-                      </span>
-                    )}
-                    {phone ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-md border border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 break-all">
-                        <Phone size={10} aria-hidden /> {phone}
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-md border border-red-500/20 bg-red-500/5 text-red-600 dark:text-red-400/80">
-                        <Phone size={10} aria-hidden /> {t('page.resultados.noPhone')}
+                  {reasons.length > 0 && (
+                    <p className="mt-1.5 text-xs text-foreground/80 min-w-0 break-words">
+                      {reasons.join(' · ')}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-x-4 gap-y-1 mt-2 flex-wrap min-w-0 text-xs text-muted">
+                    {phone && (
+                      <span className="inline-flex items-center gap-1.5 text-foreground tabular-nums">
+                        <Phone size={12} className="text-muted" aria-hidden /> {phone}
                       </span>
                     )}
-                    {p.emails && p.emails.length > 0 && p.emails.slice(0, 1).map((em) => (
-                      <span key={em} className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-md border border-blue-500/25 bg-blue-500/10 text-blue-700 dark:text-blue-300 break-all" title={t('page.resultados.hasEmail')}>
-                        <Mail size={10} aria-hidden /> {em}
+                    {p.emails && p.emails.length > 0 && (
+                      <span className="inline-flex items-center gap-1.5 text-foreground break-all" title={t('page.resultados.hasEmail')}>
+                        <Mail size={12} className="text-muted" aria-hidden /> {p.emails[0]}
                       </span>
-                    ))}
+                    )}
+                    {p.websiteUri && (
+                      <span className="inline-flex items-center gap-1.5 min-w-0">
+                        <Globe size={12} aria-hidden /> <span className="truncate max-w-[14rem]">{p.websiteUri.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}</span>
+                      </span>
+                    )}
+                    {!phone && <span className="inline-flex items-center gap-1.5"><Phone size={12} aria-hidden /> {t('page.resultados.noPhone')}</span>}
                     {p.rfData?.porte && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-md border border-cyan-500/25 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300">
+                      <span className="inline-flex items-center gap-1">
                         {t('page.resultados.porteLabel')}: {formatPorte(p.rfData.porte, t)}
                       </span>
                     )}
                     {p.cnpjStatus && isMarketFeatureEnabled('cnae') && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-md border border-border bg-surface text-muted">
+                      <span className="inline-flex items-center gap-1">
                         {t('page.resultados.cnpjLabel')}: {p.cnpjStatus}
                       </span>
                     )}
                     {getOpeningHoursLabel(p.currentOpeningHours?.weekdayDescriptions, p.currentOpeningHours?.openNow, t) && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-md border border-border bg-surface text-muted">
+                      <span className="inline-flex items-center gap-1">
                         {getOpeningHoursLabel(p.currentOpeningHours?.weekdayDescriptions, p.currentOpeningHours?.openNow, t)}
                       </span>
                     )}

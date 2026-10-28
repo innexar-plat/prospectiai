@@ -275,20 +275,22 @@ async function tryCacheOrDbSearch(
         city?: string | null;
         state?: string | null;
         country?: string | null;
+        radiusKm?: number | null;
     },
     saveHistory: SaveHistoryFn,
 ): Promise<SearchResult | null> {
     if (pageToken) return null;
-    const { workspaceId, userId, textQuery, includedType, effectivePageSize, hasWebsite, hasPhone, city, state, country } = params;
-    const cacheKey = buildCacheKey(textQuery, includedType, effectivePageSize, hasWebsite, hasPhone, city, state, country);
+    const { workspaceId, textQuery, includedType, effectivePageSize, hasWebsite, hasPhone, city, state, country, radiusKm } = params;
+    const cacheKey = buildCacheKey(textQuery, includedType, effectivePageSize, hasWebsite, hasPhone, city, state, country, radiusKm);
     const cached = await getCached<{ places: PlaceResult[]; nextPageToken?: string }>(cacheKey);
     const cachedCount = cached?.places?.length ?? 0;
     const minAcceptableFromCache = Math.min(5, effectivePageSize);
     if (cached?.places && cachedCount >= minAcceptableFromCache) {
         logger.info('Search: cache hit', { cachedCount });
         const crossedPlaces = await crossWithReceitaIfEligible(cached.places, textQuery, includedType, city, state, country);
-        const unified = collectAllContacts(crossedPlaces);
+        const unified = await hydratePlacesWithLeadSnapshot(collectAllContacts(crossedPlaces));
         await saveHistory(unified.length, unified);
+        await chargeSearchCredit(workspaceId);
         return { ...cached, places: unified, fromCache: true };
     }
     if (cachedCount > 0) logger.info('Search: cache skipped (below minimum)', { cachedCount, minAcceptableFromCache });
@@ -356,7 +358,21 @@ async function tryCacheOrDbSearch(
     const enriched = await enrichWebsitesFromSerper(crossedPlaces);
     const unified = collectAllContacts(enriched);
     await saveHistory(unified.length, unified);
+    await chargeSearchCredit(workspaceId);
     return { places: unified, fromLocalDb: true };
+}
+
+/**
+ * One credit per search that returns results, whatever the source (Google, shared cache or
+ * local lead base). Cache/local hits used to be free, so the same query cost a credit for one
+ * customer and nothing for the next.
+ */
+async function chargeSearchCredit(workspaceId: string): Promise<void> {
+    await prisma.workspace.update({
+        where: { id: workspaceId },
+        data: { leadsUsed: { increment: 1 } },
+    });
+    import('@/lib/credit-alerts').then(({ maybeSendLowCreditsAlert }) => maybeSendLowCreditsAlert(workspaceId)).catch(() => {});
 }
 
 async function persistUnifiedSearchResult(
@@ -367,7 +383,7 @@ async function persistUnifiedSearchResult(
     pageSize: number,
     filters: FiltersPayload,
     resultsCount: number,
-    location?: { city?: string | null; state?: string | null; country?: string | null },
+    location?: { city?: string | null; state?: string | null; country?: string | null; radiusKm?: number | null },
 ): Promise<void> {
     recordUsageEvent({
         workspaceId: activeWorkspace.id,
@@ -386,14 +402,11 @@ async function persistUnifiedSearchResult(
         location?.city,
         location?.state,
         location?.country,
+        location?.radiusKm,
     );
     setCached(scopedCacheKey, { places }, SEARCH_CACHE_TTL_SECONDS).catch(() => {});
 
-    await prisma.workspace.update({
-        where: { id: activeWorkspace.id },
-        data: { leadsUsed: { increment: 1 } },
-    });
-    import('@/lib/credit-alerts').then(({ maybeSendLowCreditsAlert }) => maybeSendLowCreditsAlert(activeWorkspace.id)).catch(() => {});
+    await chargeSearchCredit(activeWorkspace.id);
 
     enqueueSearchHistoryWrite({
         workspaceId: activeWorkspace.id,
@@ -442,7 +455,7 @@ function createSaveHistoryForSearch(
     textQuery: string,
     effectivePageSize: number,
     filtersPayload: FiltersPayload,
-    location?: { city?: string | null; state?: string | null; country?: string | null },
+    location?: { city?: string | null; state?: string | null; country?: string | null; radiusKm?: number | null },
 ): SaveHistoryFn {
     return async (resultsCount: number, places?: PlaceResult[]): Promise<void> => {
         const payload = {
@@ -478,7 +491,7 @@ async function executeGoogleSearchAndPersist(
     userId: string,
     filtersPayload: FiltersPayload,
     country?: string | null,
-    location?: { city?: string | null; state?: string | null; country?: string | null },
+    location?: { city?: string | null; state?: string | null; country?: string | null; radiusKm?: number | null },
 ): Promise<SearchResult> {
     if (input.pageToken) {
         await new Promise((r) => setTimeout(r, NEXT_PAGE_TOKEN_DELAY_MS));
@@ -493,6 +506,7 @@ async function executeGoogleSearchAndPersist(
         location?.city,
         location?.state,
         location?.country,
+        location?.radiusKm,
     );
     const lockKey = `search-lock:${cacheKey}`;
     const lockToken = randomUUID();
@@ -604,8 +618,29 @@ async function executeGoogleSearchAndPersist(
     return result;
 }
 
+function escapeRegExp(text: string): string {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Collapses a location repeated back to back ("Dentista Blumenau Blumenau") — older clients
+ * re-appended the city each time a search was re-run from history. Keeps cache keys and the
+ * Google query clean.
+ */
+export function normalizeSearchQuery(textQuery: string, ...locations: Array<string | null | undefined>): string {
+    let q = textQuery.replace(/\s+/g, ' ').trim();
+    for (const loc of locations) {
+        const l = loc?.trim();
+        if (!l || l === 'Todos') continue;
+        const term = `(?<![\\p{L}\\d])${escapeRegExp(l)}(?![\\p{L}\\d])`;
+        q = q.replace(new RegExp(`${term}(?:\\s+${term})+`, 'giu'), l);
+    }
+    return q;
+}
+
 export async function runSearch(input: SearchInput, userId: string): Promise<SearchResult> {
-    const { textQuery, includedType, pageSize, pageToken, hasWebsite, hasPhone, city, state, country, radiusKm, bypassDbAndRf } = input;
+    const { includedType, pageSize, pageToken, hasWebsite, hasPhone, city, state, country, radiusKm, bypassDbAndRf } = input;
+    const textQuery = normalizeSearchQuery(input.textQuery, city, state);
     const effectivePageSize = Math.min(PLACES_PAGE_SIZE_MAX, Math.max(1, pageSize ?? PLACES_PAGE_SIZE_MAX));
     const filtersPayload = {
         includedType: includedType ?? null,
@@ -624,13 +659,13 @@ export async function runSearch(input: SearchInput, userId: string): Promise<Sea
     });
 
     const { activeWorkspace } = await getSearchUserAndWorkspaceOrThrow(userId);
-    const locationInfo = { city: city ?? null, state: state ?? null, country: country ?? null };
+    const locationInfo = { city: city ?? null, state: state ?? null, country: country ?? null, radiusKm: radiusKm ?? null };
     const saveHistory = createSaveHistoryForSearch(activeWorkspace, userId, textQuery, effectivePageSize, filtersPayload, locationInfo);
 
     if (!bypassDbAndRf) {
         const earlyResult = await tryCacheOrDbSearch(
             pageToken,
-            { workspaceId: activeWorkspace.id, userId, textQuery, includedType, effectivePageSize, hasWebsite, hasPhone, city, state, country },
+            { workspaceId: activeWorkspace.id, userId, textQuery, includedType, effectivePageSize, hasWebsite, hasPhone, city, state, country, radiusKm },
             saveHistory,
         );
         if (earlyResult) return earlyResult;

@@ -40,11 +40,13 @@ export function buildCacheKey(
     city?: string | null,
     state?: string | null,
     country?: string | null,
+    radiusKm?: number | null,
 ): string {
     const c = (city ?? '').toLowerCase().trim();
     const s = (state ?? '').toLowerCase().trim();
     const k = (country ?? '').toLowerCase().trim();
-    return `search:${textQuery.toLowerCase().trim()}:${includedType || ''}:${pageSize || 20}:${hasWebsite || 'any'}:${hasPhone || 'any'}:${c}:${s}:${k}`;
+    // v2: results ranked by the reach-aware opportunity score; radius is part of the query.
+    return `search:v2:${textQuery.toLowerCase().trim()}:${includedType || ''}:${pageSize || 20}:${hasWebsite || 'any'}:${hasPhone || 'any'}:${c}:${s}:${k}:${radiusKm ?? ''}`;
 }
 
 function buildTextSearchDedupKey(

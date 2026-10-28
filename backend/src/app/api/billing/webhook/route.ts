@@ -16,6 +16,8 @@ import {
     notifyPlanUpgrade,
 } from '@/lib/telegram-business-alerts';
 import { logger } from '@/lib/logger';
+import { freshCreditCycle } from '@/lib/billing-period';
+import { freePlanData } from '@/lib/billing-lifecycle';
 
 type SubscriptionWithPeriod = Stripe.Subscription & { current_period_end: number };
 
@@ -137,7 +139,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
             plan: planId,
             subscriptionStatus: subscription.status,
             leadsLimit: getMarketLeadsLimit(planId, 'US'),
-            leadsUsed: 0,
+            ...freshCreditCycle(new Date(), periodEnd(subscription)),
             currentPeriodEnd: periodEnd(subscription),
             billingCycle,
             gracePeriodEnd: null,
@@ -197,12 +199,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
 async function handleSubscriptionDeleted(subscription: SubscriptionWithPeriod): Promise<void> {
     await prisma.workspace.updateMany({
         where: { subscriptionId: subscription.id },
-        data: {
-            subscriptionStatus: 'canceled',
-            plan: 'FREE',
-            leadsLimit: PLANS.FREE.leadsLimit,
-            gracePeriodEnd: null,
-        },
+        data: freePlanData(),
     });
 
     notifyPaymentFailed({
@@ -232,9 +229,14 @@ async function handleSubscriptionUpdated(subscription: SubscriptionWithPeriod): 
     // Otherwise a card update or other subscription change would lose the scheduled downgrade.
     const workspace = await prisma.workspace.findFirst({
         where: { subscriptionId: subscription.id },
-        select: { plan: true },
+        select: { plan: true, currentPeriodEnd: true },
     });
     const planActuallyChanged = workspace != null && workspace.plan !== planId;
+    const newPeriodEnd = periodEnd(subscription);
+    // Credits refill only when a new period starts (renewal) or the plan changes — not on
+    // every update (card change, metadata, cancel_at_period_end), which would hand out free credits.
+    const periodAdvanced = workspace?.currentPeriodEnd == null || newPeriodEnd.getTime() > workspace.currentPeriodEnd.getTime() + 60_000;
+    const refillCredits = isActive && (periodAdvanced || planActuallyChanged);
 
     await prisma.workspace.updateMany({
         where: { subscriptionId: subscription.id },
@@ -242,8 +244,8 @@ async function handleSubscriptionUpdated(subscription: SubscriptionWithPeriod): 
             plan: planId,
             subscriptionStatus: subscription.status,
             leadsLimit: getMarketLeadsLimit(planId, 'US'),
-            leadsUsed: isActive ? 0 : undefined,
-            currentPeriodEnd: periodEnd(subscription),
+            ...(refillCredits ? freshCreditCycle(new Date(), newPeriodEnd) : {}),
+            currentPeriodEnd: newPeriodEnd,
             billingCycle,
             gracePeriodEnd: gracePeriodEndValue,
             ...(planActuallyChanged

@@ -15,6 +15,9 @@ export const billingApi = {
         repCode?: string;
         promoCode?: string;
         promoToken?: string;
+        /** BR only: 'card' (recurring subscription, requires card_token_id) or 'pix'. */
+        paymentMethod?: 'card' | 'pix';
+        card_token_id?: string;
     }) =>
         request<CheckoutResponse>('/billing/checkout', {
             method: 'POST',

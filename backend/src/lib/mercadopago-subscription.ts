@@ -1,6 +1,6 @@
 /**
  * Mercado Pago PreApproval (recurring subscription) via REST.
- * Used when user pays with card; PIX/boleto use Preference (one-time) in checkout.
+ * Used for card payments (recurring); PIX uses a Preference + one PIX charge per cycle (see mercadopago-pix.ts).
  */
 
 const MP_BASE = 'https://api.mercadopago.com';
@@ -9,7 +9,8 @@ export type BillingCycle = 'monthly' | 'annual';
 
 export interface CreatePreApprovalParams {
     payerEmail: string;
-    cardTokenId: string;
+    /** Omit to let the customer enter the card on Mercado Pago's page (returns init_point). */
+    cardTokenId?: string;
     reason: string;
     externalReference: string;
     transactionAmount: number;
@@ -41,25 +42,21 @@ export async function createPreApproval(params: CreatePreApprovalParams): Promis
 
     const frequency = params.cycle === 'annual' ? 12 : 1;
     const frequencyType = 'months';
-    const startDate = new Date();
-    const endDate = new Date(startDate);
-    endDate.setFullYear(endDate.getFullYear() + 2);
 
     const body = {
         reason: params.reason,
         external_reference: params.externalReference,
         payer_email: params.payerEmail,
-        card_token_id: params.cardTokenId,
+        ...(params.cardTokenId ? { card_token_id: params.cardTokenId } : {}),
+        // No end_date: the subscription renews until cancelled.
         auto_recurring: {
             frequency,
             frequency_type: frequencyType,
-            start_date: startDate.toISOString(),
-            end_date: endDate.toISOString(),
             transaction_amount: params.transactionAmount,
             currency_id: 'BRL',
         },
         back_url: params.backUrl,
-        status: 'authorized' as const,
+        status: params.cardTokenId ? 'authorized' as const : 'pending' as const,
         ...(params.notificationUrl && { notification_url: params.notificationUrl }),
     };
 

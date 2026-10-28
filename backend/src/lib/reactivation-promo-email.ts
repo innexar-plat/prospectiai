@@ -11,13 +11,13 @@ import { ctaButton, ctaButtonSecondary } from '@/lib/email-templates';
 import { getSiteUrlForMarket } from '@/lib/site-url';
 
 const APP_NAME = 'PrecisionAI';
-const BRAND_COLOR = '#1047da';
+const BRAND_COLOR = '#4F46E5';
 const BRAND_DARK = '#0c1930';
 const TEXT_COLOR = '#1f2937';
 const MUTED_COLOR = '#6b7280';
 const SUCCESS_COLOR = '#059669';
 const SITE_URL = getSiteUrlForMarket('BR');
-const LOGO_URL = process.env.EMAIL_LOGO_URL ?? `${SITE_URL}/brands/precision-logo.png`;
+const LOGO_URL = process.env.EMAIL_LOGO_URL ?? `${SITE_URL}/brands/precision-logo-white.png`;
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL ?? 'suporte@precisionai.com.br';
 const COMPANY_NAME = 'Innexar Brasil';
 const COMPANY_ADDRESS = 'Av. Dona Ophelia Caccerari Reis - Aviação, 363 — São Paulo, SP';
@@ -161,8 +161,8 @@ export function buildReactivationPromoEmailHtml(options: ReactivationPromoEmailO
                 <tr>
                   <td style="vertical-align:middle;">
                     <a href="${base}" style="text-decoration:none;">
-                      <img src="${LOGO_URL}" alt="${APP_NAME}" width="181" height="40"
-                           style="display:block;border:0;border-radius:8px;background-color:rgba(255,255,255,0.12);object-fit:contain;" />
+                      <img src="${LOGO_URL}" alt="${APP_NAME}" width="212" height="40"
+                           style="display:block;border:0;" />
                     </a>
                   </td>
                   <td align="right" style="vertical-align:middle;">

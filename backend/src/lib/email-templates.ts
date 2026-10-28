@@ -54,11 +54,11 @@ function getAllowedSiteBases(preferredBase?: string): string[] {
   return [...bases];
 }
 const APP_NAME  = 'PrecisionAI';
-const LOGO_URL  = process.env.EMAIL_LOGO_URL ?? `${SITE_URL.replace(/\/$/, '')}/brands/precision-logo.png`;
+const LOGO_URL  = process.env.EMAIL_LOGO_URL ?? `${SITE_URL.replace(/\/$/, '')}/brands/precision-logo-white.png`;
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL ?? 'suporte@precisionai.com.br';
 
 // Marca
-const BRAND_COLOR   = '#1047da';
+const BRAND_COLOR   = '#4F46E5';
 const BRAND_DARK    = '#0c1930';
 const TEXT_COLOR    = '#1f2937';
 const MUTED_COLOR   = '#6b7280';
@@ -264,8 +264,8 @@ function wrapContent(content: string, options: {
                 <tr>
                   <td style="vertical-align:middle;">
                     <a href="${base}" style="text-decoration:none;">
-                      <img src="${LOGO_URL}" alt="${APP_NAME}" width="181" height="40"
-                           style="display:block;border:0;border-radius:8px;background-color:rgba(255,255,255,0.15);object-fit:contain;" />
+                      <img src="${LOGO_URL}" alt="${APP_NAME}" width="212" height="40"
+                           style="display:block;border:0;" />
                     </a>
                   </td>
                   <td align="right" style="vertical-align:middle;">

@@ -182,10 +182,10 @@ export const SUPPORT_MESSAGES: Record<string, Record<string, string>> = {
             'As buscas por leads são gratuitas. Apenas a análise detalhada com IA (que gera score, classificação e estratégia) consome créditos.',
         'support.faq.credits.q4': 'Como funciona o período de teste?',
         'support.faq.credits.a4.br':
-            'Novos usuários no Brasil recebem créditos gratuitos para testar análises de IA. O trial permite explorar buscas, resultados e análises antes de assinar. Após o trial, escolha um plano em Planos — pagamento via Mercado Pago (cartão, Pix ou boleto).',
+            'Novos usuários no Brasil recebem créditos gratuitos para testar análises de IA. O trial permite explorar buscas, resultados e análises antes de assinar. Após o trial, escolha um plano em Planos — pagamento via Mercado Pago (cartão de crédito ou Pix).',
         'support.faq.credits.q5': 'Como pagar com Mercado Pago?',
         'support.faq.credits.a5.br':
-            'Em Planos, selecione o plano desejado e clique em Assinar. Você será redirecionado ao checkout Mercado Pago com opções de cartão de crédito, Pix e boleto. A assinatura renova automaticamente; cancele a qualquer momento em Planos.',
+            'Em Planos, selecione o plano desejado, clique em Assinar e escolha cartão de crédito ou Pix. No cartão a assinatura renova automaticamente; no Pix enviamos um novo Pix por e-mail antes de cada renovação. Os créditos são mensais: o saldo não usado vence no fim de cada ciclo. Cancele a qualquer momento em Planos.',
         'support.faq.credits.q4.us': 'Como funciona a cobrança com Stripe?',
         'support.faq.credits.a4.us':
             'Assinaturas nos EUA são processadas com segurança via Stripe. Escolha um plano em Planos, informe os dados do cartão no checkout Stripe e a assinatura renova automaticamente a cada mês. Atualize o cartão ou cancele a qualquer momento em Planos.',
@@ -327,10 +327,10 @@ export const SUPPORT_MESSAGES: Record<string, Record<string, string>> = {
             'Lead searches are free. Only detailed AI analysis (which generates score, classification, and strategy) consumes credits.',
         'support.faq.credits.q4': 'How does the free trial work?',
         'support.faq.credits.a4.br':
-            'New users in Brazil receive free credits to test AI analyses. The trial lets you explore searches, results, and analyses before subscribing. After the trial, choose a plan under Plans — payment via Mercado Pago (card, Pix, or boleto).',
+            'New users in Brazil receive free credits to test AI analyses. The trial lets you explore searches, results, and analyses before subscribing. After the trial, choose a plan under Plans — payment via Mercado Pago (credit card or Pix).',
         'support.faq.credits.q5': 'How do I pay with Mercado Pago?',
         'support.faq.credits.a5.br':
-            'Under Plans, select your plan and click Subscribe. You will be redirected to Mercado Pago checkout with credit card, Pix, and boleto options. Subscription renews automatically; cancel anytime under Plans.',
+            'Under Plans, select your plan, click Subscribe and choose credit card or Pix. Card subscriptions renew automatically; with Pix we email a new Pix before each renewal. Credits are monthly: unused credits expire at the end of each cycle. Cancel anytime under Plans.',
         'support.faq.credits.q4.us': 'How does billing work with Stripe?',
         'support.faq.credits.a4.us':
             'US subscriptions are processed securely via Stripe. Choose a plan under Plans, enter your card on the Stripe checkout page, and your subscription renews automatically each month. Update payment method or cancel anytime from Plans.',
@@ -471,10 +471,10 @@ export const SUPPORT_MESSAGES: Record<string, Record<string, string>> = {
             'Las búsquedas de leads son gratuitas. Solo el análisis detallado con IA (que genera score, clasificación y estrategia) consume créditos.',
         'support.faq.credits.q4': '¿Cómo funciona el período de prueba?',
         'support.faq.credits.a4.br':
-            'Los nuevos usuarios en Brasil reciben créditos gratuitos para probar análisis de IA. El trial permite explorar búsquedas, resultados y análisis antes de suscribirse. Después, elige un plan en Planes — pago vía Mercado Pago (tarjeta, Pix o boleto).',
+            'Los nuevos usuarios en Brasil reciben créditos gratuitos para probar análisis de IA. El trial permite explorar búsquedas, resultados y análisis antes de suscribirse. Después, elige un plan en Planes — pago vía Mercado Pago (tarjeta de crédito o Pix).',
         'support.faq.credits.q5': '¿Cómo pagar con Mercado Pago?',
         'support.faq.credits.a5.br':
-            'En Planes, selecciona el plan deseado y haz clic en Suscribirse. Serás redirigido al checkout de Mercado Pago con opciones de tarjeta, Pix y boleto. La suscripción se renueva automáticamente; cancela en cualquier momento en Planes.',
+            'En Planes, selecciona el plan, haz clic en Suscribirse y elige tarjeta de crédito o Pix. Con tarjeta la suscripción se renueva automáticamente; con Pix enviamos un nuevo Pix por e-mail antes de cada renovación. Los créditos son mensuales: el saldo no usado vence al final de cada ciclo. Cancela en cualquier momento en Planes.',
         'support.faq.credits.q4.us': '¿Cómo funciona la facturación con Stripe?',
         'support.faq.credits.a4.us':
             'Las suscripciones en EE.UU. se procesan de forma segura vía Stripe. Elige un plan en Planes, ingresa tu tarjeta en el checkout de Stripe y la suscripción se renueva automáticamente cada mes. Actualiza el método de pago o cancela en cualquier momento.',

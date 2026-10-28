@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import { LogoIcon } from './LogoIcon';
-import { BRAND_FAVICON_SRC } from '@/lib/brand';
+import { BRAND_MARK_SRC } from '@/lib/brand';
 
 describe('LogoIcon', () => {
-  it('renders the favicon image', () => {
+  it('renders the brand mark', () => {
     const { container } = render(<LogoIcon />);
     const img = container.querySelector('img');
     expect(img).toBeInTheDocument();
-    expect(img).toHaveAttribute('src', BRAND_FAVICON_SRC);
+    expect(img).toHaveAttribute('src', BRAND_MARK_SRC);
     expect(img).toHaveAttribute('aria-hidden', 'true');
   });
 

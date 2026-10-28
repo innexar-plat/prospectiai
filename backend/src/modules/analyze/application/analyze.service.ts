@@ -127,7 +127,11 @@ function mapExistingAnalysisToOutput(existingAnalysis: {
     cnpjAnalysis?: string | null;
     reviewTrend?: string | null;
     suggestedContactTime?: string | null;
+    extras?: unknown;
 }): AnalyzeOutput {
+    const extras = existingAnalysis.extras && typeof existingAnalysis.extras === 'object'
+        ? existingAnalysis.extras as Pick<AnalyzeOutput, 'quickActions' | 'keyMetrics' | 'messageVariants'> & { reviewAnalysis?: string | null }
+        : {};
     return {
         score: existingAnalysis.score ?? 0,
         scoreLabel: existingAnalysis.scoreLabel ?? '',
@@ -154,6 +158,10 @@ function mapExistingAnalysisToOutput(existingAnalysis: {
         cnpjAnalysis: existingAnalysis.cnpjAnalysis ?? undefined,
         reviewTrend: existingAnalysis.reviewTrend ?? undefined,
         suggestedContactTime: existingAnalysis.suggestedContactTime ?? undefined,
+        quickActions: Array.isArray(extras.quickActions) ? extras.quickActions : undefined,
+        keyMetrics: Array.isArray(extras.keyMetrics) ? extras.keyMetrics : undefined,
+        messageVariants: extras.messageVariants ?? undefined,
+        reviewAnalysis: extras.reviewAnalysis ?? undefined,
         aiProvider: undefined,
     };
 }
@@ -304,8 +312,10 @@ export async function runAnalyzePreChecks(input: AnalyzeInput, userId: string): 
         throw err;
     }
 
+    // Reuse an analysis made by anyone in the workspace — a teammate should not pay again for the same lead.
     const existingAnalysis = await prisma.leadAnalysis.findFirst({
-        where: { userId, lead: { placeId } },
+        where: { lead: { placeId }, OR: [{ userId }, { workspaceId: activeWorkspace.id }] },
+        orderBy: { createdAt: 'desc' },
         include: { lead: true },
     });
     if (existingAnalysis) {
@@ -373,7 +383,8 @@ export async function runAnalyze(input: AnalyzeInput, userId: string, onProgress
     }
 
     const existingAnalysis = await prisma.leadAnalysis.findFirst({
-        where: { userId, lead: { placeId: businessData.placeId } },
+        where: { lead: { placeId: businessData.placeId }, OR: [{ userId }, { workspaceId: activeWorkspace.id }] },
+        orderBy: { createdAt: 'desc' },
         include: { lead: true },
     });
     if (existingAnalysis) {
@@ -438,6 +449,12 @@ export async function runAnalyze(input: AnalyzeInput, userId: string, onProgress
         { workspaceId: activeWorkspace.id, userId },
         onProgress
     );
+
+    if (result.failed) {
+        // AI call failed: show the error but do not charge a credit nor cache it, so the user can retry.
+        logger.warn('Analyze failed — no credit charged', { placeId: businessData.placeId, workspaceId: activeWorkspace.id });
+        return { ...result.analysis, aiProvider: result.provider ?? config.provider } as AnalyzeOutput;
+    }
 
     const durationMs = Date.now() - analyzeStart;
     logger.info('Analyze completed', {

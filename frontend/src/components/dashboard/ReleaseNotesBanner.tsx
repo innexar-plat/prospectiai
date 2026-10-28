@@ -9,7 +9,7 @@ import { useI18n } from '@/lib/i18n';
 import { isPendingCreditsTour } from '@/lib/post-auth-redirect';
 import { wasWelcomeTourDone } from '@/lib/tour-steps';
 
-const BRAND = '#1047da';
+const BRAND = '#4F46E5';
 
 export function ReleaseNotesBanner() {
   const { t } = useI18n();
@@ -34,7 +34,7 @@ export function ReleaseNotesBanner() {
 
   return (
     <div
-      className="shrink-0 border-b border-[#1047da]/15 bg-gradient-to-r from-[#1047da]/10 via-[#1047da]/5 to-transparent"
+      className="shrink-0 border-b border-[#4F46E5]/15 bg-gradient-to-r from-[#4F46E5]/10 via-[#4F46E5]/5 to-transparent"
       style={{ borderBottomColor: `${BRAND}26` }}
     >
       <div className="mx-auto flex max-w-7xl items-start gap-3 px-4 py-3 sm:px-6">
@@ -68,7 +68,7 @@ export function ReleaseNotesBanner() {
         <button
           type="button"
           onClick={handleDismiss}
-          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-card/80 text-muted transition-colors hover:border-[#1047da]/25 hover:text-foreground"
+          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-card/80 text-muted transition-colors hover:border-[#4F46E5]/25 hover:text-foreground"
           aria-label={t('common.releaseNotes.closeAria')}
         >
           <X size={14} />

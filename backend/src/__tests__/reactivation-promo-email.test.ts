@@ -25,8 +25,8 @@ describe('reactivation-promo-email', () => {
   it('generates responsive HTML with brand color and logo', () => {
     const html = buildReactivationPromoEmailHtml();
     expect(html).toContain('<!DOCTYPE html>');
-    expect(html).toContain('#1047da');
-    expect(html).toContain('precision-logo.png');
+    expect(html).toContain('#4F46E5');
+    expect(html).toContain('precision-logo-white.png');
     expect(html).toContain('role="presentation"');
     expect(html).toContain('max-width:600px');
   });

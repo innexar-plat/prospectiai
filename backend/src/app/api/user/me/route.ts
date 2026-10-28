@@ -112,6 +112,10 @@ type WorkspaceAfterExpiry = {
     gracePeriodEnd?: Date | null;
     pendingPlanId?: string | null;
     pendingPlanEffectiveAt?: Date | null;
+    creditsResetAt?: Date | null;
+    renewalPaymentUrl?: string | null;
+    renewalPaymentQrCode?: string | null;
+    renewalPaymentExpiresAt?: Date | null;
     starterPromoEligible?: boolean | null;
     companyName?: string | null;
     legalName?: string | null;
@@ -185,6 +189,14 @@ function buildUiUser(
         gracePeriodEnd: w?.gracePeriodEnd?.toISOString() ?? null,
         pendingPlanId: w?.pendingPlanId ?? null,
         pendingPlanEffectiveAt: w?.pendingPlanEffectiveAt?.toISOString() ?? null,
+        creditsResetAt: w?.creditsResetAt?.toISOString() ?? null,
+        renewalPix: w?.renewalPaymentExpiresAt && w.renewalPaymentExpiresAt > new Date()
+            ? {
+                url: w.renewalPaymentUrl ?? null,
+                qrCode: w.renewalPaymentQrCode ?? null,
+                expiresAt: w.renewalPaymentExpiresAt.toISOString(),
+            }
+            : null,
         autoProspeccaoEnabled: w?.autoProspeccaoEnabled ?? false,
         isTrialing: isTrialing(w ?? {}),
         trialExpired: isTrialExpired(w ?? {}),
@@ -224,9 +236,14 @@ export async function GET(req: NextRequest) {
                     leadsLimit: true,
                     subscriptionStatus: true,
                     currentPeriodEnd: true,
+                    billingCycle: true,
                     gracePeriodEnd: true,
                     pendingPlanId: true,
                     pendingPlanEffectiveAt: true,
+                    creditsResetAt: true,
+                    renewalPaymentUrl: true,
+                    renewalPaymentQrCode: true,
+                    renewalPaymentExpiresAt: true,
                     starterPromoEligible: true,
                     companyName: true,
                     legalName: true,

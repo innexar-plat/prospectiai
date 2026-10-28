@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createHmac } from 'crypto';
 import { mpConfig } from '@/lib/mercadopago';
 import { Payment } from 'mercadopago';
-import { getPreApproval, updatePreApprovalAmount } from '@/lib/mercadopago-subscription';
+import { cancelPreApproval, getPreApproval, updatePreApprovalAmount } from '@/lib/mercadopago-subscription';
 import { prisma } from '@/lib/prisma';
 import { PLANS, PlanType, getPlanPrices } from '@/lib/billing-config';
 import { parseMpExternalReference, STARTER_PROMO_BR } from '@/lib/billing-promo';
@@ -10,6 +10,9 @@ import { getMarketLeadsLimit } from '@/lib/market';
 import { sendEmail } from '@/lib/email';
 import { paymentSuccessTemplate, paymentFailureTemplate } from '@/lib/email-templates';
 import { logger } from '@/lib/logger';
+import { extendPeriodEnd, freshCreditCycle, isMpPreapprovalId, toCycle } from '@/lib/billing-period';
+import { freePlanData } from '@/lib/billing-lifecycle';
+import { sendRenewalConfirmedEmail, sendSubscriptionCancelledEmail, type BillingRecipient } from '@/lib/billing-emails';
 import { createCommissionForFirstPayment, cancelCommissionsByOrderOrSubscription, createCommissionForRecurring } from '@/lib/affiliate';
 import { isWebhookDuplicate } from '@/lib/webhook-dedup';
 import { rateLimit } from '@/lib/ratelimit';
@@ -19,6 +22,7 @@ import {
     notifyPaymentFailed,
     notifyPaymentRefunded,
     notifyPaymentRenewed,
+    notifyPlanDowngradeScheduled,
     notifyPlanUpgrade,
 } from '@/lib/telegram-business-alerts';
 
@@ -136,87 +140,139 @@ function validateMpSignature(
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function periodEndFromInterval(interval: string): Date {
-    const d = new Date();
-    if (interval === 'annual') {
-        d.setFullYear(d.getFullYear() + 1);
-    } else {
-        d.setMonth(d.getMonth() + 1);
-    }
-    return d;
+type MpPaymentData = {
+    id?: number | string;
+    status?: string;
+    status_detail?: string;
+    transaction_amount?: number;
+    date_created?: string;
+    external_reference?: string;
+    metadata?: Record<string, unknown>;
+    point_of_interaction?: { transaction_data?: { subscription_id?: string } };
+};
+
+function metaString(data: MpPaymentData, key: string): string | undefined {
+    const value = data.metadata?.[key];
+    return value == null || value === '' ? undefined : String(value);
 }
 
-async function applyPromoRenewalIfNeeded(
-    workspaceId: string,
-    subscriptionId: string,
-    promoPaymentsRemaining: number | null | undefined,
-    promoRegularAmountBrl: number | null | undefined,
-): Promise<void> {
-    if (promoPaymentsRemaining == null || promoPaymentsRemaining <= 0) return;
-    const remaining = promoPaymentsRemaining - 1;
-    if (remaining > 0) {
-        await prisma.workspace.update({
-            where: { id: workspaceId },
-            data: { promoPaymentsRemaining: remaining },
-        });
-        return;
-    }
-    const regularAmount = promoRegularAmountBrl ?? STARTER_PROMO_BR.regularPriceBrl;
-    await updatePreApprovalAmount(subscriptionId, regularAmount);
-    await prisma.workspace.update({
-        where: { id: workspaceId },
-        data: {
-            promoPaymentsRemaining: null,
-            promoRegularAmountBrl: null,
-            starterPromoCode: null,
-        },
-    });
-    logger.info('MP promo period ended — subscription amount updated to regular price', {
-        workspaceId,
-        subscriptionId,
-        regularAmount,
-    });
+/** Card-subscription charges reference their PreApproval in metadata or point_of_interaction. */
+function preapprovalIdOf(data: MpPaymentData): string | undefined {
+    return metaString(data, 'preapproval_id')
+        ?? metaString(data, 'subscription_id')
+        ?? data.point_of_interaction?.transaction_data?.subscription_id
+        ?? undefined;
 }
 
-async function applyApprovedPaymentMp(userId: string, planId: PlanType, interval: string, paymentId: string, promoId?: string): Promise<void> {
-    const plan = PLANS[planId];
-    const userWithWorkspace = await prisma.user.findUnique({
+async function findUserWorkspace(userId: string) {
+    const user = await prisma.user.findUnique({
         where: { id: userId },
-        include: { workspaces: { orderBy: { workspace: { createdAt: 'asc' } }, take: 1, include: { workspace: true } } }
+        include: { workspaces: { orderBy: { workspace: { createdAt: 'asc' } }, take: 1, include: { workspace: true } } },
     });
-    const workspace = userWithWorkspace?.workspaces?.[0]?.workspace;
-    const workspaceId = workspace?.id;
-    if (!workspaceId) return;
-    const billingCycle = interval === 'annual' ? 'annual' : 'monthly';
+    return { user, workspace: user?.workspaces?.[0]?.workspace ?? null };
+}
+
+async function ownerRecipient(workspaceId: string): Promise<BillingRecipient | null> {
+    const member = await prisma.workspaceMember.findFirst({
+        where: { workspaceId, role: 'OWNER' },
+        orderBy: { createdAt: 'asc' },
+        select: { user: { select: { email: true, name: true, market: true } } },
+    });
+    if (!member?.user.email) return null;
+    return { email: member.user.email, name: member.user.name, market: member.user.market };
+}
+
+/** Promo payments still to be charged at the promo price after the current one. */
+function promoAfterPayment(remaining: number | null | undefined): { promoPaymentsRemaining: number | null; endsNow: boolean } {
+    if (remaining == null || remaining <= 0) return { promoPaymentsRemaining: null, endsNow: false };
+    const next = remaining - 1;
+    return next > 0 ? { promoPaymentsRemaining: next, endsNow: false } : { promoPaymentsRemaining: null, endsNow: true };
+}
+
+async function cancelReplacedPreapproval(oldSubscriptionId: string | null | undefined, newId: string | null, workspaceId: string): Promise<void> {
+    if (!isMpPreapprovalId(oldSubscriptionId) || oldSubscriptionId === newId) return;
+    // Upgrade / plan switch: the previous card subscription must stop charging, otherwise
+    // the customer is billed twice every month.
+    try {
+        await cancelPreApproval(oldSubscriptionId!);
+        logger.info('MP: previous PreApproval cancelled after plan switch', { workspaceId, oldSubscriptionId, newId });
+    } catch (err) {
+        logger.error('MP: failed to cancel previous PreApproval — customer may be double billed', {
+            workspaceId, oldSubscriptionId, error: err instanceof Error ? err.message : 'Unknown',
+        });
+    }
+}
+
+// ─── One-time payments (PIX / Checkout Pro) + recurring PIX renewals ────────
+
+async function applyApprovedPaymentMp(data: MpPaymentData, userId: string, planId: PlanType, interval: string, paymentId: string, promoId?: string): Promise<{ workspaceId: string; isRenewal: boolean } | null> {
+    const workspaceIdHint = metaString(data, 'workspace_id');
+    const { user, workspace: userWorkspace } = await findUserWorkspace(userId);
+    const workspace = workspaceIdHint
+        ? await prisma.workspace.findUnique({ where: { id: workspaceIdHint } })
+        : userWorkspace;
+    if (!workspace) return null;
+
+    const now = new Date();
+    const cycle = toCycle(interval);
+    const isRenewal = metaString(data, 'renewal') === '1';
+    // Same plan still running (renewal or paying early): extend from the current end so no paid day is lost.
+    const continuesPlan = workspace.plan === planId && workspace.subscriptionStatus === 'active';
+    const currentPeriodEnd = extendPeriodEnd(continuesPlan ? workspace.currentPeriodEnd : null, cycle, now);
+    const market = workspace.market === 'US' ? 'US' : 'BR';
+
+    await cancelReplacedPreapproval(workspace.subscriptionId, null, workspace.id);
+
+    const promo = isRenewal
+        ? promoAfterPayment(workspace.promoPaymentsRemaining)
+        : promoId === STARTER_PROMO_BR.id
+            ? { promoPaymentsRemaining: STARTER_PROMO_BR.months - 1, endsNow: false }
+            : { promoPaymentsRemaining: workspace.promoPaymentsRemaining, endsNow: false };
+
     await prisma.workspace.update({
-        where: { id: workspaceId },
+        where: { id: workspace.id },
         data: {
             plan: planId,
             subscriptionStatus: 'active',
-            leadsLimit: getMarketLeadsLimit(planId as PlanType),
-            leadsUsed: 0,
-            currentPeriodEnd: periodEndFromInterval(interval),
-            billingCycle,
+            subscriptionId: `mp_pay_${paymentId}`,
+            leadsLimit: getMarketLeadsLimit(planId, market),
+            ...freshCreditCycle(now, currentPeriodEnd),
+            currentPeriodEnd,
+            billingCycle: cycle,
             gracePeriodEnd: null,
-            ...(promoId === STARTER_PROMO_BR.id
+            renewalPaymentId: null,
+            renewalPaymentUrl: null,
+            renewalPaymentQrCode: null,
+            renewalPaymentExpiresAt: null,
+            ...(workspace.pendingPlanId === planId ? { pendingPlanId: null, pendingPlanEffectiveAt: null } : {}),
+            promoPaymentsRemaining: promo.promoPaymentsRemaining,
+            ...(promo.endsNow ? { promoRegularAmountBrl: null, starterPromoCode: null } : {}),
+            ...(!isRenewal && promoId === STARTER_PROMO_BR.id
                 ? {
                     starterPromoCode: promoId,
-                    promoPaymentsRemaining: STARTER_PROMO_BR.months,
                     promoRegularAmountBrl: STARTER_PROMO_BR.regularPriceBrl,
                     starterPromoEligible: false,
                 }
                 : {}),
-            // Store payment ID as reference for one-time MP Preference payments
-            // PreApproval payments will overwrite this with the preapproval ID later
-            ...(!workspace.subscriptionId ? { subscriptionId: `mp_pay_${paymentId}` } : {}),
-        }
+        },
     });
-    if (userWithWorkspace?.email) {
-        const html = paymentSuccessTemplate(plan.name, plan.leadsLimit, DASHBOARD_URL);
-        sendEmail(userWithWorkspace.email, 'Seu plano Precision IA está ativo — bem-vindo', html).catch((err) => {
+
+    const plan = PLANS[planId];
+    const recipient = await ownerRecipient(workspace.id);
+    if (isRenewal && recipient) {
+        await sendRenewalConfirmedEmail(workspace.id, recipient, {
+            planName: plan.name,
+            leadsLimit: getMarketLeadsLimit(planId, market),
+            periodEnd: currentPeriodEnd,
+            paymentId,
+        });
+    } else if (user?.email) {
+        const html = paymentSuccessTemplate(plan.name, getMarketLeadsLimit(planId, market), DASHBOARD_URL, user.name ?? undefined, currentPeriodEnd);
+        sendEmail(user.email, 'Seu plano Precision IA está ativo — bem-vindo', html).catch((err) => {
             logger.error('Payment success email failed', { userId, error: err instanceof Error ? err.message : 'Unknown' });
         });
     }
+    return { workspaceId: workspace.id, isRenewal };
 }
 
 async function sendPaymentRejectedEmail(userId: string): Promise<void> {
@@ -228,12 +284,80 @@ async function sendPaymentRejectedEmail(userId: string): Promise<void> {
     });
 }
 
+async function handleOneTimeApproved(data: MpPaymentData, id: string): Promise<void> {
+    const userId = metaString(data, 'user_id');
+    const planId = metaString(data, 'plan_id') as PlanType | undefined;
+    if (!userId || !planId || !(planId in PLANS)) return;
+    const interval = metaString(data, 'interval') || 'monthly';
+    const affiliateCode = metaString(data, 'affiliate_code');
+    const repCode = metaString(data, 'rep');
+    const promoId = metaString(data, 'promo_id');
+
+    const applied = await applyApprovedPaymentMp(data, userId, planId, interval, id, promoId);
+    if (!applied) return;
+    const valueCents = Math.round((data.transaction_amount ?? getPlanPrices(PLANS[planId], toCycle(interval)).price_brl) * 100);
+
+    if (applied.isRenewal) {
+        notifyPaymentRenewed({
+            workspaceId: applied.workspaceId,
+            toPlan: planId,
+            provider: 'mercadopago',
+            paymentId: id,
+            billingCycle: interval,
+            amount: valueCents / 100,
+            currency: 'BRL',
+        });
+        try {
+            await createCommissionForRecurring({
+                workspaceId: applied.workspaceId,
+                subscriptionId: `mp_pay_${id}`,
+                planId,
+                valueCents,
+                currency: 'BRL',
+                orderId: id,
+            });
+        } catch (e) {
+            logger.error('Affiliate recurring commission (MP PIX renewal) failed', { error: e instanceof Error ? e.message : 'Unknown' });
+        }
+        return;
+    }
+
+    notifyPaymentApproved({
+        userId,
+        toPlan: planId,
+        billingCycle: interval,
+        provider: 'mercadopago',
+        amount: valueCents / 100,
+        currency: 'BRL',
+        paymentId: id,
+        status: data.status,
+    });
+    notifyPlanUpgrade({ userId, toPlan: planId, billingCycle: interval, provider: 'mercadopago' });
+    const { user } = await findUserWorkspace(userId);
+    try {
+        await createCommissionForFirstPayment({
+            userId,
+            workspaceId: applied.workspaceId,
+            userEmail: user?.email ?? null,
+            planId,
+            valueCents,
+            currency: 'BRL',
+            orderId: id,
+            affiliateCodeFromMetadata: affiliateCode,
+        });
+    } catch (e) {
+        logger.error('Affiliate commission create failed (MP payment)', { error: e instanceof Error ? e.message : 'Unknown' });
+    }
+    if (repCode) {
+        await handleRepCommission(repCode, userId, applied.workspaceId, planId, valueCents, id);
+    }
+}
+
 async function handlePaymentTopic(id: string): Promise<void> {
     const payment = new Payment(mpConfig);
-    const data = await payment.get({ id });
-    const statusDetail = (data as { status_detail?: string }).status_detail;
-    const preapprovalId = (data.metadata?.preapproval_id ?? data.metadata?.subscription_id) as string | undefined;
-    logger.info('MP Full Payment Data', { paymentId: id, status: data.status, status_detail: statusDetail });
+    const data = await payment.get({ id }) as unknown as MpPaymentData;
+    const preapprovalId = preapprovalIdOf(data);
+    logger.info('MP Full Payment Data', { paymentId: id, status: data.status, status_detail: data.status_detail, preapprovalId });
 
     // Dedup by payment+status (not just payment ID): MP re-notifies the same payment ID as
     // its status transitions (e.g. pending -> approved). A dedup key on ID alone would let the
@@ -242,11 +366,11 @@ async function handlePaymentTopic(id: string): Promise<void> {
         return;
     }
     notifyPaymentCreated({
-        userId: data.metadata?.user_id,
-        toPlan: data.metadata?.plan_id as string | undefined,
-        billingCycle: (data.metadata?.interval as string) || 'monthly',
+        userId: metaString(data, 'user_id'),
+        toPlan: metaString(data, 'plan_id'),
+        billingCycle: metaString(data, 'interval') || 'monthly',
         provider: 'mercadopago',
-        amount: (data as { transaction_amount?: number }).transaction_amount ?? null,
+        amount: data.transaction_amount ?? null,
         currency: 'BRL',
         paymentId: id,
         subscriptionId: preapprovalId,
@@ -254,116 +378,20 @@ async function handlePaymentTopic(id: string): Promise<void> {
     });
 
     if (data.status === 'approved') {
-        const userId = data.metadata?.user_id;
-        const planId = data.metadata?.plan_id as PlanType;
-        const interval = (data.metadata?.interval as string) || 'monthly';
-        const affiliateCode = data.metadata?.affiliate_code as string | undefined;
-        const repCode = data.metadata?.rep as string | undefined;
-        const promoId = data.metadata?.promo_id as string | undefined;
-        if (userId && planId) {
-            await applyApprovedPaymentMp(userId, planId, interval, id, promoId);
-            notifyPaymentApproved({
-                userId,
-                toPlan: planId,
-                billingCycle: interval,
-                provider: 'mercadopago',
-                amount: (data as { transaction_amount?: number }).transaction_amount ?? null,
-                currency: 'BRL',
-                paymentId: id,
-                subscriptionId: preapprovalId ?? null,
-                status: data.status,
-            });
-            notifyPlanUpgrade({
-                userId,
-                toPlan: planId,
-                billingCycle: interval,
-                provider: 'mercadopago',
-                subscriptionId: preapprovalId ?? null,
-            });
-            const plan = PLANS[planId];
-            if (plan) {
-                const userWithWorkspace = await prisma.user.findUnique({
-                    where: { id: userId },
-                    include: { workspaces: { orderBy: { workspace: { createdAt: 'asc' } }, take: 1 } },
-                });
-                const workspaceId = userWithWorkspace?.workspaces?.[0]?.workspaceId;
-                if (workspaceId) {
-                    const { price_brl } = getPlanPrices(plan, interval === 'annual' ? 'annual' : 'monthly');
-                    const valueCents = Math.round(price_brl * 100);
-                    try {
-                        await createCommissionForFirstPayment({
-                            userId,
-                            workspaceId,
-                            userEmail: userWithWorkspace?.email ?? null,
-                            planId,
-                            valueCents,
-                            currency: 'BRL',
-                            orderId: id,
-                            affiliateCodeFromMetadata: affiliateCode,
-                        });
-                    } catch (e) {
-                        logger.error('Affiliate commission create failed (MP payment)', { error: e instanceof Error ? e.message : 'Unknown' });
-                    }
-
-                    if (repCode && workspaceId) {
-                        await handleRepCommission(repCode, userId, workspaceId, planId, valueCents, id, preapprovalId);
-                    }
-                }
-            }
-        }
-        // Recurring subscription payments (renewals): MP sends payment with preapproval_id in metadata.
         if (preapprovalId) {
-            try {
-                const workspace = await prisma.workspace.findFirst({
-                    where: { subscriptionId: preapprovalId },
-                    select: {
-                        id: true,
-                        plan: true,
-                        promoPaymentsRemaining: true,
-                        promoRegularAmountBrl: true,
-                    },
-                });
-                if (workspace) {
-                    const transactionAmount = (data as { transaction_amount?: number }).transaction_amount;
-                    const valueCents = transactionAmount != null ? Math.round(transactionAmount * 100) : 0;
-                    if (valueCents > 0) {
-                        await createCommissionForRecurring({
-                            workspaceId: workspace.id,
-                            subscriptionId: preapprovalId,
-                            planId: (workspace.plan || 'BASIC') as PlanType,
-                            valueCents,
-                            currency: 'BRL',
-                            orderId: id,
-                        });
-                        notifyPaymentRenewed({
-                            workspaceId: workspace.id,
-                            toPlan: workspace.plan,
-                            provider: 'mercadopago',
-                            paymentId: id,
-                            subscriptionId: preapprovalId,
-                            amount: valueCents / 100,
-                            currency: 'BRL',
-                        });
-                        await applyPromoRenewalIfNeeded(
-                            workspace.id,
-                            preapprovalId,
-                            workspace.promoPaymentsRemaining,
-                            workspace.promoRegularAmountBrl,
-                        );
-                    }
-                }
-            } catch (e) {
-                logger.error('Affiliate recurring commission (MP) failed', { error: e instanceof Error ? e.message : 'Unknown' });
-            }
+            // Card subscription charge — the PreApproval is the source of truth.
+            await handlePreapprovalCharge(preapprovalId, id, data);
+        } else {
+            await handleOneTimeApproved(data, id);
         }
         return;
     }
     if (data.status === 'rejected') {
-        const userId = data.metadata?.user_id;
+        const userId = metaString(data, 'user_id');
         notifyPaymentFailed({
             userId,
-            toPlan: data.metadata?.plan_id as string | undefined,
-            billingCycle: (data.metadata?.interval as string) || 'monthly',
+            toPlan: metaString(data, 'plan_id'),
+            billingCycle: metaString(data, 'interval') || 'monthly',
             provider: 'mercadopago',
             paymentId: id,
             subscriptionId: preapprovalId ?? null,
@@ -371,15 +399,16 @@ async function handlePaymentTopic(id: string): Promise<void> {
         });
         if (userId) await sendPaymentRejectedEmail(userId);
     }
-    if (data.status === 'refunded' || data.status === 'cancelled') {
+    if (data.status === 'refunded' || data.status === 'cancelled' || data.status === 'charged_back') {
         notifyPaymentRefunded({
-            userId: data.metadata?.user_id,
-            toPlan: data.metadata?.plan_id as string | undefined,
+            userId: metaString(data, 'user_id'),
+            toPlan: metaString(data, 'plan_id'),
             provider: 'mercadopago',
             paymentId: id,
             subscriptionId: preapprovalId ?? null,
             status: data.status,
         });
+        await revokeRefundedOneTimePayment(id, data.status);
         try {
             const cancelled = await cancelCommissionsByOrderOrSubscription(id, undefined);
             if (cancelled > 0) logger.info('Affiliate commissions cancelled (MP refund/cancel)', { paymentId: id, count: cancelled });
@@ -389,156 +418,305 @@ async function handlePaymentTopic(id: string): Promise<void> {
     }
 }
 
-async function handlePreapprovalTopic(id: string): Promise<void> {
-    const preapproval = await getPreApproval(id);
-    const extRef = (preapproval as { external_reference?: string }).external_reference;
-    if (!extRef) return;
-    const parsed = parseMpExternalReference(extRef);
-    if (!parsed) {
-        logger.warn('MP preapproval: invalid external_reference', { preapprovalId: id, extRef });
+/** A refunded/charged-back one-time payment that is the workspace's current plan revokes it. */
+async function revokeRefundedOneTimePayment(paymentId: string, status: string | undefined): Promise<void> {
+    if (status === 'cancelled') {
+        // An expired, never-paid PIX: just clear it if it was the pending renewal charge.
+        await prisma.workspace.updateMany({
+            where: { renewalPaymentId: paymentId },
+            data: { renewalPaymentId: null, renewalPaymentUrl: null, renewalPaymentQrCode: null, renewalPaymentExpiresAt: null },
+        });
+        return;
+    }
+    const ws = await prisma.workspace.findFirst({ where: { subscriptionId: `mp_pay_${paymentId}` }, select: { id: true, market: true } });
+    if (!ws) return;
+    await prisma.workspace.update({ where: { id: ws.id }, data: freePlanData() });
+    logger.warn('MP refund/chargeback: plan revoked', { workspaceId: ws.id, paymentId, status });
+}
+
+// ─── Card subscriptions (PreApproval) ───────────────────────────────────────
+
+type PreApprovalData = Awaited<ReturnType<typeof getPreApproval>> & { external_reference?: string };
+
+async function resolvePreapprovalWorkspace(preapproval: PreApprovalData) {
+    const parsed = preapproval.external_reference ? parseMpExternalReference(preapproval.external_reference) : null;
+    const bySub = await prisma.workspace.findFirst({ where: { subscriptionId: preapproval.id } });
+    if (bySub) return { workspace: bySub, parsed };
+    if (!parsed?.userId) return { workspace: null, parsed };
+    const { workspace } = await findUserWorkspace(parsed.userId);
+    return { workspace, parsed };
+}
+
+/**
+ * Activates a card subscription or records one of its charges.
+ * - new subscription (first time we see this PreApproval on the workspace): full activation,
+ *   cancels the PreApproval it replaces (upgrade), first-payment commissions, welcome email
+ * - later charge (paymentId, not the first one): renewal — period extended, credits refilled
+ * - repeated "authorized" notifications: only sync status/period, credits untouched
+ */
+async function activatePreapproval(preapproval: PreApprovalData, charge?: { paymentId: string; data: MpPaymentData }): Promise<void> {
+    const { workspace, parsed } = await resolvePreapprovalWorkspace(preapproval);
+    if (!workspace || !parsed) {
+        logger.warn('MP preapproval: workspace not resolved', { preapprovalId: preapproval.id });
         return;
     }
     const { userId, planId, cycle, affiliateCode, promoId, repCode } = parsed;
     const plan = PLANS[planId];
-    if (!plan || !userId) {
-        logger.warn('MP preapproval: invalid external_reference', { preapprovalId: id, extRef });
-        return;
+    if (!plan) return;
+
+    const now = new Date();
+    const isNew = workspace.subscriptionId !== preapproval.id;
+    const createdAt = preapproval.date_created ? new Date(preapproval.date_created) : null;
+    const chargedAt = charge?.data.date_created ? new Date(charge.data.date_created) : now;
+    const isFirstCharge = createdAt != null && chargedAt.getTime() - createdAt.getTime() < 24 * 60 * 60 * 1000;
+    const isRenewal = !isNew && charge != null && !isFirstCharge;
+    const nextPayment = preapproval.next_payment_date ? new Date(preapproval.next_payment_date) : null;
+    const currentPeriodEnd = nextPayment && nextPayment > now ? nextPayment : extendPeriodEnd(workspace.currentPeriodEnd, cycle, now);
+    const market = workspace.market === 'US' ? 'US' : 'BR';
+    const chargedBrl = preapproval.auto_recurring?.transaction_amount ?? getPlanPrices(plan, cycle).price_brl;
+    const valueCents = Math.round((charge?.data.transaction_amount ?? chargedBrl) * 100);
+
+    if (isNew) await cancelReplacedPreapproval(workspace.subscriptionId, preapproval.id, workspace.id);
+
+    const promo = isRenewal ? promoAfterPayment(workspace.promoPaymentsRemaining) : null;
+    await prisma.workspace.update({
+        where: { id: workspace.id },
+        data: {
+            subscriptionId: preapproval.id,
+            plan: planId,
+            subscriptionStatus: 'active',
+            leadsLimit: getMarketLeadsLimit(planId, market),
+            currentPeriodEnd,
+            billingCycle: cycle,
+            gracePeriodEnd: null,
+            renewalPaymentId: null,
+            renewalPaymentUrl: null,
+            renewalPaymentQrCode: null,
+            renewalPaymentExpiresAt: null,
+            ...(isNew || isRenewal ? freshCreditCycle(now, currentPeriodEnd) : {}),
+            ...(isNew ? { pendingPlanId: null, pendingPlanEffectiveAt: null } : {}),
+            ...(isNew && promoId === STARTER_PROMO_BR.id
+                ? {
+                    starterPromoCode: promoId,
+                    promoPaymentsRemaining: STARTER_PROMO_BR.months - 1,
+                    promoRegularAmountBrl: STARTER_PROMO_BR.regularPriceBrl,
+                    starterPromoEligible: false,
+                }
+                : {}),
+            ...(promo ? { promoPaymentsRemaining: promo.promoPaymentsRemaining } : {}),
+            ...(promo?.endsNow ? { promoRegularAmountBrl: null, starterPromoCode: null } : {}),
+        },
+    });
+
+    if (promo?.endsNow) {
+        const regular = workspace.promoRegularAmountBrl ?? STARTER_PROMO_BR.regularPriceBrl;
+        await updatePreApprovalAmount(preapproval.id, regular).catch((err: unknown) => {
+            logger.error('MP promo end: update to regular price failed', { preapprovalId: preapproval.id, error: err instanceof Error ? err.message : 'Unknown' });
+        });
     }
 
-    const userWithWorkspace = await prisma.user.findUnique({
-        where: { id: userId },
-        include: { workspaces: { orderBy: { workspace: { createdAt: 'asc' } }, take: 1 } }
-    });
-    const workspaceId = userWithWorkspace?.workspaces?.[0]?.workspaceId;
-    if (!workspaceId) return;
-
-    const status = (preapproval as { status?: string }).status;
-    if (status === 'authorized' || status === 'active') {
-        const nextPayment = (preapproval as { next_payment_date?: string }).next_payment_date;
-        const currentPeriodEnd = nextPayment ? new Date(nextPayment) : periodEndFromInterval(cycle);
-        const promoAmount = (preapproval as { auto_recurring?: { transaction_amount?: number } }).auto_recurring?.transaction_amount;
-        const { price_brl } = getPlanPrices(plan, cycle);
-        const chargedBrl = promoId && promoAmount != null ? promoAmount : price_brl;
-        const valueCents = Math.round(chargedBrl * 100);
-        await prisma.workspace.update({
-            where: { id: workspaceId },
-            data: {
-                subscriptionId: preapproval.id,
-                plan: planId,
-                subscriptionStatus: 'active',
-                leadsLimit: getMarketLeadsLimit(planId as PlanType),
-                leadsUsed: 0,
-                currentPeriodEnd,
-                billingCycle: cycle,
-                gracePeriodEnd: null,
-                ...(promoId === STARTER_PROMO_BR.id
-                    ? {
-                        starterPromoCode: promoId,
-                        promoPaymentsRemaining: STARTER_PROMO_BR.months,
-                        promoRegularAmountBrl: STARTER_PROMO_BR.regularPriceBrl,
-                        starterPromoEligible: false,
-                    }
-                    : {}),
-            },
-        });
-        notifyPaymentApproved({
-            userId,
-            userEmail: userWithWorkspace?.email ?? null,
-            workspaceId,
+    const recipient = await ownerRecipient(workspace.id);
+    if (isRenewal) {
+        notifyPaymentRenewed({
+            workspaceId: workspace.id,
             toPlan: planId,
-            billingCycle: cycle,
             provider: 'mercadopago',
+            paymentId: charge!.paymentId,
+            subscriptionId: preapproval.id,
             amount: valueCents / 100,
             currency: 'BRL',
-            paymentId: id,
-            subscriptionId: id,
-            status,
-        });
-        notifyPlanUpgrade({
-            userId,
-            userEmail: userWithWorkspace?.email ?? null,
-            workspaceId,
-            toPlan: planId,
-            billingCycle: cycle,
-            provider: 'mercadopago',
-            subscriptionId: id,
         });
         try {
-            await createCommissionForFirstPayment({
-                userId,
-                workspaceId,
-                userEmail: userWithWorkspace?.email ?? null,
+            await createCommissionForRecurring({
+                workspaceId: workspace.id,
+                subscriptionId: preapproval.id,
                 planId,
                 valueCents,
                 currency: 'BRL',
-                orderId: id,
-                subscriptionId: id,
-                affiliateCodeFromMetadata: affiliateCode,
+                orderId: charge!.paymentId,
             });
         } catch (e) {
-            logger.error('Affiliate commission create failed (MP preapproval)', { error: e instanceof Error ? e.message : 'Unknown' });
+            logger.error('Affiliate recurring commission (MP) failed', { error: e instanceof Error ? e.message : 'Unknown' });
         }
+        if (recipient) {
+            await sendRenewalConfirmedEmail(workspace.id, recipient, {
+                planName: plan.name,
+                leadsLimit: getMarketLeadsLimit(planId, market),
+                periodEnd: currentPeriodEnd,
+                paymentId: charge!.paymentId,
+            });
+        }
+        return;
+    }
+    if (!isNew) return;
 
-        if (repCode) {
-            await handleRepCommission(repCode, userId, workspaceId, planId, valueCents, id, id);
-        }
-    } else if (status === 'cancelled' || status === 'pending' || status === 'paused') {
+    const { user } = await findUserWorkspace(userId);
+    notifyPaymentApproved({
+        userId,
+        userEmail: user?.email ?? null,
+        workspaceId: workspace.id,
+        toPlan: planId,
+        billingCycle: cycle,
+        provider: 'mercadopago',
+        amount: valueCents / 100,
+        currency: 'BRL',
+        paymentId: preapproval.id,
+        subscriptionId: preapproval.id,
+        status: preapproval.status,
+    });
+    notifyPlanUpgrade({
+        userId,
+        userEmail: user?.email ?? null,
+        workspaceId: workspace.id,
+        toPlan: planId,
+        billingCycle: cycle,
+        provider: 'mercadopago',
+        subscriptionId: preapproval.id,
+    });
+    if (user?.email) {
+        const html = paymentSuccessTemplate(plan.name, getMarketLeadsLimit(planId, market), DASHBOARD_URL, user.name ?? undefined, currentPeriodEnd);
+        sendEmail(user.email, 'Seu plano Precision IA está ativo — bem-vindo', html).catch((err) => {
+            logger.error('Payment success email failed', { userId, error: err instanceof Error ? err.message : 'Unknown' });
+        });
+    }
+    try {
+        await createCommissionForFirstPayment({
+            userId,
+            workspaceId: workspace.id,
+            userEmail: user?.email ?? null,
+            planId,
+            valueCents,
+            currency: 'BRL',
+            orderId: preapproval.id,
+            subscriptionId: preapproval.id,
+            affiliateCodeFromMetadata: affiliateCode,
+        });
+    } catch (e) {
+        logger.error('Affiliate commission create failed (MP preapproval)', { error: e instanceof Error ? e.message : 'Unknown' });
+    }
+    if (repCode) {
+        await handleRepCommission(repCode, userId, workspace.id, planId, valueCents, preapproval.id, preapproval.id);
+    }
+}
+
+async function handlePreapprovalCharge(preapprovalId: string, paymentId: string, data: MpPaymentData): Promise<void> {
+    const preapproval = await getPreApproval(preapprovalId) as PreApprovalData;
+    await activatePreapproval(preapproval, { paymentId, data });
+}
+
+async function handlePreapprovalTopic(id: string): Promise<void> {
+    const preapproval = await getPreApproval(id) as PreApprovalData;
+    const status = preapproval.status;
+    // Dedup per status: the first "pending" notification must not swallow the later "authorized".
+    if (await isWebhookDuplicate('mercadopago', `preapproval:${id}:${status}`)) return;
+
+    if (status === 'authorized' || status === 'active') {
+        await activatePreapproval(preapproval);
+        return;
+    }
+    if (status === 'pending') {
+        // Not authorized yet (checkout in progress) — nothing to change.
+        return;
+    }
+
+    const { workspace, parsed } = await resolvePreapprovalWorkspace(preapproval);
+    // Only the workspace's current subscription matters: an old PreApproval we cancelled
+    // ourselves after an upgrade must not touch the new plan.
+    if (!workspace || workspace.subscriptionId !== preapproval.id) return;
+    const recipient = await ownerRecipient(workspace.id);
+
+    if (status === 'cancelled') {
+        const now = new Date();
+        const accessUntil = workspace.currentPeriodEnd && workspace.currentPeriodEnd > now ? workspace.currentPeriodEnd : now;
+        // Paid time is kept: FREE is applied by the lifecycle cron at period end.
         await prisma.workspace.update({
-            where: { id: workspaceId },
-            data: {
-                subscriptionStatus: 'past_due',
-                gracePeriodEnd: new Date(Date.now() + GRACE_DAYS_MS),
-            },
+            where: { id: workspace.id },
+            data: { subscriptionStatus: 'canceled', pendingPlanId: 'FREE', pendingPlanEffectiveAt: accessUntil },
+        });
+        notifyPlanDowngradeScheduled({
+            workspaceId: workspace.id,
+            fromPlan: workspace.plan,
+            toPlan: 'FREE',
+            provider: 'mercadopago',
+            subscriptionId: id,
+            effectiveAt: accessUntil.toISOString(),
+        });
+        if (recipient) await sendSubscriptionCancelledEmail(workspace.id, recipient, PLANS[workspace.plan as PlanType]?.name ?? workspace.plan, accessUntil);
+        try {
+            const cancelled = await cancelCommissionsByOrderOrSubscription(id, id);
+            if (cancelled > 0) logger.info('Affiliate commissions cancelled (MP preapproval cancelled)', { preapprovalId: id, count: cancelled });
+        } catch (e) {
+            logger.error('Affiliate cancel commissions (MP preapproval) failed', { error: e instanceof Error ? e.message : 'Unknown' });
+        }
+        return;
+    }
+
+    if (status === 'paused') {
+        await prisma.workspace.update({
+            where: { id: workspace.id },
+            data: { subscriptionStatus: 'past_due', gracePeriodEnd: new Date(Date.now() + GRACE_DAYS_MS) },
         });
         notifyPaymentFailed({
-            userId,
-            userEmail: userWithWorkspace?.email ?? null,
-            workspaceId,
-            toPlan: planId,
-            billingCycle: cycle,
+            userId: parsed?.userId,
+            workspaceId: workspace.id,
+            toPlan: workspace.plan,
             provider: 'mercadopago',
-            paymentId: id,
             subscriptionId: id,
             status,
         });
-        if (status === 'cancelled') {
-            try {
-                const cancelled = await cancelCommissionsByOrderOrSubscription(id, id);
-                if (cancelled > 0) logger.info('Affiliate commissions cancelled (MP preapproval cancelled)', { preapprovalId: id, count: cancelled });
-            } catch (e) {
-                logger.error('Affiliate cancel commissions (MP preapproval) failed', { error: e instanceof Error ? e.message : 'Unknown' });
-            }
-        }
+        if (parsed?.userId) await sendPaymentRejectedEmail(parsed.userId);
     }
 }
 
-async function handlePaymentTopicSafe(id: string): Promise<void> {
-    try {
-        await handlePaymentTopic(id);
-    } catch (error) {
-        logger.error('Mercado Pago Webhook Error', { error: error instanceof Error ? error.message : 'Unknown' });
-    }
-}
-
-async function handlePreapprovalTopicSafe(id: string): Promise<void> {
-    try {
-        await handlePreapprovalTopic(id);
-    } catch (error) {
-        logger.error('MP Preapproval Webhook Error', { error: error instanceof Error ? error.message : 'Unknown' });
-    }
-}
-
-async function dispatchMpWebhook(topic: string | null, id: string | null): Promise<void> {
-    if (topic === 'payment' && id) {
-        await handlePaymentTopicSafe(id);
+/** Subscription charge notification (topic authorized_payment / subscription_authorized_payment). */
+async function handleAuthorizedPaymentTopic(id: string): Promise<void> {
+    const token = process.env.MERCADOPAGO_ACCESS_TOKEN;
+    if (!token) return;
+    const res = await fetch(`https://api.mercadopago.com/authorized_payments/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+        logger.warn('MP authorized_payment fetch failed', { id, status: res.status });
         return;
     }
-    if (topic === 'preapproval' && id) {
-        await handlePreapprovalTopicSafe(id);
+    const ap = await res.json() as { preapproval_id?: string; payment?: { id?: number | string; status?: string } };
+    const paymentId = ap.payment?.id != null ? String(ap.payment.id) : null;
+    if (!ap.preapproval_id || !paymentId) return;
+    // The payment topic carries the same charge; process via the payment so both paths share dedup.
+    const payment = new Payment(mpConfig);
+    const data = await payment.get({ id: paymentId }) as unknown as MpPaymentData;
+    if (data.status !== 'approved') return;
+    if (await isWebhookDuplicate('mercadopago', `payment:${paymentId}:${data.status}`)) return;
+    await handlePreapprovalCharge(ap.preapproval_id, paymentId, data);
+}
+
+async function runSafe(label: string, fn: () => Promise<void>): Promise<void> {
+    try {
+        await fn();
+    } catch (error) {
+        logger.error(label, { error: error instanceof Error ? error.message : 'Unknown' });
+    }
+}
+
+const PREAPPROVAL_TOPICS = new Set(['preapproval', 'subscription_preapproval']);
+const AUTHORIZED_PAYMENT_TOPICS = new Set(['authorized_payment', 'subscription_authorized_payment']);
+
+async function dispatchMpWebhook(topic: string | null, id: string | null): Promise<void> {
+    if (!topic || !id) return;
+    if (topic === 'payment') {
+        await runSafe('Mercado Pago Webhook Error', () => handlePaymentTopic(id));
+        return;
+    }
+    if (PREAPPROVAL_TOPICS.has(topic)) {
+        await runSafe('MP Preapproval Webhook Error', () => handlePreapprovalTopic(id));
+        return;
+    }
+    if (AUTHORIZED_PAYMENT_TOPICS.has(topic)) {
+        await runSafe('MP Authorized Payment Webhook Error', () => handleAuthorizedPaymentTopic(id));
         return;
     }
     // merchant_order: fetch order and process its payments
-    if (topic === 'merchant_order' && id) {
+    if (topic === 'merchant_order') {
         try {
             const token = process.env.MERCADOPAGO_ACCESS_TOKEN;
             if (!token) return;
@@ -549,7 +727,7 @@ async function dispatchMpWebhook(topic: string | null, id: string | null): Promi
             const order = await res.json() as { payments?: Array<{ id: number; status: string }> };
             const approved = order.payments?.find((p) => p.status === 'approved');
             if (approved) {
-                await handlePaymentTopicSafe(String(approved.id));
+                await runSafe('Mercado Pago Webhook Error', () => handlePaymentTopic(String(approved.id)));
             }
         } catch (err) {
             logger.error('MP merchant_order processing failed', { orderId: id, error: err instanceof Error ? err.message : 'Unknown' });
@@ -611,7 +789,7 @@ export async function POST(req: Request) {
     // internally (keyed by payment status too — see handlePaymentTopic), since MP re-sends the
     // same resource ID as its status changes and a plain ID-based key here would swallow that.
     const dedupeId = dataId ?? xRequestId ?? '';
-    if (topic !== 'payment' && topic !== 'merchant_order' && dedupeId && await isWebhookDuplicate('mercadopago', `${topic}:${dedupeId}`)) {
+    if (topic !== 'payment' && topic !== 'merchant_order' && !PREAPPROVAL_TOPICS.has(topic ?? '') && !AUTHORIZED_PAYMENT_TOPICS.has(topic ?? '') && dedupeId && await isWebhookDuplicate('mercadopago', `${topic}:${dedupeId}`)) {
         return NextResponse.json({ received: true });
     }
 

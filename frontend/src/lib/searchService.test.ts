@@ -16,6 +16,18 @@ describe('searchService', () => {
   });
 
   describe('buildTextQuery', () => {
+    it('does not repeat the city when the term (from history) already contains it', () => {
+      const q = buildTextQuery({ advancedTerm: 'Dentista Blumenau', city: 'Blumenau', state: 'SC', country: 'BR', niches: [] });
+      expect(q).toBe('Dentista Blumenau SC');
+      const again = buildTextQuery({ advancedTerm: q, city: 'Blumenau', state: 'SC', country: 'BR', niches: [] });
+      expect(again).toBe('Dentista Blumenau SC');
+    });
+
+    it('matches locations ignoring case and accents', () => {
+      const q = buildTextQuery({ advancedTerm: 'clinicas sao paulo', city: 'São Paulo', country: 'BR', niches: [] });
+      expect(q).toBe('clinicas sao paulo');
+    });
+
     it('uses advancedTerm with location context when city provided', () => {
       const q = buildTextQuery({
         advancedTerm: '  cafes especiais  ',

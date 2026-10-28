@@ -256,4 +256,48 @@ describe('POST /api/billing/webhook (Stripe)', () => {
       }),
     );
   });
+
+  it('customer.subscription.updated without a new period (e.g. card change) does not refill credits', async () => {
+    const periodEnd = Math.floor(Date.now() / 1000) + 10 * 86400;
+    mockConstructEvent.mockReturnValue({
+      id: 'evt_card',
+      type: 'customer.subscription.updated',
+      data: {
+        object: {
+          id: 'sub_same', metadata: { planId: 'PRO' }, status: 'active',
+          current_period_end: periodEnd,
+          items: { data: [{ price: { recurring: { interval: 'month' } } }] },
+        },
+      },
+    });
+    prisma.workspace.findFirst.mockResolvedValue({ plan: 'PRO', currentPeriodEnd: new Date(periodEnd * 1000) });
+    prisma.workspace.updateMany.mockResolvedValue({ count: 1 });
+
+    await POST(makeReq());
+    const data = prisma.workspace.updateMany.mock.calls.at(-1)[0].data;
+    expect(data).not.toHaveProperty('leadsUsed');
+  });
+
+  it('customer.subscription.updated with a new period (renewal) refills credits', async () => {
+    const oldEnd = Math.floor(Date.now() / 1000);
+    const newEnd = oldEnd + 30 * 86400;
+    mockConstructEvent.mockReturnValue({
+      id: 'evt_renew',
+      type: 'customer.subscription.updated',
+      data: {
+        object: {
+          id: 'sub_same', metadata: { planId: 'PRO' }, status: 'active',
+          current_period_end: newEnd,
+          items: { data: [{ price: { recurring: { interval: 'month' } } }] },
+        },
+      },
+    });
+    prisma.workspace.findFirst.mockResolvedValue({ plan: 'PRO', currentPeriodEnd: new Date(oldEnd * 1000) });
+    prisma.workspace.updateMany.mockResolvedValue({ count: 1 });
+
+    await POST(makeReq());
+    const data = prisma.workspace.updateMany.mock.calls.at(-1)[0].data;
+    expect(data.leadsUsed).toBe(0);
+    expect(data.creditsResetAt).toBeInstanceOf(Date);
+  });
 });

@@ -191,8 +191,10 @@ export const checkoutSchema = z.object({
   locale: z.string().max(10).optional(),
   cycle: z.enum(['monthly', 'annual']).optional(),
   interval: z.enum(['monthly', 'annual']).optional(),
-  /** Mercado Pago card token (for recurring subscription with card). Omit for PIX/boleto (Preference). */
+  /** Mercado Pago card token (for recurring subscription with card). Omit for PIX (Preference). */
   card_token_id: z.string().max(500).optional(),
+  /** BR: 'card' = recurring card subscription (MP PreApproval), 'pix' = PIX renewed every cycle. */
+  paymentMethod: z.enum(['card', 'pix']).optional(),
   /** If true and current plan > target plan, schedule downgrade at period end instead of creating new checkout. */
   scheduleAtPeriodEnd: z.boolean().optional(),
   /** Código do afiliado (do cookie/ref). Repasse no metadata do pagamento para atribuição. */

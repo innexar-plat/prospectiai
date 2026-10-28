@@ -1,6 +1,7 @@
 /**
  * Tests for email-config-encrypt: round-trip, no secret leak, invalid input handling.
  */
+import { createCipheriv, randomBytes, scryptSync } from 'crypto';
 import { encryptEmailSecret, decryptEmailSecret } from '@/lib/email-config-encrypt';
 
 const MIN_SECRET = 'a'.repeat(16);
@@ -34,6 +35,15 @@ describe('email-config-encrypt', () => {
     expect(a).not.toBe(b);
     expect(decryptEmailSecret(a)).toBe(plain);
     expect(decryptEmailSecret(b)).toBe(plain);
+  });
+
+  it('decrypts values saved in the legacy fixed-salt format', () => {
+    const key = scryptSync(MIN_SECRET, 'email-config-salt', 32);
+    const iv = randomBytes(16);
+    const cipher = createCipheriv('aes-256-gcm', key, iv);
+    const enc = Buffer.concat([cipher.update('re_legacy_key', 'utf8'), cipher.final()]);
+    const legacy = Buffer.concat([iv, cipher.getAuthTag(), enc]).toString('hex');
+    expect(decryptEmailSecret(legacy)).toBe('re_legacy_key');
   });
 
   it('throws on decrypt with invalid hex (too short)', () => {

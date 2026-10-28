@@ -10,6 +10,7 @@
 import { generateCompletionForRole, generateObjectForRole } from '@/lib/ai';
 import { getWebContextForRole } from '@/lib/web-search/resolve';
 import { scrapeWebsite, formatWebsiteMetadataForPrompt } from '@/lib/website-scraper';
+import type { Prisma } from '@prisma/client';
 import { prisma } from './prisma';
 import {
     buildTaskDescription,
@@ -419,7 +420,7 @@ export async function analyzeLead(
     isBusinessPlan: boolean = false,
     context?: AnalyzeLeadContext,
     onProgress?: AnalyzeProgressCallback
-): Promise<{ analysis: LeadAnalysis; usage?: { inputTokens: number; outputTokens: number }; provider?: string; model?: string }> {
+): Promise<{ analysis: LeadAnalysis; usage?: { inputTokens: number; outputTokens: number }; provider?: string; model?: string; failed?: boolean }> {
     const normalizedLocale = normalizeAnalyzeLocale(locale);
     const isEn = normalizedLocale === 'en';
     onProgress?.('profile', isEn ? 'Loading business profile...' : normalizedLocale === 'es' ? 'Cargando perfil del negocio...' : 'Carregando perfil do negócio...');
@@ -476,6 +477,7 @@ export async function analyzeLead(
         }
 
         analysisCore = sanitizeLeadAnalysisCore(analysisCore, finalProfile);
+        analysisCore = { ...analysisCore, socialMedia: keepGroundedSocialLinks(analysisCore.socialMedia, prompt) };
 
         onProgress?.('parsing', isEn ? 'Processing AI response...' : 'Processando resposta da IA...');
         onProgress?.('ai_call', isEn ? 'Generating report sections...' : 'Gerando seções do relatório...');
@@ -502,8 +504,39 @@ export async function analyzeLead(
         const { logger } = await import('@/lib/logger');
         logger.error('AI Analysis Error', { error: error instanceof Error ? error.message : 'Unknown' });
         const msg = ((error as { message?: string })?.message ?? '').toLowerCase();
-        return { analysis: buildFallbackAnalysis(getAnalysisErrorMessage(msg, locale), locale) };
+        return { analysis: buildFallbackAnalysis(getAnalysisErrorMessage(msg, locale), locale), failed: true };
     }
+}
+
+/**
+ * Social profile links are only kept when they appear in the data we gave the model
+ * (website scrape, web search, Places data). Otherwise the model may invent plausible-looking
+ * URLs and the seller ends up messaging a profile that does not exist.
+ */
+export function keepGroundedSocialLinks(
+    social: LeadAnalysis['socialMedia'] | undefined,
+    sourceText: string,
+): LeadAnalysis['socialMedia'] {
+    if (!social) return {};
+    const haystack = sourceText.toLowerCase();
+    const grounded = (url: string | undefined): string | undefined => {
+        const u = url?.trim();
+        if (!u || !/^https?:\/\//i.test(u)) return undefined;
+        try {
+            const parsed = new URL(u);
+            const host = parsed.hostname.replace(/^www\./, '').toLowerCase();
+            const path = parsed.pathname.replace(/\/+$/, '').toLowerCase();
+            if (!path || path === '/') return undefined;
+            return haystack.includes(`${host}${path}`) ? u : undefined;
+        } catch {
+            return undefined;
+        }
+    };
+    return {
+        instagram: grounded(social.instagram),
+        facebook: grounded(social.facebook),
+        linkedin: grounded(social.linkedin),
+    };
 }
 
 async function ensureGuestUserIfNeeded(userId: string | undefined, profile?: UserBusinessProfile): Promise<string> {
@@ -602,6 +635,14 @@ async function saveAnalysisToDb(
                 cnpjAnalysis: analysis.cnpjAnalysis || undefined,
                 reviewTrend: analysis.reviewTrend || undefined,
                 suggestedContactTime: analysis.suggestedContactTime || undefined,
+                // JSON round-trip: plain JSON value for the Json column.
+                extras: JSON.parse(JSON.stringify({
+                    quickActions: analysis.quickActions ?? [],
+                    keyMetrics: analysis.keyMetrics ?? [],
+                    messageVariants: analysis.messageVariants ?? {},
+                    reviewAnalysis: analysis.reviewAnalysis ?? null,
+                })) as Prisma.InputJsonValue,
+                workspaceId: workspaceId ?? undefined,
             }
         });
         if (userId && userId !== 'cl_guest_default') {
