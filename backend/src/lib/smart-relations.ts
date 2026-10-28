@@ -14,6 +14,21 @@
 import { prisma } from './prisma';
 import { logger } from './logger';
 
+/**
+ * Short, bounded lookups for the related-companies panel: these run on every lead page view,
+ * so they get a statement timeout and no parallel workers. Ordering by capital happens over
+ * at most 300 indexed candidates, never over a whole sector/state.
+ */
+async function boundedRf<T>(sql: string, ...params: unknown[]): Promise<T> {
+    return prisma.$transaction(async (tx) => {
+        await tx.$executeRawUnsafe('SET LOCAL statement_timeout = 2500');
+        await tx.$executeRawUnsafe('SET LOCAL max_parallel_workers_per_gather = 0');
+        await tx.$executeRawUnsafe('SET LOCAL jit = off');
+        return tx.$queryRawUnsafe(sql, ...params) as Promise<T>;
+    });
+}
+
+
 const RELATIONS_QUERY_TIMEOUT_MS = 2500;
 
 /* ------------------------------------------------------------------ */
@@ -115,19 +130,20 @@ async function findSameSectorSameCity(
     excludeCnpj: string,
     limit: number = 10,
 ): Promise<RelatedCompany[]> {
-    const rows = await prisma.$queryRawUnsafe<Array<{
+    const rows = await boundedRf<Array<{
         cnpj: string; razaoSocial: string; nomeFantasia: string | null;
         cnaePrincipal: string | null; municipio: string | null; uf: string | null;
         ddd: string | null; telefone: string | null; email: string | null;
         capitalSocial: number | null; porte: string | null;
     }>>(
-        `SELECT cnpj, "razaoSocial", "nomeFantasia", "cnaePrincipal", municipio, uf,
+        `SELECT * FROM (SELECT cnpj, "razaoSocial", "nomeFantasia", "cnaePrincipal", municipio, uf,
                 ddd, telefone, email, "capitalSocial", porte
          FROM "RfCompany"
          WHERE "cnaePrincipal" = $1
            AND municipio = $2
            AND uf = $3
            AND cnpj != $4
+         LIMIT 300) candidates
          ORDER BY "capitalSocial" DESC NULLS LAST
          LIMIT $5`,
         cnaePrincipal, municipio, uf, excludeCnpj, limit,
@@ -158,19 +174,20 @@ async function findSameSector(
     excludeMunicipio: string,
     limit: number = 10,
 ): Promise<RelatedCompany[]> {
-    const rows = await prisma.$queryRawUnsafe<Array<{
+    const rows = await boundedRf<Array<{
         cnpj: string; razaoSocial: string; nomeFantasia: string | null;
         cnaePrincipal: string | null; municipio: string | null; uf: string | null;
         ddd: string | null; telefone: string | null; email: string | null;
         capitalSocial: number | null; porte: string | null;
     }>>(
-        `SELECT cnpj, "razaoSocial", "nomeFantasia", "cnaePrincipal", municipio, uf,
+        `SELECT * FROM (SELECT cnpj, "razaoSocial", "nomeFantasia", "cnaePrincipal", municipio, uf,
                 ddd, telefone, email, "capitalSocial", porte
          FROM "RfCompany"
          WHERE "cnaePrincipal" = $1
            AND uf = $2
            AND municipio != $3
            AND cnpj != $4
+         LIMIT 300) candidates
          ORDER BY "capitalSocial" DESC NULLS LAST
          LIMIT $5`,
         cnaePrincipal, uf, excludeMunicipio, excludeCnpj, limit,
@@ -201,20 +218,21 @@ async function findSameNeighbourhood(
     excludeCnpj: string,
     limit: number = 10,
 ): Promise<RelatedCompany[]> {
-    const rows = await prisma.$queryRawUnsafe<Array<{
+    const rows = await boundedRf<Array<{
         cnpj: string; razaoSocial: string; nomeFantasia: string | null;
         cnaePrincipal: string | null; municipio: string | null; uf: string | null;
         bairro: string | null;
         ddd: string | null; telefone: string | null; email: string | null;
         capitalSocial: number | null; porte: string | null;
     }>>(
-        `SELECT cnpj, "razaoSocial", "nomeFantasia", "cnaePrincipal", municipio, uf,
+        `SELECT * FROM (SELECT cnpj, "razaoSocial", "nomeFantasia", "cnaePrincipal", municipio, uf,
                 bairro, ddd, telefone, email, "capitalSocial", porte
          FROM "RfCompany"
          WHERE municipio = $1
            AND uf = $2
            AND UPPER(bairro) = $3
            AND cnpj != $4
+         LIMIT 300) candidates
          ORDER BY "capitalSocial" DESC NULLS LAST
          LIMIT $5`,
         municipio, uf, bairro, excludeCnpj, limit,
@@ -245,7 +263,7 @@ async function findSharedPhone(
     excludeCnpj: string,
     limit: number = 5,
 ): Promise<RelatedCompany[]> {
-    const rows = await prisma.$queryRawUnsafe<Array<{
+    const rows = await boundedRf<Array<{
         cnpj: string; razaoSocial: string; nomeFantasia: string | null;
         cnaePrincipal: string | null; municipio: string | null; uf: string | null;
         ddd: string | null; telefone: string | null; email: string | null;
@@ -288,7 +306,7 @@ async function findSharedEmail(
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail || !normalizedEmail.includes('@')) return [];
 
-    const rows = await prisma.$queryRawUnsafe<Array<{
+    const rows = await boundedRf<Array<{
         cnpj: string; razaoSocial: string; nomeFantasia: string | null;
         cnaePrincipal: string | null; municipio: string | null; uf: string | null;
         ddd: string | null; telefone: string | null; email: string | null;
@@ -297,7 +315,7 @@ async function findSharedEmail(
         `SELECT cnpj, "razaoSocial", "nomeFantasia", "cnaePrincipal", municipio, uf,
                 ddd, telefone, email, "capitalSocial", porte
          FROM "RfCompany"
-                 WHERE email = $1
+                 WHERE lower(email) = lower($1) AND email IS NOT NULL
            AND cnpj != $2
          LIMIT $3`,
                 normalizedEmail, excludeCnpj, limit,
@@ -351,7 +369,7 @@ async function findSameSectorLeads(
     userId: string,
     limit: number = 5,
 ): Promise<RelatedCompany[]> {
-    const rows = await prisma.$queryRawUnsafe<Array<{
+    const rows = await boundedRf<Array<{
         placeId: string; name: string; cnpj: string | null;
         companyMainCnae: string | null; address: string | null;
         phone: string | null; email: string | null;
@@ -417,7 +435,7 @@ export async function getSmartRelations(
     } | null = null;
 
     if (lead.cnpj) {
-        const row = await prisma.$queryRawUnsafe<Array<{
+        const row = await boundedRf<Array<{
             cnpj: string; cnaePrincipal: string | null; municipio: string | null;
             uf: string | null; bairro: string | null; ddd: string | null;
             telefone: string | null; email: string | null;

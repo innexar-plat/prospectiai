@@ -1,3 +1,4 @@
+import { toRfText } from '@/lib/rf-fuzzy-match';
 import { prisma } from '@/lib/prisma';
 import type { Prisma, SearchProfile } from '@prisma/client';
 import type { RfCompanyData } from '../domain/types';
@@ -42,7 +43,8 @@ export async function runSearchWorker(
   if (profile.hasPhone === true) where.telefone = { not: null };
   if (profile.minCapital != null) where.capitalSocial = { gte: profile.minCapital };
   if (profile.openedAfter) where.dataAbertura = { gte: profile.openedAfter };
-  if (profile.municipio) where.municipio = { contains: profile.municipio, mode: 'insensitive' };
+  // RF stores cities uppercase without accents: equality uses the index, `contains` scanned the table.
+  if (profile.municipio) where.municipio = toRfText(profile.municipio);
   if (blockedCnpjs.length > 0) where.cnpj = { notIn: blockedCnpjs };
 
   // Buscar CNPJs já prospectados neste workspace para dedup
@@ -53,8 +55,9 @@ export async function runSearchWorker(
   const companies = await prisma.rfCompany.findMany({
     where,
     take: maxLeads * 3, // pega mais para absorver deduplicações
-    orderBy: [{ capitalSocial: 'desc' }, { email: 'asc' }],
   });
+  // Bigger companies first — sorted over the fetched candidates, not the whole sector/state.
+  companies.sort((a, b) => (b.capitalSocial ?? 0) - (a.capitalSocial ?? 0));
 
   const toInsert: RfCompanyData[] = [];
   let dedupSkip = 0;

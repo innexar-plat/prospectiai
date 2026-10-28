@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { getCached, setCached } from '@/lib/redis';
 import { logger } from '@/lib/logger';
 import type { PlaceResult } from '../domain/types';
+import { toRfText } from '@/lib/rf-fuzzy-match';
 
 let _rfCrossEnabled: boolean | null = null;
 
@@ -27,7 +28,7 @@ export function invalidateRfCrossConfigCache(): void {
 const SEARCH_RF_MAX_RESULTS = Number.parseInt(process.env.SEARCH_RF_MAX_RESULTS ?? '20', 10);
 const SEARCH_RF_AUTO_CNAE_LIMIT = Number.parseInt(process.env.SEARCH_RF_AUTO_CNAE_LIMIT ?? '5', 10);
 const SEARCH_RF_AUTO_CNAE_LOOKUPS = Number.parseInt(process.env.SEARCH_RF_AUTO_CNAE_LOOKUPS ?? '12', 10);
-const SEARCH_RF_CROSS_TIMEOUT_MS = Number.parseInt(process.env.SEARCH_RF_CROSS_TIMEOUT_MS ?? '15000', 10);
+const SEARCH_RF_CROSS_TIMEOUT_MS = Number.parseInt(process.env.SEARCH_RF_CROSS_TIMEOUT_MS ?? '4000', 10);
 const SEARCH_RF_CACHE_ENABLED = String(process.env.SEARCH_RF_CACHE_ENABLED ?? 'true').toLowerCase() === 'true';
 const SEARCH_RF_CACHE_TTL_SECONDS = Number.parseInt(process.env.SEARCH_RF_CACHE_TTL_SECONDS ?? '900', 10);
 const SEARCH_RF_MAX_IN_FLIGHT = Number.parseInt(process.env.SEARCH_RF_MAX_IN_FLIGHT ?? '2', 10);
@@ -265,6 +266,9 @@ async function queryRawWithStatementTimeout<T>(
 ): Promise<T[]> {
     return prisma.$transaction(async (tx) => {
         await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${Math.max(1000, timeoutMs)}`);
+        // One search must not grab every core: these are short indexed lookups.
+        await tx.$executeRawUnsafe('SET LOCAL max_parallel_workers_per_gather = 0');
+        await tx.$executeRawUnsafe('SET LOCAL jit = off');
         return tx.$queryRawUnsafe<T[]>(sql, ...params);
     });
 }
@@ -432,8 +436,10 @@ async function searchRfPlacesForCross(
         }
 
         if (hasCity) {
-            branchConds.push(`lower(municipio) LIKE $${paramIdx}`);
-            params.push(`%${cityTrim!.toLowerCase()}%`);
+            // RF stores cities uppercase without accents: exact match uses the
+            // (cnaePrincipal, municipio, uf) index; the old LIKE '%city%' could not.
+            branchConds.push(`municipio = $${paramIdx}`);
+            params.push(toRfText(cityTrim!));
             paramIdx += 1;
         }
 

@@ -333,6 +333,7 @@ export async function syncLead(place: PlaceResult) {
             const fuzzyResult = await fuzzyMatchRfCompany(
                 place.displayName.text,
                 place.formattedAddress ?? '',
+                place.nationalPhoneNumber ?? place.internationalPhoneNumber ?? null,
             );
             if (fuzzyResult) {
                 matchConfidence = fuzzyResult.matchConfidence;

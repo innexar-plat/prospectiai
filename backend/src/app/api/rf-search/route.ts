@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { getOrCreateRequestId, jsonWithRequestId } from '@/lib/request-id';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
+import { estimateRfCompanyCount, searchRfCompanies } from '@/lib/rf-query';
 
 const rfSearchSchema = z.object({
   cnae: z.string().max(7).optional(),
@@ -40,24 +41,18 @@ export async function POST(req: NextRequest) {
 
     const { cnae, cnaes, uf, municipio, porte, razaoSocial, page, pageSize } = parsed.data;
 
-    // Build where clause — support both single cnae and cnaes array
-    const where: Record<string, unknown> = {};
     const effectiveCnaes = cnaes?.length ? cnaes : cnae ? [cnae] : [];
-    if (effectiveCnaes.length === 1) {
-      where.cnaePrincipal = { startsWith: effectiveCnaes[0] };
-    } else if (effectiveCnaes.length > 1) {
-      where.OR = effectiveCnaes.map((c) => ({ cnaePrincipal: { startsWith: c } }));
-    }
-    if (uf) where.uf = uf.toUpperCase();
-    if (municipio) where.municipio = { contains: municipio, mode: 'insensitive' };
-    if (porte) where.porte = porte;
-    if (razaoSocial) where.razaoSocial = { contains: razaoSocial, mode: 'insensitive' };
-
-    // Need at least one filter
     const filterCount = effectiveCnaes.length + (uf ? 1 : 0) + (municipio ? 1 : 0) + (porte ? 1 : 0) + (razaoSocial ? 1 : 0);
     if (filterCount === 0) {
       return jsonWithRequestId(
         { error: 'Informe pelo menos um filtro (CNAE, UF, município, porte ou razão social).' },
+        { status: 400, requestId }
+      );
+    }
+    // A bare porte filter would match millions of rows — require something selective.
+    if (effectiveCnaes.length === 0 && !municipio && !(razaoSocial && razaoSocial.trim().length >= 3)) {
+      return jsonWithRequestId(
+        { error: 'Informe um CNAE, um município ou parte da razão social (mínimo 3 letras).' },
         { status: 400, requestId }
       );
     }
@@ -71,15 +66,11 @@ export async function POST(req: NextRequest) {
       pageSize,
     });
 
-    const [companies, total] = await Promise.all([
-      prisma.rfCompany.findMany({
-        where,
-        take: pageSize,
-        skip: (page - 1) * pageSize,
-        orderBy: [{ uf: 'asc' }, { razaoSocial: 'asc' }],
-      }),
-      prisma.rfCompany.count({ where }),
-    ]);
+    const { companies, total, capped } = await searchRfCompanies(
+      { cnaes: effectiveCnaes, uf, municipio, porte, razaoSocial },
+      page,
+      pageSize,
+    );
 
     // Enrich with CNAE description
     const cnaeCodes = [...new Set(companies.map((c) => c.cnaePrincipal))];
@@ -126,6 +117,7 @@ export async function POST(req: NextRequest) {
     return jsonWithRequestId({
       companies: results,
       total,
+      totalCapped: capped,
       page,
       pageSize,
       totalPages: Math.ceil(total / pageSize),
@@ -211,7 +203,7 @@ export async function GET(req: NextRequest) {
     }
 
     const [totalCompanies, totalCnaes] = await Promise.all([
-      prisma.rfCompany.count(),
+      estimateRfCompanyCount(),
       prisma.cnaeCode.count(),
     ]);
 

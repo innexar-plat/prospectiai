@@ -1063,14 +1063,10 @@ model RfCompany {
   capitalSocial Float?                      // Capital social (R$)
   dataAbertura  String?                     // Data início atividade (YYYYMMDD)
 
-  @@index([cnaePrincipal])
-  @@index([uf])
   @@index([uf, cnaePrincipal])
   @@index([cnaePrincipal, municipio, uf])
   @@index([municipio])
-  @@index([municipio, uf, bairro])
   @@index([ddd, telefone])
-  @@index([porte])
 }
 
 // ═══════════════════════════════════════════════════════════════════

@@ -16,7 +16,7 @@
  * Requer: DATABASE_URL no .env ou como variável de ambiente.
  */
 
-import { createReadStream, createWriteStream, existsSync, mkdirSync, unlinkSync, readdirSync } from 'node:fs';
+import { createReadStream, createWriteStream, existsSync, mkdirSync, unlinkSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import { createInterface } from 'node:readline';
 import { execSync } from 'node:child_process';
@@ -35,9 +35,11 @@ const __dirname = dirname(__filename);
 const RF_WEBDAV_BASE = 'https://arquivos.receitafederal.gov.br/public.php/webdav/Dados/Cadastros/CNPJ';
 const RF_WEBDAV_TOKEN = 'gn672Ad4CF8N6TK';
 const RF_WEBDAV_AUTH = 'Basic ' + Buffer.from(`${RF_WEBDAV_TOKEN}:`).toString('base64');
-// Auto-detect latest month folder or use env override
-const RF_MONTH = process.env.RF_MONTH || '2026-03';
-const RF_BASE_URL = `${RF_WEBDAV_BASE}/${RF_MONTH}`;
+// Month folder: RF_MONTH env override, otherwise the latest one published (resolved in main()).
+let RF_MONTH = process.env.RF_MONTH || '';
+let RF_BASE_URL = '';
+/** Marker with the last month fully imported — the monthly cron skips months already done. */
+const LAST_MONTH_FILE = join(__dirname, '..', '.rf-last-imported-month');
 const TEMP_DIR = join(__dirname, '..', '.rf-import-temp');
 const BATCH_SIZE = 5000; // INSERT batch size (Empresas: 4 params × 5000 = 20K)
 const ESTAB_BATCH_SIZE = 4000; // Estabelecimentos: 14 params × 4000 = 56K (pg limit: 65535)
@@ -46,6 +48,7 @@ const TOTAL_BATCHES = 10; // RF splits files 0-9
 // Parse CLI args
 const args = process.argv.slice(2);
 const cnaeOnly = args.includes('--cnae-only');
+const force = args.includes('--force');
 const skipDownload = args.includes('--skip-download');
 const batchArg = args.find((a) => a.startsWith('--batch'));
 const specificBatch = batchArg ? parseInt(args[args.indexOf('--batch') + 1] ?? args[args.indexOf(batchArg)]?.split('=')[1], 10) : null;
@@ -101,6 +104,38 @@ async function execBatchInserts(table, columns, rows) {
 async function getPool() {
   const { default: pg } = await import('pg');
   return new pg.Client({ connectionString: DATABASE_URL });
+}
+
+// ── Month detection ──────────────────────────────────────────────────────────
+
+/** Lists the month folders (YYYY-MM) published in the RF WebDAV share and returns the newest. */
+function fetchLatestRfMonth() {
+  return new Promise((resolve, reject) => {
+    const req = https.request(`${RF_WEBDAV_BASE}/`, {
+      method: 'PROPFIND',
+      headers: { Authorization: RF_WEBDAV_AUTH, Depth: '1' },
+      timeout: 60000,
+    }, (res) => {
+      let body = '';
+      res.on('data', (c) => { body += c; });
+      res.on('end', () => {
+        const months = [...body.matchAll(/CNPJ\/(\d{4}-\d{2})\//g)].map((m) => m[1]).sort();
+        if (months.length === 0) return reject(new Error(`No month folders found (HTTP ${res.statusCode})`));
+        resolve(months[months.length - 1]);
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => req.destroy(new Error('PROPFIND timeout')));
+    req.end();
+  });
+}
+
+function readLastImportedMonth() {
+  try {
+    return existsSync(LAST_MONTH_FILE) ? readFileSync(LAST_MONTH_FILE, 'utf8').trim() : '';
+  } catch {
+    return '';
+  }
 }
 
 // ── Download helper ──────────────────────────────────────────────────────────
@@ -376,6 +411,8 @@ async function importEstabelecimentos(batchNum, municipiosMap) {
 
   try {
     const buffer = [];
+    const inactive = [];
+    let removed = 0;
     let total = 0;
     let skipped = 0;
     let lastLog = 0;
@@ -401,8 +438,16 @@ async function importEstabelecimentos(batchNum, municipiosMap) {
       const telefone1 = (fields[22] || '').trim();
       const email = (fields[27] || '').trim().toLowerCase();
 
-      // Filter: only active (02) and headquarters (1)
+      // Filter: only active (02) and headquarters (1). A headquarters that is no longer active
+      // (closed, suspended, unfit) is removed from the base, so it stops showing up as a lead.
       if (situacao !== '02' || matrizFilial !== '1') {
+        if (matrizFilial === '1' && situacao && cnpjBase) {
+          inactive.push(`${cnpjBase}${cnpjOrdem}${cnpjDv}`);
+          if (inactive.length >= ESTAB_BATCH_SIZE) {
+            const ids = inactive.splice(0);
+            removed += await deleteInactive(client, ids);
+          }
+        }
         skipped++;
         return;
       }
@@ -439,13 +484,21 @@ async function importEstabelecimentos(batchNum, municipiosMap) {
       total += buffer.length;
       await insertEstabBatch(client, buffer);
     }
-    console.log(`\r  ✅ ${(total / 1000).toFixed(0)}K empresas ativas importadas, ${(skipped / 1000).toFixed(0)}K ignoradas`);
+    if (inactive.length > 0) removed += await deleteInactive(client, inactive.splice(0));
+    console.log(`\r  ✅ ${(total / 1000).toFixed(0)}K empresas ativas importadas, ${(skipped / 1000).toFixed(0)}K ignoradas, ${removed} inativas removidas`);
   } finally {
     await client.end();
   }
 
   // Cleanup
   try { execSync(`rm -rf "${csvDir}"`); } catch { /* ok */ }
+}
+
+/** Deletes headquarters that are no longer active (primary-key lookups, cheap). */
+async function deleteInactive(client, cnpjs) {
+  if (cnpjs.length === 0) return 0;
+  const res = await client.query('DELETE FROM "RfCompany" WHERE cnpj = ANY($1::varchar[])', [cnpjs]);
+  return res.rowCount ?? 0;
 }
 
 async function insertEstabBatch(client, batch) {
@@ -481,14 +534,37 @@ async function insertEstabBatch(client, batch) {
     LEFT JOIN _rf_empresa_temp e ON e.cnpj_base = v.cnpj_base
     ON CONFLICT ("cnpj") DO UPDATE SET
       "razaoSocial" = COALESCE(EXCLUDED."razaoSocial", "RfCompany"."razaoSocial"),
-      "nomeFantasia" = COALESCE(EXCLUDED."nomeFantasia", "RfCompany"."nomeFantasia"),
+      "nomeFantasia" = EXCLUDED."nomeFantasia",
+      "cnaePrincipal" = EXCLUDED."cnaePrincipal",
+      "uf" = EXCLUDED."uf",
+      "municipio" = COALESCE(EXCLUDED."municipio", "RfCompany"."municipio"),
+      "cep" = EXCLUDED."cep",
+      "bairro" = EXCLUDED."bairro",
+      "logradouro" = EXCLUDED."logradouro",
+      "numero" = EXCLUDED."numero",
+      "ddd" = EXCLUDED."ddd",
+      "telefone" = EXCLUDED."telefone",
+      "email" = EXCLUDED."email",
       "porte" = COALESCE(EXCLUDED."porte", "RfCompany"."porte"),
       "capitalSocial" = COALESCE(EXCLUDED."capitalSocial", "RfCompany"."capitalSocial")
+    -- Skip rewriting rows that did not change: avoids bloating 27M rows every month.
+    WHERE ("RfCompany"."nomeFantasia", "RfCompany"."cnaePrincipal", "RfCompany"."cep", "RfCompany"."numero",
+           "RfCompany"."ddd", "RfCompany"."telefone", "RfCompany"."email", "RfCompany"."porte")
+      IS DISTINCT FROM
+          (EXCLUDED."nomeFantasia", EXCLUDED."cnaePrincipal", EXCLUDED."cep", EXCLUDED."numero",
+           EXCLUDED."ddd", EXCLUDED."telefone", EXCLUDED."email", COALESCE(EXCLUDED."porte", "RfCompany"."porte"))
   `, values);
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 async function main() {
+  if (!RF_MONTH) RF_MONTH = await fetchLatestRfMonth();
+  RF_BASE_URL = `${RF_WEBDAV_BASE}/${RF_MONTH}`;
+  const lastImported = readLastImportedMonth();
+  if (!force && !cnaeOnly && specificBatch === null && lastImported === RF_MONTH) {
+    console.log(`✔ ${RF_MONTH} já importado — nada a fazer (use --force para reimportar).`);
+    return;
+  }
   console.log('🚀 Importação de dados da Receita Federal');
   console.log(`   Fonte: ${RF_BASE_URL}`);
   console.log(`   Temp: ${TEMP_DIR}`);
@@ -549,15 +625,22 @@ async function main() {
   await execSQL('DROP TABLE IF EXISTS _rf_empresa_temp');
 
   // Stats
-  const countResult = await execSQL('SELECT COUNT(*) as total FROM "RfCompany"');
+  // Planner estimate: an exact count(*) would read the whole 6 GB table.
+  await execSQL('ANALYZE "RfCompany"');
+  const countResult = await execSQL(`SELECT reltuples::bigint AS total FROM pg_class WHERE relname = 'RfCompany'`);
   const cnaeCountResult = await execSQL('SELECT COUNT(*) as total FROM "CnaeCode"');
   const elapsed = ((Date.now() - startTime) / 60000).toFixed(1);
 
   console.log('\n═══════════════════════════════════════════════');
   console.log(`✅ Importação concluída em ${elapsed} minutos!`);
   console.log(`   📊 ${cnaeCountResult.rows[0].total} códigos CNAE`);
-  console.log(`   📊 ${Number(countResult.rows[0].total).toLocaleString('pt-BR')} empresas ativas (matrizes)`);
+  console.log(`   📊 ~${Number(countResult.rows[0].total).toLocaleString('pt-BR')} empresas ativas (matrizes)`);
   console.log('═══════════════════════════════════════════════');
+
+  if (!cnaeOnly && specificBatch === null) {
+    writeFileSync(LAST_MONTH_FILE, `${RF_MONTH}\n`);
+    try { execSync(`rm -rf "${TEMP_DIR}"`); } catch { /* ok */ }
+  }
 }
 
 main().catch((err) => {
