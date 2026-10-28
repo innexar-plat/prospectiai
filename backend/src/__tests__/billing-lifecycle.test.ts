@@ -47,6 +47,7 @@ const emails = {
 jest.mock('@/lib/billing-emails', () => emails);
 jest.mock('@/lib/reengagement', () => ({ runReengagementEmails: jest.fn().mockResolvedValue({ candidates: 0, sent: 0, fromRf: 0, fromHistory: 0 }) }));
 jest.mock('@/lib/activation-lifecycle', () => ({ runActivationEmails: jest.fn().mockResolvedValue({ firstSearch: 0, nudge: 0 }) }));
+jest.mock('@/lib/sales-routine', () => ({ runFollowUpReminders: jest.fn().mockResolvedValue({ sent: 0, candidates: 0 }) }));
 jest.mock('@/lib/logger', () => ({ logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() } }));
 
 import { runBillingLifecycleJob, applyPendingPlanChange, renewalAmountBrl } from '@/lib/billing-lifecycle';

@@ -339,9 +339,11 @@ export const leadStatusSchema = z
     conversionReason: z.string().max(1000).optional(),
     dealValue: z.number().min(0).optional(),
     lostReason: z.enum(['PRICE', 'NO_NEED', 'COMPETITOR', 'NO_RESPONSE', 'OTHER']).optional(),
+    /** ISO date of the next follow-up; null clears it. */
+    nextFollowUpAt: z.iso.datetime().nullable().optional(),
   })
-  .refine((d) => d.status !== undefined || d.isFavorite !== undefined, {
-    message: 'At least one of status or isFavorite is required',
+  .refine((d) => d.status !== undefined || d.isFavorite !== undefined || d.nextFollowUpAt !== undefined, {
+    message: 'At least one of status, isFavorite or nextFollowUpAt is required',
   });
 
 /** DELETE /api/team/remove — body */

@@ -1,4 +1,5 @@
 import type { Place, PlaceDetail } from '@/lib/api';
+import { getActiveMarket } from '@/lib/market';
 
 export function inferDialCodeFromAddress(address?: string): string {
   const normalized = (address ?? '').toLowerCase();
@@ -67,4 +68,13 @@ export function buildMailtoUrl(options: {
     return query ? `mailto:${to}?${query}` : `mailto:${to}`;
   }
   return query ? `mailto:?${query}` : null;
+}
+
+/** wa.me link from a stored phone (national or international) with an optional prefilled message. */
+export function whatsappLink(phone: string | null, message: string | null): string | null {
+  const digits = (phone ?? '').replace(/\D/g, '');
+  if (digits.length < 8) return null;
+  const dial = getActiveMarket() === 'US' ? '1' : '55';
+  const number = digits.startsWith(dial) && digits.length > 11 ? digits : `${dial}${digits}`;
+  return `https://wa.me/${number}${message ? `?text=${encodeURIComponent(message)}` : ''}`;
 }

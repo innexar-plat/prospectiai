@@ -14,6 +14,7 @@ import { buildMapsUrl, buildWhatsAppNumber, getPrimaryPhone, getPrimaryEmail, bu
 import { CrmSidePanel } from '@/components/dashboard/CrmSidePanel';
 import { representativeApi } from '@/lib/api/representative';
 import SmartRelations from '@/components/SmartRelations';
+import { FollowUpBar } from '@/components/dashboard/FollowUpBar';
 import { cn } from '@/lib/utils';
 
 /**
@@ -772,6 +773,7 @@ function LeadDetailNotFound({ onBack }: { onBack: () => void }) {
 
 interface LeadDetailContentProps {
   user: SessionUser;
+  onLeadUpdated: (item: LeadAnalysisListItem) => void;
   place: PlaceDetail | Place;
   analysis: Analysis | null;
   tags: LeadTagItem[];
@@ -1118,7 +1120,7 @@ function AnalysisProgressMotion({ currentStep }: { currentStep: AnalyzeProgressS
 
 function LeadDetailContent(props: LeadDetailContentProps) {
   const { t } = useI18n();
-  const { user, place, analysis, tags, leadAnalysisItem, togglingFavorite, showTagInput, newTag, analyzing, currentStep, copiedPhone, copiedEmail, savingLead, onBack, onToggleFavorite, onSaveLead, onCopyPhone, onCopyEmail, onAddTag, onRemoveTag, setNewTag, setShowTagInput, onAnalyze, onOpenCompanyProfile, trackAction, onCrmSuccess, onCrmError, onCrmWarning } = props;
+  const { user, place, analysis, tags, leadAnalysisItem, togglingFavorite, showTagInput, newTag, analyzing, currentStep, copiedPhone, copiedEmail, savingLead, onBack, onToggleFavorite, onSaveLead, onCopyPhone, onCopyEmail, onAddTag, onRemoveTag, setNewTag, setShowTagInput, onAnalyze, onOpenCompanyProfile, trackAction, onCrmSuccess, onCrmError, onCrmWarning, onLeadUpdated } = props;
   const name = place.displayName?.text ?? place.id;
   const ownerName = place.companyTradeName ?? place.displayName?.text ?? place.id;
   return (
@@ -1141,6 +1143,7 @@ function LeadDetailContent(props: LeadDetailContentProps) {
       <div className="px-4 py-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-5 box-border w-full">
         <ProfileCompletenessBanner user={user} onPrimaryAction={onOpenCompanyProfile} />
         <LeadDetailToolbar onBack={onBack} leadAnalysisItem={leadAnalysisItem} togglingFavorite={togglingFavorite} onToggleFavorite={onToggleFavorite} onSaveLead={onSaveLead} saving={savingLead} />
+        {leadAnalysisItem && <FollowUpBar item={leadAnalysisItem} onUpdated={onLeadUpdated} />}
         {/* Lead data and the analysis call-to-action side by side; once analysed, the report takes
             the full width (its 3-column diagnostics were unreadable squeezed into half the page). */}
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-5 xl:gap-6 items-start">
@@ -1440,6 +1443,7 @@ export default function LeadDetailPage() {
       onCrmSuccess={(msg) => addToast('success', msg)}
       onCrmError={(msg) => addToast('error', msg)}
       onCrmWarning={(msg) => addToast('warning', msg)}
+      onLeadUpdated={setLeadAnalysisItem}
     />
   );
 }

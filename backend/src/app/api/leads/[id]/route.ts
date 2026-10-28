@@ -3,6 +3,7 @@ import { getApiSession } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { leadStatusSchema, formatZodError } from '@/lib/validations/schemas';
 import { recordLeadEvent } from '@/lib/lead-intelligence';
+import { followUpForStatusChange } from '@/lib/sales-routine';
 
 async function findLeadAnalysisForUser(analysisId: string, userId: string) {
     const userWithWorkspace = await prisma.user.findUnique({
@@ -64,7 +65,7 @@ export async function PATCH(
         if (!parsed.success) {
             return NextResponse.json({ error: formatZodError(parsed) }, { status: 400 });
         }
-        const { status, isFavorite, conversionReason, dealValue, lostReason } = parsed.data;
+        const { status, isFavorite, conversionReason, dealValue, lostReason, nextFollowUpAt } = parsed.data;
 
         const current = await findLeadAnalysisForUser(id, session.user.id);
         if (!current) {
@@ -79,10 +80,13 @@ export async function PATCH(
         if (dealValue !== undefined) data.dealValue = dealValue;
         if (lostReason !== undefined) data.lostReason = lostReason;
 
-        // Set timestamps based on status change
-        if (status === 'CONTACTED' && current.status !== 'CONTACTED') data.contactedAt = new Date();
+        // Set timestamps based on status change. A repeat CONTACTED is a new touch, so contactedAt
+        // tracks the latest contact (drives "contacted today" in the sales routine).
+        if (status === 'CONTACTED') data.contactedAt = new Date();
         if (status === 'CONVERTED' && current.status !== 'CONVERTED') data.convertedAt = new Date();
         if (status === 'LOST' && current.status !== 'LOST') data.lostAt = new Date();
+        const followUp = followUpForStatusChange(status, current.status, nextFollowUpAt);
+        if (followUp !== undefined) data.nextFollowUpAt = followUp;
 
         const userWithWorkspace = await prisma.user.findUnique({
             where: { id: session.user.id },
@@ -99,7 +103,7 @@ export async function PATCH(
         });
 
         // Record event + invalidate pipeline cache on status change
-        if (status !== undefined && status !== current.status) {
+        if (status !== undefined && (status !== current.status || status === 'CONTACTED')) {
             const eventType = status === 'CONVERTED' ? 'CONVERTED'
                 : status === 'LOST' ? 'LOST'
                 : status === 'CONTACTED' ? 'CONTACTED'

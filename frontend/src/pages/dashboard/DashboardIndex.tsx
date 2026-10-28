@@ -16,6 +16,7 @@ import { leadsApi, searchApi, type LeadStats, type SearchHistoryItem } from '@/l
 import { cn } from '@/lib/utils';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { ProfileSearchSuggestions } from '@/components/dashboard/ProfileSearchSuggestions';
+import { TodayAgenda } from '@/components/dashboard/TodayAgenda';
 import { CnaeAutocomplete } from '@/components/dashboard/CnaeAutocomplete';
 import { Button } from '@/components/ui/Button';
 import { startSearch, validateSearchPayload, buildTextQuery } from '@/lib/searchService';
@@ -745,6 +746,9 @@ export default function DashboardIndex() {
         className="p-4 sm:p-6 max-w-5xl mx-auto w-full space-y-5" role="search"
         onKeyDown={(e) => { if (e.key === 'Enter' && canSearch && !loading && !trialExpired) { e.preventDefault(); runSearch(); } }}
       >
+        {/* ── Sales routine: due follow-ups and best uncontacted leads ── */}
+        {!isNewUser && <TodayAgenda />}
+
         {/* ── Quick start for new users ── */}
         {isNewUser && !trialExpired && (
           <section aria-label={t('dash.a11y.quickstart')} className="rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-600/10 to-indigo-600/5 p-5 sm:p-6">

@@ -429,6 +429,8 @@ model LeadAnalysis {
   contactedAt              DateTime?      // When status changed to CONTACTED
   convertedAt              DateTime?      // When status changed to CONVERTED
   lostAt                   DateTime?      // When status changed to LOST
+  /// Sales routine: when the rep should touch this lead again (shown in "Hoje").
+  nextFollowUpAt           DateTime?
 
   createdAt                DateTime       @default(now())
   updatedAt                DateTime       @updatedAt
@@ -440,6 +442,7 @@ model LeadAnalysis {
   @@index([userId])
   @@index([leadId])
   @@index([workspaceId])
+  @@index([workspaceId, nextFollowUpAt])
 }
 
 // Histórico de buscas para reaproveitamento e auditoria

@@ -6,12 +6,20 @@ import type {
     ConversionStats,
     LeadTagItem,
     NotificationItem,
+    TodayAgenda,
 } from './types';
 
 export const leadsApi = {
     list: () => request<LeadAnalysisListItem[]>('/leads'),
     get: (id: string) => request<LeadAnalysisListItem>(`/leads/${id}`),
     stats: () => request<LeadStats>('/leads/stats'),
+    /** Sales routine: due follow-ups + best uncontacted leads for the viewer's local day. */
+    today: () => request<TodayAgenda>(`/leads/today?tz=${new Date().getTimezoneOffset()}`),
+    setFollowUp: (analysisId: string, nextFollowUpAt: string | null) =>
+        request<LeadAnalysisListItem>(`/leads/${analysisId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ nextFollowUpAt }),
+        }),
     save: (place: { placeId: string; name: string; address?: string; phone?: string; website?: string; rating?: number; reviewCount?: number; types?: string[]; businessStatus?: string }) =>
         request<LeadAnalysisListItem>('/leads', {
             method: 'POST',
@@ -26,6 +34,7 @@ export const leadsApi = {
         conversionReason?: string;
         dealValue?: number;
         lostReason?: string;
+        nextFollowUpAt?: string | null;
     }) =>
         request<LeadAnalysisListItem>(`/leads/${analysisId}`, {
             method: 'PATCH',

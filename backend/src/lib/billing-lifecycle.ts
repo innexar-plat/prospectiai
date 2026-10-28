@@ -518,6 +518,15 @@ async function runReengagement(ctx: Ctx): Promise<void> {
     }
 }
 
+// ── 10. Sales routine reminders ─────────────────────────────────────────────
+
+async function runFollowUps(ctx: Ctx): Promise<void> {
+    const { runFollowUpReminders } = await import('@/lib/sales-routine');
+    const r = await runFollowUpReminders(ctx.now, ctx.dryRun);
+    if (r.candidates) ctx.report.counts.followup_candidates = r.candidates;
+    if (r.sent) ctx.report.counts.followup_sent = r.sent;
+}
+
 export async function runBillingLifecycleJob(options: { dryRun?: boolean; now?: Date } = {}): Promise<LifecycleReport> {
     const ctx: Ctx = {
         now: options.now ?? new Date(),
@@ -534,6 +543,7 @@ export async function runBillingLifecycleJob(options: { dryRun?: boolean; now?: 
         ['expiry', runExpiry],
         ['activation', runActivation],
         ['reengagement', runReengagement],
+        ['followups', runFollowUps],
     ];
     for (const [name, step] of steps) {
         try {

@@ -464,6 +464,7 @@ export interface LeadAnalysisListItem {
     dealValue?: number;
     lostReason?: string;
     contactedAt?: string;
+    nextFollowUpAt?: string | null;
     convertedAt?: string;
     lostAt?: string;
     createdAt: string;
@@ -923,4 +924,25 @@ export interface RepAffiliateDTO {
     createdAt: string;
 }
 
+export type AgendaReason = 'overdue' | 'due_today' | 'hot_new' | 'new';
 
+export interface AgendaItem {
+    analysisId: string;
+    placeId: string;
+    name: string;
+    phone: string | null;
+    score: number | null;
+    closeProbability: number | null;
+    bestContactWindow: string | null;
+    whatsappMessage: string | null;
+    status: 'NEW' | 'CONTACTED';
+    nextFollowUpAt: string | null;
+    contactedAt: string | null;
+    reason: AgendaReason;
+    overdueDays: number;
+}
+
+export interface TodayAgenda {
+    items: AgendaItem[];
+    stats: { dueCount: number; contactedToday: number; contactedThisWeek: number; activeLeads: number };
+}

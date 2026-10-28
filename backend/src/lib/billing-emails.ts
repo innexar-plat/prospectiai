@@ -359,3 +359,42 @@ export function sendReengagementEmail(
         : `${p.companies.length} empresas da sua busca "${p.niche}" ainda esperam seu contato`;
     return sendOnce(`reengagement:${userId}:${p.week}`, to.email, subject, html);
 }
+
+// ── Sales routine ───────────────────────────────────────────────────────────
+
+/** "N follow-ups hoje" — links straight to the dashboard agenda. */
+export function sendFollowUpReminderEmail(
+    userId: string,
+    to: BillingRecipient,
+    p: { total: number; overdue: number; names: string[]; day: string },
+): Promise<boolean> {
+    const en = isEn(to);
+    const base = siteFor(to);
+    const list = companyList(p.names.map((name) => ({ name, detail: '', phone: null })));
+    const more = p.total > p.names.length ? (en ? `…and ${p.total - p.names.length} more.` : `…e mais ${p.total - p.names.length}.`) : '';
+    const overdueLine = p.overdue > 0
+        ? (en ? `${p.overdue} of them ${p.overdue === 1 ? 'is' : 'are'} overdue — a quick message now still saves the deal.` : `${p.overdue} ${p.overdue === 1 ? 'está atrasado' : 'estão atrasados'} — uma mensagem rápida agora ainda salva a venda.`)
+        : '';
+    const title = en
+        ? `${p.total} follow-up${p.total === 1 ? '' : 's'} for today`
+        : `${p.total} follow-up${p.total === 1 ? '' : 's'} para hoje`;
+    const html = buildEmail({
+        title,
+        preheader: en ? 'The message is ready — one click opens WhatsApp.' : 'A mensagem já está pronta — um clique abre o WhatsApp.',
+        userName: to.name ?? undefined,
+        body: [
+            en ? 'These leads are waiting for your next contact:' : 'Estes leads estão esperando seu próximo contato:',
+            list,
+            more,
+            overdueLine,
+            en ? 'Most deals close on the 2nd to 5th contact. Keep the rhythm.' : 'A maioria das vendas fecha entre o 2º e o 5º contato. Mantenha o ritmo.',
+        ].filter(Boolean),
+        ctaHref: `${base}/dashboard?utm_source=email&utm_campaign=followup#hoje`,
+        ctaLabel: en ? 'Open today\'s list' : 'Abrir lista de hoje',
+        accentColor: BRAND_COLOR,
+        unsubscribeToken: userId,
+        siteUrl: base,
+    });
+    return sendOnce(`followup:${userId}:${p.day}`, to.email, title, html);
+}
+
