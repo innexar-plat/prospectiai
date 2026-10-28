@@ -525,6 +525,16 @@ async function runFollowUps(ctx: Ctx): Promise<void> {
     const r = await runFollowUpReminders(ctx.now, ctx.dryRun);
     if (r.candidates) ctx.report.counts.followup_candidates = r.candidates;
     if (r.sent) ctx.report.counts.followup_sent = r.sent;
+    if (r.pushed) ctx.report.counts.followup_pushed = r.pushed;
+}
+
+// ── 11. Contact enrichment ──────────────────────────────────────────────────
+
+async function runEnrichment(ctx: Ctx): Promise<void> {
+    const { runEmailEnrichment } = await import('@/lib/email-enrichment');
+    const r = await runEmailEnrichment(ctx.dryRun);
+    if (r.checked) ctx.report.counts.email_enrich_checked = r.checked;
+    if (r.found) ctx.report.counts.email_enrich_found = r.found;
 }
 
 export async function runBillingLifecycleJob(options: { dryRun?: boolean; now?: Date } = {}): Promise<LifecycleReport> {
@@ -544,6 +554,7 @@ export async function runBillingLifecycleJob(options: { dryRun?: boolean; now?: 
         ['activation', runActivation],
         ['reengagement', runReengagement],
         ['followups', runFollowUps],
+        ['email_enrichment', runEnrichment],
     ];
     for (const [name, step] of steps) {
         try {

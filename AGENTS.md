@@ -47,7 +47,7 @@ Root `package.json` at `/srv/innexar/production/prospector-ai/package.json`.
 - Remote URL: `git@github.com-innexar:innexar-plat/prospectiai.git`
 - SSH host `github.com-innexar` (aliased in `~/.ssh/config`) uses key `id_ed25519_dunnaa_app`
 - DO NOT push to `github.com` — the default `id_ed25519` key won't authenticate.
-- Current branch: `feat/sidebar-and-sonar-fixes` (off `main`)
+- Production deploys from `main` (`scripts/deploy.sh` does `git pull --ff-only` on the checked-out branch)
 
 ## Build Pipeline
 
@@ -84,7 +84,7 @@ Traefik (external) → frontend (Nginx :80) → backend (Next.js :4000) → Post
 
 - Frontend Nginx serves SPA at `/`, admin SPA at `/admin/`, proxies `/api/*` to backend
 - Two domains: `precisionia.com.br` (BR) and `precisionai.innexar.app` (US)
-- Redis password is hardcoded in `docker-compose.yml:223` — **do not copy/commit**
+- Redis password lives in `.env` (`REDIS_PASSWORD`) — **never print or commit it**
 - Stack: frontend (128MB) + backend (512MB) + Redis (768MB) + PostgreSQL (4GB)
 - Health check endpoints: frontend `GET /`, backend `GET /api/health`
 
@@ -146,13 +146,14 @@ The `robots.txt` and Cloudflare AI Audit allowlist must be kept in sync so AI cr
 - i18n bundles: `frontend/src/lib/i18n/bundles/{pt,en}.ts`
 - SEO HTML generator reads `VITE_MARKET` env var (`BR` or `US`)
 
-## Security Hotspots (must fix)
+## Security Status
 
-1. Redis password hardcoded in `docker-compose.yml` (line 223)
-2. `resetToken` stored plaintext in DB (no hash)
-3. JWT 30-day expiry, no revocation mechanism
-4. Static salt in `email-config-encrypt.ts`
-5. Redis `protected-mode no` in `docker/redis.conf`
+Resolved (2026-10-28): Redis password comes from `.env` (`${REDIS_PASSWORD}`, no literal fallback) and
+`protected-mode yes`; reset tokens stored only as `resetTokenHash`; JWT sessions revocable via
+`tokenVersion` (checked per request); email-config encryption has per-record salt with legacy fallback;
+website scraping goes through `src/lib/safe-fetch.ts` (blocks private IPs/internal hosts, re-validates redirects).
+
+Still open: JWT max age is 30 days (revocable, but long).
 
 ## Common Pitfalls
 

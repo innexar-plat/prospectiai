@@ -9,7 +9,7 @@
  */
 import { generateCompletionForRole, generateObjectForRole } from '@/lib/ai';
 import { getWebContextForRole } from '@/lib/web-search/resolve';
-import { scrapeWebsite, formatWebsiteMetadataForPrompt } from '@/lib/website-scraper';
+import { scrapeWebsite, formatWebsiteMetadataForPrompt, pickBestEmail } from '@/lib/website-scraper';
 import type { Prisma } from '@prisma/client';
 import { prisma } from './prisma';
 import {
@@ -313,6 +313,14 @@ async function prepareLeadAnalysisPrompt(
     if (website) {
         try {
             const meta = await scrapeWebsite(website);
+            const foundEmail = pickBestEmail(meta.emails, website);
+            if (foundEmail) {
+                // Keep the e-mail the analysis found instead of only feeding it to the prompt.
+                prisma.lead.updateMany({
+                    where: { placeId: business.placeId, email: null, recommendedEmail: null },
+                    data: { recommendedEmail: foundEmail },
+                }).catch(() => { /* best effort */ });
+            }
             websiteScrapingBlock = capPromptText(
                 formatWebsiteMetadataForPrompt(meta, isEn),
                 PROMPT_LIMITS.websiteScrapingChars,

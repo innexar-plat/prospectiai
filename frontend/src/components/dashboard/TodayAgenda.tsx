@@ -55,6 +55,27 @@ export function TodayAgenda() {
     }
   }, [addToast, finish, t]);
 
+  /**
+   * Leads already contacted get the next cadence message (2nd, 3rd, breakup) written by the AI.
+   * The tab is opened synchronously so popup blockers allow it, then pointed at WhatsApp.
+   */
+  const openFollowUpWhatsApp = useCallback(async (e: React.MouseEvent<HTMLAnchorElement>, item: AgendaItem) => {
+    if (item.status !== 'CONTACTED') { void markContacted(item); return; }
+    e.preventDefault();
+    const tab = window.open('', '_blank');
+    let message = item.whatsappMessage;
+    try {
+      message = (await leadsApi.followUpMessage(item.analysisId)).message;
+    } catch { /* fall back to the original message */ }
+    const link = whatsappLink(item.phone, message);
+    if (link) {
+      if (tab) tab.location.href = link; else window.location.href = link;
+    } else {
+      tab?.close();
+    }
+    void markContacted(item);
+  }, [markContacted]);
+
   const snooze = useCallback(async (item: AgendaItem) => {
     setBusy(item.analysisId);
     try {
@@ -110,10 +131,11 @@ export function TodayAgenda() {
                       href={wa}
                       target="_blank"
                       rel="noopener noreferrer"
-                      onClick={() => { void markContacted(item); }}
+                      onClick={(e) => { void openFollowUpWhatsApp(e, item); }}
+                      title={item.status === 'CONTACTED' ? t('dash.today.nextMessageHint') : undefined}
                       className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors"
                     >
-                      <MessageCircle size={14} aria-hidden /> WhatsApp
+                      <MessageCircle size={14} aria-hidden /> {item.status === 'CONTACTED' ? t('dash.today.nextMessage') : 'WhatsApp'}
                     </a>
                   )}
                   <button

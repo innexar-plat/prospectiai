@@ -147,7 +147,7 @@ export function followUpForStatusChange(
  * Daily e-mail: "you have N follow-ups today". Sent only when at least one follow-up falls due
  * today (overdue ones are counted in, but never trigger an e-mail alone — no daily nagging).
  */
-export async function runFollowUpReminders(now: Date, dryRun: boolean): Promise<{ sent: number; candidates: number }> {
+export async function runFollowUpReminders(now: Date, dryRun: boolean): Promise<{ sent: number; pushed: number; candidates: number }> {
     const { start, end } = localDayBounds(now);
     const due = await prisma.leadAnalysis.findMany({
         where: { status: { in: ['NEW', 'CONTACTED'] }, nextFollowUpAt: { lt: end } },
@@ -165,26 +165,49 @@ export async function runFollowUpReminders(now: Date, dryRun: boolean): Promise<
         byUser.set(row.userId, entry);
     }
     const userIds = [...byUser].filter(([, e]) => e.dueToday > 0).map(([id]) => id);
-    if (userIds.length === 0) return { sent: 0, candidates: 0 };
+    if (userIds.length === 0) return { sent: 0, pushed: 0, candidates: 0 };
 
     const users = await prisma.user.findMany({
-        where: { id: { in: userIds }, notifyByEmail: true, disabledAt: null },
-        select: { id: true, email: true, name: true, market: true },
+        where: { id: { in: userIds }, disabledAt: null },
+        select: { id: true, email: true, name: true, market: true, notifyByEmail: true },
     });
-    if (dryRun) return { sent: 0, candidates: users.length };
+    if (dryRun) return { sent: 0, pushed: 0, candidates: users.length };
 
     const { sendFollowUpReminderEmail } = await import('@/lib/billing-emails');
+    const { createNotification } = await import('@/lib/notification-service');
+    const { acquireRedisLock } = await import('@/lib/redis');
+    const day = start.toISOString().slice(0, 10);
     let sent = 0;
+    let pushed = 0;
     for (const user of users) {
         const entry = byUser.get(user.id);
-        if (!user.email || !entry) continue;
+        if (!entry) continue;
+        const total = entry.dueToday + entry.overdue;
+        const en = user.market === 'US';
+
+        // In-app notification + web push (phone), once per user per day.
+        if (await acquireRedisLock(`followup-push:${user.id}:${day}`, '1', 36 * 60 * 60 * 1000)) {
+            await createNotification({
+                userId: user.id,
+                channel: 'follow_up_due',
+                title: en ? `${total} follow-up${total === 1 ? '' : 's'} today` : `${total} follow-up${total === 1 ? '' : 's'} para hoje`,
+                message: en
+                    ? `${entry.names.slice(0, 2).join(', ')}${total > 2 ? ' and more' : ''} are waiting. The message is ready.`
+                    : `${entry.names.slice(0, 2).join(', ')}${total > 2 ? ' e outros' : ''} estão esperando. A mensagem já está pronta.`,
+                link: '/dashboard#hoje',
+                locale: en ? 'en' : 'pt',
+                market: en ? 'US' : 'BR',
+            }).then(() => { pushed += 1; }).catch(() => { /* best effort */ });
+        }
+
+        if (!user.email || !user.notifyByEmail) continue;
         const ok = await sendFollowUpReminderEmail(user.id, { email: user.email, name: user.name, market: user.market }, {
-            total: entry.dueToday + entry.overdue,
+            total,
             overdue: entry.overdue,
             names: entry.names,
-            day: start.toISOString().slice(0, 10),
+            day,
         });
         if (ok) sent += 1;
     }
-    return { sent, candidates: users.length };
+    return { sent, pushed, candidates: users.length };
 }

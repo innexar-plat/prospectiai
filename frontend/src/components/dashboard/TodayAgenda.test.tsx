@@ -7,11 +7,13 @@ import { whatsappLink } from '@/lib/lead-contact-utils';
 const today = vi.fn();
 const updateStatus = vi.fn();
 const setFollowUp = vi.fn();
+const followUpMessage = vi.fn();
 vi.mock('@/lib/api', () => ({
   leadsApi: {
     today: () => today(),
     updateStatus: (...a: unknown[]) => updateStatus(...a),
     setFollowUp: (...a: unknown[]) => setFollowUp(...a),
+    followUpMessage: (...a: unknown[]) => followUpMessage(...a),
   },
 }));
 vi.mock('@/lib/i18n', () => ({
@@ -72,5 +74,23 @@ describe('TodayAgenda', () => {
     fireEvent.click(await screen.findByTitle('dash.today.snooze'));
     await waitFor(() => expect(setFollowUp).toHaveBeenCalledWith('c', expect.any(String)));
     expect(await screen.findByText('dash.today.empty')).toBeInTheDocument();
+  });
+
+  it('opens WhatsApp with the AI-written next message for contacted leads', async () => {
+    today.mockResolvedValueOnce({
+      items: [item('d', { status: 'CONTACTED', reason: 'due_today', nextFollowUpAt: '2026-10-28T15:00:00Z' })],
+      stats: { dueCount: 1, contactedToday: 0, contactedThisWeek: 0, activeLeads: 1 },
+    });
+    followUpMessage.mockResolvedValueOnce({ touch: 2, message: 'Oi de novo', cached: false });
+    updateStatus.mockResolvedValueOnce({});
+    const tab = { location: { href: '' }, close: vi.fn() };
+    const open = vi.spyOn(window, 'open').mockReturnValue(tab as unknown as Window);
+    renderAgenda();
+
+    fireEvent.click(await screen.findByText('dash.today.nextMessage'));
+    await waitFor(() => expect(tab.location.href).toBe('https://wa.me/5511988887777?text=Oi%20de%20novo'));
+    expect(open).toHaveBeenCalledWith('', '_blank');
+    expect(updateStatus).toHaveBeenCalledWith('d', 'CONTACTED', expect.anything());
+    open.mockRestore();
   });
 });

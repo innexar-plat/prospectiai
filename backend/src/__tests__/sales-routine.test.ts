@@ -9,6 +9,10 @@ jest.mock('@/lib/prisma', () => ({
 }));
 const mockReminder = jest.fn().mockResolvedValue(true);
 jest.mock('@/lib/billing-emails', () => ({ sendFollowUpReminderEmail: (...a: unknown[]) => mockReminder(...a) }));
+const mockNotify = jest.fn().mockResolvedValue({ id: 'n1' });
+jest.mock('@/lib/notification-service', () => ({ createNotification: (...a: unknown[]) => mockNotify(...a) }));
+const mockLock = jest.fn().mockResolvedValue(true);
+jest.mock('@/lib/redis', () => ({ acquireRedisLock: (...a: unknown[]) => mockLock(...a) }));
 
 import { followUpForStatusChange, getTodayAgenda, localDayBounds, runFollowUpReminders } from '@/lib/sales-routine';
 
@@ -87,12 +91,15 @@ describe('runFollowUpReminders', () => {
             { userId: 'u1', nextFollowUpAt: new Date('2026-10-28T13:00:00Z'), lead: { name: 'Today' } },
             { userId: 'u2', nextFollowUpAt: new Date('2026-10-21T12:00:00Z'), lead: { name: 'Only overdue' } },
         ]);
-        mockUsers.mockResolvedValueOnce([{ id: 'u1', email: 'u1@x.com', name: 'Ana', market: 'BR' }]);
+        mockUsers.mockResolvedValueOnce([
+            { id: 'u1', email: 'u1@x.com', name: 'Ana', market: 'BR', notifyByEmail: true },
+        ]);
 
         const r = await runFollowUpReminders(NOW, false);
 
         expect(mockUsers.mock.calls[0][0].where.id).toEqual({ in: ['u1'] });
-        expect(r).toEqual({ sent: 1, candidates: 1 });
+        expect(r).toEqual({ sent: 1, pushed: 1, candidates: 1 });
+        expect(mockNotify).toHaveBeenCalledWith(expect.objectContaining({ userId: 'u1', channel: 'follow_up_due', link: '/dashboard#hoje', title: '2 follow-ups para hoje' }));
         expect(mockReminder).toHaveBeenCalledWith('u1', expect.objectContaining({ email: 'u1@x.com' }), {
             total: 2, overdue: 1, names: ['Old', 'Today'], day: '2026-10-28',
         });
@@ -101,7 +108,17 @@ describe('runFollowUpReminders', () => {
     it('dry run sends nothing', async () => {
         mockFindMany.mockResolvedValueOnce([{ userId: 'u1', nextFollowUpAt: new Date('2026-10-28T13:00:00Z'), lead: { name: 'X' } }]);
         mockUsers.mockResolvedValueOnce([{ id: 'u1', email: 'u1@x.com', name: null, market: 'BR' }]);
-        expect(await runFollowUpReminders(NOW, true)).toEqual({ sent: 0, candidates: 1 });
+        expect(await runFollowUpReminders(NOW, true)).toEqual({ sent: 0, pushed: 0, candidates: 1 });
         expect(mockReminder).not.toHaveBeenCalled();
     });
 });
+
+describe('runFollowUpReminders push-only users', () => {
+    it('pushes to users who opted out of e-mail, without e-mailing them', async () => {
+        mockFindMany.mockResolvedValueOnce([{ userId: 'u3', nextFollowUpAt: new Date('2026-10-28T13:00:00Z'), lead: { name: 'X' } }]);
+        mockUsers.mockResolvedValueOnce([{ id: 'u3', email: 'u3@x.com', name: null, market: 'BR', notifyByEmail: false }]);
+        expect(await runFollowUpReminders(NOW, false)).toEqual({ sent: 0, pushed: 1, candidates: 1 });
+        expect(mockReminder).not.toHaveBeenCalled();
+    });
+});
+

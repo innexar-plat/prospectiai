@@ -15,6 +15,9 @@ export const leadsApi = {
     stats: () => request<LeadStats>('/leads/stats'),
     /** Sales routine: due follow-ups + best uncontacted leads for the viewer's local day. */
     today: () => request<TodayAgenda>(`/leads/today?tz=${new Date().getTimezoneOffset()}`),
+    /** Next cadence message (2nd, 3rd, breakup) for a contacted lead — generated once, cached. */
+    followUpMessage: (analysisId: string) =>
+        request<{ touch: number; message: string; cached: boolean }>(`/leads/${analysisId}/follow-up-message`, { method: 'POST' }),
     setFollowUp: (analysisId: string, nextFollowUpAt: string | null) =>
         request<LeadAnalysisListItem>(`/leads/${analysisId}`, {
             method: 'PATCH',
