@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { leadsApi, searchApi, type LeadStats, type SearchHistoryItem } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
+import { ProfileSearchSuggestions } from '@/components/dashboard/ProfileSearchSuggestions';
 import { CnaeAutocomplete } from '@/components/dashboard/CnaeAutocomplete';
 import { Button } from '@/components/ui/Button';
 import { startSearch, validateSearchPayload, buildTextQuery } from '@/lib/searchService';
@@ -397,9 +398,16 @@ export default function DashboardIndex() {
   }, [loading]);
 
   // Pre-fill form from URL params
+  // Default location = the city saved in the business profile (onboarding asks for it).
+  useEffect(() => {
+    if (!user.city?.trim()) return;
+    setForm((prev) => (prev.city?.trim() ? prev : { ...prev, city: user.city!.trim(), state: user.state?.trim() || prev.state }));
+  }, [user.city, user.state]);
+
   useEffect(() => {
     const q = searchParams.get('q');
     if (!q) return;
+    setSearchBarQuery(q);
     setForm((prev) => ({
       ...prev,
       advancedTerm: q,
@@ -728,9 +736,6 @@ export default function DashboardIndex() {
         subtitle={t('dash.search.subtitle')}
         breadcrumb={t('dash.search.breadcrumb')}
         onHistórico={goToHistorico}
-        onIniciarBusca={runSearch}
-        searchLoading={loading}
-        primaryDisabled={!canSearch}
       />
 
       <motion.div
@@ -888,6 +893,18 @@ export default function DashboardIndex() {
             </div>
           )}
         </section>
+
+        <ProfileSearchSuggestions
+          disabled={loading}
+          onPick={(term) => { handleSearchBarChange(term); setBarOpen(false); }}
+        />
+
+        {!form.city?.trim() && (
+          <p role="note" className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400">
+            <Info size={13} className="shrink-0" aria-hidden />
+            {t('dash.search.cityHint')}
+          </p>
+        )}
 
         {/* ── Search Profiles ── */}
         {(profiles.length > 0 || activeProfileId) && (
@@ -1104,7 +1121,7 @@ export default function DashboardIndex() {
                 className="w-4 h-4 rounded border-border text-violet-600 focus:ring-violet-500/30 bg-surface disabled:opacity-50 transition-colors"
               />
               <span className="text-[11px] font-semibold text-muted group-hover:text-foreground transition-colors">
-                Busca Rápida (Apenas Google, ignora Receita Federal)
+                {t('dash.search.quickMode')}
               </span>
             </label>
           </div>

@@ -35,6 +35,9 @@ vi.mock('@/lib/api', () => ({
     history: vi.fn().mockResolvedValue({ items: [] }),
     citySuggestions: vi.fn().mockResolvedValue({ cities: [] }),
   },
+  onboardingApi: {
+    suggestSearches: vi.fn().mockResolvedValue({ terms: [] }),
+  },
 }));
 
 vi.mock('@/lib/searchService', () => ({
