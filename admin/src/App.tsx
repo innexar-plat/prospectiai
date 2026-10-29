@@ -44,6 +44,7 @@ import { RepStatsPage } from '@/pages/representatives/Stats';
 import { WhatsAppPage } from '@/pages/WhatsAppPage';
 import { SystemHealthPage } from '@/pages/SystemHealthPage';
 import { RetentionPage } from '@/pages/RetentionPage';
+import { AutoProspeccaoEmailsPage } from '@/pages/AutoProspeccaoEmailsPage';
 import { BillingPage } from '@/pages/BillingPage';
 
 function App() {
@@ -90,6 +91,7 @@ function App() {
               <Route path="email-weekly-report" element={<WeeklyReportConfigPage />} />
               <Route path="email-analytics" element={<EmailAnalyticsPage />} />
               <Route path="email-logs" element={<EmailLogsPage />} />
+              <Route path="auto-prospeccao/envios" element={<AutoProspeccaoEmailsPage />} />
               <Route path="auto-prospeccao/templates" element={<AutoProspeccaoTemplatesPage />} />
               <Route path="auto-prospeccao/templates/:id" element={<AutoProspeccaoTemplateEditorPage />} />
               <Route path="auto-prospeccao/search-profiles" element={<AutoProspeccaoSearchProfilesPage />} />

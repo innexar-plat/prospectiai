@@ -66,6 +66,7 @@ const sections: NavSection[] = [
   {
     title: 'Auto-Prospecção',
     items: [
+      { to: 'auto-prospeccao/envios', end: false, label: 'Envios e aberturas', icon: Send },
       { to: 'auto-prospeccao/templates', end: false, label: 'Templates de Email', icon: Mail },
       { to: 'auto-prospeccao/search-profiles', end: false, label: 'Perfis de Busca', icon: Search },
       { to: 'auto-prospeccao/sender-pool', end: false, label: 'Pool de Remetentes', icon: Send },

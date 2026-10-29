@@ -72,10 +72,30 @@ export interface SendResult {
   error?: string;
 }
 
-async function sendViaResend(apiKey: string, from: string, to: string, subject: string, html: string): Promise<SendResult> {
+/** Extras for outreach mail: plain-text part, a real reply address and List-Unsubscribe headers. */
+export interface SendOptions {
+  text?: string;
+  replyTo?: string;
+  headers?: Record<string, string>;
+  /** Display name override, keeping the configured address (e.g. "Ana | Precision IA"). */
+  fromName?: string;
+}
+
+function withFromName(from: string, fromName?: string): string {
+  if (!fromName?.trim()) return from;
+  const address = from.match(/<([^>]+)>/)?.[1] ?? from;
+  return `${fromName.replace(/[<>"]/g, '').trim()} <${address}>`;
+}
+
+async function sendViaResend(apiKey: string, from: string, to: string, subject: string, html: string, opts: SendOptions = {}): Promise<SendResult> {
   try {
     const resend = new Resend(apiKey);
-    const { error } = await resend.emails.send({ from, to: [to], subject, html });
+    const { error } = await resend.emails.send({
+      from, to: [to], subject, html,
+      ...(opts.text ? { text: opts.text } : {}),
+      ...(opts.replyTo ? { replyTo: opts.replyTo } : {}),
+      ...(opts.headers ? { headers: opts.headers } : {}),
+    });
     if (error) {
       logger.warn('Resend send failed', { to, subject, error: error.message });
       return { sent: false, error: error.message };
@@ -90,7 +110,7 @@ async function sendViaResend(apiKey: string, from: string, to: string, subject: 
 
 type SmtpConfig = { smtpHost: string; smtpPort: number; smtpUser: string; smtpPasswordEncrypted: string };
 
-async function sendViaSmtp(config: SmtpConfig, from: string, to: string, subject: string, html: string): Promise<SendResult> {
+async function sendViaSmtp(config: SmtpConfig, from: string, to: string, subject: string, html: string, opts: SendOptions = {}): Promise<SendResult> {
   try {
     const password = decryptEmailSecret(config.smtpPasswordEncrypted);
     const transporter = nodemailer.createTransport({
@@ -99,7 +119,7 @@ async function sendViaSmtp(config: SmtpConfig, from: string, to: string, subject
       secure: config.smtpPort === 465,
       auth: { user: config.smtpUser, pass: password },
     });
-    await transporter.sendMail({ from, to, subject, html });
+    await transporter.sendMail({ from, to, subject, html, text: opts.text, replyTo: opts.replyTo, headers: opts.headers });
     return { sent: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -118,16 +138,17 @@ async function sendWithDbConfig(
   to: string,
   subject: string,
   html: string,
+  opts: SendOptions = {},
 ): Promise<SendResult | null> {
   try {
     if (config?.provider === 'resend' && config.resendApiKeyEncrypted) {
       const key = decryptEmailSecret(config.resendApiKeyEncrypted);
-      return await sendViaResend(key, from, to, subject, html);
+      return await sendViaResend(key, from, to, subject, html, opts);
     }
     if (config?.provider === 'smtp' && config.smtpHost && config.smtpPort != null && config.smtpUser && config.smtpPasswordEncrypted) {
       return await sendViaSmtp(
         { smtpHost: config.smtpHost, smtpPort: config.smtpPort, smtpUser: config.smtpUser, smtpPasswordEncrypted: config.smtpPasswordEncrypted },
-        from, to, subject, html
+        from, to, subject, html, opts
       );
     }
     return null;
@@ -139,20 +160,20 @@ async function sendWithDbConfig(
   }
 }
 
-export async function sendEmail(to: string, subject: string, html: string): Promise<SendResult> {
+export async function sendEmail(to: string, subject: string, html: string, opts: SendOptions = {}): Promise<SendResult> {
   const config = await getEmailConfigFromDb();
-  const from = getFromAddress(config?.fromEmail);
+  const from = withFromName(getFromAddress(config?.fromEmail), opts.fromName);
   let result: SendResult;
   let provider = 'none';
 
-  const dbResult = await sendWithDbConfig(config, from, to, subject, html);
+  const dbResult = await sendWithDbConfig(config, from, to, subject, html, opts);
   if (dbResult) {
     result = dbResult;
     provider = config?.provider ?? 'db';
   } else {
     const envKey = process.env.RESEND_API_KEY?.trim();
     if (envKey) {
-      result = await sendViaResend(envKey, getFromAddress(undefined), to, subject, html);
+      result = await sendViaResend(envKey, withFromName(getFromAddress(undefined), opts.fromName), to, subject, html, opts);
       provider = 'resend';
     } else {
       logger.info('Email skipped (no config)', { to, subject });

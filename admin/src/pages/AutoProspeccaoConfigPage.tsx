@@ -176,6 +176,46 @@ export function AutoProspeccaoConfigPage() {
               />
               <span className="text-sm text-gray-700">Envio automático de email habilitado</span>
             </label>
+            <label className="flex items-start gap-3 cursor-pointer mb-4">
+              <input
+                type="checkbox"
+                checked={form.useSystemSender ?? false}
+                onChange={(e) => set('useSystemSender', e.target.checked)}
+                className="w-4 h-4 mt-0.5 rounded accent-primary"
+              />
+              <span className="text-sm text-gray-700">
+                Enviar pelo e-mail principal do sistema (quando não houver remetente no pool)
+                <span className="block text-xs text-gray-400 mt-0.5">
+                  Aquecimento automático: 15/dia na 1ª semana, 30 na 2ª, 60 na 3ª, depois o máximo configurado (até 120).
+                  Só em dias úteis, 9h–18h, sem contadores/fiscal nem endereços repetidos.
+                </span>
+              </span>
+            </label>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Nome do remetente</label>
+                <input
+                  type="text"
+                  maxLength={60}
+                  placeholder="Ex.: Vinicius | Precision IA"
+                  className="w-full border border-gray-200 rounded px-3 py-2 text-sm"
+                  value={form.senderName ?? ''}
+                  onChange={(e) => set('senderName', e.target.value)}
+                />
+                <p className="text-xs text-gray-400 mt-1">Nome de pessoa abre mais que nome de empresa</p>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Responder para (Reply-To)</label>
+                <input
+                  type="email"
+                  placeholder="voce@precisionia.com.br"
+                  className="w-full border border-gray-200 rounded px-3 py-2 text-sm"
+                  value={form.replyToEmail ?? ''}
+                  onChange={(e) => set('replyToEmail', e.target.value)}
+                />
+                <p className="text-xs text-gray-400 mt-1">Caixa real que recebe as respostas dos leads</p>
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Intervalo entre steps (horas)</label>

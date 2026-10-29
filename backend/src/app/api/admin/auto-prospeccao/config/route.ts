@@ -50,6 +50,9 @@ export async function PATCH(req: NextRequest) {
     'scheduleTimeStart',
     'scheduleTimeEnd',
     'scheduleDays',
+    'useSystemSender',
+    'replyToEmail',
+    'senderName',
   ] as const;
 
   const data: Record<string, unknown> = {};
@@ -57,6 +60,18 @@ export async function PATCH(req: NextRequest) {
     if (field in body) {
       data[field] = body[field];
     }
+  }
+
+  if ('replyToEmail' in data) {
+    const v = typeof data.replyToEmail === 'string' ? data.replyToEmail.trim() : '';
+    if (v && !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(v)) {
+      return NextResponse.json({ error: 'replyToEmail inválido' }, { status: 400 });
+    }
+    data.replyToEmail = v || null;
+  }
+  if ('senderName' in data) {
+    const v = typeof data.senderName === 'string' ? data.senderName.replace(/[<>"]/g, '').trim().slice(0, 60) : '';
+    data.senderName = v || null;
   }
 
   if (Object.keys(data).length === 0) {

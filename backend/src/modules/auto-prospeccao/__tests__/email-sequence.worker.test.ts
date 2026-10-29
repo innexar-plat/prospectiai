@@ -14,9 +14,11 @@ jest.mock('@/lib/prisma', () => ({
     autoProspSenderPool: {
       findMany: jest.fn(),
       update: jest.fn(),
+      count: jest.fn().mockResolvedValue(0),
     },
     prospectedLeadEmailEvent: {
       create: jest.fn(),
+      count: jest.fn().mockResolvedValue(0),
     },
     autoProspeccaoTemplate: {
       findFirst: jest.fn(),

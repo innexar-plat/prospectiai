@@ -14,8 +14,7 @@ function page(message: string): NextResponse {
  * GET /api/track/email/optout/[eventId] — one-click opt-out from auto-prospecting e-mails.
  * Marks the lead OPTED_OUT and suppresses the address for every workspace.
  */
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ eventId: string }> }) {
-    const { eventId } = await params;
+async function optOut(eventId: string): Promise<void> {
     try {
         const event = await prisma.prospectedLeadEmailEvent.findUnique({
             where: { id: eventId },
@@ -35,6 +34,21 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ eve
     } catch (error) {
         logger.warn('Opt-out failed', { eventId, error: error instanceof Error ? error.message : 'Unknown' });
     }
+}
+
+/** Confirmation page: link scanners (e.g. Safe Links) prefetch GETs, so GET never opts out by itself. */
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ eventId: string }> }) {
+    const { eventId } = await params;
+    const action = `/api/track/email/optout/${encodeURIComponent(eventId)}`;
+    return page(`Não quer mais receber nossos e-mails?</p>`
+        + `<form method="post" action="${action}" style="margin-top:16px;">`
+        + `<button type="submit" style="background:#4F46E5;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:14px;cursor:pointer;">Confirmar descadastro</button>`
+        + `</form><p style="margin:0;">`);
+}
+
+/** Form submit and RFC 8058 one-click unsubscribe (List-Unsubscribe-Post from Gmail/Yahoo). */
+export async function POST(_req: NextRequest, { params }: { params: Promise<{ eventId: string }> }) {
+    await optOut((await params).eventId);
     // Same answer either way: never reveal whether an id exists.
     return page('Pronto. Você não receberá mais e-mails nossos.');
 }

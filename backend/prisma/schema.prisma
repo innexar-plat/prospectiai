@@ -1142,6 +1142,14 @@ model AutoProspeccaoConfig {
   emailAutoSend        Boolean  @default(true)
   emailStepIntervalHours Int    @default(48)
   defaultSequenceId    String?
+  /// Cold e-mail through the main system sender (EmailConfig) with warm-up limits.
+  useSystemSender      Boolean  @default(false)
+  /// First day the system sender was used — drives the warm-up ramp.
+  systemSenderStartedAt DateTime?
+  /// Real inbox that receives replies (cold e-mail from noreply@ gets no answers and looks like spam).
+  replyToEmail         String?
+  /// Person-like display name, e.g. "Vinicius | Precision IA".
+  senderName           String?
 
   // Blacklist de CNPJs que nunca devem ser contatados
   blockedCnpjs         Json     @default("[]")

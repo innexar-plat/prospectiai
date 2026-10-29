@@ -1185,7 +1185,32 @@ export interface AutoProspConfig {
   emailAutoSend: boolean;
   emailStepIntervalHours: number;
   defaultSequenceId: string | null;
+  useSystemSender: boolean;
+  systemSenderStartedAt: string | null;
+  replyToEmail: string | null;
+  senderName: string | null;
   updatedAt: string;
+}
+
+export interface AutoProspEmailStats {
+  sender: {
+    mode: 'pool' | 'system' | 'none';
+    active: boolean;
+    startedAt: string | null;
+    dailyCap: number;
+    sentToday: number;
+    remainingToday: number;
+    businessHoursNow: boolean;
+    replyTo: string | null;
+    senderName: string | null;
+  };
+  totals: { sent7d: number; sentTotal: number; opened7d: number; openedTotal: number; openRate7d: number | null; optedOut: number; bounced: number };
+  pipeline: Record<string, number>;
+  daily: Array<{ day: string; sent: number; opened: number }>;
+  recent: Array<{
+    id: string; step: number; subject: string; sentAt: string | null; openedAt: string | null;
+    company: string; email: string | null; city: string; leadStatus: string; score: number | null;
+  }>;
 }
 
 export interface SenderPoolItem {
@@ -1206,6 +1231,14 @@ export interface SenderPoolItem {
 }
 
 export const autoProspeccaoAdminApi = {
+  emails: {
+    stats: (workspaceId: string) =>
+      request<{ data: AutoProspEmailStats }>(`/admin/auto-prospeccao/emails?workspaceId=${encodeURIComponent(workspaceId)}`),
+    preview: (workspaceId: string, step: number) =>
+      request<{ data: { subject: string; html: string; templateId: string } }>(
+        `/admin/auto-prospeccao/emails/preview?workspaceId=${encodeURIComponent(workspaceId)}&step=${step}`,
+      ),
+  },
   templates: {
     list: (params?: { isSystem?: string; type?: string; limit?: number; page?: number }) => {
       const q = new URLSearchParams();

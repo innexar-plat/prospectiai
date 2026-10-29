@@ -110,15 +110,16 @@ SET subject = 'O que a prospecção com IA faz por uma equipe comercial em 30 di
     "updatedAt" = now()
 WHERE type = 'WARM_WEEK3_SOCIAL';
 
--- 5. Turn auto-prospecting on for the company workspace. E-mail only leaves through a dedicated
---    sender in the pool (none configured yet), so search + AI scoring start now and cold e-mail
---    starts once a sender on a separate domain is added. CRM push keeps its current setting (on).
+-- 5. Turn auto-prospecting on for the company workspace, sending through the main sender with
+--    warm-up (15/day first week → 30 → 60 → up to 120), business hours only, risky recipients
+--    skipped. Requires migration 20261031000000_auto_prosp_system_sender (applied on deploy).
+--    Set "Responder para" and "Nome do remetente" in Admin → Auto-prospecção → Configurações.
 UPDATE "AutoProspeccaoConfig"
-SET "isActive" = true, "emailAutoSend" = true, "updatedAt" = now()
+SET "isActive" = true, "emailAutoSend" = true, "useSystemSender" = true, "updatedAt" = now()
 WHERE "workspaceId" = 'sys-workspace-precisionia';
 
 COMMIT;
 
 -- Check
 SELECT c.name, c.audience, c.status, c."scheduledAt" FROM "EmailCampaign" c WHERE c.id LIKE 'cmp_%2026_11' ORDER BY c."scheduledAt";
-SELECT "isActive", "emailAutoSend", "crmAutoSend" FROM "AutoProspeccaoConfig" WHERE "workspaceId" = 'sys-workspace-precisionia';
+SELECT "isActive", "emailAutoSend", "useSystemSender", "crmAutoSend" FROM "AutoProspeccaoConfig" WHERE "workspaceId" = 'sys-workspace-precisionia';
