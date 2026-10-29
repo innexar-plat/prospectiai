@@ -12,7 +12,9 @@ export async function GET(req: NextRequest) {
   if (!workspaceId) return NextResponse.json({ error: 'workspaceId required' }, { status: 400 });
 
   const config = await prisma.autoProspeccaoConfig.findUnique({ where: { workspaceId } });
-  if (!config) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (!config) {
+    return NextResponse.json({ error: 'Este workspace ainda não tem auto-prospecção configurada.' }, { status: 404 });
+  }
 
   return NextResponse.json({ data: config });
 }

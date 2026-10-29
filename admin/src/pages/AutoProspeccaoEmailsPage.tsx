@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Eye, Mail, MailOpen, RefreshCw, Send, ShieldCheck, UserX } from 'lucide-react';
-import { adminApi, autoProspeccaoAdminApi, type AdminWorkspaceListItem, type AutoProspEmailStats } from '@/lib/api';
+import { autoProspeccaoAdminApi, type AutoProspEmailStats } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 const DEFAULT_WORKSPACE = 'sys-workspace-precisionia';
@@ -28,7 +28,7 @@ function Stat({ label, value, hint, icon: Icon }: { label: string; value: React.
 
 /** Cold outreach activity: who received what, who opened, opt-outs and today's warm-up budget. */
 export function AutoProspeccaoEmailsPage() {
-  const [workspaces, setWorkspaces] = useState<AdminWorkspaceListItem[]>([]);
+  const [workspaces, setWorkspaces] = useState<Array<{ id: string; name: string | null }>>([]);
   const [workspaceId, setWorkspaceId] = useState(DEFAULT_WORKSPACE);
   const [data, setData] = useState<AutoProspEmailStats | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +38,7 @@ export function AutoProspeccaoEmailsPage() {
   const [preview, setPreview] = useState<{ subject: string; html: string } | null>(null);
 
   useEffect(() => {
-    adminApi.workspaces({ limit: 100 }).then((r) => setWorkspaces(r.items)).catch(() => { /* selector optional */ });
+    autoProspeccaoAdminApi.configuredWorkspaces().then((r) => setWorkspaces(r.data)).catch(() => { /* selector optional */ });
   }, []);
 
   useEffect(() => {

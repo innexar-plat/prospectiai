@@ -1231,6 +1231,11 @@ export interface SenderPoolItem {
 }
 
 export const autoProspeccaoAdminApi = {
+  /** Workspaces that have an auto-prospecting config. */
+  configuredWorkspaces: () =>
+    request<{ data: Array<{ id: string; name: string | null; plan: string; autoProspeccaoEnabled: boolean }> }>(
+      '/admin/auto-prospeccao/workspaces?configured=1&limit=50',
+    ),
   emails: {
     stats: (workspaceId: string) =>
       request<{ data: AutoProspEmailStats }>(`/admin/auto-prospeccao/emails?workspaceId=${encodeURIComponent(workspaceId)}`),

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { autoProspeccaoAdminApi, adminApi, type AutoProspConfig, type AdminWorkspaceListItem } from '@/lib/api';
+import { autoProspeccaoAdminApi, type AutoProspConfig } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Settings, Search, Save, RefreshCw } from 'lucide-react';
 
 const CRM_PROVIDERS = ['rdstation', 'hubspot', 'agendor', 'all'];
 
 export function AutoProspeccaoConfigPage() {
-  const [workspaces, setWorkspaces] = useState<AdminWorkspaceListItem[]>([]);
+  const [workspaces, setWorkspaces] = useState<Array<{ id: string; name: string | null; autoProspeccaoEnabled: boolean }>>([]);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState('');
   const [config, setConfig] = useState<AutoProspConfig | null>(null);
   const [form, setForm] = useState<Partial<AutoProspConfig>>({});
@@ -20,10 +20,19 @@ export function AutoProspeccaoConfigPage() {
   };
 
   useEffect(() => {
-    adminApi
-      .workspaces({ limit: 100 })
-      .then((res) => setWorkspaces(res.items))
+    autoProspeccaoAdminApi
+      .configuredWorkspaces()
+      .then((res) => {
+        setWorkspaces(res.data);
+        // Open the company workspace (or the only configured one) right away.
+        const preferred = res.data.find((w) => w.id === 'sys-workspace-precisionia') ?? res.data[0];
+        if (preferred) {
+          setSelectedWorkspaceId(preferred.id);
+          loadConfig(preferred.id);
+        }
+      })
       .catch(() => showToast('error', 'Erro ao carregar workspaces.'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
   }, []);
 
   const loadConfig = (wsId: string) => {
