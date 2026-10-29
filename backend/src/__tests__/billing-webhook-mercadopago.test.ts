@@ -64,6 +64,7 @@ jest.mock('@/lib/ops-telemetry', () => ({ recordWebhook: jest.fn().mockResolvedV
 jest.mock('@/lib/logger', () => ({ logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() } }));
 
 import { POST } from '@/app/api/billing/webhook/mercadopago/route';
+import { addMonths } from '@/lib/billing-period';
 
 const SECRET = 'mp-secret';
 
@@ -186,7 +187,8 @@ describe('MP webhook — recurring PIX', () => {
         expect(data.subscriptionId).toBe('mp_pay_777');
         expect(data.leadsUsed).toBe(0);
         expect(data.renewalPaymentId).toBeNull();
-        const expected = new Date(current); expected.setUTCMonth(expected.getUTCMonth() + 1);
+        // Month-end clamp (31 Oct → 30 Nov), as billing-period does — not Date#setUTCMonth overflow.
+        const expected = addMonths(current, 1);
         expect((data.currentPeriodEnd as Date).toISOString().slice(0, 10)).toBe(expected.toISOString().slice(0, 10));
         expect(mockRecurringCommission).toHaveBeenCalled();
         expect(mockFirstCommission).not.toHaveBeenCalled();

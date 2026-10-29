@@ -1,5 +1,4 @@
 import { prisma } from '@/lib/prisma';
-import { sendEmail } from '@/lib/email';
 import type { SendResult } from '@/lib/email';
 import { logger } from '@/lib/logger';
 import { decryptEmailSecret } from '@/lib/email-config-encrypt';
@@ -115,6 +114,12 @@ const BASE_URL = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'htt
 // Sender pool helpers (round-robin with daily limit)
 // ---------------------------------------------------------------------------
 
+export function buildOptOutFooter(url: string): string {
+  return `<p style="margin:24px 0 0;font-size:12px;line-height:1.5;color:#6b7280;text-align:center;">`
+    + `Recebeu este e-mail porque sua empresa tem cadastro público na Receita Federal. `
+    + `<a href="${url}" style="color:#6b7280;text-decoration:underline;">Não quero receber mais e-mails</a>.</p>`;
+}
+
 async function pickSender(workspaceId: string) {
   // Fetch all active senders ordered by least recently used, then filter by daily limit
   // (typically very few senders per workspace, so in-memory filter is fine)
@@ -196,34 +201,46 @@ async function sendStep(
     const pixelUrl = `${BASE_URL}/api/track/email/open/${eventId}`;
     const trackingPixel = `<img src="${pixelUrl}" width="1" height="1" alt="" style="display:none;width:1px;height:1px;border:0" />`;
 
-    // Inject pixel just before </body> (or append if no </body>)
+    // Cold outreach must always carry a one-click opt-out (LGPD / anti-spam) — appended here so
+    // no template can ship without it.
+    const optOut = buildOptOutFooter(`${BASE_URL}/api/track/email/optout/${eventId}`);
+
+    // Inject opt-out + pixel just before </body> (or append if no </body>)
     if (bodyHtml.includes('</body>')) {
-      bodyHtml = bodyHtml.replace('</body>', `${trackingPixel}</body>`);
+      bodyHtml = bodyHtml.replace('</body>', `${optOut}${trackingPixel}</body>`);
     } else {
-      bodyHtml = bodyHtml + trackingPixel;
+      bodyHtml = bodyHtml + optOut + trackingPixel;
     }
 
-    // Try sender pool first (round-robin), then fall back to system email config
+    const suppressed = await prisma.emailUnsubscribe.findFirst({
+      where: { email: toEmail.toLowerCase(), category: { in: ['ALL', 'MARKETING'] } },
+      select: { id: true },
+    });
+    if (suppressed) {
+      await prisma.prospectedLead.update({ where: { id: leadId }, data: { status: 'OPTED_OUT' } });
+      return false;
+    }
+
+    // Only a dedicated sender from the pool. Never fall back to the system address: cold e-mail
+    // volume would burn the domain that delivers password resets, PIX and receipts.
     const poolSender = await pickSender(workspaceId);
-    let result: SendResult;
-
-    if (poolSender) {
-      result = await sendViaPoolSender(
-        poolSender.id,
-        poolSender.provider,
-        poolSender.fromEmail,
-        poolSender.resendApiKeyEncrypted,
-        poolSender.smtpHost,
-        poolSender.smtpPort,
-        poolSender.smtpUser,
-        poolSender.smtpPasswordEncrypted,
-        toEmail,
-        subject,
-        bodyHtml,
-      );
-    } else {
-      result = await sendEmail(toEmail, subject, bodyHtml);
+    if (!poolSender) {
+      logger.warn('email-sequence: no dedicated sender in pool — skipping cold e-mail', { workspaceId, leadId });
+      return false;
     }
+    const result = await sendViaPoolSender(
+      poolSender.id,
+      poolSender.provider,
+      poolSender.fromEmail,
+      poolSender.resendApiKeyEncrypted,
+      poolSender.smtpHost,
+      poolSender.smtpPort,
+      poolSender.smtpUser,
+      poolSender.smtpPasswordEncrypted,
+      toEmail,
+      subject,
+      bodyHtml,
+    );
 
     if (!result.sent) {
       logger.warn('email-sequence: send failed', { leadId, step, error: result.error });

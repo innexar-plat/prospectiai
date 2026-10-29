@@ -46,7 +46,7 @@ const hotLead = {
 describe('runEmailSequenceWorker', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('should send step 1 email to new HOT leads', async () => {
+  it('does not send cold e-mail through the system address when the sender pool is empty', async () => {
     (mockPrisma.autoProspeccaoConfig.findUnique as jest.Mock).mockResolvedValue({ emailStepIntervalHours: 48 });
     (mockPrisma.autoProspSenderPool.findMany as jest.Mock).mockResolvedValue([]);
     (mockPrisma.prospectedLead.findMany as jest.Mock)
@@ -54,19 +54,12 @@ describe('runEmailSequenceWorker', () => {
       .mockResolvedValueOnce([]); // in-progress leads
     (mockPrisma.autoProspeccaoTemplate.findFirst as jest.Mock).mockResolvedValue(null);
     (mockPrisma.autoProspeccaoRun.update as jest.Mock).mockResolvedValue({});
-    mockSendEmail.mockResolvedValue({ sent: true });
-    (mockPrisma.prospectedLeadEmailEvent.create as jest.Mock).mockResolvedValue({});
     (mockPrisma.prospectedLead.update as jest.Mock).mockResolvedValue({});
 
     const result = await runEmailSequenceWorker('ws1', 'run1');
 
-    expect(result.emailsSent).toBe(1);
-    expect(result.leadsStarted).toBe(1);
-    expect(mockSendEmail).toHaveBeenCalledWith(
-      hotLead.email,
-      expect.any(String),
-      expect.any(String),
-    );
+    expect(result.emailsSent).toBe(0);
+    expect(mockSendEmail).not.toHaveBeenCalled();
   });
 
   it('should skip leads without email', async () => {

@@ -1,6 +1,6 @@
-import { toRfText } from '@/lib/rf-fuzzy-match';
+import { findRfCompanies } from '@/lib/rf-query';
 import { prisma } from '@/lib/prisma';
-import type { Prisma, SearchProfile } from '@prisma/client';
+import type { SearchProfile } from '@prisma/client';
 import type { RfCompanyData } from '../domain/types';
 
 interface SearchResult {
@@ -26,36 +26,23 @@ export async function runSearchWorker(
   const ufList = Array.isArray(profile.uf) ? (profile.uf as string[]) : [];
   const porteList = Array.isArray(profile.porte) ? (profile.porte as string[]) : [];
 
-  // Construir where clause dinamicamente
-  const where: Prisma.RfCompanyWhereInput = {};
-
-  if (cnaeList.length === 1) {
-    where.cnaePrincipal = { startsWith: cnaeList[0]!.substring(0, 4) };
-  } else if (cnaeList.length > 1) {
-    where.OR = cnaeList.map((cnae) => ({
-      cnaePrincipal: { startsWith: cnae.substring(0, 4) },
-    }));
-  }
-
-  if (ufList.length > 0) where.uf = { in: ufList };
-  if (porteList.length > 0) where.porte = { in: porteList };
-  if (profile.hasEmail === true) where.email = { not: null };
-  if (profile.hasPhone === true) where.telefone = { not: null };
-  if (profile.minCapital != null) where.capitalSocial = { gte: profile.minCapital };
-  if (profile.openedAfter) where.dataAbertura = { gte: profile.openedAfter };
-  // RF stores cities uppercase without accents: equality uses the index, `contains` scanned the table.
-  if (profile.municipio) where.municipio = toRfText(profile.municipio);
-  if (blockedCnpjs.length > 0) where.cnpj = { notIn: blockedCnpjs };
-
-  // Buscar CNPJs já prospectados neste workspace para dedup
+  // Bounded RF query (statement timeout, no parallel workers) — the old Prisma query had neither
+  // and a broad profile scanned the 27M-row table.
   const existingCnpjs = await prisma.prospectedLead
     .findMany({ where: { workspaceId }, select: { cnpj: true } })
     .then((rows) => new Set(rows.map((r) => r.cnpj)));
+  const blocked = new Set(blockedCnpjs);
 
-  const companies = await prisma.rfCompany.findMany({
-    where,
-    take: maxLeads * 3, // pega mais para absorver deduplicações
-  });
+  const companies = (await findRfCompanies({
+    cnaes: cnaeList.map((c) => c.replace(/\D/g, '').substring(0, 4)),
+    ufs: ufList,
+    portes: porteList,
+    municipio: profile.municipio,
+    hasEmail: profile.hasEmail === true,
+    hasPhone: profile.hasPhone === true,
+    minCapital: profile.minCapital,
+    openedSince: profile.openedAfter,
+  }, maxLeads * 3)).filter((c) => !blocked.has(c.cnpj));
   // Bigger companies first — sorted over the fetched candidates, not the whole sector/state.
   companies.sort((a, b) => (b.capitalSocial ?? 0) - (a.capitalSocial ?? 0));
 

@@ -1252,13 +1252,15 @@ export interface FeatureAnnouncementConfig {
   /** Lista de benefícios da nova feature */
   benefits?: string[];
   badge?: string;
+  /** User id for the one-click unsubscribe link (marketing e-mails must carry it). */
+  unsubscribeToken?: string;
 }
 
 export function featureAnnouncementTemplate(
   config: FeatureAnnouncementConfig,
   userName?: string,
 ): string {
-  const { featureName, tagline, description, ctaLabel, ctaUrl, benefits, badge } = config;
+  const { featureName, tagline, description, ctaLabel, ctaUrl, benefits, badge, unsubscribeToken } = config;
 
   let content = '';
   if (userName) {
@@ -1287,6 +1289,7 @@ export function featureAnnouncementTemplate(
   return wrapContent(content, {
     preheader: `Novidade no Precision IA: ${escapeHtml(featureName)} — ${escapeHtml(tagline)}`.slice(0, 90),
     accentColor: BRAND_COLOR,
+    unsubscribeToken,
   });
 }
 

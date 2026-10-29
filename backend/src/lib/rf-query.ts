@@ -23,6 +23,10 @@ export interface RfFilters {
     openedSince?: string | null;
     hasPhone?: boolean;
     hasEmail?: boolean;
+    /** Lists (auto-prospecting profiles): any of these states / company sizes. */
+    ufs?: string[];
+    portes?: string[];
+    minCapital?: number | null;
 }
 
 /** Next lexicographic string after a prefix: '5611' → '5612' (prefix match as an index range). */
@@ -42,6 +46,11 @@ export function buildRfWhere(f: RfFilters): { sql: string; params: string[] } {
             : `("cnaePrincipal" >= ${p(c)} AND "cnaePrincipal" < ${p(prefixUpperBound(c))})`)).join(' OR ')})`);
     }
     if (f.uf?.trim()) conds.push(`uf = ${p(f.uf.trim().toUpperCase())}`);
+    const ufs = (f.ufs ?? []).map((u) => u.trim().toUpperCase()).filter((u) => /^[A-Z]{2}$/.test(u));
+    if (ufs.length > 0) conds.push(`uf IN (${ufs.map(p).join(', ')})`);
+    const portes = (f.portes ?? []).map((v) => v.trim().toUpperCase()).filter(Boolean);
+    if (portes.length > 0) conds.push(`porte IN (${portes.map(p).join(', ')})`);
+    if (f.minCapital != null && Number.isFinite(f.minCapital)) conds.push(`"capitalSocial" >= ${p(String(f.minCapital))}::float8`);
     if (f.municipio?.trim()) conds.push(`municipio = ${p(toRfText(f.municipio))}`);
     if (f.porte?.trim()) conds.push(`porte = ${p(f.porte.trim().toUpperCase())}`);
     if (f.razaoSocial && f.razaoSocial.trim().length >= 3) {
@@ -61,6 +70,16 @@ async function bounded<T>(timeoutMs: number, fn: (tx: typeof prisma) => Promise<
         await tx.$executeRawUnsafe('SET LOCAL jit = off');
         return fn(tx as unknown as typeof prisma);
     });
+}
+
+/** Up to `limit` matching companies, bounded like interactive searches (no ORDER BY, no count). */
+export async function findRfCompanies(filters: RfFilters, limit: number): Promise<RfCompany[]> {
+    const { sql, params } = buildRfWhere(filters);
+    const safeLimit = Math.max(1, Math.min(1000, Math.floor(limit)));
+    return bounded(RF_QUERY_TIMEOUT_MS, (tx) => tx.$queryRawUnsafe<RfCompany[]>(
+        `SELECT * FROM "RfCompany" WHERE ${sql} LIMIT ${safeLimit}`,
+        ...params,
+    ));
 }
 
 /**

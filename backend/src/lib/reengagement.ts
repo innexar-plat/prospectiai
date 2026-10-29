@@ -13,6 +13,7 @@ import { addDays } from '@/lib/billing-period';
 import { toRfText } from '@/lib/rf-fuzzy-match';
 import { sendReengagementEmail, type ReengagementCompany } from '@/lib/billing-emails';
 import { logger } from '@/lib/logger';
+import { claimMarketingSlot } from '@/lib/marketing-cap';
 
 const INACTIVE_DAYS = 7;
 const MAX_SENDS = 6;
@@ -188,6 +189,7 @@ export async function runReengagementEmails(now: Date, dryRun: boolean): Promise
         if (companies.length < 2) continue;
 
         if (dryRun) { result.sent++; source === 'rf' ? result.fromRf++ : result.fromHistory++; continue; }
+        if (!(await claimMarketingSlot(u.id))) continue;
         const ok = await sendReengagementEmail(u.id, { email: u.email, name: u.name, market: u.market }, {
             source, niche, city: last.city ?? null, companies, total, week,
         });

@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { sendEmail } from '@/lib/email';
 import { promotionEmailTemplate, featureAnnouncementTemplate, reengagementTemplate } from '@/lib/email-templates';
 import { logger } from '@/lib/logger';
+import { claimMarketingSlot } from '@/lib/marketing-cap';
 import type {
   CreateTemplateInput,
   UpdateTemplateInput,
@@ -99,7 +100,7 @@ export function renderTemplatePreview(template: {
   ctaUrl?: string | null;
   accentColor?: string | null;
   preheader?: string | null;
-}, userName?: string): string {
+}, userName?: string, unsubscribeToken?: string): string {
   const body = template.body as TemplateBody;
 
   // Replace template variables like {{firstName}} in text content
@@ -130,6 +131,7 @@ export function renderTemplatePreview(template: {
       expiresAt: body.expiresAt ? new Date(body.expiresAt) : undefined,
       benefits,
       legalNote: body.legalNote,
+      unsubscribeToken,
     }, userName);
   }
 
@@ -142,6 +144,7 @@ export function renderTemplatePreview(template: {
       ctaUrl: template.ctaUrl ?? '#',
       benefits,
       badge: body.badge,
+      unsubscribeToken,
     }, userName);
   }
 
@@ -164,6 +167,7 @@ export function renderTemplatePreview(template: {
     ctaUrl: template.ctaUrl ?? '#',
     accentColor: template.accentColor ?? undefined,
     benefits,
+    unsubscribeToken,
   }, userName);
 }
 
@@ -278,6 +282,7 @@ function buildAudienceWhere(audience: string, filter?: Record<string, unknown> |
   const where: Record<string, unknown> = {
     email: { not: null },
     disabledAt: null,
+    notifyByEmail: true,
   };
 
   // Exclude users who unsubscribed from marketing or all emails
@@ -307,18 +312,24 @@ function buildAudienceWhere(audience: string, filter?: Record<string, unknown> |
       break;
     }
     case 'INACTIVE': {
+      // No search in the last N days (account older than that) — real product activity.
       const days = (filter as Record<string, number> | null)?.inactiveDays ?? 30;
-      where.updatedAt = { lt: new Date(Date.now() - days * 24 * 60 * 60 * 1000) };
+      const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      where.createdAt = { lt: cutoff };
+      where.searchHistory = { none: { createdAt: { gte: cutoff } } };
       break;
     }
     case 'CHURNED': {
-      where.disabledAt = { not: null };
-      // Override the disabled check for churned users
-      delete where.disabledAt;
+      // Lost customers: trial expired or subscription cancelled, not paying now.
+      // Disabled accounts stay excluded — they must never receive marketing.
       where.workspaces = {
-        some: { workspace: { plan: 'FREE' } },
+        some: {
+          workspace: {
+            plan: { in: ['FREE', 'TRIAL'] },
+            subscriptionStatus: { in: ['trial_expired', 'canceled', 'cancelled', 'inactive', 'expired'] },
+          },
+        },
       };
-      // Users who previously had a paid plan (simplification)
       break;
     }
     case 'CUSTOM': {
@@ -377,6 +388,8 @@ export async function sendCampaign(campaignId: string) {
       where,
       select: { id: true, email: true, name: true },
     });
+    const skipCap = campaign.audienceFilter && typeof campaign.audienceFilter === 'object'
+      && (campaign.audienceFilter as Record<string, unknown>).ignoreFrequencyCap === true;
 
     // Get unsubscribed emails
     const unsubscribedEmails = new Set(
@@ -427,7 +440,14 @@ export async function sendCampaign(campaignId: string) {
       // Send sequentially within batch to respect rate limits
       for (const user of batch) {
         try {
-          const html = renderTemplatePreview(campaign.template, user.name ?? undefined);
+          if (!skipCap && !(await claimMarketingSlot(user.id))) {
+            await prisma.emailCampaignRecipient.updateMany({
+              where: { campaignId, userId: user.id },
+              data: { status: 'FAILED', error: 'frequency_cap' },
+            });
+            continue;
+          }
+          const html = renderTemplatePreview(campaign.template, user.name ?? undefined, user.id);
           // Replace variables in subject line too
           const firstName = user.name?.split(/\s/)[0] ?? '';
           const subject = campaign.template.subject

@@ -1,6 +1,10 @@
 import { runSearchWorker } from '../application/search.worker';
 import { prisma } from '@/lib/prisma';
+import { findRfCompanies } from '@/lib/rf-query';
 import type { SearchProfile } from '@prisma/client';
+
+jest.mock('@/lib/rf-query', () => ({ findRfCompanies: jest.fn() }));
+const mockFindRf = findRfCompanies as jest.Mock;
 
 jest.mock('@/lib/prisma', () => ({
   prisma: {
@@ -74,7 +78,7 @@ describe('runSearchWorker', () => {
 
   it('should create leads from RF data', async () => {
     (mockPrisma.prospectedLead.findMany as jest.Mock).mockResolvedValue([]);
-    (mockPrisma.rfCompany.findMany as jest.Mock).mockResolvedValue(mockCompanies);
+    mockFindRf.mockResolvedValue(mockCompanies);
     (mockPrisma.prospectedLead.createMany as jest.Mock).mockResolvedValue({ count: 1 });
     (mockPrisma.searchProfile.update as jest.Mock).mockResolvedValue({});
     (mockPrisma.autoProspeccaoRun.update as jest.Mock).mockResolvedValue({});
@@ -90,7 +94,7 @@ describe('runSearchWorker', () => {
     (mockPrisma.prospectedLead.findMany as jest.Mock).mockResolvedValue([
       { cnpj: '11111111000101' },
     ]);
-    (mockPrisma.rfCompany.findMany as jest.Mock).mockResolvedValue(mockCompanies);
+    mockFindRf.mockResolvedValue(mockCompanies);
     (mockPrisma.prospectedLead.createMany as jest.Mock).mockResolvedValue({ count: 0 });
     (mockPrisma.searchProfile.update as jest.Mock).mockResolvedValue({});
     (mockPrisma.autoProspeccaoRun.update as jest.Mock).mockResolvedValue({});
@@ -108,7 +112,7 @@ describe('runSearchWorker', () => {
     }));
 
     (mockPrisma.prospectedLead.findMany as jest.Mock).mockResolvedValue([]);
-    (mockPrisma.rfCompany.findMany as jest.Mock).mockResolvedValue(manyCompanies);
+    mockFindRf.mockResolvedValue(manyCompanies);
     (mockPrisma.prospectedLead.createMany as jest.Mock).mockResolvedValue({ count: 5 });
     (mockPrisma.searchProfile.update as jest.Mock).mockResolvedValue({});
     (mockPrisma.autoProspeccaoRun.update as jest.Mock).mockResolvedValue({});
@@ -120,19 +124,18 @@ describe('runSearchWorker', () => {
 
   it('should filter blocked CNPJs', async () => {
     (mockPrisma.prospectedLead.findMany as jest.Mock).mockResolvedValue([]);
-    (mockPrisma.rfCompany.findMany as jest.Mock).mockResolvedValue(mockCompanies);
+    mockFindRf.mockResolvedValue(mockCompanies);
     (mockPrisma.prospectedLead.createMany as jest.Mock).mockResolvedValue({ count: 0 });
     (mockPrisma.searchProfile.update as jest.Mock).mockResolvedValue({});
     (mockPrisma.autoProspeccaoRun.update as jest.Mock).mockResolvedValue({});
 
     const result = await runSearchWorker('ws1', baseProfile, 'run1', 50, ['11111111000101']);
 
-    // The blocked CNPJ filter is applied at DB level via `where.cnpj = { notIn: [...] }`,
-    // so RF query returns 0 results
-    expect(mockPrisma.rfCompany.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ cnpj: { notIn: ['11111111000101'] } }),
-      }),
+    // Blocked CNPJs are dropped from the bounded RF result before insert.
+    expect(result.leadsFound).toBe(mockCompanies.filter((c) => c.cnpj !== '11111111000101').length);
+    expect(mockFindRf).toHaveBeenCalledWith(
+      expect.objectContaining({ cnaes: ['7020'], ufs: ['SP', 'RJ'], portes: ['DEMAIS', 'EPP'], hasEmail: true }),
+      150,
     );
   });
 });
