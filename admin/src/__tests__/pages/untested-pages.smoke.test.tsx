@@ -57,6 +57,7 @@ vi.mock('@/lib/api', () => ({
     hubspotObservability: { get: () => mockHubspotObs() },
   },
   autoProspeccaoAdminApi: {
+    configuredWorkspaces: () => Promise.resolve({ data: [] }),
     templates: {
       list: (...args: unknown[]) => mockAutoTemplatesList(...args),
       get: (...args: unknown[]) => mockAutoTemplateGet(...args),
