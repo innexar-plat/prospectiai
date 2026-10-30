@@ -328,11 +328,9 @@ export async function generateCompletionForRole(
         throw new Error(`No AI config for role "${role}" and no env fallback configured`);
     }
 
-    const messages: Array<{ role: 'system' | 'user'; content: string }> = [];
-    if (options.systemPrompt) {
-        messages.push({ role: 'system', content: options.systemPrompt });
-    }
-    messages.push({ role: 'user', content: options.prompt });
+    // System prompt goes in `system` (not as a message): the AI SDK flags system messages inside
+    // `messages` as a prompt-injection risk and warns on every call.
+    const messages: Array<{ role: 'user'; content: string }> = [{ role: 'user', content: options.prompt }];
 
     const attempts = candidates.filter((candidate) => !isModelOpen(getModelKey(candidate)));
     const orderedAttempts = attempts.length > 0 ? attempts : candidates;
@@ -348,6 +346,7 @@ export async function generateCompletionForRole(
             const model = createLanguageModel(candidate);
             const result = await generateText({
                 model,
+                ...(options.systemPrompt ? { system: options.systemPrompt } : {}),
                 messages,
                 maxOutputTokens: options.maxOutputTokens ?? 16384,
                 abortSignal: AbortSignal.timeout(90_000),

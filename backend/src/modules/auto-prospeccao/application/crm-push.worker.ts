@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { acquireRedisLock } from '@/lib/redis';
+import { alertWarning } from '@/lib/telegram-alert';
 import {
   getValidRdStationAccessToken,
   getRdProductMode,
@@ -59,12 +61,19 @@ export async function runCrmPushWorker(
       });
       pushed++;
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown';
+      failed++;
+      if (isCrmAuthError(message)) {
+        // Every other lead would fail the same way: stop and ask for the integration to be
+        // reconnected (once a day) instead of logging one error per lead every run.
+        await reportCrmAuthLost(workspaceId, config.crmProvider, message);
+        break;
+      }
       logger.error('crm-push.worker: failed to push lead', {
         leadId: lead.id,
         provider: config.crmProvider,
-        error: err instanceof Error ? err.message : 'Unknown',
+        error: message,
       });
-      failed++;
     }
   }
 
@@ -74,6 +83,20 @@ export async function runCrmPushWorker(
   });
 
   return { pushed, failed };
+}
+
+export function isCrmAuthError(message: string): boolean {
+  return /\b401\b|invalid_token|token (not available|refresh failed)|unauthori[sz]ed|invalid refresh_token/i.test(message);
+}
+
+async function reportCrmAuthLost(workspaceId: string, provider: string, message: string): Promise<void> {
+  logger.error('crm-push.worker: CRM authorization lost — reconnect the integration', { workspaceId, provider, error: message.slice(0, 200) });
+  const day = new Date().toISOString().slice(0, 10);
+  if (!(await acquireRedisLock(`crm-auth-alert:${workspaceId}:${provider}:${day}`, '1', 26 * 60 * 60 * 1000))) return;
+  await alertWarning('CRM desconectado', `Auto-prospecção parou de enviar leads ao ${provider}. Reconecte a integração.`, {
+    workspaceId,
+    provider,
+  }).catch(() => { /* alert is best effort */ });
 }
 
 /**
