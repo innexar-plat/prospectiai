@@ -230,13 +230,13 @@ export function AutoProspeccaoConfigPage() {
                 <label className="block text-xs text-gray-500 mb-1">Intervalo entre steps (horas)</label>
                 <input
                   type="number"
-                  min={1}
+                  min={24}
                   max={720}
                   className="w-full border border-gray-200 rounded px-3 py-2 text-sm"
                   value={form.emailStepIntervalHours ?? 48}
                   onChange={(e) => set('emailStepIntervalHours', parseInt(e.target.value, 10))}
                 />
-                <p className="text-xs text-gray-400 mt-1">Quantas horas esperar entre step 1→2→3</p>
+                <p className="text-xs text-gray-400 mt-1">Horas entre a 1ª, 2ª e 3ª mensagem (mínimo 24)</p>
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Máx. emails por dia</label>

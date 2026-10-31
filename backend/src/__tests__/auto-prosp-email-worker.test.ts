@@ -99,6 +99,17 @@ describe('auto-prospecting e-mail worker', () => {
         expect(mockLeadUpdate).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'c' }, data: expect.objectContaining({ status: 'BOUNCED' }) }));
     });
 
+    it('waits at least 24 h between steps even when configured lower', async () => {
+        mockConfig.mockResolvedValueOnce({ ...systemConfig, emailStepIntervalHours: 1, systemSenderStartedAt: new Date('2026-09-01T00:00:00Z') });
+        mockSenderCount.mockResolvedValueOnce(0);
+        mockLeads
+            .mockResolvedValueOnce([{ ...lead('a', 'joao@padaria.com.br'), status: 'EMAILING', emailEvents: [{ step: 1, sentAt: new Date(NOW.getTime() - 2 * 60 * 60 * 1000), openedAt: null }] }])
+            .mockResolvedValueOnce([]);
+        const r = await runEmailSequenceWorker('w1', 'run1', NOW);
+        expect(r.leadsAdvanced).toBe(0);
+        expect(mockSystemSend).not.toHaveBeenCalled();
+    });
+
     it('does not send outside business hours', async () => {
         mockConfig.mockResolvedValueOnce(systemConfig);
         mockSenderCount.mockResolvedValueOnce(0);
@@ -132,5 +143,17 @@ describe('auto-prospecting e-mail worker', () => {
 describe('buildOptOutFooter', () => {
     it('explains the source of the address', () => {
         expect(buildOptOutFooter('https://x/o/1')).toContain('Receita Federal');
+    });
+});
+
+describe('displayCompanyName', () => {
+    it('reads like a person wrote it', () => {
+        const { displayCompanyName } = jest.requireActual('@/modules/auto-prospeccao/application/email-sequence.worker');
+        expect(displayCompanyName('GOLDSZTEIN HOLDING DE PARTICIPACOES LTDA')).toBe('Goldsztein Holding de Participacoes');
+        expect(displayCompanyName('BRASIL SUSTENTAVEL AGROPECUARIA S.A.')).toBe('Brasil Sustentavel Agropecuaria');
+        expect(displayCompanyName('360NETWORKS DO BRASIL LTDA', 'NETUNO')).toBe('Netuno');
+        expect(displayCompanyName('SD&G ADMINISTRACAO E PARTICIPACOES LTDA.')).toBe('Sd&g Administracao e Participacoes');
+        expect(displayCompanyName('X', 'Padaria do João')).toBe('Padaria do João');
+        expect(displayCompanyName('AUPOL TI CONSULTORIA LTDA ME')).toBe('Aupol TI Consultoria');
     });
 });

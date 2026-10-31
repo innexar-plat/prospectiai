@@ -64,6 +64,13 @@ export async function PATCH(req: NextRequest) {
     }
   }
 
+  if ('emailStepIntervalHours' in data) {
+    const hours = Number(data.emailStepIntervalHours);
+    if (!Number.isFinite(hours) || hours < 24 || hours > 720) {
+      return NextResponse.json({ error: 'Intervalo entre etapas deve ficar entre 24 e 720 horas' }, { status: 400 });
+    }
+    data.emailStepIntervalHours = Math.round(hours);
+  }
   if ('replyToEmail' in data) {
     const v = typeof data.replyToEmail === 'string' ? data.replyToEmail.trim() : '';
     if (v && !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(v)) {

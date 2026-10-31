@@ -774,7 +774,10 @@ async function parseMpNotification(req: Request): Promise<{ topic: string | null
 
     // Try v1 format (query params)
     const topicV1 = searchParams.get('topic') || searchParams.get('type');
-    const idV1 = searchParams.get('id') || searchParams.get('data.id');
+    // MP signs the manifest with `data.id` from the query string (lowercased when alphanumeric),
+    // so prefer it over the legacy IPN `id` parameter.
+    const queryDataId = searchParams.get('data.id');
+    const idV1 = (queryDataId ? queryDataId.toLowerCase() : null) || searchParams.get('id');
     if (topicV1 && idV1) {
         return { topic: topicV1, dataId: idV1, xSignature, xRequestId };
     }
@@ -809,7 +812,15 @@ export async function POST(req: Request) {
     // Validate HMAC signature
     if (!validateMpSignature(xSignature, xRequestId, dataId)) {
         await recordWebhook('mercadopago', false, 'invalid signature');
-        logger.warn('MP Webhook signature validation failed', { topic, dataId });
+        const url = new URL(req.url);
+        logger.warn('MP Webhook signature validation failed', {
+            topic,
+            dataId,
+            // Shape of the notification (IPN `?id&topic` vs webhook `?data.id&type`) — no secrets.
+            queryKeys: [...url.searchParams.keys()].join(','),
+            hasRequestId: Boolean(xRequestId),
+            userAgent: req.headers.get('user-agent')?.slice(0, 60) ?? null,
+        });
         return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 

@@ -14,6 +14,7 @@ interface EmailSequenceResult {
 }
 
 const MAX_STEPS = 3;
+export const MIN_STEP_INTERVAL_HOURS = 24;
 
 /** How cold mail leaves: a dedicated pool sender, or the main sender under warm-up rules. */
 interface SenderContext {
@@ -38,7 +39,8 @@ export async function runEmailSequenceWorker(
   let leadsAdvanced = 0;
 
   const config = await prisma.autoProspeccaoConfig.findUnique({ where: { workspaceId } });
-  const stepIntervalHours = config?.emailStepIntervalHours ?? 48;
+  // Never less than a day between steps: three e-mails in one morning reads as spam.
+  const stepIntervalHours = Math.max(MIN_STEP_INTERVAL_HOURS, config?.emailStepIntervalHours ?? 48);
 
   const hasPoolSender = (await prisma.autoProspSenderPool.count({ where: { workspaceId, isActive: true } })) > 0;
   const useSystem = !hasPoolSender && config?.useSystemSender === true;
@@ -89,7 +91,7 @@ export async function runEmailSequenceWorker(
     if (quota <= 0) break;
     // Só avança se passou o intervalo mínimo desde o último step
     if (lastEvent.sentAt && lastEvent.sentAt < cutoff) {
-      const sent = await sendStep(lead.id, lead.email, lead.razaoSocial, nextStep, workspaceId, !!lastEvent.openedAt, sender);
+      const sent = await sendStep(lead.id, lead.email, displayCompanyName(lead.razaoSocial, lead.nomeFantasia), nextStep, workspaceId, !!lastEvent.openedAt, sender);
       if (sent) {
         emailsSent++;
         leadsAdvanced++;
@@ -117,7 +119,7 @@ export async function runEmailSequenceWorker(
         });
         continue;
       }
-      const sent = await sendStep(lead.id, lead.email, lead.razaoSocial, 1, workspaceId, false, sender);
+      const sent = await sendStep(lead.id, lead.email, displayCompanyName(lead.razaoSocial, lead.nomeFantasia), 1, workspaceId, false, sender);
       if (sent) {
         emailsSent++;
         leadsStarted++;
@@ -135,6 +137,29 @@ export async function runEmailSequenceWorker(
   }
 
   return finishRun(runId, { emailsSent, leadsStarted, leadsAdvanced });
+}
+
+const LEGAL_SUFFIX = /[\s,.-]+(ltda|ltda\.?\s*-?\s*me|ltda\.?\s*-?\s*epp|s\/?a|s\.a\.?|eireli|me|epp|mei|ss|limitada)\.?$/i;
+const KEEP_UPPER = new Set(['ti', 'rh', 'b2b', 'sa', 'br', 'sp', 'rj', 'mg', 'pr', 'rs', 'sc', 'df', 'ba', 'go', 'ce', 'pe', 'ia', 'ai', 'cnpj', 'crm', 'erp']);
+const LOWER_WORDS = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'em', 'para', 'com']);
+
+/**
+ * How a person would write the company name: trade name when Receita has one, otherwise the legal
+ * name without LTDA/S.A./ME and in title case ("GOLDSZTEIN HOLDING LTDA" → "Goldsztein Holding").
+ */
+export function displayCompanyName(razaoSocial: string, nomeFantasia?: string | null): string {
+  let name = (nomeFantasia?.trim() || razaoSocial || '').replace(/\s+/g, ' ').trim();
+  for (let i = 0; i < 3 && LEGAL_SUFFIX.test(name); i++) name = name.replace(LEGAL_SUFFIX, '').trim();
+  if (name !== name.toUpperCase()) return name; // already mixed case: keep the company's own spelling
+  return name
+    .toLowerCase()
+    .split(' ')
+    .map((w, i) => {
+      if (KEEP_UPPER.has(w.replace(/[^a-z]/g, '')) && w.length <= 4) return w.toUpperCase();
+      if (i > 0 && LOWER_WORDS.has(w)) return w;
+      return w.charAt(0).toUpperCase() + w.slice(1);
+    })
+    .join(' ');
 }
 
 async function finishRun(runId: string, result: EmailSequenceResult): Promise<EmailSequenceResult> {
