@@ -1329,3 +1329,46 @@ export const autoProspeccaoAdminApi = {
       ),
   },
 };
+
+// ── Support tickets ─────────────────────────────────────────────────────────
+
+export type SupportTicketStatus = 'OPEN' | 'ANSWERED' | 'CLOSED';
+
+export interface AdminSupportTicket {
+  id: string;
+  number: number;
+  subject: string;
+  category: 'QUESTION' | 'PROBLEM' | 'BILLING' | 'SUGGESTION';
+  status: SupportTicketStatus;
+  lastMessageAt: string;
+  createdAt: string;
+  closedAt: string | null;
+  user: { id: string; name: string | null; email: string | null };
+  _count?: { messages: number };
+}
+
+export interface AdminSupportTicketDetail extends AdminSupportTicket {
+  context: Record<string, unknown> | null;
+  workspaceId: string | null;
+  user: { id: string; name: string | null; email: string | null; market: string };
+  messages: Array<{ id: string; authorType: 'USER' | 'ADMIN'; body: string; createdAt: string }>;
+}
+
+export const supportAdminApi = {
+  list: (status?: SupportTicketStatus) =>
+    request<{ tickets: AdminSupportTicket[]; counts: Partial<Record<SupportTicketStatus, number>> }>(
+      `/admin/support/tickets${status ? `?status=${status}` : ''}`,
+    ),
+  get: (id: string) => request<{ ticket: AdminSupportTicketDetail }>(`/admin/support/tickets/${id}`),
+  reply: (id: string, body: string, close = false) =>
+    request<{ ticket: AdminSupportTicketDetail }>(`/admin/support/tickets/${id}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ body, close }),
+    }),
+  setStatus: (id: string, status: SupportTicketStatus) =>
+    request<{ ticket: AdminSupportTicketDetail }>(`/admin/support/tickets/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }),
+};
+

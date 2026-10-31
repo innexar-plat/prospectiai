@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { BLOG_POSTS } from '@/pages/blog/blogData';
 import { getWave1Slugs } from '@/lib/seo-local';
+import { COMPANY_STATS_BASE_PATH, getCompanyStatsPage, getCompanyStatsSlugs } from '@/lib/seo-company-stats';
 import { getActiveMarket } from '@/lib/market';
 import { getAppOrigin } from '@/lib/site-url';
 
@@ -70,6 +71,22 @@ export default function SiteMapPage() {
                 </Link>
               </li>
             ))}
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-bold mb-4">Empresas por segmento e cidade</h2>
+          <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
+            {getCompanyStatsSlugs().map((slug) => {
+              const page = getCompanyStatsPage(slug);
+              return page ? (
+                <li key={slug}>
+                  <Link to={`/${COMPANY_STATS_BASE_PATH}/${slug}`} className="underline underline-offset-2 hover:text-violet-500">
+                    {page.segmentName} em {page.city} ({page.uf})
+                  </Link>
+                </li>
+              ) : null;
+            })}
           </ul>
         </section>
 

@@ -431,3 +431,24 @@ export type AiConfigCreateInput = z.infer<typeof aiConfigCreateSchema>;
 export type AiConfigUpdateInput = z.infer<typeof aiConfigUpdateSchema>;
 export type AiRuntimeUpdateInput = z.infer<typeof aiRuntimeUpdateSchema>;
 export type WebSearchConfigInput = z.infer<typeof webSearchConfigSchema>;
+
+/** Support tickets */
+export const supportTicketCreateSchema = z.object({
+  subject: z.string().trim().min(3, 'Assunto muito curto').max(140),
+  category: z.enum(['QUESTION', 'PROBLEM', 'BILLING', 'SUGGESTION']).default('QUESTION'),
+  message: z.string().trim().min(5, 'Descreva um pouco mais').max(5000),
+  context: z.object({
+    page: z.string().max(300).optional(),
+    userAgent: z.string().max(300).optional(),
+  }).optional(),
+});
+
+export const supportMessageSchema = z.object({
+  body: z.string().trim().min(1).max(5000),
+  close: z.boolean().optional(),
+});
+
+export const supportStatusSchema = z.object({
+  status: z.enum(['OPEN', 'ANSWERED', 'CLOSED']),
+});
+

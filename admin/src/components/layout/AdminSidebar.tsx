@@ -24,6 +24,7 @@ import {
   MessageCircle,
   HeartPulse,
   Wallet,
+  LifeBuoy,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -38,6 +39,7 @@ const sections: NavSection[] = [
       { to: 'system-health', end: false, label: 'Saúde do sistema', icon: HeartPulse },
       { to: 'billing', end: false, label: 'Assinaturas e cobrança', icon: Wallet },
       { to: 'retention', end: false, label: 'Retenção e ativação', icon: TrendingUp },
+      { to: 'suporte', end: false, label: 'Suporte (chamados)', icon: LifeBuoy },
       { to: 'users', end: false, label: 'Usuários', icon: Users },
       { to: 'workspaces', end: false, label: 'Workspaces', icon: Building2 },
       { to: 'leads', end: false, label: 'Leads', icon: FileText },

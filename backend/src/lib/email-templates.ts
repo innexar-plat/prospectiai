@@ -55,7 +55,7 @@ function getAllowedSiteBases(preferredBase?: string): string[] {
 }
 const APP_NAME  = 'Precision IA';
 const LOGO_URL  = process.env.EMAIL_LOGO_URL ?? `${SITE_URL.replace(/\/$/, '')}/brands/precision-logo-white.png`;
-const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL ?? 'suporte@precisionai.com.br';
+const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL ?? 'suporte@precisionia.com.br';
 
 // Marca
 const BRAND_COLOR   = '#4F46E5';

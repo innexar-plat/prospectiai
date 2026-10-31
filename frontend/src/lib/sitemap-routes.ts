@@ -5,6 +5,7 @@
 
 import type { Market } from '@/lib/market';
 import { getAllSeoSlugs } from '@/lib/seo-local';
+import { COMPANY_STATS_BASE_PATH, companyStatsDescription, companyStatsTitle, getCompanyStatsPage, getCompanyStatsSlugs } from '@/lib/seo-company-stats';
 
 export const BR_ORIGIN = 'https://precisionia.com.br';
 export const US_ORIGIN = 'https://precisionai.innexar.app';
@@ -221,8 +222,23 @@ export function getUsIndexableRoutes(): SitemapRoute[] {
   ];
 }
 
+/** "Empresas de <segmento> em <cidade>" — mirrors getCompanyStatsRoutes() in scripts/generate-seo-html.mjs. */
+export function getCompanyStatsRoutes(): SitemapRoute[] {
+  return getCompanyStatsSlugs().flatMap((slug) => {
+    const page = getCompanyStatsPage(slug);
+    if (!page) return [];
+    return [{
+      path: `${COMPANY_STATS_BASE_PATH}/${slug}`,
+      title: companyStatsTitle(page),
+      description: companyStatsDescription(page),
+      priority: '0.7',
+      changefreq: 'monthly',
+    }];
+  });
+}
+
 export function getBrIndexableRoutes(): SitemapRoute[] {
-  return getBrCoreRoutes();
+  return [...getBrCoreRoutes(), ...getCompanyStatsRoutes()];
 }
 
 export function getIndexableRoutesForMarket(market: Market): SitemapRoute[] {

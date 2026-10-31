@@ -18,7 +18,7 @@ const MUTED_COLOR = '#6b7280';
 const SUCCESS_COLOR = '#059669';
 const SITE_URL = getSiteUrlForMarket('BR');
 const LOGO_URL = process.env.EMAIL_LOGO_URL ?? `${SITE_URL}/brands/precision-logo-white.png`;
-const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL ?? 'suporte@precisionai.com.br';
+const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL ?? 'suporte@precisionia.com.br';
 const COMPANY_NAME = 'Innexar Brasil';
 const COMPANY_ADDRESS = 'Av. Dona Ophelia Caccerari Reis - Aviação, 363 — São Paulo, SP';
 

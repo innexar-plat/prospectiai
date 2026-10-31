@@ -27,6 +27,7 @@ import { clearAllTourFlags } from '@/lib/tour-steps';
 import { useI18n } from '@/lib/i18n';
 import { getActiveMarket, isMarketFeatureEnabled } from '@/lib/market';
 import { FAQ_STRUCTURE, INSTRUCTION_KEYS } from '@/lib/i18n/support-messages';
+import { SupportTickets } from '@/components/dashboard/SupportTickets';
 
 const LUCIDE_ICONS: Record<string, LucideIcon> = {
     Search,
@@ -127,6 +128,8 @@ export default function SuportePage() {
                         <p className="text-[11px] text-muted">{t('page.suporte.statusDesc')}</p>
                     </div>
                 </div>
+
+                <SupportTickets />
 
                 <section aria-label={t('page.suporte.quickLinks')}>
                     <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">

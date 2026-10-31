@@ -44,6 +44,7 @@ import { RepStatsPage } from '@/pages/representatives/Stats';
 import { WhatsAppPage } from '@/pages/WhatsAppPage';
 import { SystemHealthPage } from '@/pages/SystemHealthPage';
 import { RetentionPage } from '@/pages/RetentionPage';
+import { SupportTicketsPage } from '@/pages/SupportTicketsPage';
 import { AutoProspeccaoEmailsPage } from '@/pages/AutoProspeccaoEmailsPage';
 import { BillingPage } from '@/pages/BillingPage';
 
@@ -58,6 +59,8 @@ function App() {
               <Route index element={<Dashboard />} />
               <Route path="system-health" element={<SystemHealthPage />} />
               <Route path="retention" element={<RetentionPage />} />
+              <Route path="suporte" element={<SupportTicketsPage />} />
+              <Route path="suporte/:id" element={<SupportTicketsPage />} />
               <Route path="billing" element={<BillingPage />} />
               <Route path="workspaces" element={<WorkspacesPage />} />
               <Route path="workspaces/:id" element={<WorkspaceDetailPage />} />

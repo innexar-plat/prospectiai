@@ -89,6 +89,40 @@ function getBrIndexableRoutes() {
   return routes;
 }
 
+/** "Empresas de <segmento> em <cidade>" — same JSON as src/lib/seo-company-stats.ts. */
+function getCompanyStatsRoutes() {
+  let data;
+  try {
+    data = JSON.parse(readFileSync(path.join(ROOT, 'src', 'data', 'seo-company-stats.json'), 'utf8'));
+  } catch {
+    console.warn('Aviso: src/data/seo-company-stats.json ausente — páginas /empresas não geradas');
+    return [];
+  }
+  const fmt = (n) => Number(n).toLocaleString('pt-BR');
+  return Object.entries(data.pages).map(([slug, p]) => {
+    const seg = p.segmentName.toLowerCase();
+    const small = p.total ? Math.round(((p.porte.ME + p.porte.EPP) / p.total) * 100) : 0;
+    const bairros = p.topBairros.map((b) => `<li>${escapeHtml(b.name)}: ${fmt(b.count)}</li>`).join('');
+    // Static content for crawlers; React replaces it on load with the interactive page.
+    const bodyHtml = `<main style="max-width:48rem;margin:0 auto;padding:2.5rem 1rem;font-family:system-ui,sans-serif">`
+      + `<h1>${escapeHtml(p.segmentName)} em ${escapeHtml(p.city)} (${p.uf})</h1>`
+      + `<p>Existem <strong>${fmt(p.total)} empresas ativas</strong> de ${escapeHtml(seg)} em ${escapeHtml(p.city)}, segundo a base pública da Receita Federal. ${fmt(p.openedLast12m)} delas abriram nos últimos 12 meses.</p>`
+      + `<ul><li>Empresas ativas: ${fmt(p.total)}</li><li>Abertas em 12 meses: ${fmt(p.openedLast12m)}</li><li>Com telefone: ${p.withPhonePct}%</li><li>Micro e pequenas: ${small}%</li></ul>`
+      + (bairros ? `<h2>Bairros com mais ${escapeHtml(seg)} em ${escapeHtml(p.city)}</h2><ol>${bairros}</ol>` : '')
+      + `<h2>Porte das empresas</h2><ul><li>${fmt(p.porte.ME)} microempresas (ME)</li><li>${fmt(p.porte.EPP)} pequenas (EPP)</li><li>${fmt(p.porte.DEMAIS)} médias e grandes</li></ul>`
+      + `<p><a href="/auth/signup?utm_source=seo&amp;utm_campaign=empresas">Ver a lista completa com telefone e e-mail — 7 dias grátis</a></p>`
+      + `<p><small>Fonte: dados públicos do CNPJ (Receita Federal). Atualizado em ${escapeHtml(data.generatedAt)}.</small></p></main>`;
+    return {
+      path: `empresas/${slug}`,
+      title: `${p.segmentName} em ${p.city} (${p.uf}): ${fmt(p.total)} empresas ativas | Precision`,
+      description: `Lista de ${seg} em ${p.city}-${p.uf}: ${fmt(p.total)} empresas ativas na Receita Federal, ${fmt(p.openedLast12m)} abertas nos últimos 12 meses. Veja bairros, porte e como prospectar.`,
+      priority: '0.7',
+      changefreq: 'monthly',
+      bodyHtml,
+    };
+  });
+}
+
 function escapeHtml(s) {
   return String(s)
     .replace(/&/g, '&amp;')
@@ -138,7 +172,8 @@ function generatePerRouteHtml(indexHtml, routes, origin) {
   for (const r of routes) {
     if (!r.path) continue;
     const url = routeToUrl(origin, r);
-    const html = replaceMeta(indexHtml, { url, title: r.title, description: r.description });
+    let html = replaceMeta(indexHtml, { url, title: r.title, description: r.description });
+    if (r.bodyHtml) html = html.replace('<div id="root"></div>', `<div id="root">${r.bodyHtml}</div>`);
     const outPath = path.join(DIST, `${r.path}.html`);
     mkdirSync(path.dirname(outPath), { recursive: true });
     writeFileSync(outPath, html);
@@ -156,7 +191,7 @@ function main() {
     process.exit(1);
   }
 
-  const brRoutes = getBrIndexableRoutes();
+  const brRoutes = [...getBrIndexableRoutes(), ...getCompanyStatsRoutes()];
   const usRoutes = getUsIndexableRoutes();
 
   writeSitemap(BR_ORIGIN, brRoutes, 'sitemap.xml');

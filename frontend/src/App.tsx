@@ -54,6 +54,7 @@ const AcceptInvitePage = lazy(() => import('./pages/AcceptInvitePage').then(m =>
 const Privacy = lazy(() => import('./pages/legal/Privacy'));
 const Terms = lazy(() => import('./pages/legal/Terms'));
 const SeoLandingPage = lazy(() => import('./pages/seo/SeoLandingPage'));
+const CompanyStatsPage = lazy(() => import('./pages/seo/CompanyStatsPage'));
 const RdStationIntegration = lazy(() => import('./pages/public/RdStationIntegration'));
 const AgendorIntegration = lazy(() => import('./pages/public/AgendorIntegration'));
 const HubspotIntegration = lazy(() => import('./pages/public/HubspotIntegration'));
@@ -214,6 +215,7 @@ function App() {
           <Route path="afiliado/materiais" element={<AfiliadoMateriaisPage />} />
           <Route path="afiliado/pagamento" element={<AfiliadoPagamentoPage />} />
         </Route>
+        <Route path="/empresas/:slug" element={<CompanyStatsPage />} />
         {getWave1Slugs().map((e) => (
           <Route key={e.slug} path={`/${e.slug}`} element={<SeoLandingPage />} />
         ))}
