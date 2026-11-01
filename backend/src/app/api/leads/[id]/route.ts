@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { leadStatusSchema, formatZodError } from '@/lib/validations/schemas';
 import { recordLeadEvent } from '@/lib/lead-intelligence';
 import { followUpForStatusChange } from '@/lib/sales-routine';
+import { syncDealOnLeadContact } from '@/lib/crm';
 
 async function findLeadAnalysisForUser(analysisId: string, userId: string) {
     const userWithWorkspace = await prisma.user.findUnique({
@@ -132,6 +133,10 @@ export async function PATCH(
                     where: { workspaceId: current.workspaceId, briefDate: today },
                 }).catch(() => {}); // fire-and-forget
             }
+        }
+
+        if (status === 'CONTACTED') {
+            await syncDealOnLeadContact(id, session.user.id).catch(() => { /* CRM sync is best effort */ });
         }
 
         return NextResponse.json(updated);

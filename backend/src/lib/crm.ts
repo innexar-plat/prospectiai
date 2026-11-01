@@ -261,8 +261,18 @@ export async function moveDeal(workspaceId: string, userId: string, dealId: stri
         data.lostReason = stage.kind === 'LOST' ? (lostReason?.trim() || null) : null;
         data.lastActivityAt = now;
     }
+    // Keep the saved lead in step with the deal (won → converted, lost → lost).
+    const leadSync = changed && deal.leadAnalysisId && stage.kind !== 'OPEN'
+        ? [prisma.leadAnalysis.updateMany({
+            where: { id: deal.leadAnalysisId },
+            data: stage.kind === 'WON'
+                ? { status: 'CONVERTED', convertedAt: now, nextFollowUpAt: null, dealValue: deal.value || undefined }
+                : { status: 'LOST', lostAt: now, nextFollowUpAt: null },
+        })]
+        : [];
     const [updated] = await prisma.$transaction([
         prisma.crmDeal.update({ where: { id: dealId }, data, select: DEAL_CARD_SELECT }),
+        ...leadSync,
         ...(changed ? [prisma.crmActivity.create({
             data: {
                 workspaceId, dealId, userId, type: 'STAGE_CHANGE',
@@ -368,3 +378,27 @@ export async function exportDealsCsv(workspaceId: string): Promise<string> {
     ].map(csvCell).join(','));
     return '﻿' + [header.join(','), ...rows].join('\n');
 }
+
+/**
+ * A contact logged on a saved lead ("Contatei hoje", WhatsApp from "Hoje") also lands on its
+ * open deal: timeline entry, and a deal still in the first stage moves to the next one.
+ */
+export async function syncDealOnLeadContact(leadAnalysisId: string, userId: string): Promise<void> {
+    const deal = await prisma.crmDeal.findFirst({
+        where: { leadAnalysisId, stage: { kind: 'OPEN' } },
+        select: { id: true, workspaceId: true, pipelineId: true, stage: { select: { id: true, name: true, position: true } } },
+    });
+    if (!deal) return;
+    const now = new Date();
+    const stages = await prisma.crmStage.findMany({ where: { pipelineId: deal.pipelineId, kind: 'OPEN' }, orderBy: { position: 'asc' }, select: { id: true, name: true } });
+    const isFirst = stages[0]?.id === deal.stage.id;
+    const next = isFirst ? stages[1] : undefined;
+    await prisma.$transaction([
+        prisma.crmActivity.create({ data: { workspaceId: deal.workspaceId, dealId: deal.id, userId, type: 'WHATSAPP', body: 'Contato registrado pela rotina de follow-up.', doneAt: now } }),
+        ...(next ? [
+            prisma.crmDeal.update({ where: { id: deal.id }, data: { stageId: next.id, lastActivityAt: now } }),
+            prisma.crmActivity.create({ data: { workspaceId: deal.workspaceId, dealId: deal.id, userId, type: 'STAGE_CHANGE', title: `${deal.stage.name} → ${next.name}`, doneAt: now } }),
+        ] : [prisma.crmDeal.update({ where: { id: deal.id }, data: { lastActivityAt: now } })]),
+    ]);
+}
+

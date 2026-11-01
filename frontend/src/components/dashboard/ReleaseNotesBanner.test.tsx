@@ -10,7 +10,7 @@ vi.mock('@/lib/app-version', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/app-version')>();
   return {
     ...actual,
-    APP_VERSION: '2.2.0',
+    APP_VERSION: '2.5.0',
   };
 });
 
@@ -23,33 +23,36 @@ describe('ReleaseNotesBanner', () => {
     localStorage.setItem(getLocaleStorageKey(), 'pt');
   });
 
-  it('renders current release highlights once for unseen version', () => {
+  it('renders the current release once and marks it seen right away', () => {
     markWelcomeTourDone();
 
-    renderWithI18n(<ReleaseNotesBanner />);
+    const first = renderWithI18n(<ReleaseNotesBanner />);
 
-    expect(screen.getByText(/novidades da versão 2\.2\.0/i)).toBeInTheDocument();
-    expect(screen.getByText(/tour guiado redesenhado/i)).toBeInTheDocument();
-    expect(screen.getByText(/banner de novidades por versão/i)).toBeInTheDocument();
+    expect(screen.getByText(/novidades da versão 2\.5\.0/i)).toBeInTheDocument();
+    expect(screen.getByText(/CRM com funil de vendas/i)).toBeInTheDocument();
+    // Seen on first display: the next visit does not show it again, even without closing.
+    expect(localStorage.getItem(getWhatsNewSeenKey('2.5.0'))).toBe('1');
+    first.unmount();
+    renderWithI18n(<ReleaseNotesBanner />);
+    expect(screen.queryByText(/CRM com funil de vendas/i)).not.toBeInTheDocument();
   });
 
-  it('dismisses and persists current version', () => {
+  it('closes on click', () => {
     markWelcomeTourDone();
 
     renderWithI18n(<ReleaseNotesBanner />);
 
     fireEvent.click(screen.getByRole('button', { name: /fechar novidades/i }));
 
-    expect(localStorage.getItem(getWhatsNewSeenKey('2.2.0'))).toBe('1');
-    expect(screen.queryByText(/novidades da versão 2\.2\.0/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/CRM com funil de vendas/i)).not.toBeInTheDocument();
   });
 
   it('does not render when current version was already dismissed', () => {
-    localStorage.setItem(getWhatsNewSeenKey('2.2.0'), '1');
+    localStorage.setItem(getWhatsNewSeenKey('2.5.0'), '1');
 
     renderWithI18n(<ReleaseNotesBanner />);
 
-    expect(screen.queryByText(/novidades da versão 2\.2\.0/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/novidades da versão 2\.5\.0/i)).not.toBeInTheDocument();
   });
 
   it('defers until checkout credits tour is cleared', () => {
@@ -57,13 +60,13 @@ describe('ReleaseNotesBanner', () => {
 
     renderWithI18n(<ReleaseNotesBanner />);
 
-    expect(screen.queryByText(/novidades da versão 2\.2\.0/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/novidades da versão 2\.5\.0/i)).not.toBeInTheDocument();
   });
 
   it('defers until welcome tour is completed', () => {
     renderWithI18n(<ReleaseNotesBanner />);
 
-    expect(screen.queryByText(/novidades da versão 2\.2\.0/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/novidades da versão 2\.5\.0/i)).not.toBeInTheDocument();
   });
 
   it('renders after welcome tour was completed and no checkout tour pending', () => {
@@ -71,6 +74,6 @@ describe('ReleaseNotesBanner', () => {
 
     renderWithI18n(<ReleaseNotesBanner />);
 
-    expect(screen.getByText(/novidades da versão 2\.2\.0/i)).toBeInTheDocument();
+    expect(screen.getByText(/novidades da versão 2\.5\.0/i)).toBeInTheDocument();
   });
 });

@@ -777,59 +777,6 @@ export default function DashboardIndex() {
           </section>
         )}
 
-        {/* ── Credits strip ── */}
-        {!trialExpired && (
-          userNeedsSubscription ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-xl border border-violet-500/25 bg-gradient-to-r from-violet-600/10 to-indigo-600/5 text-sm">
-              <span className="text-muted">{t('dash.credits.stripNoPlan', { count: US_STARTER_CREDITS })}</span>
-              <Link
-                to="/dashboard/planos"
-                className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 px-3 py-1.5 text-xs font-bold text-white hover:shadow-md hover:shadow-violet-600/30 transition-all"
-              >
-                <Sparkles size={13} />
-                {t('dash.credits.subscribeCta', { count: US_STARTER_CREDITS })}
-              </Link>
-            </div>
-          ) : (
-            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 rounded-xl border border-border bg-surface/50 text-sm">
-              <span className="text-muted">
-                <span className="font-semibold text-foreground tabular-nums">
-                  {t('dash.credits.remaining', { count: creditUsage.remainingLabel })}
-                </span>
-                <span className="text-muted/60 mx-2">·</span>
-                <span className="tabular-nums">{t('dash.credits.used', { used: creditUsage.usedLabel, limit: creditUsage.limitLabel })}</span>
-              </span>
-              {remainingCredits <= 10 && (
-                <Link to="/dashboard/planos" className="text-violet-600 dark:text-violet-400 font-semibold text-xs hover:underline">
-                  {t('dash.credits.viewPlans')}
-                </Link>
-              )}
-            </div>
-          )
-        )}
-
-        {/* ── Metrics ── */}
-        {stats && (stats.total > 0 || stats.searchesThisMonth > 0) && (
-          <section aria-label={t('dash.a11y.accountSummary')} className="grid grid-cols-2 sm:grid-cols-4 gap-3 items-stretch">
-            {[
-              { label: t('dash.stats.savedLeads'), value: stats.total, icon: Target, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-500/10 border-violet-500/20' },
-              { label: t('dash.stats.highScore'), value: stats.highScore, icon: TrendingUp, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
-              { label: t('dash.stats.favorites'), value: stats.favorites, icon: Star, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
-              { label: t('dash.stats.searchesMonth'), value: stats.searchesThisMonth, icon: SearchIcon, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20' },
-            ].map(({ label, value, icon: Icon, color, bg }) => (
-              <div key={label} className={`rounded-2xl border ${bg} p-4 flex items-center gap-3 min-h-[92px] h-full`}>
-                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
-                  <Icon size={18} className={color} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xl font-black text-foreground tabular-nums leading-none">{value.toLocaleString(numberLocale)}</p>
-                  <p className="text-[11px] text-muted leading-snug mt-1.5">{label}</p>
-                </div>
-              </div>
-            ))}
-          </section>
-        )}
-
         {/* ── First search hint (new users) ── */}
         <FirstSearchHintBanner
           isNewUser={isNewUser}
@@ -1391,6 +1338,60 @@ export default function DashboardIndex() {
             </motion.div>
           )}
         </section>
+
+        {/* Account numbers below the form: the search is the main action of this page. */}
+        {/* ── Credits strip ── */}
+        {!trialExpired && (
+          userNeedsSubscription ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-xl border border-violet-500/25 bg-gradient-to-r from-violet-600/10 to-indigo-600/5 text-sm">
+              <span className="text-muted">{t('dash.credits.stripNoPlan', { count: US_STARTER_CREDITS })}</span>
+              <Link
+                to="/dashboard/planos"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 px-3 py-1.5 text-xs font-bold text-white hover:shadow-md hover:shadow-violet-600/30 transition-all"
+              >
+                <Sparkles size={13} />
+                {t('dash.credits.subscribeCta', { count: US_STARTER_CREDITS })}
+              </Link>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 rounded-xl border border-border bg-surface/50 text-sm">
+              <span className="text-muted">
+                <span className="font-semibold text-foreground tabular-nums">
+                  {t('dash.credits.remaining', { count: creditUsage.remainingLabel })}
+                </span>
+                <span className="text-muted/60 mx-2">·</span>
+                <span className="tabular-nums">{t('dash.credits.used', { used: creditUsage.usedLabel, limit: creditUsage.limitLabel })}</span>
+              </span>
+              {remainingCredits <= 10 && (
+                <Link to="/dashboard/planos" className="text-violet-600 dark:text-violet-400 font-semibold text-xs hover:underline">
+                  {t('dash.credits.viewPlans')}
+                </Link>
+              )}
+            </div>
+          )
+        )}
+
+        {/* ── Metrics ── */}
+        {stats && (stats.total > 0 || stats.searchesThisMonth > 0) && (
+          <section aria-label={t('dash.a11y.accountSummary')} className="grid grid-cols-2 sm:grid-cols-4 gap-3 items-stretch">
+            {[
+              { label: t('dash.stats.savedLeads'), value: stats.total, icon: Target, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-500/10 border-violet-500/20' },
+              { label: t('dash.stats.highScore'), value: stats.highScore, icon: TrendingUp, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+              { label: t('dash.stats.favorites'), value: stats.favorites, icon: Star, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
+              { label: t('dash.stats.searchesMonth'), value: stats.searchesThisMonth, icon: SearchIcon, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20' },
+            ].map(({ label, value, icon: Icon, color, bg }) => (
+              <div key={label} className={`rounded-2xl border ${bg} p-4 flex items-center gap-3 min-h-[92px] h-full`}>
+                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
+                  <Icon size={18} className={color} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xl font-black text-foreground tabular-nums leading-none">{value.toLocaleString(numberLocale)}</p>
+                  <p className="text-[11px] text-muted leading-snug mt-1.5">{label}</p>
+                </div>
+              </div>
+            ))}
+          </section>
+        )}
       </motion.div>
 
       {showUpgradeCTA && (

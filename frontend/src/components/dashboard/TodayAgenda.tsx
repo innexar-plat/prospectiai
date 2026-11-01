@@ -8,7 +8,7 @@ import { whatsappLink } from '@/lib/lead-contact-utils';
 import { cn } from '@/lib/utils';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const VISIBLE = 6;
+const VISIBLE = 3;
 
 function inDays(days: number): string {
   return new Date(Date.now() + days * DAY_MS).toISOString();
@@ -23,6 +23,7 @@ export function TodayAgenda() {
   const { addToast } = useToast();
   const [data, setData] = useState<TodayAgendaData | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -94,8 +95,8 @@ export function TodayAgenda() {
   const { items, stats } = data;
 
   return (
-    <section id="hoje" aria-label={t('dash.today.title')} className="rounded-2xl border border-border bg-card p-4 sm:p-5 stagger-in">
-      <header className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3">
+    <section id="hoje" aria-label={t('dash.today.title')} className="rounded-2xl border border-border bg-card px-4 py-3 sm:px-5 stagger-in">
+      <header className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-1">
         <h2 className="flex items-center gap-2 text-base font-bold text-foreground">
           <CalendarCheck size={18} className="text-violet-600 dark:text-violet-400" aria-hidden />
           {t('dash.today.title')}
@@ -114,11 +115,11 @@ export function TodayAgenda() {
         </p>
       ) : (
         <ul className="divide-y divide-border">
-          {items.slice(0, VISIBLE).map((item) => {
+          {items.slice(0, expanded ? items.length : VISIBLE).map((item) => {
             const wa = whatsappLink(item.phone, item.whatsappMessage);
             const disabled = busy === item.analysisId;
             return (
-              <li key={item.analysisId} className="flex flex-col sm:flex-row sm:items-center gap-2 py-2.5">
+              <li key={item.analysisId} className="flex flex-col sm:flex-row sm:items-center gap-2 py-2">
                 <div className="min-w-0 flex-1">
                   <Link to={`/dashboard/lead/${item.placeId}`} className="block truncate text-sm font-semibold text-foreground hover:text-violet-700 dark:hover:text-violet-300">
                     {item.name}
@@ -163,7 +164,9 @@ export function TodayAgenda() {
         </ul>
       )}
       {items.length > VISIBLE && (
-        <p className="mt-2 text-xs text-muted">{t('dash.today.more', { count: items.length - VISIBLE })}</p>
+        <button type="button" onClick={() => setExpanded((v) => !v)} className="mt-1 text-xs font-medium text-violet-700 dark:text-violet-300 hover:underline">
+          {expanded ? t('dash.today.showLess') : t('dash.today.showMore', { count: items.length - VISIBLE })}
+        </button>
       )}
     </section>
   );

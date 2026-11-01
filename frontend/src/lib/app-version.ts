@@ -1,7 +1,7 @@
 /**
  * Canonical app version — keep in sync with frontend/package.json and backend/package.json.
  */
-export const APP_VERSION = '2.2.0';
+export const APP_VERSION = '2.5.0';
 
 /** localStorage key prefix for the per-version "what's new" banner dismiss flag. */
 export const WHATS_NEW_SEEN_KEY_PREFIX = 'prospector-whats-new-seen-v';

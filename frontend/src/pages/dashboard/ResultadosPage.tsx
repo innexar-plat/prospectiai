@@ -1,9 +1,9 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
-import { AlertCircle, Download, Loader2, BookmarkPlus, BookmarkCheck, Sparkles, GitCompare, Star, Globe, Phone, MapPin, Info, Mail } from 'lucide-react';
+import { AlertCircle, Download, Loader2, BookmarkPlus, BookmarkCheck, Sparkles, GitCompare, Star, Globe, Phone, MapPin, Info, Mail, KanbanSquare, CircleCheck } from 'lucide-react';
 import { Skeleton } from '@/components/ui/Skeleton';
 import type { LeadAnalysisListItem, SessionUser } from '@/lib/api';
-import { searchApi, leadsApi, analyzeStream } from '@/lib/api';
+import { searchApi, leadsApi, analyzeStream, crmApi } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { ProfileCompletenessBanner } from '@/components/dashboard/ProfileCompletenessBanner';
@@ -117,6 +117,8 @@ export default function ResultadosPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [crmBusyId, setCrmBusyId] = useState<string | null>(null);
+  const [crmIds, setCrmIds] = useState<Set<string>>(new Set());
   const [leadIndex, setLeadIndex] = useState<Record<string, LeadAnalysisListItem>>({});
   const [selectedForCompare, setSelectedForCompare] = useState<Set<string>>(new Set());
   const [batchJobId, setBatchJobId] = useState<string | null>(null);
@@ -184,6 +186,40 @@ export default function ResultadosPage() {
       setSavingId(null);
     }
   }, [savingId, savedIds, addToast, t]);
+
+  /** Save (if needed) and open a CRM deal for the result in one click. */
+  const handleAddToCrm = useCallback(async (e: React.MouseEvent, p: (typeof places)[number]) => {
+    e.stopPropagation();
+    if (crmBusyId === p.id || crmIds.has(p.id)) return;
+    setCrmBusyId(p.id);
+    const name = p.displayName?.text ?? p.id;
+    try {
+      let analysisId = leadIndex[p.id]?.id;
+      if (!analysisId) {
+        const saved = await leadsApi.save({
+          placeId: p.id,
+          name,
+          address: p.formattedAddress,
+          phone: p.nationalPhoneNumber ?? p.internationalPhoneNumber,
+          website: p.websiteUri,
+          rating: p.rating,
+          reviewCount: p.userRatingCount,
+          types: p.types,
+          businessStatus: p.businessStatus,
+        });
+        analysisId = saved.id;
+        setSavedIds((prev) => new Set(prev).add(p.id));
+        setLeadIndex((prev) => ({ ...prev, [p.id]: saved }));
+      }
+      await crmApi.createDeal({ leadAnalysisId: analysisId });
+      setCrmIds((prev) => new Set(prev).add(p.id));
+      addToast('success', t('page.resultados.toast.crmAdded', { name }));
+    } catch {
+      addToast('error', t('page.resultados.toast.crmError'));
+    } finally {
+      setCrmBusyId(null);
+    }
+  }, [crmBusyId, crmIds, leadIndex, addToast, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -811,7 +847,21 @@ export default function ResultadosPage() {
                   />
                 </div>
               </div>
-                <div className="flex items-center pr-2 sm:pr-4 shrink-0">
+                <div className="flex items-center gap-0.5 pr-2 sm:pr-4 shrink-0">
+                  <button
+                    type="button"
+                    title={crmIds.has(p.id) ? t('page.resultados.inCrm') : t('page.resultados.addToCrm')}
+                    aria-label={crmIds.has(p.id) ? t('page.resultados.inCrm') : t('page.resultados.addToCrm')}
+                    onClick={(e) => { void handleAddToCrm(e, p); }}
+                    disabled={crmBusyId === p.id || crmIds.has(p.id)}
+                    className="p-2 rounded-lg text-muted hover:text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 transition-colors disabled:opacity-60"
+                  >
+                    {crmBusyId === p.id
+                      ? <Loader2 size={18} className="animate-spin" />
+                      : crmIds.has(p.id)
+                        ? <CircleCheck size={18} className="text-emerald-600 dark:text-emerald-400" />
+                        : <KanbanSquare size={18} />}
+                  </button>
                   <button
                     type="button"
                     title={savedIds.has(p.id) ? t('page.resultados.leadSaved') : t('page.resultados.saveLead')}

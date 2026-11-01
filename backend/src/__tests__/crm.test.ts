@@ -3,7 +3,7 @@ const m = {
     dealFindFirst: jest.fn(), dealFindMany: jest.fn(), dealCreate: jest.fn(), dealUpdate: jest.fn(), dealCount: jest.fn(), dealAggregate: jest.fn(),
     stageFindFirst: jest.fn(), stageDeleteMany: jest.fn(), stageUpdate: jest.fn(), stageCreate: jest.fn(),
     activityCreate: jest.fn(), activityCount: jest.fn(), activityFindMany: jest.fn(),
-    memberFindFirst: jest.fn(), analysisFindFirst: jest.fn(), tx: jest.fn(),
+    memberFindFirst: jest.fn(), analysisFindFirst: jest.fn(), analysisUpdateMany: jest.fn(), stageFindMany: jest.fn(), tx: jest.fn(),
 };
 jest.mock('@/lib/prisma', () => ({
     prisma: {
@@ -16,15 +16,16 @@ jest.mock('@/lib/prisma', () => ({
         crmStage: {
             findFirst: (...a: unknown[]) => m.stageFindFirst(...a), deleteMany: (...a: unknown[]) => m.stageDeleteMany(...a),
             update: (...a: unknown[]) => m.stageUpdate(...a), create: (...a: unknown[]) => m.stageCreate(...a),
+            findMany: (...a: unknown[]) => m.stageFindMany(...a),
         },
         crmActivity: { create: (...a: unknown[]) => m.activityCreate(...a), count: (...a: unknown[]) => m.activityCount(...a), findMany: (...a: unknown[]) => m.activityFindMany(...a) },
         workspaceMember: { findFirst: (...a: unknown[]) => m.memberFindFirst(...a) },
-        leadAnalysis: { findFirst: (...a: unknown[]) => m.analysisFindFirst(...a) },
+        leadAnalysis: { findFirst: (...a: unknown[]) => m.analysisFindFirst(...a), updateMany: (...a: unknown[]) => m.analysisUpdateMany(...a) },
         $transaction: (...a: unknown[]) => m.tx(...a),
     },
 }));
 
-import { CrmError, DEFAULT_STAGES, createDeal, ensureDefaultPipeline, getMetrics, moveDeal, saveStages } from '@/lib/crm';
+import { CrmError, DEFAULT_STAGES, createDeal, ensureDefaultPipeline, getMetrics, moveDeal, saveStages, syncDealOnLeadContact } from '@/lib/crm';
 
 const stages = DEFAULT_STAGES.map((s, i) => ({ ...s, id: `s${i}`, position: i }));
 const pipeline = { id: 'p1', name: 'Vendas', stages };
@@ -102,6 +103,36 @@ describe('crm', () => {
         m.dealFindFirst.mockResolvedValueOnce({ id: 'd-existing' });
         expect(await createDeal('w1', 'u1', { leadAnalysisId: 'la1' })).toEqual({ id: 'd-existing' });
         expect(m.dealCreate).not.toHaveBeenCalled();
+    });
+
+    it('winning a deal marks the saved lead as converted', async () => {
+        m.dealFindFirst.mockResolvedValueOnce({ id: 'd1', pipelineId: 'p1', stageId: 's4', value: 3000, leadAnalysisId: 'la1', stage: stages[4] });
+        m.stageFindFirst.mockResolvedValueOnce(stages[5]);
+        m.dealUpdate.mockResolvedValueOnce({ id: 'd1' });
+        m.analysisUpdateMany.mockResolvedValueOnce({ count: 1 });
+        m.activityCreate.mockResolvedValueOnce({});
+
+        await moveDeal('w1', 'u1', 'd1', 's5', 0);
+
+        expect(m.analysisUpdateMany).toHaveBeenCalledWith({ where: { id: 'la1' }, data: expect.objectContaining({ status: 'CONVERTED', nextFollowUpAt: null, dealValue: 3000 }) });
+    });
+
+    it('a contact logged on the lead advances its deal out of the first stage', async () => {
+        m.dealFindFirst.mockResolvedValueOnce({ id: 'd1', workspaceId: 'w1', pipelineId: 'p1', stage: { id: 's0', name: 'Novo lead', position: 0 } });
+        m.stageFindMany.mockResolvedValueOnce([{ id: 's0', name: 'Novo lead' }, { id: 's1', name: 'Contato feito' }]);
+        m.activityCreate.mockResolvedValue({});
+        m.dealUpdate.mockResolvedValueOnce({});
+
+        await syncDealOnLeadContact('la1', 'u1');
+
+        expect(m.dealUpdate).toHaveBeenCalledWith({ where: { id: 'd1' }, data: expect.objectContaining({ stageId: 's1' }) });
+        expect(m.activityCreate.mock.calls.map((c) => c[0].data.type)).toEqual(['WHATSAPP', 'STAGE_CHANGE']);
+    });
+
+    it('no open deal for the lead: nothing to sync', async () => {
+        m.dealFindFirst.mockResolvedValueOnce(null);
+        await syncDealOnLeadContact('la9', 'u1');
+        expect(m.tx).not.toHaveBeenCalled();
     });
 });
 
