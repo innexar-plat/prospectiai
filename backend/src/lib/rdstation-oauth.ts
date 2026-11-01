@@ -1,6 +1,7 @@
 import { createHmac, randomBytes } from 'crypto';
 import { decryptEmailSecret } from '@/lib/email-config-encrypt';
 import { prisma } from '@/lib/prisma';
+import { clearCrmPushPause } from '@/lib/crm-auth-pause';
 
 type RdTokenResponse = {
   access_token: string;
@@ -191,6 +192,7 @@ async function saveUserRdTokens(userId: string, tokenData: RdTokenResponse) {
     where: { id: userId },
     data: data as never,
   });
+  await clearCrmPushPause(userId, 'rdstation');
 }
 
 function isExpiringSoon(expiresAt: Date | null | undefined): boolean {
@@ -265,6 +267,7 @@ export async function saveManualRdToken(userId: string, token: string) {
       rdStationTokenExpiresAt: null,
     } as never,
   });
+  await clearCrmPushPause(userId, 'rdstation');
 }
 
 export async function saveOAuthRdTokens(userId: string, tokens: RdTokenResponse) {

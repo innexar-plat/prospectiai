@@ -1,6 +1,7 @@
 import { createHmac, randomBytes } from 'crypto';
 import { decryptEmailSecret } from '@/lib/email-config-encrypt';
 import { prisma } from '@/lib/prisma';
+import { clearCrmPushPause } from '@/lib/crm-auth-pause';
 
 type HubspotTokenResponse = {
   access_token: string;
@@ -162,6 +163,7 @@ async function saveUserHubspotTokens(userId: string, tokenData: HubspotTokenResp
     where: { id: userId },
     data: data as never,
   });
+  await clearCrmPushPause(userId, 'hubspot');
 }
 
 function isExpiringSoon(expiresAt: Date | null | undefined): boolean {
@@ -220,6 +222,7 @@ export async function forceRefreshHubspotTokenIfPossible(userId: string): Promis
 
 export async function saveOAuthHubspotTokens(userId: string, tokens: HubspotTokenResponse) {
   await saveUserHubspotTokens(userId, tokens);
+  await clearCrmPushPause(userId, 'hubspot');
 }
 
 export async function clearHubspotIntegration(userId: string) {
