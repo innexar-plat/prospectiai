@@ -14,6 +14,7 @@ import { BR_STATES, US_STATES } from '@/lib/locationData'
 import { buildTextQuery, startSearch, type SearchPayload } from '@/lib/searchService'
 import { saveToSession } from '@/lib/last-search-storage'
 import { FIRST_SEARCH_SUGGESTIONS_KEY } from '@/components/dashboard/FirstListBanner'
+import { clearSeoSearchIntent, readSeoSearchIntent } from '@/lib/seo-search-intent'
 
 
 export default function OnboardingPage({ user }: { user: SessionUser | null }) {
@@ -41,6 +42,14 @@ export default function OnboardingPage({ user }: { user: SessionUser | null }) {
             setLocale(expectedLocale)
         }
     }, [locale, setLocale])
+
+    useEffect(() => {
+        const intent = readSeoSearchIntent()
+        if (intent) {
+            setCity((prev) => prev || intent.city)
+            setUf((prev) => prev || intent.uf)
+        }
+    }, [])
 
     useEffect(() => {
         const warning = sessionStorage.getItem('signup-verification-email-warning')
@@ -115,14 +124,19 @@ export default function OnboardingPage({ user }: { user: SessionUser | null }) {
 
     const runFirstSearch = async (): Promise<boolean> => {
         const cityTrim = city.trim()
-        if (!cityTrim || (!productService.trim() && !targetAudience.trim())) return false
+        // Visitor came from a public "Empresas de X em Y" page: search exactly that first.
+        const intent = readSeoSearchIntent()
+        if (!cityTrim || (!intent && !productService.trim() && !targetAudience.trim())) return false
         try {
             setProgress(t('page.onboarding.finding', { city: cityTrim }))
-            const { terms } = await onboardingApi.suggestSearches({
-                productService: productService.trim() || undefined,
-                targetAudience: targetAudience.trim() || undefined,
-                locale: market === 'US' ? 'en' : 'pt',
-            })
+            const terms = intent
+                ? [intent.term]
+                : (await onboardingApi.suggestSearches({
+                    productService: productService.trim() || undefined,
+                    targetAudience: targetAudience.trim() || undefined,
+                    locale: market === 'US' ? 'en' : 'pt',
+                })).terms
+            clearSeoSearchIntent()
             const term = terms[0]
             if (!term) return false
             const payload: SearchPayload = { advancedTerm: term, city: cityTrim, state: uf || undefined, countryCode: market, niches: [] }

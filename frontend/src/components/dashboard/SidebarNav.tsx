@@ -1,5 +1,5 @@
 import { NavLink, useLocation, Link } from 'react-router-dom';
-import { Search, Clock, Target, BarChart3, LogOut, Swords, TrendingUp, Users, LayoutDashboard, HelpCircle, ChevronDown, X, Lock, Building2, PanelLeftClose, PanelLeft, Plug, Sparkles, Layers, Crosshair, Bot, CreditCard, Wallet, Link2, Gift, MessageCircle } from 'lucide-react';
+import { Search, Clock, Target, BarChart3, LogOut, Swords, TrendingUp, Users, LayoutDashboard, HelpCircle, ChevronDown, X, Lock, Building2, PanelLeftClose, PanelLeft, Plug, Sparkles, Layers, Crosshair, Bot, CreditCard, Wallet, Link2, Gift, MessageCircle, KanbanSquare } from 'lucide-react';
 import { Logo } from '@/components/brand/Logo';
 import { LogoIcon } from '@/components/brand/LogoIcon';
 import { cn } from '@/lib/utils';
@@ -38,6 +38,7 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
       { to: '/dashboard/empresas', end: false, icon: Building2, labelKey: 'dash.nav.companyBase', feature: 'rfSearch' },
       { to: '/dashboard/historico', end: false, icon: Clock, labelKey: 'dash.nav.history' },
       { to: '/dashboard/leads', end: false, icon: Target, labelKey: 'dash.nav.savedLeads' },
+      { to: '/dashboard/crm', end: false, icon: KanbanSquare, labelKey: 'dash.nav.crm' },
     ],
   },
   {

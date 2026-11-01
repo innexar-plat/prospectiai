@@ -266,6 +266,8 @@ model Workspace {
   autoProspeccaoConfig AutoProspeccaoConfig?
   autoProspeccaoRuns   AutoProspeccaoRun[]
   autoProspSenderPool  AutoProspSenderPool[]
+  crmPipelines         CrmPipeline[]
+  crmDeals             CrmDeal[]
   prospectedLeads      ProspectedLead[]
   representative        Representative?
 }
@@ -1654,5 +1656,114 @@ model SupportMessage {
   ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@index([ticketId, createdAt])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CRM — funil de negociações por workspace
+// ═══════════════════════════════════════════════════════════════════
+
+enum CrmStageKind {
+  OPEN
+  WON
+  LOST
+}
+
+enum CrmActivityType {
+  NOTE
+  CALL
+  WHATSAPP
+  EMAIL
+  MEETING
+  TASK
+  STAGE_CHANGE
+}
+
+model CrmPipeline {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  stages    CrmStage[]
+  deals     CrmDeal[]
+
+  @@index([workspaceId])
+}
+
+model CrmStage {
+  id          String       @id @default(cuid())
+  pipelineId  String
+  name        String
+  position    Int
+  /// Chance of closing (0–100) used for the weighted forecast.
+  probability Int          @default(10)
+  kind        CrmStageKind @default(OPEN)
+  color       String       @default("violet")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  pipeline CrmPipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  deals    CrmDeal[]
+
+  @@index([pipelineId, position])
+}
+
+model CrmDeal {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  pipelineId      String
+  stageId         String
+  title           String
+  /// Deal value in BRL (or the workspace currency).
+  value           Float     @default(0)
+  expectedCloseAt DateTime?
+  ownerUserId     String?
+  /// Saved Precision lead this deal came from (optional).
+  leadAnalysisId  String?
+  companyName     String?
+  contactName     String?
+  contactPhone    String?
+  contactEmail    String?
+  source          String    @default("manual")
+  /// Order inside the stage column.
+  position        Float     @default(0)
+  lostReason      String?
+  wonAt           DateTime?
+  lostAt          DateTime?
+  lastActivityAt  DateTime?
+  createdById     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  workspace  Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  pipeline   CrmPipeline   @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  stage      CrmStage      @relation(fields: [stageId], references: [id], onDelete: Restrict)
+  activities CrmActivity[]
+
+  @@index([workspaceId, pipelineId, stageId])
+  @@index([workspaceId, ownerUserId])
+  @@index([leadAnalysisId])
+}
+
+model CrmActivity {
+  id          String          @id @default(cuid())
+  workspaceId String
+  dealId      String
+  type        CrmActivityType
+  title       String?
+  body        String?         @db.Text
+  /// Tasks / scheduled calls and meetings.
+  dueAt       DateTime?
+  doneAt      DateTime?
+  userId      String?
+  createdAt   DateTime        @default(now())
+
+  deal CrmDeal @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([dealId, createdAt])
+  @@index([workspaceId, dueAt])
 }
 

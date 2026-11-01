@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { BellRing, Check, Trophy, XCircle } from 'lucide-react';
-import { leadsApi, type LeadAnalysisListItem } from '@/lib/api';
+import { BellRing, Check, KanbanSquare, Trophy, XCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { crmApi, leadsApi, type LeadAnalysisListItem } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { useToast } from '@/contexts/ToastContext';
 import { cn } from '@/lib/utils';
@@ -15,6 +16,18 @@ export function FollowUpBar({ item, onUpdated }: { item: LeadAnalysisListItem; o
   const { t, locale } = useI18n();
   const { addToast } = useToast();
   const [busy, setBusy] = useState(false);
+  const navigate = useNavigate();
+
+  const sendToCrm = async () => {
+    setBusy(true);
+    try {
+      const { deal } = await crmApi.createDeal({ leadAnalysisId: item.id });
+      navigate(`/dashboard/crm?deal=${deal.id}`);
+    } catch {
+      addToast('error', t('dash.today.toast.error'));
+      setBusy(false);
+    }
+  };
   const status: Status = item.status ?? 'NEW';
   const closed = status === 'CONVERTED' || status === 'LOST';
 
@@ -69,6 +82,9 @@ export function FollowUpBar({ item, onUpdated }: { item: LeadAnalysisListItem; o
       )}
 
       <div className="flex flex-wrap items-center gap-1.5 sm:ml-auto">
+        <button type="button" disabled={busy} onClick={() => { void sendToCrm(); }} className="inline-flex h-8 items-center gap-1 rounded-lg border border-violet-300 px-3 text-xs font-semibold text-violet-700 hover:bg-violet-500/10 disabled:opacity-50 dark:text-violet-300">
+          <KanbanSquare size={14} aria-hidden /> {t('page.leadDetail.followUp.sendToCrm')}
+        </button>
         {!closed && (
           <>
             <button type="button" disabled={busy} onClick={() => setStatus('CONTACTED')} className="inline-flex h-8 items-center gap-1 rounded-lg bg-violet-600 px-3 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50">

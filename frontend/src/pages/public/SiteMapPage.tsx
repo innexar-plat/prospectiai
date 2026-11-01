@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { BLOG_POSTS } from '@/pages/blog/blogData';
 import { getWave1Slugs } from '@/lib/seo-local';
-import { COMPANY_STATS_BASE_PATH, getCompanyStatsPage, getCompanyStatsSlugs } from '@/lib/seo-company-stats';
+import { COMPANY_STATS_BASE_PATH, getCityHubLinks, getSegmentHubLinks } from '@/lib/seo-company-stats';
 import { getActiveMarket } from '@/lib/market';
 import { getAppOrigin } from '@/lib/site-url';
 
@@ -77,16 +77,13 @@ export default function SiteMapPage() {
         <section>
           <h2 className="text-xl font-bold mb-4">Empresas por segmento e cidade</h2>
           <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
-            {getCompanyStatsSlugs().map((slug) => {
-              const page = getCompanyStatsPage(slug);
-              return page ? (
-                <li key={slug}>
-                  <Link to={`/${COMPANY_STATS_BASE_PATH}/${slug}`} className="underline underline-offset-2 hover:text-violet-500">
-                    {page.segmentName} em {page.city} ({page.uf})
-                  </Link>
-                </li>
-              ) : null;
-            })}
+            {[...getCityHubLinks(), ...getSegmentHubLinks()].map((l) => (
+              <li key={l.slug}>
+                <Link to={`/${COMPANY_STATS_BASE_PATH}/${l.slug}`} className="underline underline-offset-2 hover:text-violet-500">
+                  {l.slug.startsWith('em-') ? `Empresas em ${l.label}` : `${l.label} por cidade`}
+                </Link>
+              </li>
+            ))}
           </ul>
         </section>
 

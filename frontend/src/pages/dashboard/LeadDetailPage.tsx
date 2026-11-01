@@ -16,6 +16,7 @@ import { representativeApi } from '@/lib/api/representative';
 import SmartRelations from '@/components/SmartRelations';
 import { FollowUpBar } from '@/components/dashboard/FollowUpBar';
 import { cn } from '@/lib/utils';
+import { getPlaceTypeByValue } from '@/lib/placeTypes';
 
 /**
  * Rebuilds the full analysis from a saved LeadAnalysis row. Only a handful of fields used to be
@@ -286,6 +287,11 @@ function renderSimpleMarkdown(md: string): string {
     .replace(/<\/(h[1-3]|ul|ol)>\n+/g, '</$1>')
     .replace(/\n{2,}/g, '<br/><br/>')
     .replace(/\n/g, '<br/>');
+}
+
+/** Google place type in plain language ("general_contractor" → "Construtora / Empreiteira"). */
+function placeTypeLabel(type: string): string {
+  return getPlaceTypeByValue(type)?.label ?? type.replace(/_/g, ' ');
 }
 
 function formatCnpj(value: string | undefined): string | null {
@@ -864,7 +870,7 @@ function LeadDetailInfoSection({ place, trackAction }: { place: PlaceDetail | Pl
       { label: t('page.leadDetail.label.companySize'), value: formatPorteLabel(place.rfData?.porte, t) },
       { label: t('page.leadDetail.label.cnae'), value: place.companyMainCnae ?? place.rfData?.cnaeDescricao },
     ] : [
-      ...(place.primaryType ? [{ label: t('page.leadDetail.label.industry'), value: place.primaryType }] : []),
+      ...(place.primaryType ? [{ label: t('page.leadDetail.label.industry'), value: placeTypeLabel(place.primaryType) }] : []),
     ]),
     ...(showCnae && place.rfData?.dataAbertura ? [{ label: t('page.leadDetail.label.founded'), value: place.rfData.dataAbertura }] : []),
   ].filter((item) => item.value);
@@ -906,7 +912,7 @@ function LeadDetailInfoSection({ place, trackAction }: { place: PlaceDetail | Pl
             <div className="flex flex-wrap gap-2 text-[11px]">
               {place.rating != null && <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-amber-700 dark:text-amber-300">Google {place.rating.toFixed(1)}</span>}
               {place.userRatingCount != null && <span className="rounded-full border border-border bg-card px-2 py-1 text-muted">{t('page.leadDetail.reviews', { count: place.userRatingCount })}</span>}
-              {place.primaryType && <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-cyan-700 dark:text-cyan-300">{place.primaryType}</span>}
+              {place.primaryType && <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-cyan-700 dark:text-cyan-300">{placeTypeLabel(place.primaryType)}</span>}
             </div>
           )}
           {emails.length > 0 && (
@@ -1299,7 +1305,7 @@ export default function LeadDetailPage() {
     if (!placeId) return;
     let cancelled = false;
     tagsApi.list(placeId).then((data) => {
-      if (!cancelled) setTags(data.tags);
+      if (!cancelled) setTags(data.tags ?? []);
     }).catch(() => { });
     return () => { cancelled = true; };
   }, [placeId]);

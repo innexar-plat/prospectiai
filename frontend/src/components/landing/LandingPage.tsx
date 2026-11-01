@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom';
 import {
     Search, Brain, Rocket, Zap, ArrowRight, Shield, Globe, Download, Users,
     FileOutput, Lock, BarChart3, Target, MessageSquare, TrendingUp,
-    Tag, Swords, ChevronDown, Quote, CheckCircle2, XCircle, Play, Star,
+    Tag, Swords, ChevronDown, Quote, CheckCircle2, XCircle, Star,
     Clock, DollarSign, TrendingDown, Network, Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { ProductTour } from '@/components/landing/ProductTour';
 
 /* ------------------------------------------------------------------ */
 /*  Data                                                               */
@@ -281,40 +282,9 @@ export default function LandingPage({ onViewPlans, t }: { locale: string; onView
                 <div className="max-w-6xl mx-auto">
                     <div className="text-center mb-12">
                         <h2 id="demo-heading" className="text-3xl md:text-5xl font-black mb-4 text-foreground">Veja o <span className="accent-gradient">Precision</span> em ação</h2>
-                        <p className="text-muted max-w-xl mx-auto">Busca real, score IA e decisão mais rápida sobre quais leads abordar primeiro.</p>
+                        <p className="text-muted max-w-xl mx-auto">Da busca ao fechamento: encontre a empresa, entenda o momento dela e acompanhe a venda até o fim.</p>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Video Card 1 */}
-                        <div className="relative group">
-                            <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-600 to-cyan-600 rounded-[2rem] blur opacity-20 group-hover:opacity-40 transition-all duration-500" />
-                            <div className="relative bg-card border border-border rounded-[2rem] aspect-video overflow-hidden card-shadow group-hover:shadow-[var(--theme-shadow-card-hover)] transition-all duration-500 flex items-center justify-center cursor-pointer"
-                                id="video-slot-1"
-                            >
-                                <div className="text-center p-8">
-                                    <div className="w-20 h-20 rounded-full bg-violet-600/20 border-2 border-violet-500/40 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                                        <Play size={32} className="text-violet-500 ml-1" />
-                                    </div>
-                                    <h3 className="text-xl font-bold text-foreground mb-2">Como encontrar leads em 30 segundos</h3>
-                                    <p className="text-muted text-sm">Busca inteligente + Score IA + priorização comercial</p>
-                                </div>
-                            </div>
-                        </div>
-                        {/* Video Card 2 */}
-                        <div className="relative group">
-                            <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-600 to-emerald-600 rounded-[2rem] blur opacity-20 group-hover:opacity-40 transition-all duration-500" />
-                            <div className="relative bg-card border border-border rounded-[2rem] aspect-video overflow-hidden card-shadow group-hover:shadow-[var(--theme-shadow-card-hover)] transition-all duration-500 flex items-center justify-center cursor-pointer"
-                                id="video-slot-2"
-                            >
-                                <div className="text-center p-8">
-                                    <div className="w-20 h-20 rounded-full bg-cyan-600/20 border-2 border-cyan-500/40 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                                        <Play size={32} className="text-cyan-500 ml-1" />
-                                    </div>
-                                    <h3 className="text-xl font-bold text-foreground mb-2">Análise de mercado e concorrência</h3>
-                                    <p className="text-muted text-sm">Viabilidade + Concorrência + Inteligência de Mercado</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <ProductTour />
                 </div>
             </section>
 

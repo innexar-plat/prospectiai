@@ -10,6 +10,14 @@ import { useI18n } from '@/lib/i18n';
 import { captureRefFromUrl, captureRepFromUrl } from '@/lib/affiliate-ref';
 import { getActiveMarket } from '@/lib/market';
 
+/** Biggest city hubs, linked from the home footer (kept static so the landing does not load the stats JSON). */
+const TOP_CITY_HUBS: Array<[string, string]> = [
+    ['sao-paulo-sp', 'São Paulo'], ['rio-de-janeiro-rj', 'Rio de Janeiro'], ['belo-horizonte-mg', 'Belo Horizonte'],
+    ['brasilia-df', 'Brasília'], ['curitiba-pr', 'Curitiba'], ['porto-alegre-rs', 'Porto Alegre'],
+    ['salvador-ba', 'Salvador'], ['fortaleza-ce', 'Fortaleza'], ['recife-pe', 'Recife'], ['goiania-go', 'Goiânia'],
+    ['campinas-sp', 'Campinas'], ['santos-sp', 'Santos'],
+];
+
 export default function PublicEntryClient({ locale: initialLocale }: { locale: string }) {
     const { t, locale, setLocale } = useI18n();
     const navigate = useNavigate();
@@ -60,6 +68,23 @@ export default function PublicEntryClient({ locale: initialLocale }: { locale: s
                 )}
             </main>
 
+            {!isUsMarket && (
+                <nav aria-label="Listas de empresas por cidade" className="px-8 pt-8 pb-2 border-t border-border">
+                    <div className="max-w-7xl mx-auto text-center">
+                        <Link to="/empresas" className="text-sm font-semibold text-foreground hover:text-violet-600">
+                            Listas de empresas por cidade e segmento
+                        </Link>
+                        <ul className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted">
+                            {TOP_CITY_HUBS.map(([slug, label]) => (
+                                <li key={slug}>
+                                    <Link to={`/empresas/em-${slug}`} className="hover:text-foreground">Empresas em {label}</Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </nav>
+            )}
+
             <footer className="py-6 px-8 border-t border-border" role="contentinfo">
                 <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 text-sm text-muted">
                     <span>{t('footer.copy', { year: new Date().getFullYear() })}</span>
@@ -68,6 +93,9 @@ export default function PublicEntryClient({ locale: initialLocale }: { locale: s
                             <>
                                 <Link to="/mapa-do-site" className="text-muted hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-violet-500 rounded">
                                     Mapa do site
+                                </Link>
+                                <Link to="/empresas" className="text-muted hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-violet-500 rounded">
+                                    Listas de empresas
                                 </Link>
                                 <Link to="/blog" className="text-muted hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-violet-500 rounded">
                                     Blog

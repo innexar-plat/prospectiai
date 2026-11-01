@@ -25,28 +25,49 @@ SEGMENTS = [
     ("clinicas-medicas", "Clínicas médicas", ["8630501", "8630502", "8630503"]),
     ("dentistas", "Clínicas odontológicas", ["8630504"]),
     ("saloes-de-beleza", "Salões de beleza", ["9602501"]),
+    ("clinicas-de-estetica", "Clínicas de estética", ["9602502"]),
     ("escritorios-de-contabilidade", "Escritórios de contabilidade", ["6920601"]),
     ("escritorios-de-advocacia", "Escritórios de advocacia", ["6911701"]),
     ("imobiliarias", "Imobiliárias", ["6821", "6822"]),
     ("construtoras", "Construtoras", ["4120"]),
     ("transportadoras", "Transportadoras", ["4930"]),
     ("supermercados", "Supermercados", ["4711"]),
+    ("padarias", "Padarias", ["1091102", "4721102"]),
     ("oficinas-mecanicas", "Oficinas mecânicas", ["4520"]),
     ("farmacias", "Farmácias", ["4771"]),
     ("pet-shops", "Pet shops", ["4789004"]),
+    ("lojas-de-roupas", "Lojas de roupas", ["4781"]),
+    ("lojas-de-materiais-de-construcao", "Lojas de materiais de construção", ["4744"]),
+    ("lojas-de-moveis", "Lojas de móveis", ["4754"]),
+    ("hoteis", "Hotéis", ["5510"]),
+    ("escolas-de-idiomas", "Escolas de idiomas", ["8593700"]),
+    ("agencias-de-marketing", "Agências de marketing", ["7311", "7319"]),
+    ("empresas-de-tecnologia", "Empresas de tecnologia", ["6201", "6202", "6203", "6204", "6209"]),
+    ("distribuidoras-de-alimentos", "Distribuidoras de alimentos", ["4639", "4637"]),
 ]
 
+# Display name with accents, UF. The Receita stores cities uppercase without accents.
 CITIES = [
-    ("Sao Paulo", "SP"), ("Rio de Janeiro", "RJ"), ("Belo Horizonte", "MG"), ("Brasilia", "DF"),
-    ("Salvador", "BA"), ("Fortaleza", "CE"), ("Curitiba", "PR"), ("Manaus", "AM"), ("Recife", "PE"),
-    ("Porto Alegre", "RS"), ("Goiania", "GO"), ("Belem", "PA"), ("Campinas", "SP"), ("Sao Luis", "MA"),
-    ("Guarulhos", "SP"), ("Florianopolis", "SC"), ("Santos", "SP"), ("Campo Grande", "MS"),
-    ("Natal", "RN"), ("Ribeirao Preto", "SP"),
+    ("São Paulo", "SP"), ("Rio de Janeiro", "RJ"), ("Brasília", "DF"), ("Salvador", "BA"), ("Fortaleza", "CE"),
+    ("Belo Horizonte", "MG"), ("Manaus", "AM"), ("Curitiba", "PR"), ("Recife", "PE"), ("Goiânia", "GO"),
+    ("Belém", "PA"), ("Porto Alegre", "RS"), ("Guarulhos", "SP"), ("Campinas", "SP"), ("São Luís", "MA"),
+    ("São Gonçalo", "RJ"), ("Maceió", "AL"), ("Duque de Caxias", "RJ"), ("Campo Grande", "MS"), ("Natal", "RN"),
+    ("Teresina", "PI"), ("São Bernardo do Campo", "SP"), ("Nova Iguaçu", "RJ"), ("João Pessoa", "PB"),
+    ("Santo André", "SP"), ("São José dos Campos", "SP"), ("Osasco", "SP"), ("Jaboatão dos Guararapes", "PE"),
+    ("Ribeirão Preto", "SP"), ("Uberlândia", "MG"), ("Sorocaba", "SP"), ("Contagem", "MG"), ("Aracaju", "SE"),
+    ("Feira de Santana", "BA"), ("Cuiabá", "MT"), ("Joinville", "SC"), ("Aparecida de Goiânia", "GO"),
+    ("Londrina", "PR"), ("Juiz de Fora", "MG"), ("Niterói", "RJ"), ("Porto Velho", "RO"), ("Florianópolis", "SC"),
+    ("Serra", "ES"), ("Caxias do Sul", "RS"), ("Vila Velha", "ES"), ("Macapá", "AP"), ("Mauá", "SP"),
+    ("São João de Meriti", "RJ"), ("Santos", "SP"), ("Mogi das Cruzes", "SP"), ("Betim", "MG"), ("Diadema", "SP"),
+    ("Campina Grande", "PB"), ("Jundiaí", "SP"), ("Maringá", "PR"), ("Montes Claros", "MG"), ("Piracicaba", "SP"),
+    ("Carapicuíba", "SP"), ("Olinda", "PE"), ("Cariacica", "ES"), ("Bauru", "SP"), ("Rio Branco", "AC"),
+    ("Vitória", "ES"), ("Praia Grande", "SP"), ("São Vicente", "SP"), ("Guarujá", "SP"), ("Blumenau", "SC"),
+    ("Ponta Grossa", "PR"), ("São José do Rio Preto", "SP"), ("Palmas", "TO"), ("Boa Vista", "RR"),
 ]
-CITY_DISPLAY = {
-    "Sao Paulo": "São Paulo", "Brasilia": "Brasília", "Goiania": "Goiânia", "Belem": "Belém",
-    "Sao Luis": "São Luís", "Florianopolis": "Florianópolis", "Ribeirao Preto": "Ribeirão Preto",
-}
+
+
+def rf_name(display: str) -> str:
+    return unicodedata.normalize("NFKD", display).encode("ascii", "ignore").decode().upper()
 
 
 def slugify(text: str) -> str:
@@ -76,7 +97,7 @@ def segment_case() -> str:
 
 def build_sql(since: str) -> str:
     seg = segment_case()
-    city_list = ", ".join(f"('{c.upper()}', '{uf}')" for c, uf in CITIES)
+    city_list = ", ".join(f"('{rf_name(c)}', '{uf}')" for c, uf in CITIES)
     return f"""
 SET statement_timeout = '30min';
 SET max_parallel_workers_per_gather = 0;
@@ -120,12 +141,11 @@ def main() -> None:
 
     seg_names = {s: n for s, n, _ in SEGMENTS}
     pages = {}
-    for city, uf in CITIES:
+    for display_city, uf in CITIES:
         for seg_slug, _, _ in SEGMENTS:
-            a = agg.get((seg_slug, city.upper(), uf))
+            a = agg.get((seg_slug, rf_name(display_city), uf))
             if not a or a["total"] < MIN_COMPANIES:
                 continue
-            display_city = CITY_DISPLAY.get(city, city)
             slug = f"{seg_slug}-em-{slugify(display_city)}-{uf.lower()}"
             pages[slug] = {
                 "segment": seg_slug,
@@ -147,6 +167,7 @@ def main() -> None:
     OUT.write_text(json.dumps({
         "generatedAt": date.today().isoformat(),
         "segments": [{"slug": s, "name": n} for s, n, _ in SEGMENTS],
+        "cities": [{"slug": f"{slugify(c)}-{uf.lower()}", "name": c, "uf": uf} for c, uf in CITIES],
         "pages": pages,
     }, ensure_ascii=False, indent=1) + "\n")
     print(f"{len(pages)} pages written to {OUT}")

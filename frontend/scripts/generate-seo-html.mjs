@@ -5,7 +5,7 @@
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -89,8 +89,8 @@ function getBrIndexableRoutes() {
   return routes;
 }
 
-/** "Empresas de <segmento> em <cidade>" — same JSON as src/lib/seo-company-stats.ts. */
-function getCompanyStatsRoutes() {
+/** /empresas pages — same JSON and texts (src/lib/company-stats-text.js) as the React pages. */
+async function getCompanyStatsRoutes() {
   let data;
   try {
     data = JSON.parse(readFileSync(path.join(ROOT, 'src', 'data', 'seo-company-stats.json'), 'utf8'));
@@ -98,29 +98,72 @@ function getCompanyStatsRoutes() {
     console.warn('Aviso: src/data/seo-company-stats.json ausente — páginas /empresas não geradas');
     return [];
   }
-  const fmt = (n) => Number(n).toLocaleString('pt-BR');
-  return Object.entries(data.pages).map(([slug, p]) => {
+  const T = await import(pathToFileURL(path.join(ROOT, 'src', 'lib', 'company-stats-text.js')).href);
+  const { fmt } = T;
+  const e = escapeHtml;
+  const wrap = (inner) => `<main style="max-width:48rem;margin:0 auto;padding:2.5rem 1rem;font-family:system-ui,sans-serif">${inner}`
+    + `<p><a href="/auth/signup?utm_source=seo&amp;utm_campaign=empresas">Ver listas completas com telefone e e-mail — 7 dias grátis</a></p>`
+    + `<p><small>Fonte: dados públicos do CNPJ (Receita Federal). Atualizado em ${e(data.generatedAt)}.</small></p></main>`;
+  const list = (links) => `<ul>${links.map((l) => `<li><a href="/empresas/${l.slug}">${e(l.label)}</a> — ${fmt(l.total)}</li>`).join('')}</ul>`;
+  const slugify = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const cityKey = (p) => (data.cities ?? []).find((c) => c.name === p.city && c.uf === p.uf)?.slug ?? `${slugify(p.city)}-${p.uf.toLowerCase()}`;
+
+  const entries = Object.entries(data.pages);
+  const cities = new Map();
+  const segments = new Map();
+  for (const [slug, p] of entries) {
+    const ck = `em-${cityKey(p)}`;
+    const c = cities.get(ck) ?? { city: p.city, uf: p.uf, total: 0, links: [] };
+    c.total += p.total; c.links.push({ slug, label: p.segmentName, total: p.total }); cities.set(ck, c);
+    const sg = segments.get(p.segment) ?? { name: p.segmentName, total: 0, links: [] };
+    sg.total += p.total; sg.links.push({ slug, label: `${p.city} (${p.uf})`, total: p.total }); segments.set(p.segment, sg);
+  }
+  const byTotal = (a, b) => b.total - a.total;
+
+  const routes = [];
+  const cityLinks = [...cities.entries()].map(([slug, c]) => ({ slug, label: `${c.city} (${c.uf})`, total: c.total })).sort(byTotal);
+  const segmentLinks = [...segments.entries()].map(([slug, s]) => ({ slug, label: s.name, total: s.total })).sort(byTotal);
+  routes.push({
+    path: 'empresas', title: T.HUB_TITLE, description: T.HUB_DESCRIPTION, priority: '0.8', changefreq: 'monthly',
+    bodyHtml: wrap(`<h1>Listas de empresas por cidade e segmento</h1><p>${e(T.HUB_DESCRIPTION)}</p><h2>Por cidade</h2>${list(cityLinks)}<h2>Por segmento</h2>${list(segmentLinks)}`),
+  });
+  for (const [slug, c] of cities) {
+    c.links.sort(byTotal);
+    routes.push({
+      path: `empresas/${slug}`, title: T.cityHubTitle(c.city, c.uf, c.total), description: T.cityHubDescription(c.city, c.uf, c.total, c.links.length),
+      priority: '0.8', changefreq: 'monthly',
+      bodyHtml: wrap(`<h1>Empresas em ${e(c.city)} (${c.uf}) por segmento</h1><p>${fmt(c.total)} empresas ativas em ${c.links.length} segmentos, segundo a Receita Federal.</p>${list(c.links)}`),
+    });
+  }
+  for (const [slug, sg] of segments) {
+    sg.links.sort(byTotal);
+    routes.push({
+      path: `empresas/${slug}`, title: T.segmentHubTitle(sg.name), description: T.segmentHubDescription(sg.name, sg.links.length, sg.total),
+      priority: '0.8', changefreq: 'monthly',
+      bodyHtml: wrap(`<h1>Lista de ${e(sg.name)} por cidade</h1><p>${fmt(sg.total)} empresas ativas em ${sg.links.length} cidades, segundo a Receita Federal.</p>${list(sg.links)}`),
+    });
+  }
+  for (const [slug, p] of entries) {
     const seg = p.segmentName.toLowerCase();
     const small = p.total ? Math.round(((p.porte.ME + p.porte.EPP) / p.total) * 100) : 0;
-    const bairros = p.topBairros.map((b) => `<li>${escapeHtml(b.name)}: ${fmt(b.count)}</li>`).join('');
-    // Static content for crawlers; React replaces it on load with the interactive page.
-    const bodyHtml = `<main style="max-width:48rem;margin:0 auto;padding:2.5rem 1rem;font-family:system-ui,sans-serif">`
-      + `<h1>${escapeHtml(p.segmentName)} em ${escapeHtml(p.city)} (${p.uf})</h1>`
-      + `<p>Existem <strong>${fmt(p.total)} empresas ativas</strong> de ${escapeHtml(seg)} em ${escapeHtml(p.city)}, segundo a base pública da Receita Federal. ${fmt(p.openedLast12m)} delas abriram nos últimos 12 meses.</p>`
-      + `<ul><li>Empresas ativas: ${fmt(p.total)}</li><li>Abertas em 12 meses: ${fmt(p.openedLast12m)}</li><li>Com telefone: ${p.withPhonePct}%</li><li>Micro e pequenas: ${small}%</li></ul>`
-      + (bairros ? `<h2>Bairros com mais ${escapeHtml(seg)} em ${escapeHtml(p.city)}</h2><ol>${bairros}</ol>` : '')
-      + `<h2>Porte das empresas</h2><ul><li>${fmt(p.porte.ME)} microempresas (ME)</li><li>${fmt(p.porte.EPP)} pequenas (EPP)</li><li>${fmt(p.porte.DEMAIS)} médias e grandes</li></ul>`
-      + `<p><a href="/auth/signup?utm_source=seo&amp;utm_campaign=empresas">Ver a lista completa com telefone e e-mail — 7 dias grátis</a></p>`
-      + `<p><small>Fonte: dados públicos do CNPJ (Receita Federal). Atualizado em ${escapeHtml(data.generatedAt)}.</small></p></main>`;
-    return {
-      path: `empresas/${slug}`,
-      title: `${p.segmentName} em ${p.city} (${p.uf}): ${fmt(p.total)} empresas ativas | Precision`,
-      description: `Lista de ${seg} em ${p.city}-${p.uf}: ${fmt(p.total)} empresas ativas na Receita Federal, ${fmt(p.openedLast12m)} abertas nos últimos 12 meses. Veja bairros, porte e como prospectar.`,
-      priority: '0.7',
-      changefreq: 'monthly',
-      bodyHtml,
-    };
-  });
+    const faq = T.pageFaq(p);
+    const faqLd = JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faq.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }).replace(/</g, '\\u003c');
+    const bairros = p.topBairros.map((b) => `<li>${e(b.name)}: ${fmt(b.count)}</li>`).join('');
+    routes.push({
+      path: `empresas/${slug}`, title: T.pageTitle(p), description: T.pageDescription(p), priority: '0.7', changefreq: 'monthly',
+      bodyHtml: wrap(
+        `<p><a href="/empresas">Empresas</a> / <a href="/empresas/em-${cityKey(p)}">${e(p.city)}</a> / <a href="/empresas/${p.segment}">${e(p.segmentName)}</a></p>`
+        + `<h1>Lista de ${e(p.segmentName)} em ${e(p.city)} (${p.uf})</h1>`
+        + `<p>Existem <strong>${fmt(p.total)} empresas ativas</strong> de ${e(seg)} em ${e(p.city)}, segundo a base pública da Receita Federal. ${fmt(p.openedLast12m)} delas abriram nos últimos 12 meses.</p>`
+        + `<ul><li>Empresas ativas: ${fmt(p.total)}</li><li>Abertas em 12 meses: ${fmt(p.openedLast12m)}</li><li>Com telefone: ${p.withPhonePct}%</li><li>Micro e pequenas: ${small}%</li></ul>`
+        + (bairros ? `<h2>Bairros com mais ${e(seg)} em ${e(p.city)}</h2><ol>${bairros}</ol>` : '')
+        + `<h2>Porte das empresas</h2><ul><li>${fmt(p.porte.ME)} microempresas (ME)</li><li>${fmt(p.porte.EPP)} pequenas (EPP)</li><li>${fmt(p.porte.DEMAIS)} médias e grandes</li></ul>`
+        + `<h2>Perguntas frequentes</h2>${faq.map((f) => `<h3>${e(f.q)}</h3><p>${e(f.a)}</p>`).join('')}`
+        + `<script type="application/ld+json">${faqLd}</script>`,
+      ),
+    });
+  }
+  return routes;
 }
 
 function escapeHtml(s) {
@@ -181,7 +224,7 @@ function generatePerRouteHtml(indexHtml, routes, origin) {
   }
 }
 
-function main() {
+async function main() {
   const indexPath = path.join(DIST, 'index.html');
   let indexHtml;
   try {
@@ -191,7 +234,7 @@ function main() {
     process.exit(1);
   }
 
-  const brRoutes = [...getBrIndexableRoutes(), ...getCompanyStatsRoutes()];
+  const brRoutes = [...getBrIndexableRoutes(), ...(await getCompanyStatsRoutes())];
   const usRoutes = getUsIndexableRoutes();
 
   writeSitemap(BR_ORIGIN, brRoutes, 'sitemap.xml');
@@ -215,4 +258,4 @@ function main() {
   console.log('Mercado:', MARKET, '| Rotas HTML:', activeRoutes.filter((r) => r.path).length, '| US sitemap:', usRoutes.length, 'URLs');
 }
 
-main();
+await main();

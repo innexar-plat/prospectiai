@@ -25,6 +25,7 @@ const ListasPage = lazy(() => import('./pages/dashboard/ListasPage'));
 const RelatoriosPage = lazy(() => import('./pages/dashboard/RelatoriosPage'));
 const ResultadosPage = lazy(() => import('./pages/dashboard/ResultadosPage'));
 const LeadDetailPage = lazy(() => import('./pages/dashboard/LeadDetailPage'));
+const CrmPage = lazy(() => import('./pages/dashboard/CrmPage'));
 const CompareLeadsPage = lazy(() => import('./pages/dashboard/CompareLeadsPage'));
 const PerfilPage = lazy(() => import('./pages/dashboard/PerfilPage'));
 const EmpresaPerfilPage = lazy(() => import('./pages/dashboard/EmpresaPerfilPage'));
@@ -176,6 +177,7 @@ function App() {
           <Route index element={<DashboardIndex />} />
           <Route path="historico" element={<HistoricoPage />} />
           <Route path="leads" element={<LeadsPage />} />
+          <Route path="crm" element={<CrmPage />} />
           <Route path="empresas" element={<EmpresasPage />} />
           <Route path="listas" element={<ListasPage />} />
           <Route path="relatorios" element={<RelatoriosPage />} />
@@ -215,6 +217,7 @@ function App() {
           <Route path="afiliado/materiais" element={<AfiliadoMateriaisPage />} />
           <Route path="afiliado/pagamento" element={<AfiliadoPagamentoPage />} />
         </Route>
+        <Route path="/empresas" element={<CompanyStatsPage />} />
         <Route path="/empresas/:slug" element={<CompanyStatsPage />} />
         {getWave1Slugs().map((e) => (
           <Route key={e.slug} path={`/${e.slug}`} element={<SeoLandingPage />} />

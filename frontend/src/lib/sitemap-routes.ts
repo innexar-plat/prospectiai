@@ -5,7 +5,8 @@
 
 import type { Market } from '@/lib/market';
 import { getAllSeoSlugs } from '@/lib/seo-local';
-import { COMPANY_STATS_BASE_PATH, companyStatsDescription, companyStatsTitle, getCompanyStatsPage, getCompanyStatsSlugs } from '@/lib/seo-company-stats';
+import { COMPANY_STATS_BASE_PATH, companyRouteMeta, getAllCompanyRouteSlugs } from '@/lib/seo-company-stats';
+import { HUB_DESCRIPTION, HUB_TITLE } from '@/lib/company-stats-text';
 
 export const BR_ORIGIN = 'https://precisionia.com.br';
 export const US_ORIGIN = 'https://precisionai.innexar.app';
@@ -222,19 +223,16 @@ export function getUsIndexableRoutes(): SitemapRoute[] {
   ];
 }
 
-/** "Empresas de <segmento> em <cidade>" — mirrors getCompanyStatsRoutes() in scripts/generate-seo-html.mjs. */
+/** /empresas hub, city hubs, segment hubs and segment × city pages — mirrors scripts/generate-seo-html.mjs. */
 export function getCompanyStatsRoutes(): SitemapRoute[] {
-  return getCompanyStatsSlugs().flatMap((slug) => {
-    const page = getCompanyStatsPage(slug);
-    if (!page) return [];
-    return [{
-      path: `${COMPANY_STATS_BASE_PATH}/${slug}`,
-      title: companyStatsTitle(page),
-      description: companyStatsDescription(page),
-      priority: '0.7',
-      changefreq: 'monthly',
-    }];
-  });
+  const routes: SitemapRoute[] = [
+    { path: COMPANY_STATS_BASE_PATH, title: HUB_TITLE, description: HUB_DESCRIPTION, priority: '0.8', changefreq: 'monthly' },
+  ];
+  for (const slug of getAllCompanyRouteSlugs()) {
+    const meta = companyRouteMeta(slug);
+    if (meta) routes.push({ path: `${COMPANY_STATS_BASE_PATH}/${slug}`, ...meta, priority: slug.includes('-em-') ? '0.7' : '0.8', changefreq: 'monthly' });
+  }
+  return routes;
 }
 
 export function getBrIndexableRoutes(): SitemapRoute[] {

@@ -14,6 +14,7 @@ import {
 } from '@/lib/seo-local';
 import { getActiveMarket } from '@/lib/market';
 import { getAppOrigin } from '@/lib/site-url';
+import { companyLinkForLocalEntry, formatCount } from '@/lib/seo-company-stats';
 
 function getSeoH1Title(entry: SeoLandingSlug): string {
   if (entry.type === 'cidade' && entry.city) return `Ferramenta de Inteligência Comercial para Empresas em ${entry.city}`;
@@ -106,6 +107,7 @@ export default function SeoLandingPage() {
   const localBlock = getSeoLocalBlock(entry);
   const faq = getSeoFaq(entry);
   const related = getRelatedSeoSlugs(entry);
+  const dataLink = companyLinkForLocalEntry(entry);
 
   const schemaApp = {
     '@context': 'https://schema.org',
@@ -153,6 +155,18 @@ export default function SeoLandingPage() {
         <h1 className="text-3xl md:text-4xl font-black mb-4">{h1}</h1>
         <p className="text-muted text-lg mb-6">{description}</p>
 
+        {dataLink && (
+          <Link
+            to={dataLink.href}
+            className="mb-8 flex items-center justify-between gap-3 rounded-2xl border border-violet-500/25 bg-violet-500/5 p-4 hover:bg-violet-500/10"
+          >
+            <span>
+              <span className="block text-sm font-bold text-foreground">{dataLink.label}</span>
+              <span className="block text-xs text-muted">{formatCount(dataLink.total)} empresas ativas na Receita Federal — veja bairros e porte</span>
+            </span>
+            <span aria-hidden className="text-violet-600">→</span>
+          </Link>
+        )}
         {/* Bloco dinâmico local (único por página — evita doorway) */}
         <section className="prose prose-invert max-w-none space-y-4 text-muted mb-8" aria-labelledby="intro-heading">
           <h2 id="intro-heading" className="sr-only">
