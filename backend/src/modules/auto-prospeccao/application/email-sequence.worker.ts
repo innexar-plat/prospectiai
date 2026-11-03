@@ -189,7 +189,7 @@ const BASE_URL = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'htt
 
 export function buildOptOutFooter(url: string): string {
   return `<p style="margin:24px 0 0;font-size:12px;line-height:1.5;color:#6b7280;text-align:center;">`
-    + `Recebeu este e-mail porque sua empresa tem cadastro público na Receita Federal. `
+    + `Você recebeu este e-mail porque sua empresa aparece em cadastros empresariais públicos. `
     + `<a href="${url}" style="color:#6b7280;text-decoration:underline;">Não quero receber mais e-mails</a>.</p>`;
 }
 

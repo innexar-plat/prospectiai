@@ -142,7 +142,7 @@ describe('auto-prospecting e-mail worker', () => {
 
 describe('buildOptOutFooter', () => {
     it('explains the source of the address', () => {
-        expect(buildOptOutFooter('https://x/o/1')).toContain('Receita Federal');
+        expect(buildOptOutFooter('https://x/o/1')).toContain('cadastros empresariais públicos');
     });
 });
 
