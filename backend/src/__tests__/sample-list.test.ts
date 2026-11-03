@@ -51,6 +51,7 @@ describe('buildSample', () => {
         expect(displayName(null, 'MARIA SOUZA 123.456.789-01')).toBe('Maria Souza');
         expect(displayName('PADARIA SOL', 'X 12345678901')).toBe('Padaria Sol');
         expect(displayName(null, 'CONSTRUTORA HORIZONTE LTDA')).toBe('Construtora Horizonte');
+        expect(displayName(null, '62.468.274 EDUARDO APARECIDO DO VALLE')).toBe('Eduardo Aparecido do Valle');
     });
 });
 

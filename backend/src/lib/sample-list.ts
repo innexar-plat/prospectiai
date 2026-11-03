@@ -111,6 +111,7 @@ function phoneOf(ddd: string | null, telefone: string | null): string | null {
  */
 export function displayName(nomeFantasia: string | null, razaoSocial: string): string {
     const raw = (nomeFantasia?.trim() || razaoSocial)
+        .replace(/^\s*\d{2}\.?\d{3}\.?\d{3}\s+/, '') // MEI names may start with the CNPJ root
         .replace(/\s*\d{3}\.?\d{3}\.?\d{3}-?\d{2}\s*$/, '')
         .replace(/\s+(LTDA|EIRELI|ME|EPP|S\/?A)\.?$/i, '')
         .trim();
