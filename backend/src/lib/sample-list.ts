@@ -13,6 +13,7 @@ import { sendEmail } from '@/lib/email';
 import { buildEmail } from '@/lib/email-templates';
 
 export const SAMPLE_SIZE = 20;
+const DAY_MS = 24 * 60 * 60 * 1000;
 const COMPANY_WORKSPACE_ID = 'sys-workspace-precisionia';
 const COMPANY_USER_ID = 'sys-user-precisionia';
 const SITE = 'https://precisionia.com.br';
@@ -104,20 +105,34 @@ function phoneOf(ddd: string | null, telefone: string | null): string | null {
 }
 
 /** 20 contactable companies, recently opened ones first (they are still choosing suppliers). */
-export async function buildSample(segmentSlug: string, city: string, uf: string): Promise<SampleCompany[]> {
+/**
+ * Company name fit for display. MEI legal names end with the owner's CPF ("JOAO DA SILVA 12345678901")
+ * — a personal document that must never be shown, so trailing CPF-like numbers are removed.
+ */
+export function displayName(nomeFantasia: string | null, razaoSocial: string): string {
+    const raw = (nomeFantasia?.trim() || razaoSocial)
+        .replace(/\s*\d{3}\.?\d{3}\.?\d{3}-?\d{2}\s*$/, '')
+        .replace(/\s+(LTDA|EIRELI|ME|EPP|S\/?A)\.?$/i, '')
+        .trim();
+    return titleCase(raw || razaoSocial.replace(/\d{11}/g, '').trim());
+}
+
+export async function buildSample(segmentSlug: string, city: string, uf: string, now = new Date()): Promise<SampleCompany[]> {
     const segment = SAMPLE_SEGMENTS.find((s) => s.slug === segmentSlug);
     if (!segment) throw new SampleError('Segmento inválido', 400);
-    const rows = await findRfCompanies({
-        cnaes: segment.cnaes,
-        municipio: toRfText(city),
-        uf: uf.toUpperCase(),
-        hasPhone: true,
-    }, SAMPLE_SIZE * 4);
+    const base = { cnaes: segment.cnaes, municipio: toRfText(city), uf: uf.toUpperCase(), hasPhone: true };
+    // Recently opened first (still choosing suppliers); top up with older ones when there are few.
+    const twoYearsAgo = new Date(now.getTime() - 2 * 365 * DAY_MS).toISOString().slice(0, 10).replace(/-/g, '');
+    let rows = await findRfCompanies({ ...base, openedSince: twoYearsAgo }, SAMPLE_SIZE * 4);
+    if (rows.length < SAMPLE_SIZE) {
+        const seen = new Set(rows.map((r) => r.cnpj));
+        rows = [...rows, ...(await findRfCompanies(base, SAMPLE_SIZE * 4)).filter((r) => !seen.has(r.cnpj))];
+    }
     return rows
         .sort((a, b) => (b.dataAbertura ?? '').localeCompare(a.dataAbertura ?? '') || Number(Boolean(b.email)) - Number(Boolean(a.email)))
         .slice(0, SAMPLE_SIZE)
         .map((c) => ({
-            name: titleCase((c.nomeFantasia?.trim() || c.razaoSocial).replace(/\s+(LTDA|EIRELI|ME|EPP|S\/?A)\.?$/i, '')),
+            name: displayName(c.nomeFantasia, c.razaoSocial),
             bairro: c.bairro ? titleCase(c.bairro) : null,
             porte: c.porte === 'ME' ? 'Micro' : c.porte === 'EPP' ? 'Pequena' : c.porte ? 'Média/Grande' : null,
             openedAt: c.dataAbertura && /^\d{8}$/.test(c.dataAbertura) ? `${c.dataAbertura.slice(6, 8)}/${c.dataAbertura.slice(4, 6)}/${c.dataAbertura.slice(0, 4)}` : null,
@@ -128,7 +143,6 @@ export async function buildSample(segmentSlug: string, city: string, uf: string)
 
 // ── Request flow ────────────────────────────────────────────────────────────
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_PER_IP_DAY = 5;
 const MAX_PER_EMAIL_DAY = 3;
 

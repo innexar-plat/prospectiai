@@ -17,7 +17,7 @@ jest.mock('@/lib/prisma', () => ({
 jest.mock('@/lib/email', () => ({ sendEmail: (...a: unknown[]) => m.send(...a) }));
 jest.mock('@/lib/logger', () => ({ logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() } }));
 
-import { buildSample, requestSample, sampleTokenFor, verifySampleToken } from '@/lib/sample-list';
+import { buildSample, displayName, requestSample, sampleTokenFor, verifySampleToken } from '@/lib/sample-list';
 
 const rf = (i: number, opened: string, email: string | null) => ({
     cnpj: String(i), razaoSocial: `EMPRESA ${i} LTDA`, nomeFantasia: i % 2 ? `PADARIA ${i}` : null, bairro: 'CENTRO', porte: 'ME',
@@ -37,18 +37,27 @@ describe('sample token', () => {
 
 describe('buildSample', () => {
     it('returns up to 20 companies, newest first, formatted for people', async () => {
-        m.findRf.mockResolvedValueOnce([rf(1, '20200101', null), rf(2, '20261001', 'OI@X.COM'), ...Array.from({ length: 30 }, (_, i) => rf(10 + i, '20190101', null))]);
+        m.findRf.mockResolvedValueOnce([rf(2, '20261001', 'OI@X.COM')])
+            .mockResolvedValueOnce([rf(1, '20200101', null), rf(2, '20261001', 'OI@X.COM'), ...Array.from({ length: 30 }, (_, i) => rf(10 + i, '20190101', null))]);
         const r = await buildSample('padarias', 'Campinas', 'sp');
         expect(r).toHaveLength(20);
         expect(r[0]).toEqual({ name: 'Empresa 2', bairro: 'Centro', porte: 'Micro', openedAt: '01/10/2026', phone: '(19) 98888-7777', email: 'oi@x.com' });
-        expect(m.findRf).toHaveBeenCalledWith(expect.objectContaining({ cnaes: ['1091102', '4721102'], municipio: 'CAMPINAS', uf: 'SP', hasPhone: true }), 80);
+        expect(m.findRf).toHaveBeenNthCalledWith(1, expect.objectContaining({ cnaes: ['1091102', '4721102'], municipio: 'CAMPINAS', uf: 'SP', hasPhone: true, openedSince: expect.stringMatching(/^\d{8}$/) }), 80);
+        expect(r.filter((c) => c.email === 'oi@x.com')).toHaveLength(1);
+    });
+
+    it('never shows the MEI owner CPF that the Receita appends to the legal name', () => {
+        expect(displayName(null, 'EDINALDO GUEDES DA SILVA 78865727420')).toBe('Edinaldo Guedes da Silva');
+        expect(displayName(null, 'MARIA SOUZA 123.456.789-01')).toBe('Maria Souza');
+        expect(displayName('PADARIA SOL', 'X 12345678901')).toBe('Padaria Sol');
+        expect(displayName(null, 'CONSTRUTORA HORIZONTE LTDA')).toBe('Construtora Horizonte');
     });
 });
 
 describe('requestSample', () => {
     it('SEO visitors must leave an e-mail and get the list by e-mail', async () => {
         await expect(requestSample({ segment: 'padarias', city: 'Campinas', uf: 'SP' })).rejects.toMatchObject({ status: 400 });
-        m.findRf.mockResolvedValueOnce([rf(1, '20261001', null)]);
+        m.findRf.mockResolvedValue([rf(1, '20261001', null)]);
         const r = await requestSample({ segment: 'padarias', city: 'Campinas', uf: 'SP', email: 'ana@loja.com', ip: '1.2.3.4' });
         expect(r.companies).toHaveLength(1);
         expect(m.send).toHaveBeenCalledWith('ana@loja.com', 'Sua amostra: Padarias em Campinas', expect.stringContaining('Padaria 1'), { replyTo: 'comercial@precisionia.com.br' });
@@ -57,7 +66,7 @@ describe('requestSample', () => {
 
     it('a cold-email click engages the lead and opens a CRM deal with a call task', async () => {
         m.leadFind.mockResolvedValueOnce({ id: 'L1', email: 'dono@agencia.com', razaoSocial: 'AGENCIA X LTDA', nomeFantasia: 'Agência X', telefone: '33334444', ddd: '11', status: 'EMAILING' });
-        m.findRf.mockResolvedValueOnce([rf(1, '20261001', null)]);
+        m.findRf.mockResolvedValue([rf(1, '20261001', null)]);
         m.pipelineFind.mockResolvedValueOnce({ id: 'p1', stages: [{ id: 's0' }, { id: 's1' }] });
         m.dealFind.mockResolvedValueOnce(null);
 

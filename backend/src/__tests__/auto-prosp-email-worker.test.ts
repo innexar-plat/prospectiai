@@ -156,5 +156,6 @@ describe('displayCompanyName', () => {
         expect(displayCompanyName('SD&G ADMINISTRACAO E PARTICIPACOES LTDA.')).toBe('Sd&g Administracao e Participacoes');
         expect(displayCompanyName('X', 'Padaria do João')).toBe('Padaria do João');
         expect(displayCompanyName('AUPOL TI CONSULTORIA LTDA ME')).toBe('Aupol TI Consultoria');
+        expect(displayCompanyName('EDINALDO GUEDES DA SILVA 78865727420')).toBe('Edinaldo Guedes da Silva');
     });
 });

@@ -149,7 +149,8 @@ const LOWER_WORDS = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'em', 'para', 
  * name without LTDA/S.A./ME and in title case ("GOLDSZTEIN HOLDING LTDA" → "Goldsztein Holding").
  */
 export function displayCompanyName(razaoSocial: string, nomeFantasia?: string | null): string {
-  let name = (nomeFantasia?.trim() || razaoSocial || '').replace(/\s+/g, ' ').trim();
+  // MEI legal names end with the owner's CPF — never put a personal document in an e-mail.
+  let name = (nomeFantasia?.trim() || razaoSocial || '').replace(/\s+/g, ' ').replace(/\s*\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/, '').trim();
   for (let i = 0; i < 3 && LEGAL_SUFFIX.test(name); i++) name = name.replace(LEGAL_SUFFIX, '').trim();
   if (name !== name.toUpperCase()) return name; // already mixed case: keep the company's own spelling
   return name
