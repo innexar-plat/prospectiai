@@ -1767,3 +1767,23 @@ model CrmActivity {
   @@index([workspaceId, dueAt])
 }
 
+/// Free sample of 20 companies (cold-email link or public SEO lead magnet).
+model SampleRequest {
+  id               String   @id @default(cuid())
+  email            String?
+  /// Prospected lead that clicked the link in a cold e-mail (null for SEO visitors).
+  prospectedLeadId String?
+  segment          String
+  city             String
+  uf               String   @db.VarChar(2)
+  resultCount      Int      @default(0)
+  source           String   @default("seo")
+  ipHash           String?
+  convertedUserId  String?
+  createdAt        DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([ipHash, createdAt])
+  @@index([prospectedLeadId])
+}
+

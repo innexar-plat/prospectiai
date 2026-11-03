@@ -56,6 +56,7 @@ const Privacy = lazy(() => import('./pages/legal/Privacy'));
 const Terms = lazy(() => import('./pages/legal/Terms'));
 const SeoLandingPage = lazy(() => import('./pages/seo/SeoLandingPage'));
 const CompanyStatsPage = lazy(() => import('./pages/seo/CompanyStatsPage'));
+const SamplePage = lazy(() => import('./pages/public/SamplePage'));
 const RdStationIntegration = lazy(() => import('./pages/public/RdStationIntegration'));
 const AgendorIntegration = lazy(() => import('./pages/public/AgendorIntegration'));
 const HubspotIntegration = lazy(() => import('./pages/public/HubspotIntegration'));
@@ -217,6 +218,7 @@ function App() {
           <Route path="afiliado/materiais" element={<AfiliadoMateriaisPage />} />
           <Route path="afiliado/pagamento" element={<AfiliadoPagamentoPage />} />
         </Route>
+        <Route path="/amostra" element={<SamplePage />} />
         <Route path="/empresas" element={<CompanyStatsPage />} />
         <Route path="/empresas/:slug" element={<CompanyStatsPage />} />
         {getWave1Slugs().map((e) => (

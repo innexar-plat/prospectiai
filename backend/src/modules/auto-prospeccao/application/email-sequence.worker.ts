@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { sendEmail, type SendOptions, type SendResult } from '@/lib/email';
+import { sampleUrlFor } from '@/lib/sample-list';
 import { brtDayStart, domainAcceptsMail, htmlToText, isBusinessHoursBrt, isRiskyRecipient, perRunQuota, warmupDailyCap } from '@/lib/cold-email-guard';
 import { logger } from '@/lib/logger';
 import { decryptEmailSecret } from '@/lib/email-config-encrypt';
@@ -273,8 +274,10 @@ async function sendStep(
 ): Promise<boolean> {
   try {
     const template = await resolveTemplate(step, workspaceId, previousStepOpened);
-    const subject = interpolate(template.subject, { razaoSocial });
-    let bodyHtml = interpolate(template.bodyHtml, { razaoSocial });
+    // {{amostraUrl}}: signed link to the free 20-company sample (instant, no reply needed).
+    const vars = { razaoSocial, amostraUrl: sampleUrlFor(leadId) };
+    const subject = interpolate(template.subject, vars);
+    let bodyHtml = interpolate(template.bodyHtml, vars);
 
     // Generate event ID upfront so we can embed the tracking pixel
     const eventId = crypto.randomUUID();
@@ -304,7 +307,7 @@ async function sendStep(
 
     // Multipart (HTML + text), a real Reply-To and one-click List-Unsubscribe (Gmail/Yahoo
     // bulk-sender rules): these weigh more on spam filters than the copy itself.
-    const plain = template.bodyText ? interpolate(template.bodyText, { razaoSocial }) : htmlToText(bodyHtml);
+    const plain = template.bodyText ? interpolate(template.bodyText, vars) : htmlToText(bodyHtml);
     const sendOpts: SendOptions = {
       text: `${plain}\n\n--\nNão quer receber mais e-mails? ${optOutUrl}`,
       ...(sender.replyTo ? { replyTo: sender.replyTo } : {}),
@@ -431,11 +434,12 @@ function interpolate(template: string, vars: Record<string, string>): string {
 /** Admin preview: the exact subject/HTML a step would send, with the mandatory opt-out footer. */
 export async function buildStepPreview(workspaceId: string, step: number, razaoSocial: string): Promise<{ subject: string; html: string; templateId: string }> {
   const template = await resolveTemplate(step, workspaceId, false);
-  const html = interpolate(template.bodyHtml, { razaoSocial });
+  const vars = { razaoSocial, amostraUrl: 'https://precisionia.com.br/amostra' };
+  const html = interpolate(template.bodyHtml, vars);
   const footer = buildOptOutFooter(`${BASE_URL}/api/track/email/optout/preview`);
   return {
     templateId: template.id,
-    subject: interpolate(template.subject, { razaoSocial }),
+    subject: interpolate(template.subject, vars),
     html: html.includes('</body>') ? html.replace('</body>', `${footer}</body>`) : html + footer,
   };
 }

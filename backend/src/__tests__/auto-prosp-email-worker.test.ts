@@ -1,3 +1,4 @@
+process.env.AUTH_SECRET = process.env.AUTH_SECRET || 'test-secret';
 const mockConfig = jest.fn();
 const mockConfigUpdate = jest.fn().mockResolvedValue({});
 const mockLeads = jest.fn();

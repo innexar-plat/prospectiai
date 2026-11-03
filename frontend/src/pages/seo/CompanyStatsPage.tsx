@@ -107,9 +107,19 @@ function SignupCta({ page }: { page?: StatsPage }) {
           ? `Na Precision você filtra ${page.segmentName.toLowerCase()} de ${page.city} por bairro, porte e data de abertura, vê os contatos e recebe uma análise de cada empresa feita por IA, com sugestão de abordagem.`
           : 'Na Precision você busca empresas por segmento e cidade, vê telefone e e-mail e recebe uma análise de cada uma feita por IA, com sugestão de abordagem.'}
       </p>
-      <Link to={href} onClick={remember} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-700">
-        {page ? 'Ver a lista grátis por 7 dias' : 'Testar grátis por 7 dias'} <ArrowRight size={16} aria-hidden />
-      </Link>
+      <div className="mt-4 flex flex-wrap gap-2">
+        {page && (
+          <Link
+            to={`/amostra?segmento=${encodeURIComponent(page.segment)}&cidade=${encodeURIComponent(page.city)}&uf=${page.uf}`}
+            className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-700"
+          >
+            Receber 20 empresas desta lista grátis <ArrowRight size={16} aria-hidden />
+          </Link>
+        )}
+        <Link to={href} onClick={remember} className={page ? 'inline-flex items-center gap-2 rounded-xl border border-violet-500/40 px-5 py-2.5 text-sm font-semibold text-violet-700 dark:text-violet-300 hover:bg-violet-500/10' : 'inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-700'}>
+          {page ? 'Ver a lista completa — 7 dias grátis' : 'Testar grátis por 7 dias'} {!page && <ArrowRight size={16} aria-hidden />}
+        </Link>
+      </div>
       <p className="mt-2 text-xs text-muted">Sem cartão de crédito.</p>
     </section>
   );

@@ -1,3 +1,4 @@
+process.env.AUTH_SECRET = process.env.AUTH_SECRET || 'test-secret';
 import { runEmailSequenceWorker } from '../application/email-sequence.worker';
 import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email';
