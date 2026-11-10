@@ -96,6 +96,7 @@ export function UsersPage() {
                   <>
                     <th className="px-4 py-3 font-medium">Onboarding</th>
                     <th className="px-4 py-3 font-medium">Workspaces</th>
+                    <th className="px-4 py-3 font-medium">Origem</th>
                   </>
                 )}
                 <th className="px-4 py-3 font-medium">Criado em</th>
@@ -105,7 +106,7 @@ export function UsersPage() {
             <tbody>
               {items.length === 0 ? (
                 <tr>
-                  <td colSpan={isSupport ? 6 : 7} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={isSupport ? 6 : 8} className="px-4 py-8 text-center text-gray-500">
                     Nenhum usuário encontrado.
                   </td>
                 </tr>
@@ -128,6 +129,9 @@ export function UsersPage() {
                               {u.onboardingCompletedAt ? 'Sim' : 'Não'}
                             </td>
                             <td className="px-4 py-3 text-gray-500">{(u as { _count: { workspaces: number } })._count.workspaces}</td>
+                            <td className="px-4 py-3 text-xs text-gray-500 max-w-[260px] truncate" title={(u as { origin?: string | null }).origin ?? ''}>
+                              {(u as { origin?: string | null }).origin || '—'}
+                            </td>
                           </>
                         );
                       })()

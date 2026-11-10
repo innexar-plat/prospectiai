@@ -1,9 +1,9 @@
 import municipios from '@/lib/br-municipios.json';
 
 // Bundled IBGE list (5.570 municípios) — the IBGE API is unreachable from the production server.
-const BR_CITIES = municipios as Record<string, string[]>;
+export const BR_CITIES = municipios as Record<string, string[]>;
 
-const fold = (s: string): string => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+export const fold = (s: string): string => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 export function suggestBrCities(state: string, q: string, limit = 20): string[] {
     const all = BR_CITIES[state] ?? [];

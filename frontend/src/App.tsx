@@ -5,6 +5,9 @@ import { getMarketConfig } from './lib/market';
 import { authApi, userApi, type SessionUser } from './lib/api';
 import { AppLoadingFallback } from './components/AppLoadingFallback';
 import { getPostAuthRedirect, markCheckoutDone } from './lib/post-auth-redirect';
+import { captureFirstTouch, flushFirstTouch } from './lib/first-touch';
+
+captureFirstTouch();
 
 // ── Lazy-loaded pages ──────────────────────────────────────────────────────────
 const Landing = lazy(() => import('./pages/public/Landing'));
@@ -102,6 +105,10 @@ function BillingSuccessRedirect({ user }: { user: SessionUser }) {
 
 function App() {
   const [user, setUser] = useState<SessionUser | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (user?.id) flushFirstTouch(user.id);
+  }, [user?.id]);
 
   useEffect(() => {
     const fetchSession = () => {

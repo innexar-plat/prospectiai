@@ -360,6 +360,42 @@ export function sendReengagementEmail(
     return sendOnce(`reengagement:${userId}:${p.week}`, to.email, subject, html);
 }
 
+// ── Radar (active users, weekly) ────────────────────────────────────────────
+
+export interface RadarDigestSection { niche: string; place: string; total: number; companies: ReengagementCompany[] }
+
+/** Monday digest: companies that just opened in each niche/place the user searches. */
+export function sendRadarDigestEmail(
+    userId: string,
+    to: BillingRecipient,
+    p: { week: string; total: number; items: RadarDigestSection[] },
+): Promise<boolean> {
+    if (isEn(to)) return Promise.resolve(false);
+    const base = siteFor(to);
+    const totalLabel = p.total >= 300 ? '300+' : String(p.total);
+    const sections = p.items.flatMap((i) => [
+        `<strong>${escapeText(i.niche)}${i.place ? ` em ${escapeText(i.place)}` : ''}</strong> — ${i.total >= 300 ? '300+' : i.total} recém-abertas`,
+        companyList(i.companies),
+    ]);
+    const title = `Seu radar da semana: ${totalLabel} empresas novas para vender`;
+    const html = buildEmail({
+        title,
+        preheader: 'Empresa recém-aberta ainda está escolhendo fornecedor. Chegue primeiro.',
+        userName: to.name ?? undefined,
+        body: [
+            'Estas empresas acabaram de abrir nos nichos e cidades que você busca. Quem chega primeiro costuma fechar — elas ainda não têm fornecedor definido.',
+            ...sections,
+            'No painel você vê o telefone completo, o e-mail e adiciona ao CRM com um clique.',
+        ],
+        ctaHref: `${base}/dashboard?utm_source=email&utm_campaign=radar#radar`,
+        ctaLabel: 'Abrir meu radar',
+        accentColor: BRAND_COLOR,
+        unsubscribeToken: userId,
+        siteUrl: base,
+    });
+    return sendOnce(`radar:${userId}:${p.week}`, to.email, title, html);
+}
+
 // ── Sales routine ───────────────────────────────────────────────────────────
 
 /** "N follow-ups hoje" — links straight to the dashboard agenda. */

@@ -528,6 +528,16 @@ async function runFollowUps(ctx: Ctx): Promise<void> {
     if (r.pushed) ctx.report.counts.followup_pushed = r.pushed;
 }
 
+// ── 10b. Radar weekly digest (Mondays, active users) ────────────────────────
+
+async function runRadar(ctx: Ctx): Promise<void> {
+    const { runRadarDigest } = await import('@/lib/radar');
+    const r = await runRadarDigest(ctx.now, ctx.dryRun);
+    if (r.candidates) ctx.report.counts.radar_candidates = r.candidates;
+    if (r.sent) ctx.report.counts.radar_sent = r.sent;
+    if (r.pushed) ctx.report.counts.radar_pushed = r.pushed;
+}
+
 // ── 11. Contact enrichment ──────────────────────────────────────────────────
 
 async function runEnrichment(ctx: Ctx): Promise<void> {
@@ -554,6 +564,7 @@ export async function runBillingLifecycleJob(options: { dryRun?: boolean; now?: 
         ['activation', runActivation],
         ['reengagement', runReengagement],
         ['followups', runFollowUps],
+        ['radar', runRadar],
         ['email_enrichment', runEnrichment],
     ];
     for (const [name, step] of steps) {

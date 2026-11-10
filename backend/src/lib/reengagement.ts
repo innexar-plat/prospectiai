@@ -42,13 +42,13 @@ export function maskPhone(ddd: string | null, phone: string | null): string | nu
     return ddd ? `(${ddd}) ${formatted}` : formatted;
 }
 
-function formatRfDate(yyyymmdd: string | null): string | null {
+export function formatRfDate(yyyymmdd: string | null): string | null {
     if (!yyyymmdd || yyyymmdd.length !== 8) return null;
     return `${yyyymmdd.slice(6, 8)}/${yyyymmdd.slice(4, 6)}/${yyyymmdd.slice(0, 4)}`;
 }
 
 /** Newest opening date in the base (the base lags the calendar by weeks), cached for a day. */
-async function rfLatestOpening(): Promise<string | null> {
+export async function rfLatestOpening(): Promise<string | null> {
     const cached = await getCached<string>('reengage:rf-latest-opening');
     if (cached) return cached;
     try {
@@ -64,40 +64,50 @@ function prefixUpper(p: string): string {
     return p.slice(0, -1) + String.fromCharCode(p.charCodeAt(p.length - 1) + 1);
 }
 
-/** Recently opened companies matching the search niche/city; bounded, index-driven. */
-async function newCompanies(cnaes: string[], city: string, uf: string | null, since: string): Promise<{ list: ReengagementCompany[]; total: number }> {
-    if (cnaes.length === 0) return { list: [], total: 0 };
-    const params: string[] = [toRfText(city)];
+export interface NewCompanyRow {
+    cnpj: string; razaoSocial: string; nomeFantasia: string | null; bairro: string | null; ddd: string | null;
+    telefone: string | null; email: string | null; dataAbertura: string | null; porte: string | null;
+}
+
+/** Recently opened companies matching a niche/city (up to 300 rows); bounded, index-driven. */
+export async function queryNewCompanyRows(cnaes: string[], city: string | null, uf: string | null, since: string): Promise<NewCompanyRow[]> {
+    if (cnaes.length === 0 || (!city && !uf)) return [];
+    const params: string[] = [];
+    const conds: string[] = [];
+    if (city) { params.push(toRfText(city)); conds.push(`municipio = $${params.length}`); }
     const ranges = cnaes.slice(0, 5).map((c) => {
         if (c.length >= 7) { params.push(c); return `"cnaePrincipal" = $${params.length}`; }
         params.push(c, prefixUpper(c));
         return `("cnaePrincipal" >= $${params.length - 1} AND "cnaePrincipal" < $${params.length})`;
     });
+    conds.push(`(${ranges.join(' OR ')})`);
     params.push(since);
-    let where = `municipio = $1 AND (${ranges.join(' OR ')}) AND "dataAbertura" >= $${params.length}`;
-    if (uf) { params.push(uf.toUpperCase()); where += ` AND uf = $${params.length}`; }
+    conds.push(`"dataAbertura" >= $${params.length}`);
+    if (uf) { params.push(uf.toUpperCase()); conds.push(`uf = $${params.length}`); }
 
     return prisma.$transaction(async (tx) => {
         await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${RF_TIMEOUT_MS}`);
         await tx.$executeRawUnsafe('SET LOCAL max_parallel_workers_per_gather = 0');
         await tx.$executeRawUnsafe('SET LOCAL jit = off');
-        const rows = await tx.$queryRawUnsafe<Array<{
-            razaoSocial: string; nomeFantasia: string | null; bairro: string | null; ddd: string | null;
-            telefone: string | null; dataAbertura: string | null; porte: string | null;
-        }>>(`SELECT "razaoSocial", "nomeFantasia", bairro, ddd, telefone, "dataAbertura", porte
-             FROM "RfCompany" WHERE ${where} LIMIT 300`, ...params);
-        const sorted = rows
-            .filter((r) => r.telefone)
-            .sort((a, b) => (b.dataAbertura ?? '').localeCompare(a.dataAbertura ?? ''));
-        return {
-            total: rows.length,
-            list: sorted.slice(0, 5).map((r) => ({
-                name: r.nomeFantasia?.trim() || r.razaoSocial,
-                detail: [r.bairro, formatRfDate(r.dataAbertura) ? `aberta em ${formatRfDate(r.dataAbertura)}` : null].filter(Boolean).join(' · '),
-                phone: maskPhone(r.ddd, r.telefone),
-            })),
-        };
+        return tx.$queryRawUnsafe<NewCompanyRow[]>(
+            `SELECT cnpj, "razaoSocial", "nomeFantasia", bairro, ddd, telefone, email, "dataAbertura", porte
+             FROM "RfCompany" WHERE ${conds.join(' AND ')} LIMIT 300`, ...params);
     });
+}
+
+async function newCompanies(cnaes: string[], city: string, uf: string | null, since: string): Promise<{ list: ReengagementCompany[]; total: number }> {
+    const rows = await queryNewCompanyRows(cnaes, city, uf, since);
+    const sorted = rows
+        .filter((r) => r.telefone)
+        .sort((a, b) => (b.dataAbertura ?? '').localeCompare(a.dataAbertura ?? ''));
+    return {
+        total: rows.length,
+        list: sorted.slice(0, 5).map((r) => ({
+            name: r.nomeFantasia?.trim() || r.razaoSocial,
+            detail: [r.bairro, formatRfDate(r.dataAbertura) ? `aberta em ${formatRfDate(r.dataAbertura)}` : null].filter(Boolean).join(' · '),
+            phone: maskPhone(r.ddd, r.telefone),
+        })),
+    };
 }
 
 type HistoryPlace = { displayName?: { text?: string }; formattedAddress?: string; opportunityScore?: number; rating?: number; userRatingCount?: number; websiteUri?: string; nationalPhoneNumber?: string };

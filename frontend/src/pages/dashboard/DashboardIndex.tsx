@@ -9,14 +9,15 @@ import {
   Clapperboard, Warehouse, TreePine, ChevronDown, ChevronRight, X, Save,
   Search as SearchIcon, Target, Star, TrendingUp, Tractor, Factory,
   Camera, Sofa, PartyPopper, Banknote, Activity, Waves, Utensils,
-  CircleDot, Info,
+  CircleDot, Info, MapPin,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { leadsApi, searchApi, type LeadStats, type SearchHistoryItem } from '@/lib/api';
+import { leadsApi, radarApi, searchApi, type LeadStats, type SearchHistoryItem } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { HeaderDashboard } from '@/components/dashboard/HeaderDashboard';
 import { ProfileSearchSuggestions } from '@/components/dashboard/ProfileSearchSuggestions';
 import { TodayAgenda } from '@/components/dashboard/TodayAgenda';
+import { RadarCard } from '@/components/dashboard/RadarCard';
 import { CnaeAutocomplete } from '@/components/dashboard/CnaeAutocomplete';
 import { Button } from '@/components/ui/Button';
 import { startSearch, validateSearchPayload, buildTextQuery } from '@/lib/searchService';
@@ -323,6 +324,10 @@ export default function DashboardIndex() {
 
   /* City autocomplete state (inlined from SearchFiltersRow) */
   const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
+  /** What the free-text bar understood ("... em Florianópolis SC"), shown as a hint. */
+  const [intentHint, setIntentHint] = useState<{ term: string; city: string | null; state: string | null; otherStates: string[] } | null>(null);
+  /** City filled in by the intent parser — no autocomplete dropdown for it. */
+  const intentCityRef = useRef<string | null>(null);
   const [cityOpen, setCityOpen] = useState(false);
   const cityRef = useRef<HTMLDivElement>(null);
 
@@ -496,6 +501,7 @@ export default function DashboardIndex() {
     const country = form.country;
     const state = form.state;
     const q = (form.city ?? '').trim();
+    if (q && q === intentCityRef.current) { setCityOpen(false); return; }
     if (!['BR', 'US'].includes(country) || !state || state === 'Todos' || q.length < (country === 'US' ? 2 : 3)) {
       setCitySuggestions([]);
       setCityOpen(false);
@@ -616,6 +622,43 @@ export default function DashboardIndex() {
     // Also set as advancedTerm for free-text search
     setForm((prev) => ({ ...prev, advancedTerm: q }));
   }, [allTemplates]);
+
+  // Free text with a place ("lojas de eletrônicos em Florianópolis SC", "... em Santa Catarina"):
+  // split it into term + city + state so nobody has to figure out the filter fields.
+  useEffect(() => {
+    const q = searchBarQuery.trim();
+    if (form.country !== 'BR' || q.split(/\s+/).length < 2) { setIntentHint(null); return; }
+    let cancelled = false;
+    const tid = window.setTimeout(() => {
+      radarApi.parseSearch(q, form.state)
+        .then((intent) => {
+          if (cancelled) return;
+          if (!intent.understood || (!intent.city && !intent.state)) { setIntentHint(null); return; }
+          intentCityRef.current = intent.city;
+          setForm((prev) => ({
+            ...prev,
+            advancedTerm: intent.term || prev.advancedTerm,
+            city: intent.city ?? '',
+            state: intent.state ?? prev.state,
+          }));
+          if (intent.state) {
+            const st = intent.state;
+            setFavoriteStates((prev) => (prev.includes(st) ? prev : [...prev, st]));
+          }
+          setIntentHint(intent);
+        })
+        .catch(() => undefined);
+    }, 450);
+    return () => { cancelled = true; clearTimeout(tid); };
+  }, [searchBarQuery]); // eslint-disable-line react-hooks/exhaustive-deps -- only re-parse when the text changes
+
+  const applyRadarSearch = useCallback((niche: string, city: string | null, state: string | null) => {
+    intentCityRef.current = city;
+    setSearchBarQuery(niche);
+    setForm((prev) => ({ ...prev, advancedTerm: niche, city: city ?? '', state: state ?? prev.state }));
+    if (state) setFavoriteStates((prev) => (prev.includes(state) ? prev : [...prev, state]));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   const handleSaveProfile = useCallback(() => {
     const countryLabel = getLocalizedCountryLabel(form.country, t);
@@ -749,6 +792,9 @@ export default function DashboardIndex() {
         {/* ── Sales routine: due follow-ups and best uncontacted leads ── */}
         {!isNewUser && <TodayAgenda />}
 
+        {/* ── Radar: companies that just opened in the user's niches ── */}
+        {isMarketFeatureEnabled('cnae') && <RadarCard onSearch={applyRadarSearch} />}
+
         {/* ── Quick start for new users ── */}
         {isNewUser && !trialExpired && (
           <section aria-label={t('dash.a11y.quickstart')} className="rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-600/10 to-indigo-600/5 p-5 sm:p-6">
@@ -842,6 +888,16 @@ export default function DashboardIndex() {
                 );
               })}
             </div>
+          )}
+          {intentHint && (
+            <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-muted" role="status">
+              <MapPin size={12} className="text-emerald-600" aria-hidden />
+              Entendi: {intentHint.term ? <strong className="text-foreground">{intentHint.term}</strong> : 'empresas'}
+              {intentHint.city ? ` em ${intentHint.city}/${intentHint.state}` : ` em todo o estado (${intentHint.state})`}
+              {intentHint.otherStates.length > 0 && (
+                <span>— também existe em {intentHint.otherStates.slice(0, 4).join(', ')}; ajuste o estado abaixo se for outra.</span>
+              )}
+            </p>
           )}
         </section>
 

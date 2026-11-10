@@ -18,6 +18,7 @@ import { sendRenewalConfirmedEmail, sendSubscriptionCancelledEmail, type Billing
 import { createCommissionForFirstPayment, cancelCommissionsByOrderOrSubscription, createCommissionForRecurring } from '@/lib/affiliate';
 import { isWebhookDuplicate } from '@/lib/webhook-dedup';
 import { rateLimit } from '@/lib/ratelimit';
+import { signupOriginLabel } from '@/lib/signup-attribution';
 import {
     notifyPaymentApproved,
     notifyPaymentCreated,
@@ -337,6 +338,7 @@ async function handleOneTimeApproved(data: MpPaymentData, id: string): Promise<v
 
     notifyPaymentApproved({
         userId,
+        origin: await signupOriginLabel(userId),
         toPlan: planId,
         billingCycle: interval,
         provider: 'mercadopago',
@@ -580,6 +582,7 @@ async function activatePreapproval(preapproval: PreApprovalData, charge?: { paym
     const { user } = await findUserWorkspace(userId);
     notifyPaymentApproved({
         userId,
+        origin: await signupOriginLabel(userId),
         userEmail: user?.email ?? null,
         workspaceId: workspace.id,
         toPlan: planId,

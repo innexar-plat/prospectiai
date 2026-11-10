@@ -132,7 +132,12 @@ model User {
   leadsLimit     Int       @default(10)
 
   tokenVersion   Int       @default(0)
-  
+
+  /// First-touch attribution captured by the SPA: { source, medium, campaign, referrer, landing, at }.
+  signupSource   Json?
+  /// Answer to "Como conheceu a Precision?" (onboarding).
+  heardFrom      String?
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

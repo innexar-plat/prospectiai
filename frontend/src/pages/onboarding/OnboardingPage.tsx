@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Building2, Package, Users, Sparkles, MapPin } from 'lucide-react'
-import { authApi, onboardingApi, type SessionUser } from '@/lib/api'
+import { authApi, onboardingApi, radarApi, type SessionUser } from '@/lib/api'
 import { trackPendingFreeSignupConversion } from '@/lib/marketing'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -16,6 +16,19 @@ import { saveToSession } from '@/lib/last-search-storage'
 import { FIRST_SEARCH_SUGGESTIONS_KEY } from '@/components/dashboard/FirstListBanner'
 import { clearSeoSearchIntent, readSeoSearchIntent } from '@/lib/seo-search-intent'
 
+
+const HEARD_FROM: Array<[string, string]> = [
+    ['google', 'Pesquisa no Google'],
+    ['instagram', 'Instagram'],
+    ['facebook', 'Facebook'],
+    ['linkedin', 'LinkedIn'],
+    ['youtube', 'YouTube'],
+    ['email', 'Recebi um e-mail'],
+    ['indicacao', 'Indicação de alguém'],
+    ['whatsapp', 'WhatsApp'],
+    ['chatgpt', 'ChatGPT ou outra IA'],
+    ['outro', 'Outro'],
+]
 
 export default function OnboardingPage({ user }: { user: SessionUser | null }) {
     const navigate = useNavigate()
@@ -32,6 +45,8 @@ export default function OnboardingPage({ user }: { user: SessionUser | null }) {
     const [city, setCity] = useState('')
     const [uf, setUf] = useState('')
     const [progress, setProgress] = useState('')
+    const [heardFrom, setHeardFrom] = useState('')
+    const [heardFromOther, setHeardFromOther] = useState('')
     const market = getActiveMarket()
     const states = market === 'US' ? US_STATES : BR_STATES
 
@@ -111,6 +126,9 @@ export default function OnboardingPage({ user }: { user: SessionUser | null }) {
                 city: city.trim() || undefined,
                 state: uf || undefined,
             })
+            if (heardFrom) {
+                radarApi.saveAttribution({ heardFrom, heardFromOther: heardFromOther.trim() || null }).catch(() => undefined)
+            }
             markPostOnboardingVisit()
             clearCheckoutDone()
         } catch {
@@ -256,6 +274,24 @@ export default function OnboardingPage({ user }: { user: SessionUser | null }) {
                         </div>
                         <p className="text-[11px] text-muted ml-1">{t('page.onboarding.cityHint')}</p>
                     </div>
+
+                    {getActiveMarket() === 'BR' && (
+                        <div className="space-y-1">
+                            <label htmlFor="heard-from" className="text-[10px] font-bold text-muted uppercase tracking-wider ml-1">Como conheceu a Precision? (opcional)</label>
+                            <select
+                                id="heard-from"
+                                value={heardFrom}
+                                onChange={(e) => setHeardFrom(e.target.value)}
+                                className="w-full h-11 rounded-xl border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/30"
+                            >
+                                <option value="">Escolha…</option>
+                                {HEARD_FROM.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                            </select>
+                            {heardFrom === 'outro' && (
+                                <Input value={heardFromOther} onChange={(e) => setHeardFromOther(e.target.value)} placeholder="Onde?" maxLength={120} />
+                            )}
+                        </div>
+                    )}
 
                     {progress && (
                         <p className="text-sm text-center text-violet-700 dark:text-violet-300 font-medium" role="status">{progress}</p>

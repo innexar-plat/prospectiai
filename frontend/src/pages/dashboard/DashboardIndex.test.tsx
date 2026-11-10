@@ -27,6 +27,7 @@ vi.mock('react-router-dom', async (importOriginal) => {
   };
 });
 
+const { parseSearch } = vi.hoisted(() => ({ parseSearch: vi.fn() }));
 vi.mock('@/lib/api', () => ({
   leadsApi: {
     stats: vi.fn().mockResolvedValue({ total: 0, highScore: 0, favorites: 0, searchesThisMonth: 0 }),
@@ -38,6 +39,11 @@ vi.mock('@/lib/api', () => ({
   onboardingApi: {
     suggestSearches: vi.fn().mockResolvedValue({ terms: [] }),
   },
+  radarApi: {
+    get: vi.fn().mockResolvedValue({ since: null, items: [], generatedAt: '' }),
+    parseSearch: (...a: unknown[]) => parseSearch(...a),
+  },
+  crmApi: { createDeal: vi.fn() },
 }));
 
 vi.mock('@/lib/searchService', () => ({
@@ -205,5 +211,17 @@ describe('DashboardIndex', () => {
     });
 
     expect(screen.queryByRole('status', { name: /dica para primeira busca/i })).not.toBeInTheDocument();
+  });
+
+  it('understands a place typed in the search bar and fills city and state', async () => {
+    parseSearch.mockResolvedValue({ term: 'lojas de eletrônicos', city: 'Florianópolis', state: 'SC', otherStates: [], understood: true });
+    const { container } = renderDashboard();
+    await screen.findByRole('search');
+    const bar = container.querySelector('section[data-tour="nova-busca"] input') as HTMLInputElement;
+    fireEvent.change(bar, { target: { value: 'lojas de eletrônicos em Florianópolis SC' } });
+
+    expect(await screen.findByText(/Entendi:/, {}, { timeout: 2000 })).toBeInTheDocument();
+    expect(parseSearch).toHaveBeenCalledWith('lojas de eletrônicos em Florianópolis SC', expect.anything());
+    expect(screen.getByDisplayValue('Florianópolis')).toBeInTheDocument();
   });
 });

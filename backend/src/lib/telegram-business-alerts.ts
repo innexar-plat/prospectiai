@@ -23,6 +23,8 @@ type PlanContext = WorkspaceContext & {
   paymentId?: string | null;
   effectiveAt?: string | null;
   status?: string | null;
+  /** Where the customer came from (first touch + onboarding answer). */
+  origin?: string | null;
 };
 
 function formatAmount(amount: number | null | undefined, currency: string | null | undefined): string | null {
@@ -169,6 +171,7 @@ export function notifyPaymentApproved(ctx: PlanContext): void {
         paymentId: ctx.paymentId ?? undefined,
         subscriptionId: ctx.subscriptionId ?? undefined,
         status: ctx.status ?? undefined,
+        origem: ctx.origin ?? undefined,
       },
       ctx,
     ),

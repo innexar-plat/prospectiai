@@ -9,6 +9,8 @@ export { leadsApi, pipelineApi, tagsApi, notificationsApi, pushApi } from './crm
 export { userApi, workspaceProfileApi, onboardingApi, activityApi } from './user';
 export { supportApi } from './support';
 export { crmApi } from './crm-board';
+export { radarApi } from './radar';
+export type { Radar, RadarItem, RadarCompany, SearchIntent, FirstTouch } from './radar';
 export type { CrmBoard, CrmBoardStage, CrmDealCard, CrmDealDetail, CrmActivity, CrmActivityType, CrmMember, CrmMetrics, CrmStage, CrmStageKind, CrmDealInput } from './crm-board';
 export type { SupportTicketSummary, SupportTicketDetail, SupportMessageItem, SupportTicketStatus, SupportTicketCategory } from './support';
 

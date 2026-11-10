@@ -18,6 +18,7 @@ export const NOTIFICATION_CHANNELS: ReadonlyArray<{ key: string; name: string }>
   { key: 'team_invite', name: 'Convite para workspace' },
   { key: 'admin_broadcast', name: 'Broadcast admin' },
   { key: 'follow_up_due', name: 'Follow-ups do dia (rotina de vendas)' },
+  { key: 'radar_weekly', name: 'Radar semanal de empresas novas' },
 ];
 
 export interface CreateNotificationInput {

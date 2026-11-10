@@ -79,6 +79,8 @@ export interface AdminUserListItem {
   plan: string;
   disabledAt: string | null;
   onboardingCompletedAt: string | null;
+  /** Where the user came from (UTM / referrer / onboarding answer). */
+  origin?: string | null;
   createdAt: string;
   _count: { workspaces: number; analyses: number; searchHistory: number };
 }

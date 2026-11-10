@@ -50,6 +50,8 @@ export async function GET(req: NextRequest) {
                     disabledAt: true,
                     onboardingCompletedAt: true,
                     createdAt: true,
+                    signupSource: true,
+                    heardFrom: true,
                     _count: { select: { workspaces: true, analyses: true, searchHistory: true } },
                 },
             }),
@@ -61,7 +63,9 @@ export async function GET(req: NextRequest) {
             details: { limit: safeLimit, offset: safeOffset, total, search: searchTerm ?? undefined },
         }).catch(() => {});
 
-        return NextResponse.json({ items, total, limit: safeLimit, offset: safeOffset });
+        const { describeAttribution } = await import('@/lib/signup-attribution');
+        const withOrigin = items.map(({ signupSource, heardFrom, ...u }) => ({ ...u, origin: describeAttribution(signupSource, heardFrom) }));
+        return NextResponse.json({ items: withOrigin, total, limit: safeLimit, offset: safeOffset });
     } catch (e) {
         const { logger } = await import('@/lib/logger');
         logger.error('Admin users list error', { error: e instanceof Error ? e.message : 'Unknown' });
