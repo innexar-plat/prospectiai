@@ -811,8 +811,15 @@ export async function POST(req: Request) {
 
     // Validate HMAC signature
     if (!validateMpSignature(xSignature, xRequestId, dataId)) {
-        await recordWebhook('mercadopago', false, 'invalid signature');
         const url = new URL(req.url);
+        // Legacy IPN feed (`?id=&topic=`, "MercadoPago Feed v2.0") duplicates every event that the
+        // signed webhook (`?data.id=&type=`) already delivers, but its signature never matches.
+        // Acknowledge it without processing anything so MP stops retrying — nothing is trusted.
+        if (url.searchParams.has('topic') && url.searchParams.has('id') && !url.searchParams.has('data.id')) {
+            logger.info('MP legacy IPN ignored (handled by the signed webhook)', { topic, dataId });
+            return NextResponse.json({ received: true, ignored: 'legacy-ipn' });
+        }
+        await recordWebhook('mercadopago', false, 'invalid signature');
         logger.warn('MP Webhook signature validation failed', {
             topic,
             dataId,

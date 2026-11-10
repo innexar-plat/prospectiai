@@ -206,3 +206,22 @@ describe('MP webhook — recurring PIX', () => {
         expect(mockFirstCommission).toHaveBeenCalled();
     });
 });
+
+describe('MP webhook — signature', () => {
+    const unsigned = (query: string) => new Request(`http://localhost/api/billing/webhook/mercadopago?${query}`, {
+        method: 'POST',
+        headers: { 'x-signature': 'ts=1,v1=bad', 'x-request-id': 'r1' },
+    });
+
+    it('acknowledges the legacy IPN feed without processing it', async () => {
+        const res = await POST(unsigned('id=187630384731&topic=payment'));
+        expect(res.status).toBe(200);
+        expect(mockPaymentGet).not.toHaveBeenCalled();
+    });
+
+    it('still rejects a webhook with an invalid signature', async () => {
+        const res = await POST(unsigned('data.id=187630384731&type=payment'));
+        expect(res.status).toBe(401);
+        expect(mockPaymentGet).not.toHaveBeenCalled();
+    });
+});
