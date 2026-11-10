@@ -815,7 +815,9 @@ export async function POST(req: Request) {
         // Legacy IPN feed (`?id=&topic=`, "MercadoPago Feed v2.0") duplicates every event that the
         // signed webhook (`?data.id=&type=`) already delivers, but its signature never matches.
         // Acknowledge it without processing anything so MP stops retrying — nothing is trusted.
-        if (url.searchParams.has('topic') && url.searchParams.has('id') && !url.searchParams.has('data.id')) {
+        // Only for topics confirmed to arrive signed too; anything else still fails loudly.
+        const legacyFeed = url.searchParams.has('id') && !url.searchParams.has('data.id');
+        if (legacyFeed && (topic === 'payment' || topic === 'merchant_order')) {
             logger.info('MP legacy IPN ignored (handled by the signed webhook)', { topic, dataId });
             return NextResponse.json({ received: true, ignored: 'legacy-ipn' });
         }

@@ -219,6 +219,11 @@ describe('MP webhook — signature', () => {
         expect(mockPaymentGet).not.toHaveBeenCalled();
     });
 
+    it('still rejects an unsigned legacy feed for subscription topics', async () => {
+        const res = await POST(unsigned('id=pre_1&topic=preapproval'));
+        expect(res.status).toBe(401);
+    });
+
     it('still rejects a webhook with an invalid signature', async () => {
         const res = await POST(unsigned('data.id=187630384731&type=payment'));
         expect(res.status).toBe(401);
