@@ -64,12 +64,13 @@ export function buildRfWhere(f: RfFilters): { sql: string; params: string[] } {
 }
 
 async function bounded<T>(timeoutMs: number, fn: (tx: typeof prisma) => Promise<T>): Promise<T> {
+    // Prisma closes interactive transactions after 5 s by default: give it room past the statement timeout.
     return prisma.$transaction(async (tx) => {
         await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${Math.max(200, timeoutMs)}`);
         await tx.$executeRawUnsafe('SET LOCAL max_parallel_workers_per_gather = 0');
         await tx.$executeRawUnsafe('SET LOCAL jit = off');
         return fn(tx as unknown as typeof prisma);
-    });
+    }, { timeout: Math.max(200, timeoutMs) + 3000, maxWait: 5000 });
 }
 
 /** Up to `limit` matching companies, bounded like interactive searches (no ORDER BY, no count). */

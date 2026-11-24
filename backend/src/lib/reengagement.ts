@@ -85,6 +85,7 @@ export async function queryNewCompanyRows(cnaes: string[], city: string | null, 
     conds.push(`"dataAbertura" >= $${params.length}`);
     if (uf) { params.push(uf.toUpperCase()); conds.push(`uf = $${params.length}`); }
 
+    // Prisma closes interactive transactions after 5 s by default: give it room past the statement timeout.
     return prisma.$transaction(async (tx) => {
         await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${RF_TIMEOUT_MS}`);
         await tx.$executeRawUnsafe('SET LOCAL max_parallel_workers_per_gather = 0');
@@ -92,7 +93,7 @@ export async function queryNewCompanyRows(cnaes: string[], city: string | null, 
         return tx.$queryRawUnsafe<NewCompanyRow[]>(
             `SELECT cnpj, "razaoSocial", "nomeFantasia", bairro, ddd, telefone, email, "dataAbertura", porte
              FROM "RfCompany" WHERE ${conds.join(' AND ')} LIMIT 300`, ...params);
-    });
+    }, { timeout: RF_TIMEOUT_MS + 3000, maxWait: 5000 });
 }
 
 async function newCompanies(cnaes: string[], city: string, uf: string | null, since: string): Promise<{ list: ReengagementCompany[]; total: number }> {

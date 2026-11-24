@@ -20,12 +20,13 @@ import { logger } from './logger';
  * at most 300 indexed candidates, never over a whole sector/state.
  */
 async function boundedRf<T>(sql: string, ...params: unknown[]): Promise<T> {
+    // Prisma closes interactive transactions after 5 s by default: give it room past the statement timeout.
     return prisma.$transaction(async (tx) => {
         await tx.$executeRawUnsafe('SET LOCAL statement_timeout = 2500');
         await tx.$executeRawUnsafe('SET LOCAL max_parallel_workers_per_gather = 0');
         await tx.$executeRawUnsafe('SET LOCAL jit = off');
         return tx.$queryRawUnsafe(sql, ...params) as Promise<T>;
-    });
+    }, { timeout: 2500 + 3000, maxWait: 5000 });
 }
 
 

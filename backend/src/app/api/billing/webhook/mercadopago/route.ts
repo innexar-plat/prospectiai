@@ -104,6 +104,8 @@ function validateMpSignature(
     xSignature: string | null,
     xRequestId: string | null,
     dataId: string | null,
+    /** False for the legacy IPN feed, whose signature never matches (expected, not worth a warning). */
+    logMismatch = true,
 ): boolean {
     const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
     if (!secret) {
@@ -131,7 +133,7 @@ function validateMpSignature(
 
     const expected = createHmac('sha256', secret).update(template).digest('hex');
     const matches = expected === v1;
-    if (!matches) {
+    if (!matches && logMismatch) {
         logger.warn('MP signature mismatch debug', {
             dataId, xRequestId, ts, template,
             expectedPrefix: expected.slice(0, 8), receivedPrefix: v1.slice(0, 8),
@@ -813,13 +815,13 @@ export async function POST(req: Request) {
     logger.info('MP Webhook Received', { topic, dataId, hasSignature: !!xSignature });
 
     // Validate HMAC signature
-    if (!validateMpSignature(xSignature, xRequestId, dataId)) {
-        const url = new URL(req.url);
+    const url = new URL(req.url);
+    const legacyFeed = url.searchParams.has('id') && !url.searchParams.has('data.id');
+    if (!validateMpSignature(xSignature, xRequestId, dataId, !legacyFeed)) {
         // Legacy IPN feed (`?id=&topic=`, "MercadoPago Feed v2.0") duplicates every event that the
         // signed webhook (`?data.id=&type=`) already delivers, but its signature never matches.
         // Acknowledge it without processing anything so MP stops retrying — nothing is trusted.
         // Only for topics confirmed to arrive signed too; anything else still fails loudly.
-        const legacyFeed = url.searchParams.has('id') && !url.searchParams.has('data.id');
         if (legacyFeed && (topic === 'payment' || topic === 'merchant_order')) {
             logger.info('MP legacy IPN ignored (handled by the signed webhook)', { topic, dataId });
             return NextResponse.json({ received: true, ignored: 'legacy-ipn' });

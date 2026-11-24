@@ -345,3 +345,36 @@ describe('email lib', () => {
     });
   });
 });
+
+describe('Resend transient failures', () => {
+  const { sendEmail, isTransientSendError } = jest.requireActual('@/lib/email') as typeof import('@/lib/email');
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    process.env.RESEND_API_KEY = 're_test';
+    process.env.RESEND_RETRY_DELAY_MS = '0';
+    prisma.emailConfig.findFirst.mockResolvedValue(null);
+  });
+
+  it('classifies DNS/network errors as transient, API rejections as final', () => {
+    expect(isTransientSendError('Unable to fetch data. The request could not be resolved.')).toBe(true);
+    expect(isTransientSendError('getaddrinfo EAI_AGAIN api.resend.com')).toBe(true);
+    expect(isTransientSendError('The to field must be a valid email')).toBe(false);
+  });
+
+  it('retries once after a network hiccup', async () => {
+    mockSend
+      .mockResolvedValueOnce({ error: { message: 'Unable to fetch data. The request could not be resolved.' } })
+      .mockResolvedValueOnce({ error: null });
+    const r = await sendEmail('a@b.com', 'Sua amostra', '<p>x</p>');
+    expect(r.sent).toBe(true);
+    expect(mockSend).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not retry an API rejection', async () => {
+    mockSend.mockResolvedValueOnce({ error: { message: 'Invalid recipient' } });
+    const r = await sendEmail('a@b.com', 'x', '<p>x</p>');
+    expect(r.sent).toBe(false);
+    expect(mockSend).toHaveBeenCalledTimes(1);
+  });
+});

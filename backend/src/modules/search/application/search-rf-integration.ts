@@ -270,13 +270,14 @@ async function queryRawWithStatementTimeout<T>(
     params: (string | number)[],
     timeoutMs: number,
 ): Promise<T[]> {
+    // Prisma closes interactive transactions after 5 s by default: give it room past the statement timeout.
     return prisma.$transaction(async (tx) => {
         await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${Math.max(1000, timeoutMs)}`);
         // One search must not grab every core: these are short indexed lookups.
         await tx.$executeRawUnsafe('SET LOCAL max_parallel_workers_per_gather = 0');
         await tx.$executeRawUnsafe('SET LOCAL jit = off');
         return tx.$queryRawUnsafe<T[]>(sql, ...params);
-    });
+    }, { timeout: Math.max(1000, timeoutMs) + 3000, maxWait: 5000 });
 }
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {

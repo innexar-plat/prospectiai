@@ -114,13 +114,14 @@ const RF_TRGM_THRESHOLD = Number.parseFloat(process.env.RF_TRGM_THRESHOLD ?? '0.
  * workers (one lead must not take 5 cores) and no JIT (pure overhead for these short queries).
  */
 async function boundedQuery<T>(sql: string, params: unknown[]): Promise<T[]> {
+    // Prisma closes interactive transactions after 5 s by default: give it room past the statement timeout.
     return prisma.$transaction(async (tx) => {
         await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${Math.max(300, RF_MATCH_TIMEOUT_MS)}`);
         await tx.$executeRawUnsafe('SET LOCAL max_parallel_workers_per_gather = 0');
         await tx.$executeRawUnsafe('SET LOCAL jit = off');
         await tx.$executeRawUnsafe(`SET LOCAL pg_trgm.similarity_threshold = ${RF_TRGM_THRESHOLD}`);
         return tx.$queryRawUnsafe<T[]>(sql, ...params);
-    });
+    }, { timeout: Math.max(300, RF_MATCH_TIMEOUT_MS) + 3000, maxWait: 5000 });
 }
 
 /**

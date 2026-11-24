@@ -87,7 +87,14 @@ function withFromName(from: string, fromName?: string): string {
   return `${fromName.replace(/[<>"]/g, '').trim()} <${address}>`;
 }
 
-async function sendViaResend(apiKey: string, from: string, to: string, subject: string, html: string, opts: SendOptions = {}): Promise<SendResult> {
+/** DNS/connection hiccups (not API rejections): worth one more try a moment later. */
+export function isTransientSendError(message: string): boolean {
+  return /could not be resolved|unable to fetch|fetch failed|ENOTFOUND|EAI_AGAIN|ECONNRESET|ECONNREFUSED|ETIMEDOUT|socket hang up|network/i.test(message);
+}
+
+const retryDelayMs = (): number => Number.parseInt(process.env.RESEND_RETRY_DELAY_MS ?? '3000', 10);
+
+async function resendOnce(apiKey: string, from: string, to: string, subject: string, html: string, opts: SendOptions): Promise<SendResult> {
   try {
     const resend = new Resend(apiKey);
     const { error } = await resend.emails.send({
@@ -96,16 +103,21 @@ async function sendViaResend(apiKey: string, from: string, to: string, subject: 
       ...(opts.replyTo ? { replyTo: opts.replyTo } : {}),
       ...(opts.headers ? { headers: opts.headers } : {}),
     });
-    if (error) {
-      logger.warn('Resend send failed', { to, subject, error: error.message });
-      return { sent: false, error: error.message };
-    }
-    return { sent: true };
+    return error ? { sent: false, error: error.message } : { sent: true };
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    logger.error('Email send error (Resend)', { to, subject, error: message });
-    return { sent: false, error: message };
+    return { sent: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
+}
+
+async function sendViaResend(apiKey: string, from: string, to: string, subject: string, html: string, opts: SendOptions = {}): Promise<SendResult> {
+  let result = await resendOnce(apiKey, from, to, subject, html, opts);
+  if (!result.sent && result.error && isTransientSendError(result.error)) {
+    await new Promise((r) => setTimeout(r, retryDelayMs()));
+    result = await resendOnce(apiKey, from, to, subject, html, opts);
+    if (result.sent) logger.info('Resend send succeeded on retry', { to, subject });
+  }
+  if (!result.sent) logger.warn('Resend send failed', { to, subject, error: result.error });
+  return result;
 }
 
 type SmtpConfig = { smtpHost: string; smtpPort: number; smtpUser: string; smtpPasswordEncrypted: string };
