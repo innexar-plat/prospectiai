@@ -156,7 +156,7 @@ export interface SampleInput {
     ip?: string | null;
 }
 
-function sampleEmailHtml(segmentName: string, city: string, uf: string, companies: SampleCompany[], ctaHref: string): string {
+export function sampleEmailHtml(segmentName: string, city: string, uf: string, companies: SampleCompany[], ctaHref: string): string {
     const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const rows = companies.map((c) => `<tr><td style="padding:8px 10px;border-bottom:1px solid #eef0f4;">`
         + `<div style="font-weight:600;color:#111827;">${esc(c.name)}</div>`
@@ -211,16 +211,19 @@ export async function requestSample(input: SampleInput, now = new Date()) {
         await sendEmail(email, `Sua amostra: ${segment.name} em ${city}`, sampleEmailHtml(segment.name, city, uf, companies, signup), { replyTo: 'comercial@precisionia.com.br' })
             .catch((err) => logger.warn('Sample e-mail failed', { error: err instanceof Error ? err.message : 'Unknown' }));
     }
-    if (lead) await engageLead(lead, segment.name, city, uf, now).catch((err) => logger.warn('Sample lead engagement failed', { error: err instanceof Error ? err.message : 'Unknown' }));
+    if (lead) await engageLead(lead, {
+        note: `Pediu amostra grátis: ${segment.name} em ${city} (${uf}). Ligar enquanto o interesse está quente.`,
+        task: 'Ligar para quem pediu a amostra',
+        source: 'amostra',
+    }, now).catch((err) => logger.warn('Sample lead engagement failed', { error: err instanceof Error ? err.message : 'Unknown' }));
 
     return { segment: segment.name, city, uf, companies, fromColdEmail: Boolean(lead) };
 }
 
-/** A cold-email lead that asked for a sample is warm: mark it and put it in the company CRM. */
-async function engageLead(
-    lead: { id: string; email: string | null; razaoSocial: string; nomeFantasia: string | null; telefone: string | null; ddd: string | null; status: string },
-    segmentName: string, city: string, uf: string, now: Date,
-) {
+export interface EngageableLead { id: string; email: string | null; razaoSocial: string; nomeFantasia: string | null; telefone: string | null; ddd: string | null; status: string }
+
+/** A cold-email lead that showed interest (sample, reply) is warm: mark it and put it in the company CRM. */
+export async function engageLead(lead: EngageableLead, what: { note: string; task: string; source: string }, now: Date) {
     if (lead.status !== 'CONVERTED') {
         await prisma.prospectedLead.update({ where: { id: lead.id }, data: { status: 'ENGAGED', updatedAt: now } });
     }
@@ -229,7 +232,7 @@ async function engageLead(
     if (!pipeline || !stageId) return;
     const company = lead.nomeFantasia?.trim() || lead.razaoSocial;
     const existing = await prisma.crmDeal.findFirst({ where: { workspaceId: COMPANY_WORKSPACE_ID, companyName: company, stage: { kind: 'OPEN' } }, select: { id: true } });
-    const note = `Pediu amostra grátis: ${segmentName} em ${city} (${uf}). Ligar enquanto o interesse está quente.`;
+    const note = what.note;
     if (existing) {
         await prisma.crmActivity.create({ data: { workspaceId: COMPANY_WORKSPACE_ID, dealId: existing.id, userId: COMPANY_USER_ID, type: 'NOTE', body: note, doneAt: now } });
         return;
@@ -237,12 +240,12 @@ async function engageLead(
     await prisma.crmDeal.create({
         data: {
             workspaceId: COMPANY_WORKSPACE_ID, pipelineId: pipeline.id, stageId, title: company, companyName: company,
-            contactEmail: lead.email, contactPhone: phoneOf(lead.ddd, lead.telefone), source: 'amostra', ownerUserId: COMPANY_USER_ID,
+            contactEmail: lead.email, contactPhone: phoneOf(lead.ddd, lead.telefone), source: what.source, ownerUserId: COMPANY_USER_ID,
             createdById: COMPANY_USER_ID, lastActivityAt: now,
             activities: {
                 create: [
                     { workspaceId: COMPANY_WORKSPACE_ID, userId: COMPANY_USER_ID, type: 'NOTE', body: note, doneAt: now },
-                    { workspaceId: COMPANY_WORKSPACE_ID, userId: COMPANY_USER_ID, type: 'TASK', title: 'Ligar para quem pediu a amostra', dueAt: new Date(now.getTime() + 2 * 60 * 60 * 1000) },
+                    { workspaceId: COMPANY_WORKSPACE_ID, userId: COMPANY_USER_ID, type: 'TASK', title: what.task, dueAt: new Date(now.getTime() + 2 * 60 * 60 * 1000) },
                 ],
             },
         },
