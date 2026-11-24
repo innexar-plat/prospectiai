@@ -1,3 +1,4 @@
+import { closeStaleRuns, failRun, profileScope } from '@/modules/auto-prospeccao/application/run.service';
 import { instrumentCron } from '@/lib/ops-telemetry';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
@@ -22,6 +23,7 @@ async function handlePOST(req: NextRequest) {
 
   try {
     const now = new Date();
+    await closeStaleRuns(now);
 
     // Buscar workspaces com auto-prospecção ativa
     const activeConfigs = await prisma.autoProspeccaoConfig.findMany({
@@ -33,17 +35,12 @@ async function handlePOST(req: NextRequest) {
     const results: Array<{ workspaceId: string; leadsFound: number; error?: string }> = [];
 
     for (const config of activeConfigs) {
+      let runId: string | null = null;
       try {
-        // A workspace with its own active profiles prospects only its own audience; the system
-        // profiles are the default for workspaces that have none (they are the Precision IA
-        // audience and must never feed another business's outreach).
-        const ownProfiles = await prisma.searchProfile.count({
-          where: { workspaceId: config.workspaceId, isSystem: false, isActive: true },
-        });
         const profiles = await prisma.searchProfile.findMany({
           where: {
             AND: [
-              ownProfiles > 0 || config.market === 'US' ? { workspaceId: config.workspaceId, isSystem: false } : { isSystem: true },
+              await profileScope(config.workspaceId, config.market),
               { isActive: true },
               { OR: [{ nextRunAt: null }, { nextRunAt: { lte: now } }] },
             ],
@@ -58,23 +55,34 @@ async function handlePOST(req: NextRequest) {
         const run = await prisma.autoProspeccaoRun.create({
           data: { workspaceId: config.workspaceId, triggeredBy: 'cron', status: 'RUNNING' },
         });
+        runId = run.id;
 
         const blockedCnpjs = Array.isArray(config.blockedCnpjs)
           ? (config.blockedCnpjs as string[])
           : [];
 
         let workspaceLeads = 0;
+        let profileErrors = 0;
+        let lastError: unknown = null;
         for (const profile of profiles) {
-          const result = await runSearchWorker(
-            config.workspaceId,
-            profile as SearchProfile,
-            run.id,
-            config.maxLeadsPerRun,
-            blockedCnpjs,
-          );
-          workspaceLeads += result.leadsFound;
+          // One slow profile must not cancel the others.
+          try {
+            const result = await runSearchWorker(
+              config.workspaceId,
+              profile as SearchProfile,
+              run.id,
+              config.maxLeadsPerRun,
+              blockedCnpjs,
+            );
+            workspaceLeads += result.leadsFound;
+          } catch (err) {
+            profileErrors++;
+            lastError = err;
+            logger.warn('cron/search: profile skipped', { profileId: profile.id, error: err instanceof Error ? err.message : 'Unknown' });
+          }
         }
 
+        if (profileErrors === profiles.length) throw lastError;
         await prisma.autoProspeccaoRun.update({
           where: { id: run.id },
           data: { status: 'COMPLETED', completedAt: new Date(), leadsFound: workspaceLeads },
@@ -83,6 +91,7 @@ async function handlePOST(req: NextRequest) {
         totalLeads += workspaceLeads;
         results.push({ workspaceId: config.workspaceId, leadsFound: workspaceLeads });
       } catch (err) {
+        await failRun(runId, err);
         const message = err instanceof Error ? err.message : 'Unknown';
         logger.error('cron/search: workspace error', { workspaceId: config.workspaceId, error: message });
         results.push({ workspaceId: config.workspaceId, leadsFound: 0, error: message });

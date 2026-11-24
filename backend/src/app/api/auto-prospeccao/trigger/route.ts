@@ -1,3 +1,4 @@
+import { profileScope } from '@/modules/auto-prospeccao/application/run.service';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireWorkspace, requireModuleEnabled } from '../_helpers';
@@ -56,7 +57,7 @@ async function executeDryRun(
   config: NonNullable<Awaited<ReturnType<typeof prisma.autoProspeccaoConfig.findUnique>>>,
 ) {
   const profiles = await prisma.searchProfile.findMany({
-    where: { OR: [{ workspaceId }, { isSystem: true }], isActive: true },
+    where: { ...(await profileScope(workspaceId, config.market)), isActive: true },
     orderBy: { priority: 'asc' },
     take: 3,
   });

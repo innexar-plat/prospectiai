@@ -1,3 +1,4 @@
+import { failRun } from '@/modules/auto-prospeccao/application/run.service';
 import { instrumentCron } from '@/lib/ops-telemetry';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
@@ -29,10 +30,12 @@ async function handlePOST(req: NextRequest) {
     const results = [];
 
     for (const config of activeConfigs) {
+      let runId: string | null = null;
       try {
         const run = await prisma.autoProspeccaoRun.create({
           data: { workspaceId: config.workspaceId, triggeredBy: 'cron', status: 'RUNNING' },
         });
+        runId = run.id;
 
         const result = await runCrmPushWorker(
           config.workspaceId,
@@ -48,6 +51,7 @@ async function handlePOST(req: NextRequest) {
         totalPushed += result.pushed;
         results.push({ workspaceId: config.workspaceId, ...result });
       } catch (err) {
+        await failRun(runId, err);
         logger.error('cron/crm-push: workspace error', {
           workspaceId: config.workspaceId,
           error: err instanceof Error ? err.message : 'Unknown',
