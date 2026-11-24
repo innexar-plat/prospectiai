@@ -1,3 +1,4 @@
+import { findUsCompanies } from '@/lib/us-query';
 import { findRfCompanies } from '@/lib/rf-query';
 import { prisma } from '@/lib/prisma';
 import type { SearchProfile } from '@prisma/client';
@@ -33,7 +34,7 @@ export async function runSearchWorker(
     .then((rows) => new Set(rows.map((r) => r.cnpj)));
   const blocked = new Set(blockedCnpjs);
 
-  const companies = (await findRfCompanies({
+  const companies = (isUsProfile(profile) ? await findUsLeads(profile, maxLeads * 3) : await findRfCompanies({
     cnaes: cnaeList.map((c) => c.replace(/\D/g, '').substring(0, 4)),
     ufs: ufList,
     portes: porteList,
@@ -55,7 +56,7 @@ export async function runSearchWorker(
       dedupSkip++;
       continue;
     }
-    toInsert.push(company as RfCompanyData);
+    toInsert.push(company as unknown as RfCompanyData);
   }
 
   // Em dry-run, apenas retorna os contadores sem escrever no banco
@@ -105,6 +106,36 @@ export async function runSearchWorker(
   });
 
   return { leadsFound: toInsert.length, leadsDedupSkip: dedupSkip };
+}
+
+/** US profiles list Overture categories ("marketing_agency") where BR ones list CNAE codes. */
+export function isUsProfile(profile: SearchProfile): boolean {
+  const list = Array.isArray(profile.cnaeList) ? (profile.cnaeList as string[]) : [];
+  return list.length > 0 && list.every((c) => /^[a-z][a-z0-9_]+$/.test(c));
+}
+
+async function findUsLeads(profile: SearchProfile, limit: number) {
+  const rows = await findUsCompanies({
+    categories: profile.cnaeList as string[],
+    states: Array.isArray(profile.uf) ? (profile.uf as string[]) : [],
+    city: profile.municipio,
+    hasEmail: profile.hasEmail === true,
+    hasPhone: profile.hasPhone === true,
+  }, limit);
+  return rows.map((c) => ({
+    cnpj: `us:${c.id}`,
+    razaoSocial: c.name,
+    nomeFantasia: null,
+    cnaePrincipal: c.category ?? '',
+    uf: c.state,
+    municipio: c.city,
+    ddd: null,
+    telefone: c.phone,
+    email: c.email,
+    porte: null,
+    capitalSocial: null,
+    dataAbertura: null,
+  }));
 }
 
 function buildCnaeList(profile: SearchProfile): string[] {

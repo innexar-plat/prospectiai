@@ -43,6 +43,17 @@ export async function runAnalyzeWorker(
     await Promise.all(
       batch.map(async (lead) => {
         try {
+          if (lead.cnpj.startsWith('us:')) {
+            // The AI/score rules read Receita fields; the US profile already defines the audience.
+            const ok = !!lead.email;
+            await prisma.prospectedLead.update({
+              where: { id: lead.id },
+              data: { status: ok ? 'WARM' : 'COLD', score: ok ? (lead.telefone ? 60 : 50) : 20, updatedAt: new Date() },
+            });
+            if (ok) warm++; else cold++;
+            analyzed++;
+            return;
+          }
           await prisma.prospectedLead.update({
             where: { id: lead.id },
             data: { status: 'ANALYZING' },

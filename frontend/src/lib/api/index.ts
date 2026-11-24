@@ -85,3 +85,5 @@ export type {
     AgendaReason,
     TodayAgenda,
 } from './types';
+export { usSearchApi } from './us-search';
+export type { UsCompanyResult } from './us-search';

@@ -2,8 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 
-function page(message: string): NextResponse {
-    const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Precision IA</title></head>`
+async function isUsEvent(eventId: string): Promise<boolean> {
+    try {
+        const e = await prisma.prospectedLeadEmailEvent.findUnique({ where: { id: eventId }, select: { lead: { select: { cnpj: true } } } });
+        return e?.lead?.cnpj?.startsWith('us:') ?? false;
+    } catch {
+        return false;
+    }
+}
+
+function page(message: string, us = false): NextResponse {
+    const html = `<!doctype html><html lang="${us ? 'en' : 'pt-BR'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Precision IA</title></head>`
         + `<body style="font-family:system-ui,sans-serif;background:#f9fafb;margin:0;display:flex;min-height:100vh;align-items:center;justify-content:center;">`
         + `<main style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:32px;max-width:420px;text-align:center;color:#111827;">`
         + `<h1 style="font-size:18px;margin:0 0 8px;">Precision IA</h1><p style="margin:0;color:#4b5563;">${message}</p></main></body></html>`;
@@ -40,15 +49,18 @@ async function optOut(eventId: string): Promise<void> {
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ eventId: string }> }) {
     const { eventId } = await params;
     const action = `/api/track/email/optout/${encodeURIComponent(eventId)}`;
-    return page(`Não quer mais receber nossos e-mails?</p>`
+    const us = await isUsEvent(eventId);
+    return page(`${us ? 'Stop receiving our e-mails?' : 'Não quer mais receber nossos e-mails?'}</p>`
         + `<form method="post" action="${action}" style="margin-top:16px;">`
-        + `<button type="submit" style="background:#4F46E5;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:14px;cursor:pointer;">Confirmar descadastro</button>`
-        + `</form><p style="margin:0;">`);
+        + `<button type="submit" style="background:#4F46E5;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:14px;cursor:pointer;">${us ? 'Unsubscribe' : 'Confirmar descadastro'}</button>`
+        + `</form><p style="margin:0;">`, us);
 }
 
 /** Form submit and RFC 8058 one-click unsubscribe (List-Unsubscribe-Post from Gmail/Yahoo). */
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ eventId: string }> }) {
-    await optOut((await params).eventId);
+    const { eventId } = await params;
+    await optOut(eventId);
+    const us = await isUsEvent(eventId);
     // Same answer either way: never reveal whether an id exists.
-    return page('Pronto. Você não receberá mais e-mails nossos.');
+    return page(us ? 'Done. You will not receive our e-mails anymore.' : 'Pronto. Você não receberá mais e-mails nossos.', us);
 }

@@ -36,11 +36,18 @@ def psql(sql: str, stdin: bytes | None = None) -> str:
 def load_state(con: duckdb.DuckDBPyConnection, state: str) -> None:
     t = time.time()
     excl = " AND ".join(f"coalesce(category, '') NOT LIKE '{p}'" for p in EXCLUDE)
+    # Public data goes through psql's stdin: strip control characters (an embedded newline breaks the
+    # COPY and "\\." on its own line would end it, turning the rest of the field into commands).
+    def clean(col: str) -> str:
+        return f"nullif(trim(regexp_replace({col}, '[\\x00-\\x1f\\x7f\\\\]+', ' ', 'g')), '')"
+
     csv = con.sql(f"""
-SELECT id, trim(name) AS name, category, basic_category, address, city, lower(trim(city)) AS city_norm, state,
-       postcode, phone, lower(email) AS email, website, lat, lng, confidence, operating_status, release
+SELECT id, {clean('name')} AS name, {clean('category')} AS category, {clean('basic_category')} AS basic_category,
+       {clean('address')} AS address, {clean('city')} AS city, lower({clean('city')}) AS city_norm, state,
+       {clean('postcode')} AS postcode, {clean('phone')} AS phone, lower({clean('email')}) AS email,
+       {clean('website')} AS website, lat, lng, confidence, operating_status, release
 FROM read_parquet('{DATA_DIR}/{state}.parquet')
-WHERE name IS NOT NULL AND length(trim(name)) > 1
+WHERE name IS NOT NULL AND length(trim(name)) > 1 AND regexp_matches(id, '^[0-9a-f-]+$')
   AND coalesce(operating_status, 'open') = 'open'
   AND coalesce(confidence, 0) >= {MIN_CONFIDENCE}
   AND (phone IS NOT NULL OR email IS NOT NULL OR website IS NOT NULL)

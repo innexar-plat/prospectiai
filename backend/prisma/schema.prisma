@@ -1157,6 +1157,10 @@ model AutoProspeccaoConfig {
   /// Real inbox that receives replies (cold e-mail from noreply@ gets no answers and looks like spam).
   replyToEmail         String?
   /// Person-like display name, e.g. "Vinicius | Precision IA".
+  /// BR or US: data source, language, sending hours and footer.
+  market               String   @default("BR")
+  /// Physical address in the footer (CAN-SPAM); US e-mails are not sent without it.
+  postalAddress        String?
   senderName           String?
 
   // Blacklist de CNPJs que nunca devem ser contatados
@@ -1220,7 +1224,7 @@ model ProspectedLead {
   searchProfileId   String
 
   // Dados da empresa (espelho desnormalizado do RfCompany)
-  cnpj              String               @db.VarChar(14)
+  cnpj              String               @db.VarChar(64) // CNPJ, or "us:<Overture id>"
   razaoSocial       String
   nomeFantasia      String?
   email             String?

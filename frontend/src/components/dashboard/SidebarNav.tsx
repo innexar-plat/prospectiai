@@ -35,7 +35,7 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
     titleKey: 'dash.section.prospection',
     items: [
       { to: '/dashboard', end: true, icon: Search, labelKey: 'dash.nav.newSearch' },
-      { to: '/dashboard/empresas', end: false, icon: Building2, labelKey: 'dash.nav.companyBase', feature: 'rfSearch' },
+      { to: '/dashboard/empresas', end: false, icon: Building2, labelKey: 'dash.nav.companyBase' },
       { to: '/dashboard/historico', end: false, icon: Clock, labelKey: 'dash.nav.history' },
       { to: '/dashboard/leads', end: false, icon: Target, labelKey: 'dash.nav.savedLeads' },
       { to: '/dashboard/crm', end: false, icon: KanbanSquare, labelKey: 'dash.nav.crm' },

@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { BR_CITIES, fold } from '@/lib/br-cities';
 import { sendEmail, type SendOptions, type SendResult } from '@/lib/email';
 import { sampleUrlFor } from '@/lib/sample-list';
+import { getSiteUrlForMarket } from '@/lib/site-url';
 import { brtDayStart, domainAcceptsMail, htmlToText, isBusinessHoursBrt, isRiskyRecipient, perRunQuota, warmupDailyCap } from '@/lib/cold-email-guard';
 import { logger } from '@/lib/logger';
 import { decryptEmailSecret } from '@/lib/email-config-encrypt';
@@ -23,6 +24,15 @@ interface SenderContext {
   mode: 'pool' | 'system';
   replyTo: string | null;
   senderName: string | null;
+  market?: 'BR' | 'US';
+  postalAddress?: string | null;
+}
+
+/** Milliseconds New York is behind Brasília (2 h in winter, 1 h in summer). */
+export function easternLagMs(now: Date): number {
+  const ny = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', hourCycle: 'h23' }).format(now));
+  const utc = now.getUTCHours();
+  return ((((utc - ny) % 24) + 24) % 24 - 3) * 60 * 60 * 1000;
 }
 
 /**
@@ -50,10 +60,19 @@ export async function runEmailSequenceWorker(
     logger.warn('email-sequence: no sender configured (pool empty, system sender off)', { workspaceId });
     return finishRun(runId, { emailsSent, leadsStarted, leadsAdvanced });
   }
-  if (!isBusinessHoursBrt(now)) return finishRun(runId, { emailsSent, leadsStarted, leadsAdvanced });
+  const isUs = config?.market === 'US';
+  if (isUs && (useSystem || !config?.postalAddress?.trim())) {
+    // CAN-SPAM: physical address is mandatory; and US mail never leaves from the BR main domain.
+    logger.warn('email-sequence: US workspace needs its own sender and a postal address', { workspaceId });
+    return finishRun(runId, { emailsSent, leadsStarted, leadsAdvanced });
+  }
+  // The guard functions think in Brasília time; shifting the clock makes them 9–18 h Eastern.
+  const lag = isUs ? easternLagMs(now) : 0;
+  const clock = new Date(now.getTime() - lag);
+  if (!isBusinessHoursBrt(clock)) return finishRun(runId, { emailsSent, leadsStarted, leadsAdvanced });
 
   const sentToday = await prisma.prospectedLeadEmailEvent.count({
-    where: { lead: { workspaceId }, sentAt: { gte: brtDayStart(now) } },
+    where: { lead: { workspaceId }, sentAt: { gte: new Date(brtDayStart(clock).getTime() + lag) } },
   });
   // Both modes warm up: a new sending domain starts at 15/day whatever the configured ceiling.
   const poolStartedAt = useSystem
@@ -66,13 +85,15 @@ export async function runEmailSequenceWorker(
   const dailyCap = useSystem
     ? warmupDailyCap(config?.systemSenderStartedAt ?? null, now, config?.maxEmailsPerDay ?? 120)
     : warmupDailyCap(poolStartedAt, now, config?.maxEmailsPerDay ?? 120);
-  let quota = perRunQuota(dailyCap - sentToday, now);
+  let quota = perRunQuota(dailyCap - sentToday, clock);
   if (quota <= 0) return finishRun(runId, { emailsSent, leadsStarted, leadsAdvanced });
 
   const sender: SenderContext = {
     mode: useSystem ? 'system' : 'pool',
     replyTo: config?.replyToEmail?.trim() || null,
     senderName: config?.senderName?.trim() || null,
+    market: isUs ? 'US' : 'BR',
+    postalAddress: config?.postalAddress?.trim() || null,
   };
 
   // 1. Follow-ups first: a started conversation is worth more than a new cold e-mail.
@@ -206,7 +227,13 @@ const BASE_URL = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'htt
 // Sender pool helpers (round-robin with daily limit)
 // ---------------------------------------------------------------------------
 
-export function buildOptOutFooter(url: string): string {
+export function buildOptOutFooter(url: string, us?: { postalAddress: string | null }): string {
+  if (us) {
+    const address = (us.postalAddress ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    return `<p style="margin:24px 0 0;font-size:12px;line-height:1.5;color:#6b7280;text-align:center;">`
+      + `You received this e-mail because your business is listed in public directories. `
+      + `<a href="${url}" style="color:#6b7280;text-decoration:underline;">Unsubscribe</a><br>${address}</p>`;
+  }
   return `<p style="margin:24px 0 0;font-size:12px;line-height:1.5;color:#6b7280;text-align:center;">`
     + `Você recebeu este e-mail porque sua empresa aparece em cadastros empresariais públicos. `
     + `<a href="${url}" style="color:#6b7280;text-decoration:underline;">Não quero receber mais e-mails</a>.</p>`;
@@ -292,10 +319,15 @@ async function sendStep(
   cidade = '',
 ): Promise<boolean> {
   try {
-    const template = await resolveTemplate(step, workspaceId, previousStepOpened);
+    const isUs = sender.market === 'US';
+    const template = await resolveTemplate(step, workspaceId, previousStepOpened, isUs);
+    if (!template) {
+      logger.warn('email-sequence: US workspace without its own template', { workspaceId, step });
+      return false;
+    }
     // {{amostraUrl}}: signed link to the free 20-company sample (instant, no reply needed).
     // {{cidade}}: the company's city with accents ("São Vicente").
-    const vars = { razaoSocial, amostraUrl: sampleUrlFor(leadId), cidade };
+    const vars = { razaoSocial, amostraUrl: isUs ? getSiteUrlForMarket('US') : sampleUrlFor(leadId), cidade };
     const subject = interpolate(template.subject, vars);
     let bodyHtml = interpolate(template.bodyHtml, vars);
 
@@ -307,7 +339,7 @@ async function sendStep(
     // Cold outreach must always carry a one-click opt-out (LGPD / anti-spam) — appended here so
     // no template can ship without it.
     const optOutUrl = `${BASE_URL}/api/track/email/optout/${eventId}`;
-    const optOut = buildOptOutFooter(optOutUrl);
+    const optOut = buildOptOutFooter(optOutUrl, isUs ? { postalAddress: sender.postalAddress ?? null } : undefined);
 
     // Inject opt-out + pixel just before </body> (or append if no </body>)
     if (bodyHtml.includes('</body>')) {
@@ -329,7 +361,9 @@ async function sendStep(
     // bulk-sender rules): these weigh more on spam filters than the copy itself.
     const plain = template.bodyText ? interpolate(template.bodyText, vars) : htmlToText(bodyHtml);
     const sendOpts: SendOptions = {
-      text: `${plain}\n\n--\nNão quer receber mais e-mails? ${optOutUrl}`,
+      text: isUs
+        ? `${plain}\n\n--\nUnsubscribe: ${optOutUrl}\n${sender.postalAddress ?? ''}`
+        : `${plain}\n\n--\nNão quer receber mais e-mails? ${optOutUrl}`,
       ...(sender.replyTo ? { replyTo: sender.replyTo } : {}),
       ...(sender.senderName ? { fromName: sender.senderName } : {}),
       headers: {
@@ -390,7 +424,7 @@ async function sendStep(
   }
 }
 
-async function resolveTemplate(step: number, workspaceId: string, previousOpened = false) {
+async function resolveTemplate(step: number, workspaceId: string, previousOpened = false, ownOnly = false) {
   // For step 2: use HOT_FOLLOW_OPENED if step 1 was opened, otherwise HOT_FOLLOW_NO_OPEN
   const typeMap: Record<number, string> = {
     1: 'HOT_COLD_INTRO',
@@ -405,6 +439,8 @@ async function resolveTemplate(step: number, workspaceId: string, previousOpened
   });
 
   if (workspaceTemplate) return workspaceTemplate;
+  // System templates are Portuguese Precision IA copy: never sent to US leads.
+  if (ownOnly) return null;
 
   // Fallback para template do sistema
   const systemTemplate = await prisma.autoProspeccaoTemplate.findFirst({
@@ -453,7 +489,7 @@ function interpolate(template: string, vars: Record<string, string>): string {
 
 /** Admin preview: the exact subject/HTML a step would send, with the mandatory opt-out footer. */
 export async function buildStepPreview(workspaceId: string, step: number, razaoSocial: string): Promise<{ subject: string; html: string; templateId: string }> {
-  const template = await resolveTemplate(step, workspaceId, false);
+  const template = await resolveTemplate(step, workspaceId, false) ?? getDefaultTemplate(step);
   const vars = { razaoSocial, amostraUrl: 'https://precisionia.com.br/amostra' };
   const html = interpolate(template.bodyHtml, vars);
   const footer = buildOptOutFooter(`${BASE_URL}/api/track/email/optout/preview`);

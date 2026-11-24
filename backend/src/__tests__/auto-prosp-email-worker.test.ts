@@ -149,6 +149,38 @@ describe('auto-prospecting e-mail worker', () => {
         expect((await runEmailSequenceWorker('w1', 'run2', NOW)).emailsSent).toBe(8);
     });
 
+    it('US workspace: nothing leaves without a postal address, a US sender and its own English template', async () => {
+        mockConfig.mockResolvedValueOnce({ market: 'US', maxEmailsPerDay: 100 });
+        mockSenderCount.mockResolvedValueOnce(1);
+        mockSenders.mockResolvedValue([sender]);
+        expect((await runEmailSequenceWorker('us', 'r', new Date('2026-11-03T16:00:00Z'))).emailsSent).toBe(0);
+
+        mockConfig.mockResolvedValueOnce({ market: 'US', postalAddress: '1 Main St, Miami FL', useSystemSender: true });
+        mockSenderCount.mockResolvedValueOnce(0);
+        expect((await runEmailSequenceWorker('us', 'r', new Date('2026-11-03T16:00:00Z'))).emailsSent).toBe(0);
+
+        // 13:00 UTC is 8:00 in New York: too early.
+        mockConfig.mockResolvedValueOnce({ market: 'US', postalAddress: '1 Main St, Miami FL' });
+        mockSenderCount.mockResolvedValueOnce(1);
+        expect((await runEmailSequenceWorker('us', 'r', NOW)).emailsSent).toBe(0);
+
+        mockConfig.mockResolvedValueOnce({ market: 'US', postalAddress: '1 Main St, Miami FL' });
+        mockSenderCount.mockResolvedValueOnce(1);
+        mockTemplate.mockResolvedValueOnce(null);
+        mockLeads.mockResolvedValueOnce([]).mockResolvedValueOnce([lead('a', 'joe@shop.com')]);
+        expect((await runEmailSequenceWorker('us', 'r', new Date('2026-11-03T16:00:00Z'))).emailsSent).toBe(0);
+        expect(mockTemplate).toHaveBeenCalledTimes(1);
+
+        mockConfig.mockResolvedValueOnce({ market: 'US', postalAddress: '1 Main St, Miami FL' });
+        mockSenderCount.mockResolvedValueOnce(1);
+        mockLeads.mockResolvedValueOnce([]).mockResolvedValueOnce([lead('a', 'joe@shop.com')]);
+        expect((await runEmailSequenceWorker('us', 'r', new Date('2026-11-03T16:00:00Z'))).emailsSent).toBe(1);
+        const mail = mockResendSend.mock.calls[0][0];
+        expect(mail.html).toContain('1 Main St, Miami FL');
+        expect(mail.text).toContain('Unsubscribe');
+        expect(mail.html).not.toContain('Não quero');
+    });
+
     it('skips and marks opted-out addresses', async () => {
         mockConfig.mockResolvedValueOnce(systemConfig);
         mockSenderCount.mockResolvedValueOnce(0);

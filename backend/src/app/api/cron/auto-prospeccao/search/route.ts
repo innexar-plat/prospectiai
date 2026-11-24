@@ -26,7 +26,7 @@ async function handlePOST(req: NextRequest) {
     // Buscar workspaces com auto-prospecção ativa
     const activeConfigs = await prisma.autoProspeccaoConfig.findMany({
       where: { isActive: true },
-      select: { workspaceId: true, maxLeadsPerRun: true, blockedCnpjs: true },
+      select: { workspaceId: true, maxLeadsPerRun: true, blockedCnpjs: true, market: true },
     });
 
     let totalLeads = 0;
@@ -43,7 +43,7 @@ async function handlePOST(req: NextRequest) {
         const profiles = await prisma.searchProfile.findMany({
           where: {
             AND: [
-              ownProfiles > 0 ? { workspaceId: config.workspaceId, isSystem: false } : { isSystem: true },
+              ownProfiles > 0 || config.market === 'US' ? { workspaceId: config.workspaceId, isSystem: false } : { isSystem: true },
               { isActive: true },
               { OR: [{ nextRunAt: null }, { nextRunAt: { lte: now } }] },
             ],
