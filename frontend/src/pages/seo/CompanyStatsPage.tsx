@@ -13,6 +13,7 @@ import {
   getSegmentHub,
   getSegmentHubLinks,
   relatedCompanyStats,
+  localLandingForCompanyPage,
   type CompanyStatsPage as StatsPage,
   type HubLink,
 } from '@/lib/seo-company-stats';
@@ -128,6 +129,7 @@ function SignupCta({ page }: { page?: StatsPage }) {
 function SegmentCityView({ slug, page }: { slug: string; page: StatsPage }) {
   const faq = pageFaq(page);
   const related = relatedCompanyStats(slug);
+  const localLanding = localLandingForCompanyPage(page.segment, cityHubSlugForPage(page).replace(/^em-/, ''));
   const seg = page.segmentName.toLowerCase();
   const smallShare = pct(page.porte.ME + page.porte.EPP, page.total);
   const schema = [
@@ -234,6 +236,14 @@ function SegmentCityView({ slug, page }: { slug: string; page: StatsPage }) {
             ))}
           </ul>
         </section>
+      )}
+
+      {localLanding && (
+        <p className="mt-6 text-sm">
+          <Link to={localLanding.href} className="font-medium text-violet-700 dark:text-violet-300 hover:underline">
+            {localLanding.label} →
+          </Link>
+        </p>
       )}
     </Shell>
   );

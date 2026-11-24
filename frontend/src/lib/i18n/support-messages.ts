@@ -202,7 +202,7 @@ export const SUPPORT_MESSAGES: Record<string, Record<string, string>> = {
         'support.faq.group.credits': 'Créditos e planos',
         'support.faq.credits.q1': 'Como funcionam os créditos?',
         'support.faq.credits.a1.br':
-            'Cada análise de lead com IA consome 1 crédito. O número depende do plano: Free (10/mês), Starter R$129 (100/mês), Growth R$397 (400/mês), Business R$997 (1.200/mês) e Enterprise (5.000/mês). Créditos renovam automaticamente.',
+            'Cada análise de lead com IA consome 1 crédito. O número depende do plano: Free (10/mês), Starter R$ 99 (100/mês), Growth R$ 297 (400/mês), Business R$ 797 (1.200/mês) e Enterprise (5.000/mês). Créditos renovam automaticamente.',
         'support.faq.credits.a1.us':
             'Cada análise de lead com IA consome 1 crédito. O plano Starter custa $19/mês e inclui 50 créditos. Créditos renovam automaticamente a cada ciclo de cobrança.',
         'support.faq.credits.q2': 'Posso cancelar a qualquer momento?',
@@ -378,7 +378,7 @@ export const SUPPORT_MESSAGES: Record<string, Record<string, string>> = {
         'support.faq.group.credits': 'Credits & plans',
         'support.faq.credits.q1': 'How do credits work?',
         'support.faq.credits.a1.br':
-            'Each AI lead analysis uses 1 credit. Amount depends on plan: Free (10/month), Starter R$129 (100/month), Growth R$397 (400/month), Business R$997 (1,200/month), and Enterprise (5,000/month). Credits renew automatically.',
+            'Each AI lead analysis uses 1 credit. Amount depends on plan: Free (10/month), Starter R$ 99 (100/month), Growth R$ 297 (400/month), Business R$ 797 (1,200/month), and Enterprise (5,000/month). Credits renew automatically.',
         'support.faq.credits.a1.us':
             'Each AI lead analysis uses 1 credit. The Starter plan costs $19/month and includes 50 credits. Credits renew automatically each billing cycle.',
         'support.faq.credits.q2': 'Can I cancel anytime?',
@@ -553,7 +553,7 @@ export const SUPPORT_MESSAGES: Record<string, Record<string, string>> = {
         'support.faq.group.credits': 'Créditos y planes',
         'support.faq.credits.q1': '¿Cómo funcionan los créditos?',
         'support.faq.credits.a1.br':
-            'Cada análisis de lead con IA consume 1 crédito. La cantidad depende del plan: Free (10/mes), Starter R$129 (100/mes), Growth R$397 (400/mes), Business R$997 (1.200/mes) y Enterprise (5.000/mes). Los créditos se renuevan automáticamente.',
+            'Cada análisis de lead con IA consume 1 crédito. La cantidad depende del plan: Free (10/mes), Starter R$ 99 (100/mes), Growth R$ 297 (400/mes), Business R$ 797 (1.200/mes) y Enterprise (5.000/mes). Los créditos se renuevan automáticamente.',
         'support.faq.credits.a1.us':
             'Cada análisis de lead con IA consume 1 crédito. El plan Starter cuesta $19/mes e incluye 50 créditos. Los créditos se renuevan automáticamente en cada ciclo de facturación.',
         'support.faq.credits.q2': '¿Puedo cancelar en cualquier momento?',

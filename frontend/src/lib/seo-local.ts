@@ -55,6 +55,29 @@ const BASE = 'geracao-de-leads-b2b';
 const BASE_NICHO = 'prospeccao-b2b';
 const BASE_BAIRRO = 'lista-de-empresas-por-bairro';
 
+/** Display names with accents — slugToTitle("sao-paulo") would print "Sao Paulo" in the H1. */
+const CITY_NAMES: Record<string, string> = {
+  'praia-grande': 'Praia Grande',
+  santos: 'Santos',
+  'sao-paulo': 'São Paulo',
+  guaruja: 'Guarujá',
+  'sao-vicente': 'São Vicente',
+  'rio-de-janeiro': 'Rio de Janeiro',
+  'belo-horizonte': 'Belo Horizonte',
+  curitiba: 'Curitiba',
+  'porto-alegre': 'Porto Alegre',
+  campinas: 'Campinas',
+};
+
+const NICHE_NAMES: Record<string, string> = {
+  dentistas: 'Dentistas',
+  imobiliarias: 'Imobiliárias',
+  contadores: 'Contadores',
+  advogados: 'Advogados',
+  restaurantes: 'Restaurantes',
+  clinicas: 'Clínicas',
+};
+
 function slugToTitle(slug: string): string {
   return slug
     .split('-')
@@ -98,7 +121,7 @@ export function getWave1Slugs(): SeoLandingSlug[] {
     list.push({
       slug: slugCidade(c),
       type: 'cidade',
-      city: slugToTitle(c),
+      city: CITY_NAMES[c] ?? slugToTitle(c),
       region: regionMap[c] || 'BR-SP',
     });
   }
@@ -107,8 +130,8 @@ export function getWave1Slugs(): SeoLandingSlug[] {
       list.push({
         slug: slugCidadeNicho(n, c),
         type: 'cidade-nicho',
-        city: slugToTitle(c),
-        niche: slugToTitle(n),
+        city: CITY_NAMES[c] ?? slugToTitle(c),
+        niche: NICHE_NAMES[n] ?? slugToTitle(n),
         region: 'BR-SP',
       });
     }
@@ -298,4 +321,20 @@ export function getRelatedSeoSlugs(entry: SeoLandingSlug, limit = 6): SeoLanding
     return related.slice(0, limit);
   }
   return all.filter((e) => !sameSlug(e) && e.type === 'cidade').slice(0, limit);
+}
+
+/** H1 of a local landing (shared by the React page and the build-time static HTML). */
+export function getSeoH1Title(entry: SeoLandingSlug): string {
+  if (entry.type === 'cidade' && entry.city) return `Ferramenta de Inteligência Comercial para Empresas em ${entry.city}`;
+  if (entry.type === 'cidade-nicho' && entry.city && entry.niche) return `Prospecção B2B para ${entry.niche} em ${entry.city}`;
+  if (entry.type === 'bairro' && entry.neighborhood) return `Lista de Empresas por Bairro: ${entry.neighborhood}`;
+  return 'Geração de Leads B2B e Prospecção com IA';
+}
+
+
+/** Anchor text for a related local landing. */
+export function getRelatedLinkLabel(r: SeoLandingSlug): string {
+  if (r.type === 'cidade' && r.city) return `Leads em ${r.city}`;
+  if (r.type === 'cidade-nicho' && r.city && r.niche) return `${r.niche} em ${r.city}`;
+  return r.slug;
 }

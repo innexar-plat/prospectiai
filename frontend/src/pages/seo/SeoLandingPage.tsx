@@ -10,24 +10,12 @@ import {
   getSeoLocalBlock,
   getSeoFaq,
   getRelatedSeoSlugs,
-  type SeoLandingSlug,
+  getSeoH1Title,
+  getRelatedLinkLabel,
 } from '@/lib/seo-local';
 import { getActiveMarket } from '@/lib/market';
 import { getAppOrigin } from '@/lib/site-url';
 import { companyLinkForLocalEntry, formatCount } from '@/lib/seo-company-stats';
-
-function getSeoH1Title(entry: SeoLandingSlug): string {
-  if (entry.type === 'cidade' && entry.city) return `Ferramenta de Inteligência Comercial para Empresas em ${entry.city}`;
-  if (entry.type === 'cidade-nicho' && entry.city && entry.niche) return `Prospecção B2B para ${entry.niche} em ${entry.city}`;
-  if (entry.type === 'bairro' && entry.neighborhood) return `Lista de Empresas por Bairro: ${entry.neighborhood}`;
-  return 'Geração de Leads B2B e Prospecção com IA';
-}
-
-function getRelatedLinkLabel(r: SeoLandingSlug): string {
-  if (r.type === 'cidade' && r.city) return `Leads em ${r.city}`;
-  if (r.type === 'cidade-nicho' && r.city && r.niche) return `${r.niche} em ${r.city}`;
-  return r.slug;
-}
 
 function setMeta(nameOrProperty: string, content: string, isProperty = false) {
   const attr = isProperty ? 'property' : 'name';

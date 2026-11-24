@@ -47,7 +47,7 @@ export default function PricingPage({ locale: initialLocale }: { locale: string 
         : 'Preços | Precision — Planos de Prospecção B2B';
     const seoDesc = market === 'US'
         ? 'Precision pricing: Starter plan at $19/mo with 50 credits. AI prospecting, lead scoring, and team workspaces.'
-        : 'Planos acessíveis para prospecção B2B com IA. A partir de R$ 49/mês com 50 créditos. Score IA, exportação para CRM e workspace de equipe.';
+        : 'Planos acessíveis para prospecção B2B com IA. A partir de R$ 99/mês. Score IA, exportação para CRM e workspace de equipe.';
 
     return (
         <div className="min-h-screen flex flex-col bg-background">

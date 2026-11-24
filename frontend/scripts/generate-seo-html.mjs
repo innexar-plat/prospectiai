@@ -4,6 +4,8 @@
  * Uso: node scripts/generate-seo-html.mjs (rodar após vite build, a partir de frontend/)
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { createRequire } from 'module';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 
@@ -52,7 +54,7 @@ function getBrIndexableRoutes() {
     { path: 'integracoes/rdstation', title: 'Integração Precision + RD Station CRM', description: 'Conecte o Precision ao RD Station CRM e envie leads prospectados direto para seu funil de vendas.', priority: '0.7', changefreq: 'monthly' },
     { path: 'integracoes/agendor', title: 'Integração Precision + Agendor CRM', description: 'Conecte o Precision ao Agendor e envie leads prospectados direto para seu CRM.', priority: '0.7', changefreq: 'monthly' },
     { path: 'integracoes/hubspot', title: 'Integração Precision + HubSpot CRM', description: 'Conecte o Precision ao HubSpot CRM via OAuth e envie leads prospectados direto para seu funil de vendas.', priority: '0.7', changefreq: 'monthly' },
-    { path: 'pricing', title: 'Preços | Precision — Planos de Prospecção B2B', description: 'Planos acessíveis para prospecção B2B com IA. A partir de R$ 49/mês com 50 créditos. Score IA, exportação para CRM e workspace de equipe.', priority: '0.9', changefreq: 'weekly' },
+    { path: 'pricing', title: 'Preços | Precision — Planos de Prospecção B2B', description: 'Planos acessíveis para prospecção B2B com IA. A partir de R$ 99/mês. Score IA, exportação para CRM e workspace de equipe.', priority: '0.9', changefreq: 'weekly' },
   ];
 
   const blogPosts = [
@@ -89,8 +91,31 @@ function getBrIndexableRoutes() {
   return routes;
 }
 
+
+/**
+ * Static bodies (H1, text, internal links) for every public BR page, built from the same data
+ * the React pages use — src/seo/static-bodies.tsx, bundled here with esbuild (ships with Vite).
+ */
+async function loadStaticBodies() {
+  const { build } = await import('esbuild');
+  const outfile = path.join(os.tmpdir(), `seo-static-bodies-${process.pid}.cjs`);
+  await build({
+    entryPoints: [path.join(ROOT, 'src', 'seo', 'static-bodies.tsx')],
+    bundle: true,
+    platform: 'node',
+    format: 'cjs',
+    target: 'node20',
+    jsx: 'automatic',
+    outfile,
+    alias: { '@': path.join(ROOT, 'src') },
+    define: { 'import.meta.env.VITE_MARKET': JSON.stringify(MARKET), 'process.env.NODE_ENV': '"production"' },
+    logLevel: 'warning',
+  });
+  return createRequire(import.meta.url)(outfile);
+}
+
 /** /empresas pages — same JSON and texts (src/lib/company-stats-text.js) as the React pages. */
-async function getCompanyStatsRoutes() {
+async function getCompanyStatsRoutes(staticMod) {
   let data;
   try {
     data = JSON.parse(readFileSync(path.join(ROOT, 'src', 'data', 'seo-company-stats.json'), 'utf8'));
@@ -101,9 +126,10 @@ async function getCompanyStatsRoutes() {
   const T = await import(pathToFileURL(path.join(ROOT, 'src', 'lib', 'company-stats-text.js')).href);
   const { fmt } = T;
   const e = escapeHtml;
-  const wrap = (inner) => `<main style="max-width:48rem;margin:0 auto;padding:2.5rem 1rem;font-family:system-ui,sans-serif">${inner}`
-    + `<p><a href="/auth/signup?utm_source=seo&amp;utm_campaign=empresas">Ver listas completas com telefone e e-mail — 7 dias grátis</a></p>`
-    + `<p><small>Fonte: dados públicos do CNPJ (Receita Federal). Atualizado em ${e(data.generatedAt)}.</small></p></main>`;
+  const wrap = (inner, extra = '') => staticMod.wrapStaticBody(inner
+    + extra
+    + `<p><a href="/amostra">Receber 20 empresas desta lista grátis</a> · <a href="/auth/signup?utm_source=seo&amp;utm_campaign=empresas">Ver listas completas com telefone e e-mail — 7 dias grátis</a></p>`
+    + `<p><small>Fonte: dados públicos do CNPJ (Receita Federal). Atualizado em ${e(data.generatedAt)}.</small></p>`);
   const list = (links) => `<ul>${links.map((l) => `<li><a href="/empresas/${l.slug}">${e(l.label)}</a> — ${fmt(l.total)}</li>`).join('')}</ul>`;
   const slugify = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const cityKey = (p) => (data.cities ?? []).find((c) => c.name === p.city && c.uf === p.uf)?.slug ?? `${slugify(p.city)}-${p.uf.toLowerCase()}`;
@@ -160,6 +186,10 @@ async function getCompanyStatsRoutes() {
         + `<h2>Porte das empresas</h2><ul><li>${fmt(p.porte.ME)} microempresas (ME)</li><li>${fmt(p.porte.EPP)} pequenas (EPP)</li><li>${fmt(p.porte.DEMAIS)} médias e grandes</li></ul>`
         + `<h2>Perguntas frequentes</h2>${faq.map((f) => `<h3>${e(f.q)}</h3><p>${e(f.a)}</p>`).join('')}`
         + `<script type="application/ld+json">${faqLd}</script>`,
+        (() => {
+          const local = staticMod.localLandingForCompanyPage(p.segment, cityKey(p));
+          return local ? `<p><a href="${local.href}">${e(local.label)}</a></p>` : '';
+        })(),
       ),
     });
   }
@@ -213,7 +243,14 @@ function replaceMeta(html, { url, title, description }) {
 
 function generatePerRouteHtml(indexHtml, routes, origin) {
   for (const r of routes) {
-    if (!r.path) continue;
+    if (!r.path) {
+      // "/" is served from home.html on the BR host (nginx); index.html stays the bare SPA shell.
+      if (r.bodyHtml) {
+        writeFileSync(path.join(DIST, 'home.html'), indexHtml.replace('<div id="root"></div>', `<div id="root">${r.bodyHtml}</div>`));
+        console.log('Gerado:', path.join(DIST, 'home.html'));
+      }
+      continue;
+    }
     const url = routeToUrl(origin, r);
     let html = replaceMeta(indexHtml, { url, title: r.title, description: r.description });
     if (r.bodyHtml) html = html.replace('<div id="root"></div>', `<div id="root">${r.bodyHtml}</div>`);
@@ -234,7 +271,14 @@ async function main() {
     process.exit(1);
   }
 
-  const brRoutes = [...getBrIndexableRoutes(), ...(await getCompanyStatsRoutes())];
+  const staticMod = MARKET === 'BR' ? await loadStaticBodies() : null;
+  const brRoutes = [...getBrIndexableRoutes(), ...(staticMod ? await getCompanyStatsRoutes(staticMod) : [])];
+  if (staticMod) {
+    const bodies = staticMod.buildBrStaticBodies();
+    for (const r of brRoutes) if (!r.bodyHtml && bodies[r.path]) r.bodyHtml = bodies[r.path];
+    const missing = brRoutes.filter((r) => !r.bodyHtml).map((r) => r.path || '/');
+    if (missing.length) console.warn('Aviso: rotas sem corpo estático:', missing.join(', '));
+  }
   const usRoutes = getUsIndexableRoutes();
 
   writeSitemap(BR_ORIGIN, brRoutes, 'sitemap.xml');

@@ -168,7 +168,7 @@ export const LANDING_MESSAGES: Record<string, Record<string, string>> = {
         'trial.credits': "{used}/{limit} créditos ({pct}%)",
         'trial.subscribe': "Assinar agora",
         'pricing.trialBadge': "Starter · {credits} créditos/mês",
-        'pricing.subtitle': "Preços acessíveis para equipes de qualquer tamanho. Planos a partir de R$ 97/mês.",
+        'pricing.subtitle': "Preços acessíveis para equipes de qualquer tamanho. Planos a partir de R$ 99/mês.",
         'pricing.creditsMonth': "créditos/mês",
         'pricing.featureSearch': "Busca B2B por nicho e região",
         'pricing.featureAi': "Score IA e scripts de abordagem",

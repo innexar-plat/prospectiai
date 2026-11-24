@@ -173,3 +173,28 @@ export function companyLinkForLocalEntry(entry: { city?: string; niche?: string;
   return hub ? { href: `/${COMPANY_STATS_BASE_PATH}/${cityHubSlug(citySlug)}`, label: `Empresas em ${hub.city} por segmento`, total: hub.total } : null;
 }
 
+
+/** Local landings ("geracao-de-leads-b2b-<city>") exist for these data cities. */
+const LOCAL_CITY_SLUGS: Record<string, string> = {
+  'praia-grande-sp': 'praia-grande', 'santos-sp': 'santos', 'sao-paulo-sp': 'sao-paulo', 'guaruja-sp': 'guaruja',
+  'sao-vicente-sp': 'sao-vicente', 'rio-de-janeiro-rj': 'rio-de-janeiro', 'belo-horizonte-mg': 'belo-horizonte',
+  'curitiba-pr': 'curitiba', 'porto-alegre-rs': 'porto-alegre', 'campinas-sp': 'campinas',
+};
+/** Niche landings only exist for the first three anchor cities. */
+const LOCAL_NICHE_CITIES = new Set(['praia-grande', 'santos', 'sao-paulo']);
+
+/**
+ * Reverse of companyLinkForLocalEntry: the local landing for a data page (segment + city), so
+ * both page families link to each other and none is an orphan.
+ */
+export function localLandingForCompanyPage(segment: string, citySlug: string): { href: string; label: string } | null {
+  const local = LOCAL_CITY_SLUGS[citySlug];
+  if (!local) return null;
+  const niche = Object.keys(OLD_NICHE_TO_SEGMENT).find((k) => OLD_NICHE_TO_SEGMENT[k] === segment);
+  const page = Object.values(DATA.pages).find((p) => p.segment === segment && cityHubSlugForPage(p) === cityHubSlug(citySlug));
+  const cityName = page?.city ?? (DATA.cities ?? []).find((c) => c.slug === citySlug)?.name ?? local;
+  if (niche && LOCAL_NICHE_CITIES.has(local)) {
+    return { href: `/prospeccao-b2b-${niche}-${local}`, label: `Como prospectar ${page?.segmentName.toLowerCase() ?? niche} em ${cityName}` };
+  }
+  return { href: `/geracao-de-leads-b2b-${local}`, label: `Geração de leads B2B em ${cityName}` };
+}
