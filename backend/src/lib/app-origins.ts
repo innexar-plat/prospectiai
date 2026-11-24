@@ -1,6 +1,7 @@
 /** Canonical public app origins (multi-domain deploy). */
 export const APP_ORIGINS = [
     'https://precisionia.com.br',
+    'https://us.precisionia.com.br',
     'https://precisionai.innexar.app',
 ] as const;
 

@@ -71,10 +71,10 @@ const COMPANY_NAME    = 'Innexar Brasil';
 const COMPANY_ADDRESS = 'Av. Dona Ophelia Caccerari Reis - Aviação, 363 — São Paulo, SP';
 const COMPANY_NAME_US    = 'Innexar LLC';
 const COMPANY_ADDRESS_US = '13013 Yardley Ct — Orlando, Florida, USA';
-const SUPPORT_EMAIL_US   = 'support@precisionai.innexar.app';
+const SUPPORT_EMAIL_US   = 'support@precisionia.com.br';
 
 function getCompanyIdentity(siteBase: string): { name: string; address: string; support: string } {
-  if (siteBase.includes('precisionai.innexar.app')) {
+  if (siteBase.includes('precisionai.innexar.app') || siteBase.includes('us.precisionia.com.br')) {
     return { name: COMPANY_NAME_US, address: COMPANY_ADDRESS_US, support: SUPPORT_EMAIL_US };
   }
   return { name: COMPANY_NAME, address: COMPANY_ADDRESS, support: SUPPORT_EMAIL };

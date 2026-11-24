@@ -16,14 +16,14 @@ import {
 
 describe('US market integration (Vitest)', () => {
   it('resolves canonical US and BR site URLs', () => {
-    expect(getSiteUrlForMarket('US')).toBe('https://precisionai.innexar.app');
+    expect(getSiteUrlForMarket('US')).toBe('https://us.precisionia.com.br');
     expect(getSiteUrlForMarket('BR')).toContain('precisionia');
   });
 
   it('maps USD commissions to US affiliate dashboard host', () => {
     expect(marketFromCurrency('USD')).toBe('US');
     const url = buildAffiliateDashboardUrl('USD');
-    expect(url).toMatch(/^https:\/\/precisionai\.innexar\.app\/dashboard\/afiliado/);
+    expect(url).toMatch(/^https:\/\/us\.precisionia\.com\.br\/dashboard\/afiliado/);
   });
 
   it('uses English copy for US default locale transactional emails', () => {

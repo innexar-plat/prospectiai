@@ -81,7 +81,7 @@ describe('GET /api/admin/representatives/[id]', () => {
     const data = await res.json();
 
     expect(data.currency).toBe('USD');
-    expect(data.disclosureLink).toContain('innexar.app');
-    expect(data.disclosureLink).not.toContain('precisionia.com.br');
+    expect(data.disclosureLink).toContain('us.precisionia.com.br');
+    expect(data.disclosureLink).not.toContain('//precisionia.com.br');
   });
 });

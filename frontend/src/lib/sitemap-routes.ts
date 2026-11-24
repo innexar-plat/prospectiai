@@ -9,7 +9,7 @@ import { COMPANY_STATS_BASE_PATH, companyRouteMeta, getAllCompanyRouteSlugs } fr
 import { HUB_DESCRIPTION, HUB_TITLE } from '@/lib/company-stats-text';
 
 export const BR_ORIGIN = 'https://precisionia.com.br';
-export const US_ORIGIN = 'https://precisionai.innexar.app';
+export const US_ORIGIN = 'https://us.precisionia.com.br';
 
 export interface SitemapRoute {
   /** Path without leading slash; empty string = home */

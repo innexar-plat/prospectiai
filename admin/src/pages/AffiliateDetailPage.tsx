@@ -8,7 +8,7 @@ type TabId = 'overview' | 'referrals' | 'commissions';
 
 function affiliateSignupLink(code: string, market: 'BR' | 'US' = 'BR'): string {
   if (market === 'US') {
-    return `https://precisionai.innexar.app/api/affiliate/click?ref=${encodeURIComponent(code)}`;
+    return `https://us.precisionia.com.br/api/affiliate/click?ref=${encodeURIComponent(code)}`;
   }
   const base = typeof window !== 'undefined' ? window.location.origin : '';
   return `${base}/api/affiliate/click?ref=${encodeURIComponent(code)}`;

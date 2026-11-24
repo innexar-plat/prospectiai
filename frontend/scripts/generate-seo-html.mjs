@@ -15,7 +15,7 @@ const DIST = path.join(ROOT, 'dist');
 const PUBLIC = path.join(ROOT, 'public');
 const MARKET = process.env.VITE_MARKET === 'US' ? 'US' : 'BR';
 const BR_ORIGIN = 'https://precisionia.com.br';
-const US_ORIGIN = 'https://precisionai.innexar.app';
+const US_ORIGIN = 'https://us.precisionia.com.br';
 const BASE_URL = MARKET === 'US' ? US_ORIGIN : BR_ORIGIN;
 
 /** Keep in sync with frontend/src/lib/sitemap-routes.ts */

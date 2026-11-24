@@ -168,13 +168,13 @@ describe('POST /api/auth/register', () => {
       'br@example.com',
       expect.any(String),
       expect.any(String),
-      expect.stringContaining('precisionia.com.br'),
+      expect.stringContaining('//precisionia.com.br'),
     );
     expect(sendVerificationEmail).not.toHaveBeenCalledWith(
       expect.any(String),
       expect.any(String),
       expect.any(String),
-      expect.stringContaining('precisionai.innexar.app'),
+      expect.stringContaining('us.precisionia.com.br'),
     );
   });
 
@@ -213,13 +213,13 @@ describe('POST /api/auth/register', () => {
       'us@example.com',
       expect.any(String),
       expect.any(String),
-      expect.stringContaining('precisionai.innexar.app'),
+      expect.stringContaining('us.precisionia.com.br'),
     );
     expect(sendVerificationEmail).not.toHaveBeenCalledWith(
       expect.any(String),
       expect.any(String),
       expect.any(String),
-      expect.stringContaining('precisionia.com.br'),
+      expect.stringContaining('//precisionia.com.br'),
     );
     const createData = mockTx.workspace.create.mock.calls[0][0].data;
     expect(createData.plan).not.toBe('TRIAL');

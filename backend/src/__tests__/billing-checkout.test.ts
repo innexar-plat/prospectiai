@@ -93,9 +93,9 @@ describe('POST /api/billing/checkout', () => {
     );
     expect(res.status).toBe(200);
     const stripeArgs = stripe.checkout.sessions.create.mock.calls[0][0];
-    expect(stripeArgs.success_url).toContain('https://precisionai.innexar.app/');
-    expect(stripeArgs.success_url).not.toContain('precisionia.com.br');
-    expect(stripeArgs.cancel_url).toContain('https://precisionai.innexar.app/dashboard/planos');
+    expect(stripeArgs.success_url).toContain('https://us.precisionia.com.br/');
+    expect(stripeArgs.success_url).not.toContain('//precisionia.com.br');
+    expect(stripeArgs.cancel_url).toContain('https://us.precisionia.com.br/dashboard/planos');
   });
 
   it('creates Stripe checkout for US market with en locale and domain URLs', async () => {
@@ -120,8 +120,8 @@ describe('POST /api/billing/checkout', () => {
             }),
           }),
         ],
-        success_url: expect.stringContaining('https://precisionai.innexar.app/en/billing/success'),
-        cancel_url: expect.stringContaining('https://precisionai.innexar.app/dashboard/planos'),
+        success_url: expect.stringContaining('https://us.precisionia.com.br/en/billing/success'),
+        cancel_url: expect.stringContaining('https://us.precisionia.com.br/dashboard/planos'),
       }),
     );
     expect(preference.create).not.toHaveBeenCalled();
@@ -138,9 +138,9 @@ describe('POST /api/billing/checkout', () => {
     const stripeArgs = stripe.checkout.sessions.create.mock.calls[0][0];
     expect(stripeArgs.locale).toBe('en');
     expect(stripeArgs.locale).not.toBe('pt');
-    expect(JSON.stringify(stripeArgs)).not.toContain('precisionia.com.br');
-    expect(stripeArgs.success_url).toMatch(/^https:\/\/precisionai\.innexar\.app\//);
-    expect(stripeArgs.cancel_url).toMatch(/^https:\/\/precisionai\.innexar\.app\//);
+    expect(JSON.stringify(stripeArgs)).not.toContain('//precisionia.com.br');
+    expect(stripeArgs.success_url).toMatch(/^https:\/\/us\.precisionia\.com\.br\//);
+    expect(stripeArgs.cancel_url).toMatch(/^https:\/\/us\.precisionia\.com\.br\//);
   });
 
   it('uses Mercado Pago for BR market even when locale is en', async () => {

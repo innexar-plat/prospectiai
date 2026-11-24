@@ -9,8 +9,8 @@ describe('support', () => {
   });
 
   it('uses US support email on US host (ignores BR env default)', () => {
-    vi.stubGlobal('location', { ...window.location, hostname: 'precisionai.innexar.app', protocol: 'https:' });
-    expect(getSupportEmail()).toBe('support@precisionai.innexar.app');
+    vi.stubGlobal('location', { ...window.location, hostname: 'us.precisionia.com.br', protocol: 'https:' });
+    expect(getSupportEmail()).toBe('support@precisionia.com.br');
   });
 
   it('uses BR support email on BR host', () => {
@@ -25,7 +25,7 @@ describe('support', () => {
   });
 
   it('returns null WhatsApp URL for US market', () => {
-    vi.stubGlobal('location', { ...window.location, hostname: 'precisionai.innexar.app', protocol: 'https:' });
+    vi.stubGlobal('location', { ...window.location, hostname: 'us.precisionia.com.br', protocol: 'https:' });
     expect(getSupportWhatsAppUrl()).toBeNull();
   });
 });

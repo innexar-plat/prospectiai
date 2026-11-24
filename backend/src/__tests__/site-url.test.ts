@@ -3,7 +3,7 @@ import { getSiteUrlForMarket, getSiteUrlFromRequest } from '@/lib/site-url';
 
 describe('getSiteUrlForMarket', () => {
     it('returns US canonical origin for US market', () => {
-        expect(getSiteUrlForMarket('US')).toBe('https://precisionai.innexar.app');
+        expect(getSiteUrlForMarket('US')).toBe('https://us.precisionia.com.br');
     });
 
     it('returns BR canonical origin for BR market', () => {
@@ -16,7 +16,7 @@ describe('getSiteUrlFromRequest', () => {
         const req = new Request('http://localhost/api/auth/register', {
             headers: { host: 'precisionai.innexar.app' },
         });
-        expect(getSiteUrlFromRequest(req)).toBe('https://precisionai.innexar.app');
+        expect(getSiteUrlFromRequest(req)).toBe('https://us.precisionia.com.br');
     });
 
     it('uses BR site URL when host is BR domain', () => {
@@ -33,7 +33,7 @@ describe('getSiteUrlFromRequest', () => {
                 'X-Prospector-Market': 'US',
             },
         });
-        expect(getSiteUrlFromRequest(req)).toBe('https://precisionai.innexar.app');
+        expect(getSiteUrlFromRequest(req)).toBe('https://us.precisionia.com.br');
     });
 
     it('uses market from prospector-market cookie when header absent', () => {
@@ -54,6 +54,6 @@ describe('getSiteUrlFromRequest', () => {
                 cookie: 'prospector-market=BR',
             },
         });
-        expect(getSiteUrlFromRequest(req)).toBe('https://precisionai.innexar.app');
+        expect(getSiteUrlFromRequest(req)).toBe('https://us.precisionia.com.br');
     });
 });

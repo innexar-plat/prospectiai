@@ -21,30 +21,30 @@ describe('site-url', () => {
     });
 
     it('returns market default origin without window', () => {
-        expect(getMarketOrigin('US')).toBe('https://precisionai.innexar.app');
+        expect(getMarketOrigin('US')).toBe('https://us.precisionia.com.br');
         expect(getMarketOrigin('BR')).toBe('https://precisionia.com.br');
     });
 
     it('uses current browser origin when available', () => {
         vi.stubGlobal('location', {
             ...window.location,
-            hostname: 'precisionai.innexar.app',
-            origin: 'https://precisionai.innexar.app',
+            hostname: 'us.precisionia.com.br',
+            origin: 'https://us.precisionia.com.br',
             protocol: 'https:',
         });
-        expect(getAppOrigin()).toBe('https://precisionai.innexar.app');
+        expect(getAppOrigin()).toBe('https://us.precisionia.com.br');
     });
 
     it('rewrites sibling market absolute URLs to current origin', () => {
         vi.stubGlobal('location', {
             ...window.location,
-            hostname: 'precisionai.innexar.app',
-            origin: 'https://precisionai.innexar.app',
+            hostname: 'us.precisionia.com.br',
+            origin: 'https://us.precisionia.com.br',
             protocol: 'https:',
         });
         expect(
             assertMarketHostname('https://precisionia.com.br/dashboard/planos?x=1'),
-        ).toBe('https://precisionai.innexar.app/dashboard/planos?x=1');
+        ).toBe('https://us.precisionia.com.br/dashboard/planos?x=1');
     });
 
     it('keeps URLs on the same origin unchanged', () => {

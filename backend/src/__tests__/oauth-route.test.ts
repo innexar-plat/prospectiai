@@ -32,7 +32,7 @@ describe('GET /api/oauth/:provider', () => {
             `callbackUrl=${encodeURIComponent('https://precisionia.com.br/checkout')}`,
         );
         expect(signInMock).toHaveBeenCalledWith('google', {
-            redirectTo: 'https://precisionai.innexar.app/checkout',
+            redirectTo: 'https://us.precisionia.com.br/checkout',
         });
     });
 
@@ -42,14 +42,14 @@ describe('GET /api/oauth/:provider', () => {
             `callbackUrl=${encodeURIComponent('https://precisionai.innexar.app/dashboard')}`,
         );
         expect(signInMock).toHaveBeenCalledWith('google', {
-            redirectTo: 'https://precisionai.innexar.app/dashboard',
+            redirectTo: 'https://us.precisionia.com.br/dashboard',
         });
     });
 
     it('resolves relative callbackUrl on request host', async () => {
         await callRoute('github', 'callbackUrl=%2Fcheckout');
         expect(signInMock).toHaveBeenCalledWith('github', {
-            redirectTo: 'https://precisionai.innexar.app/checkout',
+            redirectTo: 'https://us.precisionia.com.br/checkout',
         });
     });
 

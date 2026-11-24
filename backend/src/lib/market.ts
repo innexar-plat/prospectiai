@@ -13,6 +13,7 @@ export type SupportedLocale = 'pt' | 'en' | 'es';
 export const MARKET: Market = process.env.MARKET === 'US' ? 'US' : 'BR';
 
 const US_HOSTS = new Set([
+    'us.precisionia.com.br',
     'precisionai.innexar.app',
     'www.precisionai.innexar.app',
 ]);

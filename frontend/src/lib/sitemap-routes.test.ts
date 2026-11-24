@@ -12,12 +12,12 @@ import {
 import { getAllSeoSlugs } from './seo-local';
 
 describe('sitemap-routes', () => {
-  it('US routes use precisionai.innexar.app origin only', () => {
+  it('US routes use the US origin only', () => {
     const routes = getUsIndexableRoutes();
     const xml = buildSitemapXml(US_ORIGIN, routes);
     expect(xml).toContain(`<loc>${US_ORIGIN}/</loc>`);
     expect(xml).toContain(`<loc>${US_ORIGIN}/en/pricing</loc>`);
-    expect(xml).not.toContain('precisionia.com.br');
+    expect(xml).not.toContain('//precisionia.com.br');
     expect(xml).not.toContain('geracao-de-leads-b2b');
     expect(xml).not.toContain('/blog/');
   });

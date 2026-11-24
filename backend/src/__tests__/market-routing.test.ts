@@ -36,8 +36,8 @@ describe('app-origins', () => {
 
     it('keeps US OAuth callback on US domain (relative path)', () => {
         const result = resolveAuthRedirectUrl('/dashboard', US_BASE);
-        expect(result).toBe('https://precisionai.innexar.app/dashboard');
-        expect(result).not.toContain('precisionia.com.br');
+        expect(result).toBe(`${US_BASE}/dashboard`);
+        expect(result).not.toContain('//precisionia.com.br');
     });
 
     it('keeps US OAuth callback on US domain (absolute US url)', () => {
@@ -161,7 +161,7 @@ describe('getSiteUrlFromRequest', () => {
                 cookie: 'prospector-market=BR',
             },
         });
-        expect(getSiteUrlFromRequest(req)).toBe('https://precisionai.innexar.app');
+        expect(getSiteUrlFromRequest(req)).toBe('https://us.precisionia.com.br');
     });
 
     it('returns BR site URL when host is BR even with US cookie', () => {

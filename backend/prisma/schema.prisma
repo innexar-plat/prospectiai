@@ -1792,3 +1792,30 @@ model SampleRequest {
   @@index([prospectedLeadId])
 }
 
+
+/// US businesses from the Overture Maps open places dataset (CDLA-Permissive-2.0, attribution
+/// required) — the US counterpart of RfCompany. Loaded by scripts/us/load-us-companies.py.
+model UsCompany {
+  id              String   @id // Overture place id
+  name            String
+  category        String? // Overture taxonomy.primary (e.g. "dental_clinic")
+  basicCategory   String?
+  address         String?
+  city            String?
+  cityNorm        String? // lower-case city used for lookups
+  state           String   @db.Char(2)
+  postcode        String?
+  phone           String?
+  email           String?
+  website         String?
+  lat             Float?
+  lng             Float?
+  confidence      Float?
+  operatingStatus String?
+  release         String
+  updatedAt       DateTime @default(now()) @updatedAt
+
+  @@index([state, category])
+  @@index([category, cityNorm, state])
+  @@index([cityNorm, state])
+}

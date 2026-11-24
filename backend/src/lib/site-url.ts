@@ -6,7 +6,7 @@ const BR_SITE =
     process.env.NEXT_PUBLIC_APP_URL ??
     'https://precisionia.com.br';
 
-const US_SITE = process.env.SITE_URL_US ?? 'https://precisionai.innexar.app';
+const US_SITE = process.env.SITE_URL_US ?? 'https://us.precisionia.com.br';
 
 export function getSiteUrlForMarket(market: Market): string {
     return market === 'US' ? US_SITE : BR_SITE.replace(/\/$/, '');

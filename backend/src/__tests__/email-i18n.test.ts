@@ -35,7 +35,7 @@ import {
   sendAffiliateConversionEmail,
 } from '@/lib/email';
 
-const US_SITE = 'https://precisionai.innexar.app';
+const US_SITE = 'https://us.precisionia.com.br';
 const BR_SITE = getSiteUrlForMarket('BR').replace(/\/$/, '');
 
 const LOCALE_MARKERS: Record<Locale, { verification: string; oauth: string; teamInvite: string; analysis: string; affiliate: string }> = {

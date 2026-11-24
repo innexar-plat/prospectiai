@@ -6,7 +6,7 @@
 import { getActiveMarket } from '@/lib/market';
 
 const BR_SUPPORT_EMAIL = 'suporte@precisionia.com.br';
-const US_SUPPORT_EMAIL = 'support@precisionai.innexar.app';
+const US_SUPPORT_EMAIL = 'support@precisionia.com.br';
 const DEFAULT_BR_WHATSAPP = '5511912801461';
 
 const rawEmail = typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPPORT_EMAIL;

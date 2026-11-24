@@ -1,7 +1,7 @@
 import { getActiveMarket } from '@/lib/market';
 
 const BR_ORIGIN = 'https://precisionia.com.br';
-const US_ORIGIN = 'https://precisionai.innexar.app';
+const US_ORIGIN = 'https://us.precisionia.com.br';
 
 const ALLOWED_ORIGINS = new Set([BR_ORIGIN, US_ORIGIN]);
 

@@ -32,4 +32,4 @@ Allow: /
 User-agent: Bytespider
 Allow: /
 
-Sitemap: https://precisionai.innexar.app/sitemap.xml
+Sitemap: https://us.precisionia.com.br/sitemap.xml

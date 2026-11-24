@@ -8,7 +8,7 @@ export type SupportedLocale = 'pt' | 'en' | 'es';
 export const MARKET: Market =
     (import.meta.env.VITE_MARKET as Market | undefined) === 'US' ? 'US' : 'BR';
 
-const US_HOST_PATTERN = /(^|\.)precisionai\.innexar\.app$/i;
+const US_HOST_PATTERN = /(^|\.)precisionai\.innexar\.app$|^us\.precisionia\.com\.br$/i;
 export const MARKET_COOKIE = 'prospector-market';
 
 function detectMarketFromHost(hostname: string): Market | null {
