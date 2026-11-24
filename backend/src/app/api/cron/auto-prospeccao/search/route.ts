@@ -34,11 +34,16 @@ async function handlePOST(req: NextRequest) {
 
     for (const config of activeConfigs) {
       try {
-        // Buscar perfis ativos com nextRunAt <= agora
+        // A workspace with its own active profiles prospects only its own audience; the system
+        // profiles are the default for workspaces that have none (they are the Precision IA
+        // audience and must never feed another business's outreach).
+        const ownProfiles = await prisma.searchProfile.count({
+          where: { workspaceId: config.workspaceId, isSystem: false, isActive: true },
+        });
         const profiles = await prisma.searchProfile.findMany({
           where: {
             AND: [
-              { OR: [{ workspaceId: config.workspaceId }, { isSystem: true }] },
+              ownProfiles > 0 ? { workspaceId: config.workspaceId, isSystem: false } : { isSystem: true },
               { isActive: true },
               { OR: [{ nextRunAt: null }, { nextRunAt: { lte: now } }] },
             ],

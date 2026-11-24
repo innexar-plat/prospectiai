@@ -7,6 +7,7 @@ const mockLeadCount = jest.fn().mockResolvedValue(1);
 const mockTemplate = jest.fn().mockResolvedValue({ id: 't1', subject: 'Oi {{razaoSocial}}', bodyHtml: '<html><body><p>Olá {{razaoSocial}}</p></body></html>', bodyText: null });
 const mockSenderCount = jest.fn();
 const mockSenders = jest.fn();
+const mockSenderFirst = jest.fn().mockResolvedValue(null);
 const mockUnsub = jest.fn();
 const mockEventCreate = jest.fn().mockResolvedValue({});
 const mockEventCount = jest.fn().mockResolvedValue(0);
@@ -15,7 +16,7 @@ jest.mock('@/lib/prisma', () => ({
         autoProspeccaoConfig: { findUnique: (...a: unknown[]) => mockConfig(...a), update: (...a: unknown[]) => mockConfigUpdate(...a) },
         prospectedLead: { findMany: (...a: unknown[]) => mockLeads(...a), update: (...a: unknown[]) => mockLeadUpdate(...a), count: (...a: unknown[]) => mockLeadCount(...a) },
         autoProspeccaoTemplate: { findFirst: (...a: unknown[]) => mockTemplate(...a) },
-        autoProspSenderPool: { count: (...a: unknown[]) => mockSenderCount(...a), findMany: (...a: unknown[]) => mockSenders(...a), update: jest.fn().mockResolvedValue({}) },
+        autoProspSenderPool: { count: (...a: unknown[]) => mockSenderCount(...a), findMany: (...a: unknown[]) => mockSenders(...a), findFirst: (...a: unknown[]) => mockSenderFirst(...a), update: jest.fn().mockResolvedValue({}) },
         emailUnsubscribe: { findFirst: (...a: unknown[]) => mockUnsub(...a) },
         prospectedLeadEmailEvent: { create: (...a: unknown[]) => mockEventCreate(...a), count: (...a: unknown[]) => mockEventCount(...a) },
         autoProspeccaoRun: { update: jest.fn().mockResolvedValue({}) },
@@ -130,6 +131,24 @@ describe('auto-prospecting e-mail worker', () => {
         expect(mockResendSend.mock.calls[0][0].headers['List-Unsubscribe-Post']).toBe('List-Unsubscribe=One-Click');
     });
 
+    it('pool sender warms up from its creation date, whatever the configured ceiling', async () => {
+        const leads = Array.from({ length: 40 }, (_, i) => lead(`l${i}`, `dono${i}@empresa${i}.com.br`));
+        // New sender: 15/day spread over the 16 runs left today → 1 this run.
+        mockConfig.mockResolvedValueOnce({ emailStepIntervalHours: 48, maxEmailsPerDay: 200 });
+        mockSenderCount.mockResolvedValueOnce(1);
+        mockSenderFirst.mockResolvedValueOnce({ createdAt: NOW });
+        mockSenders.mockResolvedValue([sender]);
+        mockLeads.mockResolvedValueOnce([]).mockResolvedValueOnce(leads);
+        expect((await runEmailSequenceWorker('w1', 'run1', NOW)).emailsSent).toBe(1);
+
+        // Warmed-up sender (5 weeks): ceiling 120/day → 8 this run.
+        mockConfig.mockResolvedValueOnce({ emailStepIntervalHours: 48, maxEmailsPerDay: 200 });
+        mockSenderCount.mockResolvedValueOnce(1);
+        mockSenderFirst.mockResolvedValueOnce({ createdAt: new Date('2026-09-20T00:00:00Z') });
+        mockLeads.mockResolvedValueOnce([]).mockResolvedValueOnce(leads);
+        expect((await runEmailSequenceWorker('w1', 'run2', NOW)).emailsSent).toBe(8);
+    });
+
     it('skips and marks opted-out addresses', async () => {
         mockConfig.mockResolvedValueOnce(systemConfig);
         mockSenderCount.mockResolvedValueOnce(0);
@@ -157,5 +176,15 @@ describe('displayCompanyName', () => {
         expect(displayCompanyName('X', 'Padaria do João')).toBe('Padaria do João');
         expect(displayCompanyName('AUPOL TI CONSULTORIA LTDA ME')).toBe('Aupol TI Consultoria');
         expect(displayCompanyName('EDINALDO GUEDES DA SILVA 78865727420')).toBe('Edinaldo Guedes da Silva');
+    });
+});
+
+describe('cityDisplayName', () => {
+    it('restores accents from the IBGE list', () => {
+        const { cityDisplayName } = jest.requireActual('@/modules/auto-prospeccao/application/email-sequence.worker');
+        expect(cityDisplayName('SAO VICENTE', 'SP')).toBe('São Vicente');
+        expect(cityDisplayName('ITANHAEM', 'SP')).toBe('Itanhaém');
+        expect(cityDisplayName('CIDADE INVENTADA', 'SP')).toBe('Cidade Inventada');
+        expect(cityDisplayName(null, 'SP')).toBe('');
     });
 });

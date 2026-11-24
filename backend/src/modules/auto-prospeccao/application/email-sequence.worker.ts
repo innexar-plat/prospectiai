@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { BR_CITIES, fold } from '@/lib/br-cities';
 import { sendEmail, type SendOptions, type SendResult } from '@/lib/email';
 import { sampleUrlFor } from '@/lib/sample-list';
 import { brtDayStart, domainAcceptsMail, htmlToText, isBusinessHoursBrt, isRiskyRecipient, perRunQuota, warmupDailyCap } from '@/lib/cold-email-guard';
@@ -54,9 +55,17 @@ export async function runEmailSequenceWorker(
   const sentToday = await prisma.prospectedLeadEmailEvent.count({
     where: { lead: { workspaceId }, sentAt: { gte: brtDayStart(now) } },
   });
+  // Both modes warm up: a new sending domain starts at 15/day whatever the configured ceiling.
+  const poolStartedAt = useSystem
+    ? null
+    : (await prisma.autoProspSenderPool.findFirst({
+        where: { workspaceId, isActive: true },
+        orderBy: { createdAt: 'asc' },
+        select: { createdAt: true },
+      }))?.createdAt ?? null;
   const dailyCap = useSystem
     ? warmupDailyCap(config?.systemSenderStartedAt ?? null, now, config?.maxEmailsPerDay ?? 120)
-    : (config?.maxEmailsPerDay ?? 200);
+    : warmupDailyCap(poolStartedAt, now, config?.maxEmailsPerDay ?? 120);
   let quota = perRunQuota(dailyCap - sentToday, now);
   if (quota <= 0) return finishRun(runId, { emailsSent, leadsStarted, leadsAdvanced });
 
@@ -92,7 +101,7 @@ export async function runEmailSequenceWorker(
     if (quota <= 0) break;
     // Só avança se passou o intervalo mínimo desde o último step
     if (lastEvent.sentAt && lastEvent.sentAt < cutoff) {
-      const sent = await sendStep(lead.id, lead.email, displayCompanyName(lead.razaoSocial, lead.nomeFantasia), nextStep, workspaceId, !!lastEvent.openedAt, sender);
+      const sent = await sendStep(lead.id, lead.email, displayCompanyName(lead.razaoSocial, lead.nomeFantasia), nextStep, workspaceId, !!lastEvent.openedAt, sender, cityDisplayName(lead.municipio, lead.uf));
       if (sent) {
         emailsSent++;
         leadsAdvanced++;
@@ -120,7 +129,7 @@ export async function runEmailSequenceWorker(
         });
         continue;
       }
-      const sent = await sendStep(lead.id, lead.email, displayCompanyName(lead.razaoSocial, lead.nomeFantasia), 1, workspaceId, false, sender);
+      const sent = await sendStep(lead.id, lead.email, displayCompanyName(lead.razaoSocial, lead.nomeFantasia), 1, workspaceId, false, sender, cityDisplayName(lead.municipio, lead.uf));
       if (sent) {
         emailsSent++;
         leadsStarted++;
@@ -148,6 +157,14 @@ const LOWER_WORDS = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'em', 'para', 
  * How a person would write the company name: trade name when Receita has one, otherwise the legal
  * name without LTDA/S.A./ME and in title case ("GOLDSZTEIN HOLDING LTDA" → "Goldsztein Holding").
  */
+/** "SAO VICENTE"/"SP" (Receita) → "São Vicente", using the bundled IBGE list for the accents. */
+export function cityDisplayName(municipio: string | null | undefined, uf: string | null | undefined): string {
+  if (!municipio) return '';
+  const key = fold(municipio).replace(/[^a-z0-9]+/g, ' ').trim();
+  const match = (BR_CITIES[(uf ?? '').toUpperCase()] ?? []).find((c) => fold(c).replace(/[^a-z0-9]+/g, ' ').trim() === key);
+  return match ?? municipio.toLowerCase().replace(/(^|\s)\S/g, (m) => m.toUpperCase());
+}
+
 export function displayCompanyName(razaoSocial: string, nomeFantasia?: string | null): string {
   // MEI legal names end with the owner's CPF — never put a personal document in an e-mail.
   let name = (nomeFantasia?.trim() || razaoSocial || '').replace(/\s+/g, ' ').replace(/\s*\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/, '').replace(/^\d{2}\.?\d{3}\.?\d{3}\s+/, '').trim();
@@ -272,11 +289,13 @@ async function sendStep(
   workspaceId: string,
   previousStepOpened = false,
   sender: SenderContext = { mode: 'pool', replyTo: null, senderName: null },
+  cidade = '',
 ): Promise<boolean> {
   try {
     const template = await resolveTemplate(step, workspaceId, previousStepOpened);
     // {{amostraUrl}}: signed link to the free 20-company sample (instant, no reply needed).
-    const vars = { razaoSocial, amostraUrl: sampleUrlFor(leadId) };
+    // {{cidade}}: the company's city with accents ("São Vicente").
+    const vars = { razaoSocial, amostraUrl: sampleUrlFor(leadId), cidade };
     const subject = interpolate(template.subject, vars);
     let bodyHtml = interpolate(template.bodyHtml, vars);
 
