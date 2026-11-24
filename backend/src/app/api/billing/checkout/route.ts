@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { stripe } from '@/lib/stripe';
+import { STRIPE_TRIAL_DAYS, stripeTrialEligible } from '@/lib/stripe-trial';
 import { preference } from '@/lib/mercadopago';
 import { createPreApproval } from '@/lib/mercadopago-subscription';
 import { rateLimit } from '@/lib/ratelimit';
@@ -210,6 +211,10 @@ async function executeStripeCheckout(
 ): Promise<NextResponse> {
     const metadata: Record<string, string> = { userId: sessionUser.id, planId, interval: cycle };
     if (affiliateCode) metadata.affiliateCode = affiliateCode;
+    const trial = !currentPlan || currentPlan === 'FREE' || currentPlan === 'TRIAL'
+        ? await stripeTrialEligible(sessionUser.email)
+        : false;
+    if (trial) metadata.trial = '1';
     if (repCode) metadata.rep = repCode;
     const base = appUrl.replace(/\/$/, '');
     const localeSegment = locale === 'en' ? 'en' : locale === 'es' ? 'es' : 'pt';
@@ -232,7 +237,12 @@ async function executeStripeCheckout(
             },
         ],
         mode: 'subscription',
-        subscription_data: { metadata },
+        // Card is always collected; with a trial the first charge happens on day 8.
+        payment_method_collection: 'always',
+        subscription_data: {
+            metadata,
+            ...(trial ? { trial_period_days: STRIPE_TRIAL_DAYS, trial_settings: { end_behavior: { missing_payment_method: 'cancel' } } } : {}),
+        },
         success_url: `${base}/${localeSegment}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${base}/dashboard/planos`,
         metadata,
@@ -251,7 +261,7 @@ async function executeStripeCheckout(
         currency: 'USD',
     });
 
-    return NextResponse.json({ url: stripeSession.url });
+    return NextResponse.json({ url: stripeSession.url, trialDays: trial ? STRIPE_TRIAL_DAYS : 0 });
 }
 
 async function tryScheduleDowngrade(

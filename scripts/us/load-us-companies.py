@@ -14,9 +14,9 @@ import duckdb
 
 DATA_DIR = "/srv/innexar/tools/us-data"
 MIN_CONFIDENCE = 0.5
-# Places that are not businesses anyone sells to.
+# Places that are not businesses anyone sells to (churches stay: they buy services).
 EXCLUDE = [
-    "%worship%", "%park%", "historic_site", "atm", "%landmark%", "beach", "%lake%", "river", "mountain",
+    "%park%", "historic_site", "atm", "%landmark%", "beach", "%lake%", "river", "mountain",
     "monument", "cemetery", "bus_station", "bus_stop", "%train_station%", "playground", "trail%", "bridge",
     "structure_and_geography", "public_%", "post_office", "fire_department", "police_department",
     "%government%", "city_hall", "library", "%memorial%", "natural_feature", "island", "forest",

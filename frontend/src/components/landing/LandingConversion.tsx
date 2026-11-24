@@ -9,13 +9,11 @@ import {
     MessageSquare,
     BarChart3,
     Shield,
-    Star,
     Search,
     Brain,
     Rocket,
     XCircle,
     CheckCircle2,
-    Quote,
     Sparkles,
     Users,
     Clock,
@@ -151,12 +149,6 @@ export default function LandingConversion({ locale, t, onSignup, onPricing }: La
         { step: '02', icon: Brain, color: 'bg-cyan-600' },
         { step: '03', icon: Rocket, color: 'bg-emerald-600' },
     ] as const;
-
-    const testimonials = [1, 2, 3].map((i) => ({
-        quote: t(`landing.conv.testimonial${i}Quote`),
-        name: t(`landing.conv.testimonial${i}Name`),
-        role: t(`landing.conv.testimonial${i}Role`),
-    }));
 
     const localePath = locale === 'pt' ? 'pt' : locale === 'es' ? 'es' : 'en';
 
@@ -354,34 +346,6 @@ export default function LandingConversion({ locale, t, onSignup, onPricing }: La
                         >
                             {t('landing.conv.viewAllPlans')} →
                         </button>
-                    </div>
-                </div>
-            </section>
-
-            {/* Social proof */}
-            <section className="px-4 py-14 sm:py-16 bg-surface/50 border-y border-border" aria-labelledby="social-heading">
-                <div className="max-w-6xl mx-auto">
-                    <h2 id="social-heading" className="text-2xl sm:text-3xl font-black text-center text-foreground mb-3">
-                        {t('landing.conv.socialTitle')}
-                    </h2>
-                    <p className="text-center text-muted text-sm mb-8 sm:mb-10">{t('landing.conv.socialSub')}</p>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                        {testimonials.map((item) => (
-                            <div
-                                key={item.name}
-                                className="p-5 sm:p-6 rounded-2xl border border-border bg-card card-shadow card-shadow-hover"
-                            >
-                                <div className="flex gap-0.5 mb-3">
-                                    {[1, 2, 3, 4, 5].map((s) => (
-                                        <Star key={s} size={14} className="text-amber-500 fill-amber-500" aria-hidden />
-                                    ))}
-                                </div>
-                                <Quote size={18} className="text-violet-500/40 mb-2" aria-hidden />
-                                <p className="text-sm text-foreground font-medium leading-relaxed">&ldquo;{item.quote}&rdquo;</p>
-                                <p className="text-sm font-bold text-foreground mt-4">{item.name}</p>
-                                <p className="text-xs text-muted">{item.role}</p>
-                            </div>
-                        ))}
                     </div>
                 </div>
             </section>

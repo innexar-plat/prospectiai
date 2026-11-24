@@ -32,7 +32,7 @@ describe('Public landing — US funnel isolation', () => {
     document.cookie = `${MARKET_COOKIE}=;path=/;max-age=0`;
   });
 
-  it('renders US conversion landing without trial copy on US host', async () => {
+  it('renders US conversion landing with the card-on-file trial on US host', async () => {
     vi.stubGlobal('location', {
       ...window.location,
       hostname: 'precisionai.innexar.app',
@@ -40,12 +40,11 @@ describe('Public landing — US funnel isolation', () => {
     });
     renderLanding('en');
 
-    const ctas = await screen.findAllByText(/start free — 10 credits/i);
+    const ctas = await screen.findAllByText(/start your 7-day free trial/i);
     expect(ctas.length).toBeGreaterThan(0);
     expect(screen.getAllByText(/secure checkout via stripe/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/qualify leads with ai/i)).toBeInTheDocument();
-    expect(screen.queryByText(/7-day trial/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/start free trial/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/no credit card/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/começar grátis/i)).not.toBeInTheDocument();
   });
 
@@ -58,7 +57,7 @@ describe('Public landing — US funnel isolation', () => {
     });
     renderLanding('en');
 
-    expect((await screen.findAllByText(/start free — 10 credits/i)).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/start your 7-day free trial/i)).length).toBeGreaterThan(0);
     expect(screen.queryByText(/começar grátis/i)).not.toBeInTheDocument();
   });
 

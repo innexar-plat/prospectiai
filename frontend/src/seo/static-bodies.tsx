@@ -304,3 +304,92 @@ export function wrapStaticBody(innerHtml: string): string {
   const shell = renderToStaticMarkup(<Page><div data-static-slot="" /></Page>);
   return shell.replace('<div data-static-slot=""></div>', innerHtml);
 }
+
+// ── US market (us.precisionia.com.br) ─────────────────────────────────────────
+
+const US_PLANS = [
+  { name: 'Starter', price: 19, credits: 50 },
+  { name: 'Growth', price: 49, credits: 400 },
+  { name: 'Business', price: 99, credits: 1200 },
+  { name: 'Enterprise', price: 249, credits: 5000 },
+] as const;
+
+const US_SIGNUP = '/auth/signup?utm_source=seo&utm_medium=static';
+const US_NAV: Array<[string, string]> = [['/', 'Home'], ['/pricing', 'Pricing'], [US_SIGNUP, 'Start free trial']];
+
+function UsPage({ children }: { children: ReactNode }) {
+  return (
+    <div style={{ maxWidth: '48rem', margin: '0 auto', padding: '2rem 1rem', fontFamily: 'system-ui, sans-serif' }}>
+      <nav aria-label="Main">{US_NAV.map(([href, label], i) => <span key={href}>{i > 0 ? ' · ' : ''}<a href={href}>{label}</a></span>)}</nav>
+      <main>{children}</main>
+      <footer>
+        <p><a href={US_SIGNUP}>Start your 7-day free trial</a> — cancel before day 8 and pay nothing.</p>
+        <p><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/integracoes/hubspot">HubSpot integration</a></p>
+      </footer>
+    </div>
+  );
+}
+
+const usHtml = (node: ReactNode): string => renderToStaticMarkup(<UsPage>{node}</UsPage>);
+
+function UsHome({ m }: { m: Record<string, string> }) {
+  const t = (k: string) => m[`landing.conv.${k}`] ?? '';
+  return (
+    <>
+      <h1>{t('heroTitle')} {t('heroHighlight')}</h1>
+      <p>{t('heroSub')}</p>
+      <p><a href={US_SIGNUP}>{t('ctaPrimary')}</a> · {t('heroNote')}</p>
+      <h2>{t('problemTitle')} {t('problemTitleHighlight')}</h2>
+      <ul>{[1, 2, 3, 4].map((i) => <li key={i}>{t(`problem${i}`)}</li>)}</ul>
+      <h2>{t('solutionCardTitle')}</h2>
+      <ul>{[1, 2, 3, 4].map((i) => <li key={i}>{t(`solution${i}`)}</li>)}</ul>
+      <h2>{t('howTitle')}</h2>
+      <ol>{[1, 2, 3].map((i) => <li key={i}><strong>{t(`step${i}Title`)}:</strong> {t(`step${i}Desc`)}</li>)}</ol>
+      <h2>{t('featuresTitle')}</h2>
+      <ul>{[1, 2, 3, 4, 5, 6].map((i) => <li key={i}><strong>{t(`feature${i}Title`)}:</strong> {t(`feature${i}Desc`)}</li>)}</ul>
+      <h2>Plans</h2>
+      <ul>{US_PLANS.map((p) => <li key={p.name}>{p.name}: ${p.price}/mo — {p.credits.toLocaleString('en-US')} credits</li>)}</ul>
+      <p><a href="/pricing">See all plan details</a></p>
+      <h2>{t('finalTitle')}</h2>
+      <p>{t('finalSub')}</p>
+    </>
+  );
+}
+
+function UsPricing() {
+  return (
+    <>
+      <h1>Precision AI pricing</h1>
+      <p>B2B prospecting with AI from $19/month. Every plan starts with a 7-day free trial: your card is only charged on day 8, and you can cancel before that and pay nothing.</p>
+      <ul>{US_PLANS.map((p) => <li key={p.name}><strong>{p.name}</strong> — ${p.price}/month, {p.credits.toLocaleString('en-US')} credits per month</li>)}</ul>
+      <h2>Every plan includes</h2>
+      <ul>
+        <li>Search businesses by niche and city, with phone, website and e-mail when available</li>
+        <li>AI lead score and ready-to-send outreach messages</li>
+        <li>Built-in CRM pipeline and daily follow-up list</li>
+        <li>CSV export and HubSpot integration</li>
+      </ul>
+      <p><a href={US_SIGNUP}>Start your 7-day free trial</a></p>
+    </>
+  );
+}
+
+function UsSimple({ title, text }: { title: string; text: string }) {
+  return (<><h1>{title}</h1><p>{text}</p><p>Questions: <a href="mailto:support@precisionia.com.br">support@precisionia.com.br</a></p></>);
+}
+
+/** Route path → static body for the US host. */
+export function buildUsStaticBodies(messagesEn: Record<string, string>): Record<string, string> {
+  const home = usHtml(<UsHome m={messagesEn} />);
+  const pricing = usHtml(<UsPricing />);
+  return {
+    '': home,
+    en: home,
+    pricing,
+    'en/pricing': pricing,
+    privacy: usHtml(<UsSimple title="Privacy Policy" text="How Precision AI collects, uses and protects your data: account data, cookies, your rights (including under the CCPA) and how to exercise them." />),
+    terms: usHtml(<UsSimple title="Terms of Service" text="Terms for using Precision AI: account, subscription and free trial, billing, acceptable use of business data and cancellation." />),
+    'integracoes/hubspot': usHtml(<UsSimple title="Precision AI + HubSpot CRM" text="Prospect businesses with AI, qualify them automatically and send contacts and deals to HubSpot in one click, through a native OAuth connection with pipeline, stage and owner mapping." />),
+  };
+}
+export { buildLocaleMessages } from '@/lib/i18n/merge';

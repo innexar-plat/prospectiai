@@ -20,6 +20,8 @@ import { freshCreditCycle } from '@/lib/billing-period';
 import { freePlanData } from '@/lib/billing-lifecycle';
 import { markPaymentRefunded, recordPayment } from '@/lib/billing-ledger';
 import { recordWebhook } from '@/lib/ops-telemetry';
+import { alertInfo } from '@/lib/telegram-alert';
+import { sendTrialEndingEmail } from '@/lib/stripe-trial-emails';
 
 type SubscriptionWithPeriod = Stripe.Subscription & { current_period_end: number };
 
@@ -147,6 +149,16 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
             gracePeriodEnd: null,
         },
     });
+
+    // Free trial with card: nothing was charged yet — the sale, the alert and the affiliate
+    // commission happen when the first invoice is paid on day 8 (see invoice.paid).
+    if (subscription.status === 'trialing') {
+        await alertInfo('Teste grátis iniciado (Stripe, cartão cadastrado)', `${userWithWorkspace.email ?? userId} — ${planId} ${billingCycle}`, {
+            workspaceId,
+            fimDoTeste: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString().slice(0, 10) : undefined,
+        }).catch(() => undefined);
+        return null;
+    }
 
     notifyPaymentApproved({
         userId,
@@ -364,7 +376,10 @@ export async function POST(req: Request) {
                 const sub = await stripe.subscriptions.retrieve(subId);
                 const periodStart = (invoice as { period_start?: number }).period_start ?? 0;
                 const isFirstInvoice = periodStart <= sub.created + 60;
-                if (!isFirstInvoice) {
+                const isTrialConversion = sub.trial_end != null && Math.abs(periodStart - sub.trial_end) <= 120;
+                if (isTrialConversion) {
+                    await handleTrialConversion(sub, invoice.id ?? '', invoice.amount_paid ?? 0, (invoice.currency ?? 'usd').toUpperCase());
+                } else if (!isFirstInvoice) {
                     const workspace = await prisma.workspace.findFirst({
                         where: { subscriptionId: subId },
                         select: { id: true, plan: true },
@@ -414,5 +429,39 @@ export async function POST(req: Request) {
         }
     }
 
+    if (event.type === 'customer.subscription.trial_will_end') {
+        const sub = event.data.object as Stripe.Subscription;
+        await sendTrialEndingEmail(sub).catch((e) => logger.warn('Trial ending e-mail failed', { error: e instanceof Error ? e.message : 'Unknown' }));
+    }
+
     return NextResponse.json({ received: true });
+}
+
+/** Day 8: the first real charge after the free trial — this is the sale. */
+async function handleTrialConversion(sub: Stripe.Subscription, invoiceId: string, valueCents: number, currency: string): Promise<void> {
+    const workspace = await prisma.workspace.findFirst({ where: { subscriptionId: sub.id }, select: { id: true, plan: true } });
+    if (!workspace) {
+        logger.warn('Trial conversion: no workspace for subscription', { subscriptionId: sub.id });
+        return;
+    }
+    const planId = (sub.metadata?.planId || workspace.plan || 'BASIC') as PlanType;
+    const userId = sub.metadata?.userId ?? null;
+    const user = userId ? await prisma.user.findUnique({ where: { id: userId }, select: { email: true } }) : null;
+    const interval = (sub as { items?: { data?: Array<{ price?: { recurring?: { interval?: string } } }> } }).items?.data?.[0]?.price?.recurring?.interval;
+    await recordPayment({
+        workspaceId: workspace.id, provider: 'stripe', externalId: `stripe:${invoiceId}`, method: 'card',
+        kind: 'FIRST', amountCents: valueCents, currency: currency === 'BRL' ? 'BRL' : 'USD', planId,
+    });
+    notifyPaymentApproved({
+        userId: userId ?? undefined, userEmail: user?.email ?? null, workspaceId: workspace.id, toPlan: planId,
+        billingCycle: interval === 'year' ? 'annual' : 'monthly', provider: 'stripe', amount: valueCents / 100,
+        currency, paymentId: invoiceId, subscriptionId: sub.id, status: 'trial_converted',
+    });
+    if (userId) {
+        await createCommissionForFirstPayment({
+            userId, workspaceId: workspace.id, userEmail: user?.email ?? null, planId, valueCents,
+            currency: currency === 'BRL' ? 'BRL' : 'USD', orderId: invoiceId, subscriptionId: sub.id,
+            affiliateCodeFromMetadata: sub.metadata?.affiliateCode ?? undefined,
+        }).catch((e) => logger.error('Affiliate commission (trial conversion) failed', { error: e instanceof Error ? e.message : 'Unknown' }));
+    }
 }

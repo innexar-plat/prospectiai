@@ -42,6 +42,15 @@ jest.mock('@/lib/billing-ledger', () => ({
   markPaymentRefunded: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('@/lib/ops-telemetry', () => ({ recordWebhook: jest.fn().mockResolvedValue(undefined) }));
+const mockAlertInfo = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/lib/telegram-alert', () => ({ alertInfo: (...a: unknown[]) => mockAlertInfo(...a), alertSuccess: jest.fn().mockResolvedValue(undefined), alertWarning: jest.fn().mockResolvedValue(undefined) }));
+const mockTrialEmail = jest.fn().mockResolvedValue(true);
+jest.mock('@/lib/stripe-trial-emails', () => ({ sendTrialEndingEmail: (...a: unknown[]) => mockTrialEmail(...a) }));
+const mockNotifyApproved = jest.fn();
+jest.mock('@/lib/telegram-business-alerts', () => ({
+  ...jest.requireActual('@/lib/telegram-business-alerts'),
+  notifyPaymentApproved: (...a: unknown[]) => mockNotifyApproved(...a),
+}));
 jest.mock('@/lib/logger', () => ({
   logger: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },
 }));
@@ -304,5 +313,59 @@ describe('POST /api/billing/webhook (Stripe)', () => {
     const data = prisma.workspace.updateMany.mock.calls.at(-1)[0].data;
     expect(data.leadsUsed).toBe(0);
     expect(data.creditsResetAt).toBeInstanceOf(Date);
+  });
+});
+
+describe('Stripe free trial (card on file)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockHeadersGet.mockReturnValue('sig_test');
+  });
+  const { createCommissionForFirstPayment } = require('@/lib/affiliate');
+  const { recordPayment } = require('@/lib/billing-ledger');
+
+  it('trial start unlocks the plan but is not a sale (no payment alert, no commission)', async () => {
+    mockConstructEvent.mockReturnValue({
+      id: 'evt_t1', type: 'checkout.session.completed',
+      data: { object: { metadata: { userId: 'u1', planId: 'BASIC', trial: '1' }, subscription: 'sub_t', id: 'cs_t', amount_total: 0 } },
+    });
+    const trialEnd = Math.floor(Date.now() / 1000) + 7 * 86400;
+    mockSubscriptionsRetrieve.mockResolvedValue({
+      id: 'sub_t', customer: 'cus_1', status: 'trialing', trial_end: trialEnd, current_period_end: trialEnd,
+      items: { data: [{ price: { recurring: { interval: 'month' } } }] },
+    });
+    prisma.user.findUnique.mockResolvedValue({ id: 'u1', email: 'u@x.com', workspaces: [{ workspaceId: 'w1' }] });
+    prisma.workspace.update.mockResolvedValue({});
+    const res = await POST(makeReq());
+    expect(res.status).toBe(200);
+    expect(prisma.workspace.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ plan: 'BASIC', subscriptionStatus: 'trialing' }) }));
+    expect(mockNotifyApproved).not.toHaveBeenCalled();
+    expect(createCommissionForFirstPayment).not.toHaveBeenCalled();
+    expect(mockAlertInfo).toHaveBeenCalledWith(expect.stringContaining('Teste grátis iniciado'), expect.any(String), expect.any(Object));
+  });
+
+  it('day 8: the first invoice after the trial is the sale — FIRST payment, alert and affiliate commission', async () => {
+    const trialEnd = 1_800_000_000;
+    mockConstructEvent.mockReturnValue({
+      id: 'evt_t2', type: 'invoice.paid',
+      data: { object: { id: 'in_1', billing_reason: 'subscription_cycle', subscription: 'sub_t', period_start: trialEnd, amount_paid: 1900, currency: 'usd' } },
+    });
+    mockSubscriptionsRetrieve.mockResolvedValue({
+      id: 'sub_t', created: trialEnd - 7 * 86400, trial_end: trialEnd, metadata: { userId: 'u1', planId: 'BASIC', affiliateCode: 'AFF1' },
+      items: { data: [{ price: { recurring: { interval: 'month' } } }] },
+    });
+    prisma.workspace.findFirst.mockResolvedValue({ id: 'w1', plan: 'BASIC' });
+    prisma.user.findUnique.mockResolvedValue({ email: 'u@x.com' });
+    const res = await POST(makeReq());
+    expect(res.status).toBe(200);
+    expect(recordPayment).toHaveBeenCalledWith(expect.objectContaining({ kind: 'FIRST', amountCents: 1900, externalId: 'stripe:in_1' }));
+    expect(mockNotifyApproved).toHaveBeenCalledWith(expect.objectContaining({ status: 'trial_converted', amount: 19 }));
+    expect(createCommissionForFirstPayment).toHaveBeenCalledWith(expect.objectContaining({ affiliateCodeFromMetadata: 'AFF1', valueCents: 1900 }));
+  });
+
+  it('sends the reminder three days before the trial ends', async () => {
+    mockConstructEvent.mockReturnValue({ id: 'evt_t3', type: 'customer.subscription.trial_will_end', data: { object: { id: 'sub_t', metadata: { userId: 'u1' }, trial_end: 1_800_000_000 } } });
+    await POST(makeReq());
+    expect(mockTrialEmail).toHaveBeenCalledWith(expect.objectContaining({ id: 'sub_t' }));
   });
 });

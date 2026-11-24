@@ -261,6 +261,25 @@ function generatePerRouteHtml(indexHtml, routes, origin) {
   }
 }
 
+/** dist/us/: English static pages for the US host + index.html (SPA fallback) with English meta. */
+function generateUsHtml(indexHtml, routes, staticMod) {
+  const bodies = staticMod.buildUsStaticBodies(staticMod.buildLocaleMessages('en'));
+  const enIndex = indexHtml.replace('<html lang="pt-BR">', '<html lang="en">');
+  const usDir = path.join(DIST, 'us');
+  mkdirSync(usDir, { recursive: true });
+  const home = routes.find((r) => !r.path);
+  writeFileSync(path.join(usDir, 'index.html'), replaceMeta(enIndex, { url: `${US_ORIGIN}/`, title: home.title, description: home.description }));
+  for (const r of routes) {
+    const url = routeToUrl(US_ORIGIN, r);
+    let html = replaceMeta(r.path.startsWith('es/') ? indexHtml.replace('<html lang="pt-BR">', '<html lang="es">') : enIndex, { url, title: r.title, description: r.description });
+    if (bodies[r.path]) html = html.replace('<div id="root"></div>', `<div id="root">${bodies[r.path]}</div>`);
+    const out = path.join(usDir, `${r.path || 'home'}.html`);
+    mkdirSync(path.dirname(out), { recursive: true });
+    writeFileSync(out, html);
+  }
+  console.log('US: páginas estáticas em', usDir, '|', routes.length, 'rotas');
+}
+
 async function main() {
   const indexPath = path.join(DIST, 'index.html');
   let indexHtml;
@@ -293,6 +312,9 @@ async function main() {
 
   const activeRoutes = MARKET === 'US' ? usRoutes : brRoutes;
   generatePerRouteHtml(indexHtml, activeRoutes, BASE_URL);
+
+  // The same build also serves the US host (nginx picks dist/us/* by host): English meta and bodies.
+  if (staticMod) generateUsHtml(indexHtml, usRoutes, staticMod);
 
   if (MARKET === 'US') {
     writeFileSync(path.join(DIST, 'sitemap.xml'), readFileSync(path.join(DIST, 'sitemap-us.xml')));
