@@ -31,3 +31,10 @@ rf-import.log
 .rf-import-temp
 **/.rf-import-temp
 **/.rf-import-temp/**
+
+# Database dumps (12 GB, customer data) must never enter an image or the build cache
+backups
+**/*.sql.gz
+**/*.sql.gz.*
+**/*.parquet
+**/*.tsbuildinfo
